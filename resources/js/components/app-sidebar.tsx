@@ -1,6 +1,16 @@
 import { Link } from '@inertiajs/react';
-import { BookOpen, Folder, LayoutGrid } from 'lucide-react';
-import { NavFooter } from '@/components/nav-footer';
+import {
+    BookText,
+    Calendar,
+    ClipboardList,
+    GraduationCap,
+    LayoutGrid,
+    ListChecks,
+    Newspaper,
+    Store,
+    Target,
+    Users,
+} from 'lucide-react';
 import { NavMain } from '@/components/nav-main';
 import { NavUser } from '@/components/nav-user';
 import {
@@ -13,27 +23,34 @@ import {
     SidebarMenuItem,
 } from '@/components/ui/sidebar';
 import { dashboard } from '@/routes';
-import type { NavItem } from '@/types';
+import type { NavGroup } from '@/types';
 import AppLogo from './app-logo';
 
-const mainNavItems: NavItem[] = [
+const navGroups: NavGroup[] = [
     {
-        title: 'Dashboard',
-        href: dashboard(),
-        icon: LayoutGrid,
-    },
-];
-
-const footerNavItems: NavItem[] = [
-    {
-        title: 'Repository',
-        href: 'https://github.com/laravel/react-starter-kit',
-        icon: Folder,
+        label: 'Learn',
+        items: [
+            { title: 'Dashboard', href: dashboard(), icon: LayoutGrid },
+            { title: 'Courses', href: '/courses', icon: GraduationCap },
+            { title: 'Practice', href: '/practice', icon: Target },
+            { title: 'Mock Exams', href: '/mock-exams', icon: ClipboardList },
+        ],
     },
     {
-        title: 'Documentation',
-        href: 'https://laravel.com/docs/starter-kits#react',
-        icon: BookOpen,
+        label: 'Social',
+        items: [
+            { title: 'Feed', href: '/feed', icon: Newspaper },
+            { title: 'Study Rooms', href: '/study-rooms', icon: Users },
+            { title: 'Marketplace', href: '/marketplace', icon: Store },
+        ],
+    },
+    {
+        label: 'Organise',
+        items: [
+            { title: 'Timetable', href: '/timetable', icon: Calendar },
+            { title: 'Journal', href: '/journal', icon: BookText },
+            { title: 'Todo', href: '/todo', icon: ListChecks },
+        ],
     },
 ];
 
@@ -53,11 +70,10 @@ export function AppSidebar() {
             </SidebarHeader>
 
             <SidebarContent>
-                <NavMain items={mainNavItems} />
+                <NavMain groups={navGroups} />
             </SidebarContent>
 
             <SidebarFooter>
-                <NavFooter items={footerNavItems} className="mt-auto" />
                 <NavUser />
             </SidebarFooter>
         </Sidebar>

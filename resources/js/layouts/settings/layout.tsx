@@ -37,7 +37,6 @@ const sidebarNavItems: NavItem[] = [
 export default function SettingsLayout({ children }: PropsWithChildren) {
     const { isCurrentUrl } = useCurrentUrl();
 
-    // When server-side rendering, we only render the layout on the client...
     if (typeof window === 'undefined') {
         return null;
     }
@@ -61,9 +60,12 @@ export default function SettingsLayout({ children }: PropsWithChildren) {
                                 size="sm"
                                 variant="ghost"
                                 asChild
-                                className={cn('w-full justify-start', {
-                                    'bg-muted': isCurrentUrl(item.href),
-                                })}
+                                className={cn(
+                                    'w-full justify-start transition-colors duration-200',
+                                    isCurrentUrl(item.href)
+                                        ? 'bg-muted reader:bg-[rgba(62,189,147,0.06)] reader:text-[#3EBD93]'
+                                        : '',
+                                )}
                             >
                                 <Link href={item.href}>
                                     {item.icon && (

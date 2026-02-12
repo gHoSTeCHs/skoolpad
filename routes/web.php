@@ -14,4 +14,8 @@ Route::get('dashboard', function () {
     return Inertia::render('dashboard');
 })->middleware(['auth', 'verified'])->name('dashboard');
 
+Route::get('design-showcase', function () {
+    return Inertia::render('design-showcase');
+})->name('design-showcase');
+
 require __DIR__.'/settings.php';

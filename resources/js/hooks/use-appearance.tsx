@@ -1,6 +1,7 @@
+import { router } from '@inertiajs/react';
 import { useCallback, useMemo, useSyncExternalStore } from 'react';
 
-export type ResolvedAppearance = 'light' | 'dark';
+export type ResolvedAppearance = 'light' | 'dark' | 'reader';
 export type Appearance = ResolvedAppearance | 'system';
 
 export type UseAppearanceReturn = {
@@ -30,17 +31,27 @@ const getStoredAppearance = (): Appearance => {
     return (localStorage.getItem('appearance') as Appearance) || 'system';
 };
 
-const isDarkMode = (appearance: Appearance): boolean => {
-    return appearance === 'dark' || (appearance === 'system' && prefersDark());
+const resolveAppearance = (appearance: Appearance): ResolvedAppearance => {
+    if (appearance === 'reader') return 'reader';
+    if (appearance === 'dark') return 'dark';
+    if (appearance === 'system') return prefersDark() ? 'dark' : 'light';
+    return 'light';
 };
 
 const applyTheme = (appearance: Appearance): void => {
     if (typeof document === 'undefined') return;
 
-    const isDark = isDarkMode(appearance);
+    const resolved = resolveAppearance(appearance);
 
-    document.documentElement.classList.toggle('dark', isDark);
-    document.documentElement.style.colorScheme = isDark ? 'dark' : 'light';
+    document.documentElement.classList.remove('dark', 'reader');
+
+    if (resolved === 'dark') {
+        document.documentElement.classList.add('dark');
+    } else if (resolved === 'reader') {
+        document.documentElement.classList.add('reader');
+    }
+
+    document.documentElement.style.colorScheme = resolved === 'light' ? 'light' : 'dark';
 };
 
 const subscribe = (callback: () => void) => {
@@ -62,6 +73,20 @@ const handleSystemThemeChange = (): void => {
     notify();
 };
 
+const syncToServer = (mode: Appearance): void => {
+    if (typeof document === 'undefined') return;
+
+    const isAuthenticated = document.cookie.split(';').some((c) => c.trim().startsWith('laravel_session=')) ||
+        document.querySelector('meta[name="csrf-token"]') !== null;
+
+    if (isAuthenticated) {
+        router.patch('/settings/appearance', { appearance: mode }, {
+            preserveState: true,
+            preserveScroll: true,
+        });
+    }
+};
+
 export function initializeTheme(): void {
     if (typeof window === 'undefined') return;
 
@@ -73,7 +98,6 @@ export function initializeTheme(): void {
     currentAppearance = getStoredAppearance();
     applyTheme(currentAppearance);
 
-    // Set up system theme change listener
     mediaQuery()?.addEventListener('change', handleSystemThemeChange);
 }
 
@@ -85,21 +109,21 @@ export function useAppearance(): UseAppearanceReturn {
     );
 
     const resolvedAppearance: ResolvedAppearance = useMemo(
-        () => (isDarkMode(appearance) ? 'dark' : 'light'),
+        () => resolveAppearance(appearance),
         [appearance],
     );
 
     const updateAppearance = useCallback((mode: Appearance): void => {
         currentAppearance = mode;
 
-        // Store in localStorage for client-side persistence...
         localStorage.setItem('appearance', mode);
 
-        // Store in cookie for SSR...
         setCookie('appearance', mode);
 
         applyTheme(mode);
         notify();
+
+        syncToServer(mode);
     }, []);
 
     return { appearance, resolvedAppearance, updateAppearance } as const;
