@@ -27,7 +27,6 @@ class QuestionFactory extends Factory
             'semester' => fake()->randomElement(Semester::cases()),
             'marks' => fake()->randomElement([1, 2, 5, 10]),
             'difficulty_level' => fake()->randomElement(QuestionDifficulty::cases()),
-            'irt_difficulty' => null,
             'attempt_count' => 0,
             'correct_count' => 0,
             'avg_time_seconds' => null,

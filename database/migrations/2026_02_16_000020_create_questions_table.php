@@ -15,13 +15,13 @@ return new class extends Migration
         Schema::create('questions', function (Blueprint $table) {
             $table->uuid('id')->primary();
             $table->foreignUuid('institution_course_id')->nullable()->constrained()->nullOnDelete();
+            $table->foreignUuid('exam_subject_id')->nullable()->constrained()->nullOnDelete();
             $table->string('question_type');
             $table->text('content');
             $table->integer('year')->nullable();
             $table->string('semester')->nullable();
             $table->integer('marks')->nullable();
             $table->string('difficulty_level')->nullable();
-            $table->decimal('irt_difficulty', 6, 3)->nullable();
             $table->integer('attempt_count')->default(0);
             $table->integer('correct_count')->default(0);
             $table->integer('avg_time_seconds')->nullable();
@@ -49,12 +49,16 @@ return new class extends Migration
                     BEFORE INSERT OR UPDATE ON questions
                     FOR EACH ROW EXECUTE FUNCTION questions_update_search_vector();
             ");
+
+            DB::statement('
+                ALTER TABLE questions ADD CONSTRAINT questions_context_xor_check
+                CHECK (
+                    (institution_course_id IS NOT NULL)::int + (exam_subject_id IS NOT NULL)::int = 1
+                )
+            ');
         }
     }
 
-    /**
-     * Reverse the migrations.
-     */
     public function down(): void
     {
         if (DB::getDriverName() === 'pgsql') {

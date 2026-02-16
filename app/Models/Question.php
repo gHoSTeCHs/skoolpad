@@ -21,13 +21,13 @@ class Question extends Model
 
     protected $fillable = [
         'institution_course_id',
+        'exam_subject_id',
         'question_type',
         'content',
         'year',
         'semester',
         'marks',
         'difficulty_level',
-        'irt_difficulty',
         'attempt_count',
         'correct_count',
         'avg_time_seconds',
@@ -56,6 +56,11 @@ class Question extends Model
         return $this->belongsTo(InstitutionCourse::class);
     }
 
+    public function examSubject(): BelongsTo
+    {
+        return $this->belongsTo(ExamSubject::class);
+    }
+
     public function createdBy(): BelongsTo
     {
         return $this->belongsTo(User::class, 'created_by');
@@ -66,17 +71,17 @@ class Question extends Model
         return $this->belongsTo(User::class, 'reviewed_by');
     }
 
-    public function options(): HasMany
+    public function questionOptions(): HasMany
     {
         return $this->hasMany(QuestionOption::class);
     }
 
-    public function answers(): HasMany
+    public function questionAnswers(): HasMany
     {
         return $this->hasMany(QuestionAnswer::class);
     }
 
-    public function topicLinks(): HasMany
+    public function questionTopicLinks(): HasMany
     {
         return $this->hasMany(QuestionTopicLink::class);
     }

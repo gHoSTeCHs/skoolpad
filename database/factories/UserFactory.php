@@ -66,6 +66,20 @@ class UserFactory extends Factory
         ]);
     }
 
+    public function institutionModerator(): static
+    {
+        return $this->state(fn (array $attributes) => [
+            'role' => UserRole::InstitutionModerator,
+        ]);
+    }
+
+    public function contentReviewer(): static
+    {
+        return $this->state(fn (array $attributes) => [
+            'role' => UserRole::ContentReviewer,
+        ]);
+    }
+
     public function staff(): static
     {
         return $this->state(fn (array $attributes) => [

@@ -4,6 +4,7 @@ namespace App\Models;
 
 use App\Enums\ContentSubmissionStatus;
 use App\Enums\ContentSubmissionType;
+use App\Enums\Semester;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
@@ -36,6 +37,7 @@ class ContentSubmission extends Model
         return [
             'submission_type' => ContentSubmissionType::class,
             'status' => ContentSubmissionStatus::class,
+            'exam_semester' => Semester::class,
             'content' => 'array',
             'images' => 'array',
             'reviewed_at' => 'datetime',
