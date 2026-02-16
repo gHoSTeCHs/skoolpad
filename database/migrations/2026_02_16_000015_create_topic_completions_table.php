@@ -11,11 +11,13 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::create('user_preferences', function (Blueprint $table) {
+        Schema::create('topic_completions', function (Blueprint $table) {
             $table->uuid('id')->primary();
-            $table->foreignUuid('user_id')->unique()->constrained()->cascadeOnDelete();
-            $table->string('appearance', 16)->default('system');
-            $table->timestamps();
+            $table->foreignUuid('user_id')->constrained()->cascadeOnDelete();
+            $table->foreignUuid('canonical_topic_id')->constrained()->cascadeOnDelete();
+            $table->timestamp('completed_at');
+
+            $table->unique(['user_id', 'canonical_topic_id']);
         });
     }
 
@@ -24,6 +26,6 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::dropIfExists('user_preferences');
+        Schema::dropIfExists('topic_completions');
     }
 };

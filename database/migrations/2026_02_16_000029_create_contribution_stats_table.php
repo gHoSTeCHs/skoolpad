@@ -11,11 +11,15 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::create('user_preferences', function (Blueprint $table) {
+        Schema::create('contribution_stats', function (Blueprint $table) {
             $table->uuid('id')->primary();
             $table->foreignUuid('user_id')->unique()->constrained()->cascadeOnDelete();
-            $table->string('appearance', 16)->default('system');
-            $table->timestamps();
+            $table->integer('total_submissions')->default(0);
+            $table->integer('approved_submissions')->default(0);
+            $table->integer('rejected_submissions')->default(0);
+            $table->integer('contribution_points')->default(0);
+            $table->string('badge')->default('none');
+            $table->timestamp('updated_at')->nullable();
         });
     }
 
@@ -24,6 +28,6 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::dropIfExists('user_preferences');
+        Schema::dropIfExists('contribution_stats');
     }
 };
