@@ -35,25 +35,27 @@ return new class extends Migration
             $table->foreign('parent_topic_id')->references('id')->on('canonical_topics')->nullOnDelete();
         });
 
-        DB::statement('ALTER TABLE canonical_topics ADD COLUMN search_vector tsvector');
-        DB::statement('CREATE INDEX canonical_topics_search_vector_idx ON canonical_topics USING GIN (search_vector)');
+        if (DB::getDriverName() === 'pgsql') {
+            DB::statement('ALTER TABLE canonical_topics ADD COLUMN search_vector tsvector');
+            DB::statement('CREATE INDEX canonical_topics_search_vector_idx ON canonical_topics USING GIN (search_vector)');
 
-        DB::unprepared("
-            CREATE OR REPLACE FUNCTION canonical_topics_update_search_vector() RETURNS trigger AS \$\$
-            BEGIN
-                NEW.search_vector := to_tsvector('english',
-                    COALESCE(NEW.title, '') || ' ' ||
-                    COALESCE(NEW.content_plain, '') || ' ' ||
-                    COALESCE(NEW.summary, '')
-                );
-                RETURN NEW;
-            END;
-            \$\$ LANGUAGE plpgsql;
+            DB::unprepared("
+                CREATE OR REPLACE FUNCTION canonical_topics_update_search_vector() RETURNS trigger AS \$\$
+                BEGIN
+                    NEW.search_vector := to_tsvector('english',
+                        COALESCE(NEW.title, '') || ' ' ||
+                        COALESCE(NEW.content_plain, '') || ' ' ||
+                        COALESCE(NEW.summary, '')
+                    );
+                    RETURN NEW;
+                END;
+                \$\$ LANGUAGE plpgsql;
 
-            CREATE TRIGGER canonical_topics_search_update
-                BEFORE INSERT OR UPDATE ON canonical_topics
-                FOR EACH ROW EXECUTE FUNCTION canonical_topics_update_search_vector();
-        ");
+                CREATE TRIGGER canonical_topics_search_update
+                    BEFORE INSERT OR UPDATE ON canonical_topics
+                    FOR EACH ROW EXECUTE FUNCTION canonical_topics_update_search_vector();
+            ");
+        }
     }
 
     /**
@@ -61,8 +63,10 @@ return new class extends Migration
      */
     public function down(): void
     {
-        DB::unprepared('DROP TRIGGER IF EXISTS canonical_topics_search_update ON canonical_topics');
-        DB::unprepared('DROP FUNCTION IF EXISTS canonical_topics_update_search_vector()');
+        if (DB::getDriverName() === 'pgsql') {
+            DB::unprepared('DROP TRIGGER IF EXISTS canonical_topics_search_update ON canonical_topics');
+            DB::unprepared('DROP FUNCTION IF EXISTS canonical_topics_update_search_vector()');
+        }
         Schema::dropIfExists('canonical_topics');
     }
 };

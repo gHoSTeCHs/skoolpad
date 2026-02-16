@@ -2,6 +2,7 @@
 
 namespace Database\Factories;
 
+use App\Enums\UserRole;
 use Illuminate\Database\Eloquent\Factories\Factory;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Str;
@@ -11,16 +12,9 @@ use Illuminate\Support\Str;
  */
 class UserFactory extends Factory
 {
-    /**
-     * The current password being used by the factory.
-     */
     protected static ?string $password;
 
-    /**
-     * Define the model's default state.
-     *
-     * @return array<string, mixed>
-     */
+    /** @return array<string, mixed> */
     public function definition(): array
     {
         return [
@@ -32,12 +26,16 @@ class UserFactory extends Factory
             'two_factor_secret' => null,
             'two_factor_recovery_codes' => null,
             'two_factor_confirmed_at' => null,
+            'role' => UserRole::Student,
+            'secondary_role' => null,
+            'avatar_path' => null,
+            'app_pin_hash' => null,
+            'app_preferences' => [],
+            'is_active' => true,
+            'last_login_at' => null,
         ];
     }
 
-    /**
-     * Indicate that the model's email address should be unverified.
-     */
     public function unverified(): static
     {
         return $this->state(fn (array $attributes) => [
@@ -45,15 +43,40 @@ class UserFactory extends Factory
         ]);
     }
 
-    /**
-     * Indicate that the model has two-factor authentication configured.
-     */
     public function withTwoFactor(): static
     {
         return $this->state(fn (array $attributes) => [
             'two_factor_secret' => encrypt('secret'),
             'two_factor_recovery_codes' => encrypt(json_encode(['recovery-code-1'])),
             'two_factor_confirmed_at' => now(),
+        ]);
+    }
+
+    public function admin(): static
+    {
+        return $this->state(fn (array $attributes) => [
+            'role' => UserRole::SuperAdmin,
+        ]);
+    }
+
+    public function contentManager(): static
+    {
+        return $this->state(fn (array $attributes) => [
+            'role' => UserRole::ContentManager,
+        ]);
+    }
+
+    public function staff(): static
+    {
+        return $this->state(fn (array $attributes) => [
+            'role' => fake()->randomElement(UserRole::staffRoles()),
+        ]);
+    }
+
+    public function inactive(): static
+    {
+        return $this->state(fn (array $attributes) => [
+            'is_active' => false,
         ]);
     }
 }

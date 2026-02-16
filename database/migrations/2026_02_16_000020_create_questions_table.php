@@ -33,21 +33,23 @@ return new class extends Migration
             $table->timestamps();
         });
 
-        DB::statement('ALTER TABLE questions ADD COLUMN search_vector tsvector');
-        DB::statement('CREATE INDEX questions_search_vector_idx ON questions USING GIN (search_vector)');
+        if (DB::getDriverName() === 'pgsql') {
+            DB::statement('ALTER TABLE questions ADD COLUMN search_vector tsvector');
+            DB::statement('CREATE INDEX questions_search_vector_idx ON questions USING GIN (search_vector)');
 
-        DB::unprepared("
-            CREATE OR REPLACE FUNCTION questions_update_search_vector() RETURNS trigger AS \$\$
-            BEGIN
-                NEW.search_vector := to_tsvector('english', COALESCE(NEW.content, ''));
-                RETURN NEW;
-            END;
-            \$\$ LANGUAGE plpgsql;
+            DB::unprepared("
+                CREATE OR REPLACE FUNCTION questions_update_search_vector() RETURNS trigger AS \$\$
+                BEGIN
+                    NEW.search_vector := to_tsvector('english', COALESCE(NEW.content, ''));
+                    RETURN NEW;
+                END;
+                \$\$ LANGUAGE plpgsql;
 
-            CREATE TRIGGER questions_search_update
-                BEFORE INSERT OR UPDATE ON questions
-                FOR EACH ROW EXECUTE FUNCTION questions_update_search_vector();
-        ");
+                CREATE TRIGGER questions_search_update
+                    BEFORE INSERT OR UPDATE ON questions
+                    FOR EACH ROW EXECUTE FUNCTION questions_update_search_vector();
+            ");
+        }
     }
 
     /**
@@ -55,8 +57,10 @@ return new class extends Migration
      */
     public function down(): void
     {
-        DB::unprepared('DROP TRIGGER IF EXISTS questions_search_update ON questions');
-        DB::unprepared('DROP FUNCTION IF EXISTS questions_update_search_vector()');
+        if (DB::getDriverName() === 'pgsql') {
+            DB::unprepared('DROP TRIGGER IF EXISTS questions_search_update ON questions');
+            DB::unprepared('DROP FUNCTION IF EXISTS questions_update_search_vector()');
+        }
         Schema::dropIfExists('questions');
     }
 };
