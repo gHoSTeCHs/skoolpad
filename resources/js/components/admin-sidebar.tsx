@@ -2,12 +2,14 @@ import { Link } from '@inertiajs/react';
 import {
     BookOpen,
     Building2,
+    ClipboardList,
     FileDown,
     GraduationCap,
     LayoutGrid,
     ListChecks,
     MessageSquareMore,
     Settings,
+    Shapes,
     Users,
 } from 'lucide-react';
 import { NavMain } from '@/components/nav-main';
@@ -33,6 +35,7 @@ const navGroups: NavGroup[] = [
     {
         label: 'Content',
         items: [
+            { title: 'Disciplines', href: '/admin/disciplines', icon: Shapes },
             { title: 'Topics', href: '/admin/topics', icon: BookOpen },
             { title: 'Questions', href: '/admin/questions', icon: MessageSquareMore },
             { title: 'Courses', href: '/admin/courses', icon: GraduationCap },
@@ -44,6 +47,7 @@ const navGroups: NavGroup[] = [
         label: 'Platform',
         items: [
             { title: 'Institutions', href: '/admin/institutions', icon: Building2 },
+            { title: 'Exam Types', href: '/admin/exam-types', icon: ClipboardList },
             { title: 'Users', href: '/admin/users', icon: Users },
             { title: 'Settings', href: '/admin/settings', icon: Settings },
         ],

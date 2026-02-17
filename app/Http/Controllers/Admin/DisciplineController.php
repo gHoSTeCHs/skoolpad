@@ -1,0 +1,58 @@
+<?php
+
+namespace App\Http\Controllers\Admin;
+
+use App\Http\Controllers\Controller;
+use App\Http\Requests\Admin\StoreDisciplineRequest;
+use App\Http\Requests\Admin\UpdateDisciplineRequest;
+use App\Models\Discipline;
+use Illuminate\Http\RedirectResponse;
+use Illuminate\Http\Request;
+use Inertia\Inertia;
+use Inertia\Response;
+
+class DisciplineController extends Controller
+{
+    public function index(Request $request): Response
+    {
+        $disciplines = Discipline::query()
+            ->withCount('canonicalTopics')
+            ->when($request->filled('search'), function ($query) use ($request) {
+                $query->where('name', 'ilike', "%{$request->string('search')}%");
+            })
+            ->latest()
+            ->paginate(15)
+            ->withQueryString();
+
+        return Inertia::render('admin/disciplines/index', [
+            'disciplines' => $disciplines,
+            'filters' => $request->only(['search']),
+        ]);
+    }
+
+    public function create(): Response
+    {
+        return Inertia::render('admin/disciplines/create');
+    }
+
+    public function store(StoreDisciplineRequest $request): RedirectResponse
+    {
+        Discipline::create($request->validated());
+
+        return to_route('admin.disciplines.index')->with('success', 'Discipline created successfully.');
+    }
+
+    public function edit(Discipline $discipline): Response
+    {
+        return Inertia::render('admin/disciplines/edit', [
+            'discipline' => $discipline,
+        ]);
+    }
+
+    public function update(UpdateDisciplineRequest $request, Discipline $discipline): RedirectResponse
+    {
+        $discipline->update($request->validated());
+
+        return to_route('admin.disciplines.index')->with('success', 'Discipline updated successfully.');
+    }
+}

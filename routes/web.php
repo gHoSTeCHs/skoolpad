@@ -1,5 +1,11 @@
 <?php
 
+use App\Http\Controllers\Admin\DepartmentController;
+use App\Http\Controllers\Admin\DisciplineController;
+use App\Http\Controllers\Admin\ExamSubjectController;
+use App\Http\Controllers\Admin\ExamTypeController;
+use App\Http\Controllers\Admin\FacultyController;
+use App\Http\Controllers\Admin\InstitutionController;
 use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
 use Laravel\Fortify\Features;
@@ -41,12 +47,18 @@ Route::middleware(['auth', 'verified', 'staff'])->prefix('admin')->name('admin.'
     Route::get('/', fn () => Inertia::render('admin/dashboard'))->name('dashboard');
     Route::get('topics', fn () => Inertia::render('admin/topics/index'))->name('topics.index');
     Route::get('questions', fn () => Inertia::render('admin/questions/index'))->name('questions.index');
-    Route::get('institutions', fn () => Inertia::render('admin/institutions/index'))->name('institutions.index');
     Route::get('courses', fn () => Inertia::render('admin/courses/index'))->name('courses.index');
     Route::get('review-queue', fn () => Inertia::render('admin/review-queue/index'))->name('review-queue.index');
     Route::get('users', fn () => Inertia::render('admin/users/index'))->name('users.index');
     Route::get('imports', fn () => Inertia::render('admin/imports/index'))->name('imports.index');
     Route::get('settings', fn () => Inertia::render('admin/settings/index'))->name('settings.index');
+
+    Route::resource('institutions', InstitutionController::class)->except(['show', 'destroy']);
+    Route::resource('disciplines', DisciplineController::class)->except(['show', 'destroy']);
+    Route::resource('faculties', FacultyController::class)->except(['show', 'destroy']);
+    Route::resource('departments', DepartmentController::class)->except(['show', 'destroy']);
+    Route::resource('exam-types', ExamTypeController::class)->except(['show', 'destroy']);
+    Route::resource('exam-subjects', ExamSubjectController::class)->except(['show', 'destroy']);
 });
 
 require __DIR__.'/settings.php';
