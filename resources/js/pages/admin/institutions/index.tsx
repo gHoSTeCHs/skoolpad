@@ -1,14 +1,13 @@
-import { Head, Link, router } from '@inertiajs/react';
-import { Building2, Pencil } from 'lucide-react';
+import { Head, router } from '@inertiajs/react';
+import { Building2 } from 'lucide-react';
 import InstitutionController from '@/actions/App/Http/Controllers/Admin/InstitutionController';
+import { type ColumnDef, DataTable } from '@/components/admin/data-table';
 import { PageHeader } from '@/components/admin/page-header';
-import { Pagination } from '@/components/admin/pagination';
+import { RowActions } from '@/components/admin/row-actions';
 import { SearchInput } from '@/components/admin/search-input';
 import { StatusBadge } from '@/components/admin/status-badge';
 import { Button } from '@/components/ui/button';
-import { Card } from '@/components/ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import AdminLayout from '@/layouts/admin-layout';
 import { institutionTypeLabels, ownershipTypeLabels } from '@/lib/enum-labels';
 import type { Institution, PaginatedData } from '@/types/models';
@@ -36,6 +35,45 @@ const breadcrumbs = [{ title: 'Institutions', href: '/admin/institutions' }];
 function hasActiveFilters(filters: Filters): boolean {
     return !!(filters.institution_type || filters.ownership_type || filters.is_active);
 }
+
+const columns: ColumnDef<Institution>[] = [
+    {
+        id: 'name',
+        header: 'Name',
+        cell: (row) => (
+            <div>
+                <span className="font-medium">{row.name}</span>
+                <span className="ml-2 text-muted-foreground">{row.abbreviation}</span>
+            </div>
+        ),
+    },
+    {
+        id: 'type',
+        header: 'Type',
+        cell: (row) => institutionTypeLabels[row.institution_type] ?? row.institution_type,
+    },
+    {
+        id: 'ownership',
+        header: 'Ownership',
+        cell: (row) => ownershipTypeLabels[row.ownership_type] ?? row.ownership_type,
+    },
+    {
+        id: 'location',
+        header: 'Location',
+        cell: (row) => [row.city, row.state].filter(Boolean).join(', ') || '—',
+    },
+    {
+        id: 'faculties',
+        header: 'Faculties',
+        cell: (row) => row.faculties_count ?? 0,
+        align: 'right',
+    },
+    {
+        id: 'status',
+        header: 'Status',
+        cell: (row) => <StatusBadge isActive={row.is_active} />,
+    },
+];
 
 export default function AdminInstitutions({ institutions, filters, institutionTypes, ownershipTypes }: Props) {
     const indexUrl = InstitutionController.index.url();
@@ -65,124 +103,83 @@ export default function AdminInstitutions({ institutions, filters, institutionTy
                     action={{ label: 'Add Institution', href: InstitutionController.create.url() }}
                 />
 
-                <div className="flex flex-wrap items-center gap-3">
-                    <SearchInput
-                        value={filters.search ?? ''}
-                        routeUrl={indexUrl}
-                        placeholder="Search institutions..."
-                        queryParams={{
-                            institution_type: filters.institution_type,
-                            ownership_type: filters.ownership_type,
-                            is_active: filters.is_active,
-                        }}
-                    />
-                    <Select
-                        value={filters.institution_type ?? ''}
-                        onValueChange={(value) => handleFilterChange('institution_type', value === 'all' ? undefined : value)}
-                    >
-                        <SelectTrigger className="w-[180px]">
-                            <SelectValue placeholder="All Types" />
-                        </SelectTrigger>
-                        <SelectContent>
-                            <SelectItem value="all">All Types</SelectItem>
-                            {institutionTypes.map((type) => (
-                                <SelectItem key={type.value} value={type.value}>
-                                    {institutionTypeLabels[type.value] ?? type.value}
-                                </SelectItem>
-                            ))}
-                        </SelectContent>
-                    </Select>
-                    <Select
-                        value={filters.ownership_type ?? ''}
-                        onValueChange={(value) => handleFilterChange('ownership_type', value === 'all' ? undefined : value)}
-                    >
-                        <SelectTrigger className="w-[180px]">
-                            <SelectValue placeholder="All Ownership" />
-                        </SelectTrigger>
-                        <SelectContent>
-                            <SelectItem value="all">All Ownership</SelectItem>
-                            {ownershipTypes.map((type) => (
-                                <SelectItem key={type.value} value={type.value}>
-                                    {ownershipTypeLabels[type.value] ?? type.value}
-                                </SelectItem>
-                            ))}
-                        </SelectContent>
-                    </Select>
-                    <Select
-                        value={filters.is_active ?? ''}
-                        onValueChange={(value) => handleFilterChange('is_active', value === 'all' ? undefined : value)}
-                    >
-                        <SelectTrigger className="w-[180px]">
-                            <SelectValue placeholder="All Status" />
-                        </SelectTrigger>
-                        <SelectContent>
-                            <SelectItem value="all">All Status</SelectItem>
-                            <SelectItem value="1">Active</SelectItem>
-                            <SelectItem value="0">Inactive</SelectItem>
-                        </SelectContent>
-                    </Select>
-                    {hasActiveFilters(filters) && (
-                        <Button variant="ghost" size="sm" onClick={clearFilters}>
-                            Clear filters
-                        </Button>
-                    )}
-                </div>
-
-                <Card className="p-0">
-                    {institutions.data.length > 0 ? (
-                        <Table>
-                            <TableHeader>
-                                <TableRow>
-                                    <TableHead>Name</TableHead>
-                                    <TableHead>Type</TableHead>
-                                    <TableHead>Ownership</TableHead>
-                                    <TableHead>Location</TableHead>
-                                    <TableHead className="text-right">Faculties</TableHead>
-                                    <TableHead>Status</TableHead>
-                                    <TableHead className="w-[80px]">Actions</TableHead>
-                                </TableRow>
-                            </TableHeader>
-                            <TableBody>
-                                {institutions.data.map((institution) => (
-                                    <TableRow key={institution.id}>
-                                        <TableCell>
-                                            <div>
-                                                <span className="font-medium">{institution.name}</span>
-                                                <span className="ml-2 text-muted-foreground">{institution.abbreviation}</span>
-                                            </div>
-                                        </TableCell>
-                                        <TableCell>{institutionTypeLabels[institution.institution_type] ?? institution.institution_type}</TableCell>
-                                        <TableCell>{ownershipTypeLabels[institution.ownership_type] ?? institution.ownership_type}</TableCell>
-                                        <TableCell>
-                                            {[institution.city, institution.state].filter(Boolean).join(', ') || '—'}
-                                        </TableCell>
-                                        <TableCell className="text-right">{institution.faculties_count ?? 0}</TableCell>
-                                        <TableCell>
-                                            <StatusBadge isActive={institution.is_active} />
-                                        </TableCell>
-                                        <TableCell>
-                                            <Button variant="ghost" size="icon" asChild>
-                                                <Link href={InstitutionController.edit.url(institution.id)}>
-                                                    <Pencil className="size-4" />
-                                                </Link>
-                                            </Button>
-                                        </TableCell>
-                                    </TableRow>
-                                ))}
-                            </TableBody>
-                        </Table>
-                    ) : (
-                        <div className="flex flex-col items-center justify-center py-12 text-center">
-                            <Building2 className="size-10 text-muted-foreground/50" />
-                            <p className="mt-3 text-sm font-medium text-muted-foreground">No institutions found</p>
-                            <p className="mt-1 text-sm text-muted-foreground/70">
-                                Try adjusting your search or filter criteria.
-                            </p>
+                <DataTable
+                    columns={columns}
+                    paginatedData={institutions}
+                    getRowKey={(row) => row.id}
+                    toolbar={
+                        <div className="flex flex-wrap items-center gap-3">
+                            <SearchInput
+                                value={filters.search ?? ''}
+                                routeUrl={indexUrl}
+                                placeholder="Search institutions..."
+                                queryParams={{
+                                    institution_type: filters.institution_type,
+                                    ownership_type: filters.ownership_type,
+                                    is_active: filters.is_active,
+                                }}
+                            />
+                            <Select
+                                value={filters.institution_type ?? ''}
+                                onValueChange={(value) => handleFilterChange('institution_type', value === 'all' ? undefined : value)}
+                            >
+                                <SelectTrigger className="w-[180px]">
+                                    <SelectValue placeholder="All Types" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    <SelectItem value="all">All Types</SelectItem>
+                                    {institutionTypes.map((type) => (
+                                        <SelectItem key={type.value} value={type.value}>
+                                            {institutionTypeLabels[type.value] ?? type.value}
+                                        </SelectItem>
+                                    ))}
+                                </SelectContent>
+                            </Select>
+                            <Select
+                                value={filters.ownership_type ?? ''}
+                                onValueChange={(value) => handleFilterChange('ownership_type', value === 'all' ? undefined : value)}
+                            >
+                                <SelectTrigger className="w-[180px]">
+                                    <SelectValue placeholder="All Ownership" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    <SelectItem value="all">All Ownership</SelectItem>
+                                    {ownershipTypes.map((type) => (
+                                        <SelectItem key={type.value} value={type.value}>
+                                            {ownershipTypeLabels[type.value] ?? type.value}
+                                        </SelectItem>
+                                    ))}
+                                </SelectContent>
+                            </Select>
+                            <Select
+                                value={filters.is_active ?? ''}
+                                onValueChange={(value) => handleFilterChange('is_active', value === 'all' ? undefined : value)}
+                            >
+                                <SelectTrigger className="w-[180px]">
+                                    <SelectValue placeholder="All Status" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    <SelectItem value="all">All Status</SelectItem>
+                                    <SelectItem value="1">Active</SelectItem>
+                                    <SelectItem value="0">Inactive</SelectItem>
+                                </SelectContent>
+                            </Select>
+                            {hasActiveFilters(filters) && (
+                                <Button variant="ghost" size="sm" onClick={clearFilters}>
+                                    Clear filters
+                                </Button>
+                            )}
                         </div>
+                    }
+                    renderActions={(row) => (
+                        <RowActions editUrl={InstitutionController.edit.url(row.id)} />
                     )}
-                </Card>
-
-                <Pagination meta={institutions.meta} links={institutions.links} />
+                    emptyState={{
+                        icon: Building2,
+                        title: 'No institutions found',
+                        description: 'Try adjusting your search or filter criteria.',
+                    }}
+                />
             </div>
         </AdminLayout>
     );

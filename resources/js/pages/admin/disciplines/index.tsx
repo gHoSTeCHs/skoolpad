@@ -1,12 +1,10 @@
-import { Head, Link } from '@inertiajs/react';
-import { Pencil, Shapes } from 'lucide-react';
+import { Head } from '@inertiajs/react';
+import { Shapes } from 'lucide-react';
 import DisciplineController from '@/actions/App/Http/Controllers/Admin/DisciplineController';
+import { type ColumnDef, DataTable } from '@/components/admin/data-table';
 import { PageHeader } from '@/components/admin/page-header';
-import { Pagination } from '@/components/admin/pagination';
+import { RowActions } from '@/components/admin/row-actions';
 import { SearchInput } from '@/components/admin/search-input';
-import { Button } from '@/components/ui/button';
-import { Card } from '@/components/ui/card';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import AdminLayout from '@/layouts/admin-layout';
 import type { Discipline, PaginatedData } from '@/types/models';
 
@@ -21,6 +19,35 @@ interface Props {
 
 const breadcrumbs = [{ title: 'Disciplines', href: '/admin/disciplines' }];
 
+const columns: ColumnDef<Discipline>[] = [
+    {
+        id: 'name',
+        header: 'Name',
+        cell: (row) => <span className="font-medium">{row.name}</span>,
+    },
+    {
+        id: 'slug',
+        header: 'Slug',
+        cell: (row) => (
+            <code className="rounded bg-muted px-1.5 py-0.5 text-xs text-muted-foreground">
+                {row.slug}
+            </code>
+        ),
+    },
+    {
+        id: 'description',
+        header: 'Description',
+        cell: (row) => <span className="line-clamp-1">{row.description || '—'}</span>,
+        className: 'max-w-[300px]',
+    },
+    {
+        id: 'topics',
+        header: 'Topics',
+        cell: (row) => row.canonical_topics_count ?? 0,
+        align: 'right',
+    },
+];
+
 export default function AdminDisciplines({ disciplines, filters }: Props) {
     return (
         <AdminLayout breadcrumbs={breadcrumbs}>
@@ -31,62 +58,28 @@ export default function AdminDisciplines({ disciplines, filters }: Props) {
                     action={{ label: 'Add Discipline', href: DisciplineController.create.url() }}
                 />
 
-                <div className="flex items-center gap-3">
-                    <SearchInput
-                        value={filters.search ?? ''}
-                        routeUrl={DisciplineController.index.url()}
-                        placeholder="Search disciplines..."
-                    />
-                </div>
-
-                <Card className="p-0">
-                    {disciplines.data.length > 0 ? (
-                        <Table>
-                            <TableHeader>
-                                <TableRow>
-                                    <TableHead>Name</TableHead>
-                                    <TableHead>Slug</TableHead>
-                                    <TableHead className="max-w-[300px]">Description</TableHead>
-                                    <TableHead className="text-right">Topics</TableHead>
-                                    <TableHead className="w-[80px]">Actions</TableHead>
-                                </TableRow>
-                            </TableHeader>
-                            <TableBody>
-                                {disciplines.data.map((discipline) => (
-                                    <TableRow key={discipline.id}>
-                                        <TableCell className="font-medium">{discipline.name}</TableCell>
-                                        <TableCell>
-                                            <code className="rounded bg-muted px-1.5 py-0.5 text-xs text-muted-foreground">
-                                                {discipline.slug}
-                                            </code>
-                                        </TableCell>
-                                        <TableCell className="max-w-[300px]">
-                                            <span className="line-clamp-1">{discipline.description || '—'}</span>
-                                        </TableCell>
-                                        <TableCell className="text-right">{discipline.canonical_topics_count ?? 0}</TableCell>
-                                        <TableCell>
-                                            <Button variant="ghost" size="icon" asChild>
-                                                <Link href={DisciplineController.edit.url(discipline.id)}>
-                                                    <Pencil className="size-4" />
-                                                </Link>
-                                            </Button>
-                                        </TableCell>
-                                    </TableRow>
-                                ))}
-                            </TableBody>
-                        </Table>
-                    ) : (
-                        <div className="flex flex-col items-center justify-center py-12 text-center">
-                            <Shapes className="size-10 text-muted-foreground/50" />
-                            <p className="mt-3 text-sm font-medium text-muted-foreground">No disciplines found</p>
-                            <p className="mt-1 text-sm text-muted-foreground/70">
-                                Try adjusting your search criteria.
-                            </p>
+                <DataTable
+                    columns={columns}
+                    paginatedData={disciplines}
+                    getRowKey={(row) => row.id}
+                    toolbar={
+                        <div className="flex items-center gap-3">
+                            <SearchInput
+                                value={filters.search ?? ''}
+                                routeUrl={DisciplineController.index.url()}
+                                placeholder="Search disciplines..."
+                            />
                         </div>
+                    }
+                    renderActions={(row) => (
+                        <RowActions editUrl={DisciplineController.edit.url(row.id)} />
                     )}
-                </Card>
-
-                <Pagination meta={disciplines.meta} links={disciplines.links} />
+                    emptyState={{
+                        icon: Shapes,
+                        title: 'No disciplines found',
+                        description: 'Try adjusting your search criteria.',
+                    }}
+                />
             </div>
         </AdminLayout>
     );
