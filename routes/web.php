@@ -21,7 +21,10 @@ Route::middleware(['auth', 'verified'])->group(function () {
 Route::middleware(['auth', 'verified', 'onboarded'])->group(function () {
     Route::get('dashboard', fn () => Inertia::render('dashboard'))->name('dashboard');
     Route::get('courses', fn () => Inertia::render('courses/index'))->name('courses.index');
+    Route::get('courses/{course}', fn (string $course) => Inertia::render('courses/show', ['course' => $course]))->name('courses.show');
     Route::get('topics/{topic}', fn (string $topic) => Inertia::render('topics/show', ['topic' => $topic]))->name('topics.show');
+    Route::get('questions', fn () => Inertia::render('questions/index'))->name('questions.index');
+    Route::get('questions/{question}', fn (string $question) => Inertia::render('questions/show', ['question' => $question]))->name('questions.show');
     Route::get('practice', fn () => Inertia::render('practice/index'))->name('practice.index');
     Route::get('review-queue', fn () => Inertia::render('review-queue/index'))->name('review-queue.index');
     Route::get('notes', fn () => Inertia::render('notes/index'))->name('notes.index');

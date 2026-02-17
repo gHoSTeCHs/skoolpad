@@ -12,3 +12,9 @@ export type AuthLayoutProps = {
     title?: string;
     description?: string;
 };
+
+export type OnboardingLayoutProps = {
+    children: ReactNode;
+    currentStep?: number;
+    totalSteps?: number;
+};

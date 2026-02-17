@@ -1,15 +1,17 @@
 import { Link } from '@inertiajs/react';
 import {
-    BookText,
-    Calendar,
-    ClipboardList,
+    BarChart3,
+    BookOpen,
+    Calculator,
     GraduationCap,
     LayoutGrid,
     ListChecks,
-    Newspaper,
-    Store,
+    Network,
+    Search,
+    StickyNote,
     Target,
-    Users,
+    TrendingUp,
+    Upload,
 } from 'lucide-react';
 import { NavMain } from '@/components/nav-main';
 import { NavUser } from '@/components/nav-user';
@@ -33,23 +35,30 @@ const navGroups: NavGroup[] = [
             { title: 'Dashboard', href: dashboard(), icon: LayoutGrid },
             { title: 'Courses', href: '/courses', icon: GraduationCap },
             { title: 'Practice', href: '/practice', icon: Target },
-            { title: 'Mock Exams', href: '/mock-exams', icon: ClipboardList },
+            { title: 'Review Queue', href: '/review-queue', icon: ListChecks },
         ],
     },
     {
-        label: 'Social',
+        label: 'Study',
         items: [
-            { title: 'Feed', href: '/feed', icon: Newspaper },
-            { title: 'Study Rooms', href: '/study-rooms', icon: Users },
-            { title: 'Marketplace', href: '/marketplace', icon: Store },
+            { title: 'Topics', href: '/topics/browse', icon: BookOpen },
+            { title: 'Notes', href: '/notes', icon: StickyNote },
+            { title: 'Knowledge Graph', href: '/knowledge-graph', icon: Network },
+            { title: 'Search', href: '/search', icon: Search },
         ],
     },
     {
-        label: 'Organise',
+        label: 'Track',
         items: [
-            { title: 'Timetable', href: '/timetable', icon: Calendar },
-            { title: 'Journal', href: '/journal', icon: BookText },
-            { title: 'Todo', href: '/todo', icon: ListChecks },
+            { title: 'Progress', href: '/progress', icon: TrendingUp },
+            { title: 'CGPA Simulator', href: '/cgpa-simulator', icon: Calculator },
+            { title: 'Contributions', href: '/contributions', icon: BarChart3 },
+        ],
+    },
+    {
+        label: 'Share',
+        items: [
+            { title: 'Upload', href: '/upload', icon: Upload },
         ],
     },
 ];
