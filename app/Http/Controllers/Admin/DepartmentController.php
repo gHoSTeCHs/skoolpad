@@ -17,15 +17,14 @@ class DepartmentController extends Controller
 {
     use Paginates;
 
-    public function index(Request $request): Response
+    public function index(Request $request, Faculty $faculty): Response
     {
+        $faculty->load('institution:id,name,abbreviation');
+
         $departments = Department::query()
-            ->with('faculty:id,name,institution_id', 'faculty.institution:id,name')
+            ->where('faculty_id', $faculty->id)
             ->when($request->filled('search'), function ($query) use ($request) {
                 $query->where('name', 'like', "%{$request->string('search')}%");
-            })
-            ->when($request->filled('faculty_id'), function ($query) use ($request) {
-                $query->where('faculty_id', $request->string('faculty_id'));
             })
             ->tap(fn ($query) => $this->applySorting($query, $request, ['name']))
             ->paginate(15)
@@ -33,32 +32,43 @@ class DepartmentController extends Controller
 
         return Inertia::render('admin/departments/index', [
             'departments' => $this->paginated($departments),
-            'filters' => $request->only(['search', 'faculty_id', 'sort', 'direction']),
-            'faculties' => Faculty::with('institution:id,name')->select('id', 'name', 'institution_id')->orderBy('name')->get(),
+            'filters' => $request->only(['search', 'sort', 'direction']),
+            'faculty' => [
+                'id' => $faculty->id,
+                'name' => $faculty->name,
+                'abbreviation' => $faculty->abbreviation,
+                'institution' => $faculty->institution?->only('id', 'name', 'abbreviation'),
+            ],
         ]);
     }
 
-    public function create(): Response
+    public function create(Faculty $faculty): Response
     {
+        $faculty->load('institution:id,name,abbreviation');
+
         return Inertia::render('admin/departments/create', [
-            'faculties' => Faculty::with('institution:id,name')->select('id', 'name', 'institution_id')->orderBy('name')->get(),
+            'faculty' => [
+                'id' => $faculty->id,
+                'name' => $faculty->name,
+                'abbreviation' => $faculty->abbreviation,
+                'institution' => $faculty->institution?->only('id', 'name', 'abbreviation'),
+            ],
         ]);
     }
 
-    public function store(StoreDepartmentRequest $request): RedirectResponse
+    public function store(StoreDepartmentRequest $request, Faculty $faculty): RedirectResponse
     {
-        Department::create($request->validated());
+        $faculty->departments()->create($request->validated());
 
-        return to_route('admin.departments.index')->with('success', 'Department created successfully.');
+        return to_route('admin.departments.index', $faculty)->with('success', 'Department created successfully.');
     }
 
     public function edit(Department $department): Response
     {
-        $department->load('faculty:id,name,institution_id', 'faculty.institution:id,name');
+        $department->load('faculty:id,name,institution_id', 'faculty.institution:id,name,abbreviation');
 
         return Inertia::render('admin/departments/edit', [
             'department' => $department,
-            'faculties' => Faculty::with('institution:id,name')->select('id', 'name', 'institution_id')->orderBy('name')->get(),
         ]);
     }
 
@@ -66,6 +76,6 @@ class DepartmentController extends Controller
     {
         $department->update($request->validated());
 
-        return to_route('admin.departments.index')->with('success', 'Department updated successfully.');
+        return to_route('admin.departments.index', $department->faculty_id)->with('success', 'Department updated successfully.');
     }
 }

@@ -16,8 +16,7 @@ class StoreFacultyRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'institution_id' => ['required', 'exists:institutions,id'],
-            'name' => ['required', 'string', 'max:255', Rule::unique('faculties')->where('institution_id', $this->institution_id)],
+            'name' => ['required', 'string', 'max:255', Rule::unique('faculties')->where('institution_id', $this->route('institution')->id)],
             'abbreviation' => ['nullable', 'string', 'max:50'],
         ];
     }

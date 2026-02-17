@@ -16,8 +16,7 @@ class UpdateFacultyRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'institution_id' => ['required', 'exists:institutions,id'],
-            'name' => ['required', 'string', 'max:255', Rule::unique('faculties')->where('institution_id', $this->institution_id)->ignore($this->route('faculty'))],
+            'name' => ['required', 'string', 'max:255', Rule::unique('faculties')->where('institution_id', $this->route('faculty')->institution_id)->ignore($this->route('faculty'))],
             'abbreviation' => ['nullable', 'string', 'max:50'],
         ];
     }

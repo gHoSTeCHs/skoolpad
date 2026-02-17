@@ -33,6 +33,7 @@ export default function InstitutionForm({ institution, institutionTypes, ownersh
         state: institution?.state ?? '',
         city: institution?.city ?? '',
         website: institution?.website ?? '',
+        logo: null as File | null,
         is_active: institution?.is_active ?? true,
     });
 
@@ -155,6 +156,20 @@ export default function InstitutionForm({ institution, institutionTypes, ownersh
                             />
                             <InputError message={form.errors.city} />
                         </div>
+                    </div>
+
+                    <div className="space-y-2">
+                        <Label htmlFor="logo">Logo</Label>
+                        {isEditing && institution?.logo_path && !form.data.logo && (
+                            <p className="text-xs text-muted-foreground">Current logo uploaded. Upload a new one to replace it.</p>
+                        )}
+                        <Input
+                            id="logo"
+                            type="file"
+                            accept="image/jpeg,image/png,image/webp"
+                            onChange={(e) => form.setData('logo', e.target.files?.[0] ?? null)}
+                        />
+                        <InputError message={form.errors.logo} />
                     </div>
 
                     <div className="space-y-2">

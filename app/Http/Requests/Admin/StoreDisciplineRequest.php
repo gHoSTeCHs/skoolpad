@@ -17,7 +17,7 @@ class StoreDisciplineRequest extends FormRequest
     {
         return [
             'name' => ['required', 'string', 'max:255', Rule::unique('disciplines')],
-            'slug' => ['required', 'string', 'max:255', 'alpha_dash', Rule::unique('disciplines')],
+            'slug' => ['nullable', 'string', 'max:255', 'alpha_dash', Rule::unique('disciplines')],
             'description' => ['nullable', 'string'],
             'icon' => ['nullable', 'string', 'max:100'],
         ];

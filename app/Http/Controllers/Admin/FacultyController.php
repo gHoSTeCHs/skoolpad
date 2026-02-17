@@ -17,16 +17,13 @@ class FacultyController extends Controller
 {
     use Paginates;
 
-    public function index(Request $request): Response
+    public function index(Request $request, Institution $institution): Response
     {
         $faculties = Faculty::query()
-            ->with('institution:id,name,abbreviation')
+            ->where('institution_id', $institution->id)
             ->withCount('departments')
             ->when($request->filled('search'), function ($query) use ($request) {
                 $query->where('name', 'like', "%{$request->string('search')}%");
-            })
-            ->when($request->filled('institution_id'), function ($query) use ($request) {
-                $query->where('institution_id', $request->string('institution_id'));
             })
             ->tap(fn ($query) => $this->applySorting($query, $request, ['name', 'departments_count']))
             ->paginate(15)
@@ -34,32 +31,31 @@ class FacultyController extends Controller
 
         return Inertia::render('admin/faculties/index', [
             'faculties' => $this->paginated($faculties),
-            'filters' => $request->only(['search', 'institution_id', 'sort', 'direction']),
-            'institutions' => Institution::select('id', 'name')->orderBy('name')->get(),
+            'filters' => $request->only(['search', 'sort', 'direction']),
+            'institution' => $institution->only('id', 'name', 'abbreviation'),
         ]);
     }
 
-    public function create(): Response
+    public function create(Institution $institution): Response
     {
         return Inertia::render('admin/faculties/create', [
-            'institutions' => Institution::select('id', 'name', 'abbreviation')->orderBy('name')->get(),
+            'institution' => $institution->only('id', 'name', 'abbreviation'),
         ]);
     }
 
-    public function store(StoreFacultyRequest $request): RedirectResponse
+    public function store(StoreFacultyRequest $request, Institution $institution): RedirectResponse
     {
-        Faculty::create($request->validated());
+        $institution->faculties()->create($request->validated());
 
-        return to_route('admin.faculties.index')->with('success', 'Faculty created successfully.');
+        return to_route('admin.faculties.index', $institution)->with('success', 'Faculty created successfully.');
     }
 
     public function edit(Faculty $faculty): Response
     {
-        $faculty->load('institution:id,name');
+        $faculty->load('institution:id,name,abbreviation');
 
         return Inertia::render('admin/faculties/edit', [
             'faculty' => $faculty,
-            'institutions' => Institution::select('id', 'name', 'abbreviation')->orderBy('name')->get(),
         ]);
     }
 
@@ -67,6 +63,6 @@ class FacultyController extends Controller
     {
         $faculty->update($request->validated());
 
-        return to_route('admin.faculties.index')->with('success', 'Faculty updated successfully.');
+        return to_route('admin.faculties.index', $faculty->institution_id)->with('success', 'Faculty updated successfully.');
     }
 }

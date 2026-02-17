@@ -18,7 +18,7 @@ class StoreExamTypeRequest extends FormRequest
         return [
             'country_id' => ['required', 'exists:countries,id'],
             'name' => ['required', 'string', 'max:255', Rule::unique('exam_types')],
-            'slug' => ['required', 'string', 'max:255', 'alpha_dash', Rule::unique('exam_types')],
+            'slug' => ['nullable', 'string', 'max:255', 'alpha_dash', Rule::unique('exam_types')],
             'description' => ['nullable', 'string'],
             'duration_minutes' => ['nullable', 'integer', 'min:1'],
             'questions_per_subject' => ['nullable', 'integer', 'min:1'],

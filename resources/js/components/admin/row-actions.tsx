@@ -8,11 +8,17 @@ import {
     DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 
-interface RowActionsProps {
-    editUrl: string;
+interface RowAction {
+    label: string;
+    href: string;
 }
 
-export function RowActions({ editUrl }: RowActionsProps) {
+interface RowActionsProps {
+    editUrl: string;
+    actions?: RowAction[];
+}
+
+export function RowActions({ editUrl, actions }: RowActionsProps) {
     return (
         <DropdownMenu>
             <DropdownMenuTrigger asChild>
@@ -28,6 +34,11 @@ export function RowActions({ editUrl }: RowActionsProps) {
                         Edit
                     </Link>
                 </DropdownMenuItem>
+                {actions?.map((action) => (
+                    <DropdownMenuItem key={action.href} asChild>
+                        <Link href={action.href}>{action.label}</Link>
+                    </DropdownMenuItem>
+                ))}
             </DropdownMenuContent>
         </DropdownMenu>
     );

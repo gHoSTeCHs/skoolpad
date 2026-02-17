@@ -1,5 +1,6 @@
 import { Head, router } from '@inertiajs/react';
 import { ClipboardList } from 'lucide-react';
+import ExamSubjectController from '@/actions/App/Http/Controllers/Admin/ExamSubjectController';
 import ExamTypeController from '@/actions/App/Http/Controllers/Admin/ExamTypeController';
 import { type ColumnDef, DataTable } from '@/components/admin/data-table';
 import { PageHeader } from '@/components/admin/page-header';
@@ -131,7 +132,10 @@ export default function AdminExamTypes({ examTypes, filters }: Props) {
                         </div>
                     }
                     renderActions={(row) => (
-                        <RowActions editUrl={ExamTypeController.edit.url(row.id)} />
+                        <RowActions
+                            editUrl={ExamTypeController.edit.url(row.id)}
+                            actions={[{ label: 'View Subjects', href: ExamSubjectController.index.url(row.id) }]}
+                        />
                     )}
                     emptyState={{
                         icon: ClipboardList,

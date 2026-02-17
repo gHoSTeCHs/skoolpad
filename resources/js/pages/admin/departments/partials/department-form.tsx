@@ -5,26 +5,23 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardFooter } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import type { Department } from '@/types/models';
 
 interface FacultyWithInstitution {
     id: string;
     name: string;
-    institution_id: string;
-    institution?: { id: string; name: string };
+    institution?: { id: string; name: string } | null;
 }
 
 interface DepartmentFormProps {
     department?: Department;
-    faculties: FacultyWithInstitution[];
+    faculty: FacultyWithInstitution;
 }
 
-export default function DepartmentForm({ department, faculties }: DepartmentFormProps) {
+export default function DepartmentForm({ department, faculty }: DepartmentFormProps) {
     const isEditing = !!department?.id;
 
     const form = useForm({
-        faculty_id: department?.faculty_id ?? '',
         name: department?.name ?? '',
         abbreviation: department?.abbreviation ?? '',
     });
@@ -35,7 +32,7 @@ export default function DepartmentForm({ department, faculties }: DepartmentForm
         if (isEditing) {
             form.put(DepartmentController.update.url(department!.id));
         } else {
-            form.post(DepartmentController.store.url());
+            form.post(DepartmentController.store.url(faculty.id));
         }
     }
 
@@ -44,23 +41,10 @@ export default function DepartmentForm({ department, faculties }: DepartmentForm
             <Card>
                 <CardContent className="space-y-6">
                     <div className="space-y-2">
-                        <Label htmlFor="faculty_id">Faculty</Label>
-                        <Select
-                            value={form.data.faculty_id}
-                            onValueChange={(value) => form.setData('faculty_id', value)}
-                        >
-                            <SelectTrigger id="faculty_id">
-                                <SelectValue placeholder="Select faculty" />
-                            </SelectTrigger>
-                            <SelectContent>
-                                {faculties.map((faculty) => (
-                                    <SelectItem key={faculty.id} value={faculty.id}>
-                                        {faculty.name}{faculty.institution ? ` — ${faculty.institution.name}` : ''}
-                                    </SelectItem>
-                                ))}
-                            </SelectContent>
-                        </Select>
-                        <InputError message={form.errors.faculty_id} />
+                        <Label>Faculty</Label>
+                        <p className="text-sm text-muted-foreground">
+                            {faculty.name}{faculty.institution ? ` — ${faculty.institution.name}` : ''}
+                        </p>
                     </div>
 
                     <div className="grid gap-6 sm:grid-cols-2">
@@ -89,7 +73,7 @@ export default function DepartmentForm({ department, faculties }: DepartmentForm
 
                 <CardFooter className="justify-end gap-3 border-t pt-6">
                     <Button variant="outline" asChild>
-                        <Link href={DepartmentController.index.url()}>Cancel</Link>
+                        <Link href={DepartmentController.index.url(faculty.id)}>Cancel</Link>
                     </Button>
                     <Button type="submit" disabled={form.processing}>
                         {isEditing ? 'Update Department' : 'Create Department'}

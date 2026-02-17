@@ -9,6 +9,7 @@ use App\Http\Requests\Admin\UpdateDisciplineRequest;
 use App\Models\Discipline;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Str;
 use Inertia\Inertia;
 use Inertia\Response;
 
@@ -40,7 +41,12 @@ class DisciplineController extends Controller
 
     public function store(StoreDisciplineRequest $request): RedirectResponse
     {
-        Discipline::create($request->validated());
+        $data = $request->validated();
+        if (empty($data['slug'])) {
+            $data['slug'] = Str::slug($data['name']);
+        }
+
+        Discipline::create($data);
 
         return to_route('admin.disciplines.index')->with('success', 'Discipline created successfully.');
     }

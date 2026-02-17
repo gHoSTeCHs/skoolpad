@@ -6,21 +6,19 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardFooter } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Switch } from '@/components/ui/switch';
 import type { ExamSubject } from '@/types/models';
 
 interface ExamSubjectFormProps {
     examSubject?: ExamSubject;
-    examTypes: { id: string; name: string }[];
+    examType: { id: string; name: string };
 }
 
-export default function ExamSubjectForm({ examSubject, examTypes }: ExamSubjectFormProps) {
+export default function ExamSubjectForm({ examSubject, examType }: ExamSubjectFormProps) {
     const isEditing = !!examSubject?.id;
     const slugTouched = useRef(false);
 
     const form = useForm({
-        exam_type_id: examSubject?.exam_type_id ?? '',
         name: examSubject?.name ?? '',
         slug: examSubject?.slug ?? '',
         is_compulsory: examSubject?.is_compulsory ?? false,
@@ -46,7 +44,7 @@ export default function ExamSubjectForm({ examSubject, examTypes }: ExamSubjectF
         if (isEditing) {
             form.put(ExamSubjectController.update.url(examSubject!.id));
         } else {
-            form.post(ExamSubjectController.store.url());
+            form.post(ExamSubjectController.store.url(examType.id));
         }
     }
 
@@ -55,23 +53,8 @@ export default function ExamSubjectForm({ examSubject, examTypes }: ExamSubjectF
             <Card>
                 <CardContent className="space-y-6">
                     <div className="space-y-2">
-                        <Label htmlFor="exam_type_id">Exam Type</Label>
-                        <Select
-                            value={form.data.exam_type_id}
-                            onValueChange={(value) => form.setData('exam_type_id', value)}
-                        >
-                            <SelectTrigger id="exam_type_id">
-                                <SelectValue placeholder="Select exam type" />
-                            </SelectTrigger>
-                            <SelectContent>
-                                {examTypes.map((examType) => (
-                                    <SelectItem key={examType.id} value={examType.id}>
-                                        {examType.name}
-                                    </SelectItem>
-                                ))}
-                            </SelectContent>
-                        </Select>
-                        <InputError message={form.errors.exam_type_id} />
+                        <Label>Exam Type</Label>
+                        <p className="text-sm text-muted-foreground">{examType.name}</p>
                     </div>
 
                     <div className="grid gap-6 sm:grid-cols-2">
@@ -112,10 +95,10 @@ export default function ExamSubjectForm({ examSubject, examTypes }: ExamSubjectF
 
                 <CardFooter className="justify-end gap-3 border-t pt-6">
                     <Button variant="outline" asChild>
-                        <Link href={ExamSubjectController.index.url()}>Cancel</Link>
+                        <Link href={ExamSubjectController.index.url(examType.id)}>Cancel</Link>
                     </Button>
                     <Button type="submit" disabled={form.processing}>
-                        {isEditing ? 'Update Exam Subject' : 'Create Exam Subject'}
+                        {isEditing ? 'Update Subject' : 'Create Subject'}
                     </Button>
                 </CardFooter>
             </Card>

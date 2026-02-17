@@ -16,9 +16,8 @@ class UpdateExamSubjectRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'exam_type_id' => ['required', 'exists:exam_types,id'],
             'name' => ['required', 'string', 'max:255'],
-            'slug' => ['required', 'string', 'max:255', 'alpha_dash', Rule::unique('exam_subjects')->where('exam_type_id', $this->exam_type_id)->ignore($this->route('exam_subject'))],
+            'slug' => ['required', 'string', 'max:255', 'alpha_dash', Rule::unique('exam_subjects')->where('exam_type_id', $this->route('examSubject')->exam_type_id)->ignore($this->route('examSubject'))],
             'is_compulsory' => ['boolean'],
         ];
     }

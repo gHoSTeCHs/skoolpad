@@ -16,7 +16,11 @@ import { UserMenuContent } from '@/components/user-menu-content';
 import { useIsMobile } from '@/hooks/use-mobile';
 import type { SharedData } from '@/types';
 
-export function NavUser() {
+type Props = {
+    variant?: 'admin' | 'app';
+};
+
+export function NavUser({ variant = 'app' }: Props) {
     const { auth } = usePage<SharedData>().props;
     const { state } = useSidebar();
     const isMobile = useIsMobile();
@@ -46,7 +50,7 @@ export function NavUser() {
                                   : 'bottom'
                         }
                     >
-                        <UserMenuContent user={auth.user} />
+                        <UserMenuContent user={auth.user} variant={variant} />
                     </DropdownMenuContent>
                 </DropdownMenu>
             </SidebarMenuItem>

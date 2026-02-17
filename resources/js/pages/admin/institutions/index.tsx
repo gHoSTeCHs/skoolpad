@@ -1,5 +1,6 @@
 import { Head, router } from '@inertiajs/react';
 import { Building2 } from 'lucide-react';
+import FacultyController from '@/actions/App/Http/Controllers/Admin/FacultyController';
 import InstitutionController from '@/actions/App/Http/Controllers/Admin/InstitutionController';
 import { type ColumnDef, DataTable } from '@/components/admin/data-table';
 import { PageHeader } from '@/components/admin/page-header';
@@ -182,7 +183,10 @@ export default function AdminInstitutions({ institutions, filters, institutionTy
                         </div>
                     }
                     renderActions={(row) => (
-                        <RowActions editUrl={InstitutionController.edit.url(row.id)} />
+                        <RowActions
+                            editUrl={InstitutionController.edit.url(row.id)}
+                            actions={[{ label: 'View Faculties', href: FacultyController.index.url(row.id) }]}
+                        />
                     )}
                     emptyState={{
                         icon: Building2,

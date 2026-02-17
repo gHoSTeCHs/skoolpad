@@ -1,18 +1,17 @@
-import { Head, router } from '@inertiajs/react';
+import { Head } from '@inertiajs/react';
 import { Library } from 'lucide-react';
+import DepartmentController from '@/actions/App/Http/Controllers/Admin/DepartmentController';
 import FacultyController from '@/actions/App/Http/Controllers/Admin/FacultyController';
+import InstitutionController from '@/actions/App/Http/Controllers/Admin/InstitutionController';
 import { type ColumnDef, DataTable } from '@/components/admin/data-table';
 import { PageHeader } from '@/components/admin/page-header';
 import { RowActions } from '@/components/admin/row-actions';
 import { SearchInput } from '@/components/admin/search-input';
-import { Button } from '@/components/ui/button';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import AdminLayout from '@/layouts/admin-layout';
 import type { Faculty, PaginatedData } from '@/types/models';
 
 interface Filters {
     search?: string;
-    institution_id?: string;
     sort?: string;
     direction?: string;
 }
@@ -20,10 +19,8 @@ interface Filters {
 interface Props {
     faculties: PaginatedData<Faculty>;
     filters: Filters;
-    institutions: { id: string; name: string }[];
+    institution: { id: string; name: string; abbreviation: string };
 }
-
-const breadcrumbs = [{ title: 'Faculties', href: '/admin/faculties' }];
 
 const columns: ColumnDef<Faculty>[] = [
     {
@@ -40,11 +37,6 @@ const columns: ColumnDef<Faculty>[] = [
         sortable: true,
     },
     {
-        id: 'institution',
-        header: 'Institution',
-        cell: (row) => row.institution?.name ?? '—',
-    },
-    {
         id: 'departments_count',
         header: 'Departments',
         cell: (row) => row.departments_count ?? 0,
@@ -53,32 +45,22 @@ const columns: ColumnDef<Faculty>[] = [
     },
 ];
 
-export default function AdminFaculties({ faculties, filters, institutions }: Props) {
-    const indexUrl = FacultyController.index.url();
+export default function AdminFaculties({ faculties, filters, institution }: Props) {
+    const indexUrl = FacultyController.index.url(institution.id);
 
-    function handleFilterChange(key: string, value: string | undefined) {
-        router.get(
-            indexUrl,
-            { ...filters, [key]: value || undefined, search: filters.search || undefined },
-            { preserveState: true, preserveScroll: true, replace: true },
-        );
-    }
-
-    function clearFilters() {
-        router.get(
-            indexUrl,
-            { search: filters.search || undefined, sort: filters.sort, direction: filters.direction },
-            { preserveState: true, preserveScroll: true, replace: true },
-        );
-    }
+    const breadcrumbs = [
+        { title: 'Institutions', href: InstitutionController.index.url() },
+        { title: institution.name, href: indexUrl },
+        { title: 'Faculties', href: indexUrl },
+    ];
 
     return (
         <AdminLayout breadcrumbs={breadcrumbs}>
-            <Head title="Faculties" />
+            <Head title={`${institution.abbreviation} Faculties`} />
             <div className="flex flex-col gap-4 p-4 md:p-6">
                 <PageHeader
-                    title="Faculties"
-                    action={{ label: 'Add Faculty', href: FacultyController.create.url() }}
+                    title={`${institution.abbreviation} Faculties`}
+                    action={{ label: 'Add Faculty', href: FacultyController.create.url(institution.id) }}
                 />
 
                 <DataTable
@@ -86,43 +68,23 @@ export default function AdminFaculties({ faculties, filters, institutions }: Pro
                     paginatedData={faculties}
                     getRowKey={(row) => row.id}
                     toolbar={
-                        <div className="flex flex-wrap items-center gap-3">
-                            <SearchInput
-                                value={filters.search ?? ''}
-                                routeUrl={indexUrl}
-                                placeholder="Search faculties..."
-                                queryParams={{ institution_id: filters.institution_id, sort: filters.sort, direction: filters.direction }}
-                            />
-                            <Select
-                                value={filters.institution_id ?? ''}
-                                onValueChange={(value) => handleFilterChange('institution_id', value === 'all' ? undefined : value)}
-                            >
-                                <SelectTrigger className="w-[220px]">
-                                    <SelectValue placeholder="All Institutions" />
-                                </SelectTrigger>
-                                <SelectContent>
-                                    <SelectItem value="all">All Institutions</SelectItem>
-                                    {institutions.map((institution) => (
-                                        <SelectItem key={institution.id} value={institution.id}>
-                                            {institution.name}
-                                        </SelectItem>
-                                    ))}
-                                </SelectContent>
-                            </Select>
-                            {filters.institution_id && (
-                                <Button variant="ghost" size="sm" onClick={clearFilters}>
-                                    Clear filters
-                                </Button>
-                            )}
-                        </div>
+                        <SearchInput
+                            value={filters.search ?? ''}
+                            routeUrl={indexUrl}
+                            placeholder="Search faculties..."
+                            queryParams={{ sort: filters.sort, direction: filters.direction }}
+                        />
                     }
                     renderActions={(row) => (
-                        <RowActions editUrl={FacultyController.edit.url(row.id)} />
+                        <RowActions
+                            editUrl={FacultyController.edit.url(row.id)}
+                            actions={[{ label: 'View Departments', href: DepartmentController.index.url(row.id) }]}
+                        />
                     )}
                     emptyState={{
                         icon: Library,
                         title: 'No faculties found',
-                        description: 'Try adjusting your search or filter criteria.',
+                        description: 'Try adjusting your search criteria.',
                     }}
                 />
             </div>

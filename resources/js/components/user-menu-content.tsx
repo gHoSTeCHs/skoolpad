@@ -9,20 +9,24 @@ import {
 import { UserInfo } from '@/components/user-info';
 import { useMobileNavigation } from '@/hooks/use-mobile-navigation';
 import { logout } from '@/routes';
+import adminSettings from '@/routes/admin/settings';
 import { edit } from '@/routes/profile';
 import type { User } from '@/types';
 
 type Props = {
     user: User;
+    variant?: 'admin' | 'app';
 };
 
-export function UserMenuContent({ user }: Props) {
+export function UserMenuContent({ user, variant = 'app' }: Props) {
     const cleanup = useMobileNavigation();
 
     const handleLogout = () => {
         cleanup();
         router.flushAll();
     };
+
+    const settingsHref = variant === 'admin' ? adminSettings.index.url() : edit();
 
     return (
         <>
@@ -36,7 +40,7 @@ export function UserMenuContent({ user }: Props) {
                 <DropdownMenuItem asChild>
                     <Link
                         className="block w-full cursor-pointer"
-                        href={edit()}
+                        href={settingsHref}
                         prefetch
                         onClick={cleanup}
                     >

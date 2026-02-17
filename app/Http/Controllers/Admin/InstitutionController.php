@@ -12,6 +12,7 @@ use App\Models\Country;
 use App\Models\Institution;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Storage;
 use Inertia\Inertia;
 use Inertia\Response;
 
@@ -62,7 +63,14 @@ class InstitutionController extends Controller
 
     public function store(StoreInstitutionRequest $request): RedirectResponse
     {
-        Institution::create($request->validated());
+        $data = $request->validated();
+
+        if ($request->hasFile('logo')) {
+            $data['logo_path'] = $request->file('logo')->store('logos/institutions', 's3');
+        }
+        unset($data['logo']);
+
+        Institution::create($data);
 
         return to_route('admin.institutions.index')->with('success', 'Institution created successfully.');
     }
@@ -79,7 +87,17 @@ class InstitutionController extends Controller
 
     public function update(UpdateInstitutionRequest $request, Institution $institution): RedirectResponse
     {
-        $institution->update($request->validated());
+        $data = $request->validated();
+
+        if ($request->hasFile('logo')) {
+            if ($institution->logo_path) {
+                Storage::disk('s3')->delete($institution->logo_path);
+            }
+            $data['logo_path'] = $request->file('logo')->store('logos/institutions', 's3');
+        }
+        unset($data['logo']);
+
+        $institution->update($data);
 
         return to_route('admin.institutions.index')->with('success', 'Institution updated successfully.');
     }

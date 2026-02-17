@@ -16,9 +16,8 @@ class StoreExamSubjectRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'exam_type_id' => ['required', 'exists:exam_types,id'],
             'name' => ['required', 'string', 'max:255'],
-            'slug' => ['required', 'string', 'max:255', 'alpha_dash', Rule::unique('exam_subjects')->where('exam_type_id', $this->exam_type_id)],
+            'slug' => ['required', 'string', 'max:255', 'alpha_dash', Rule::unique('exam_subjects')->where('exam_type_id', $this->route('examType')->id)],
             'is_compulsory' => ['boolean'],
         ];
     }

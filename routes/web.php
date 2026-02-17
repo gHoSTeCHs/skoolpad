@@ -55,10 +55,25 @@ Route::middleware(['auth', 'verified', 'staff'])->prefix('admin')->name('admin.'
 
     Route::resource('institutions', InstitutionController::class)->except(['show', 'destroy']);
     Route::resource('disciplines', DisciplineController::class)->except(['show', 'destroy']);
-    Route::resource('faculties', FacultyController::class)->except(['show', 'destroy']);
-    Route::resource('departments', DepartmentController::class)->except(['show', 'destroy']);
     Route::resource('exam-types', ExamTypeController::class)->except(['show', 'destroy']);
-    Route::resource('exam-subjects', ExamSubjectController::class)->except(['show', 'destroy']);
+
+    Route::get('institutions/{institution}/faculties', [FacultyController::class, 'index'])->name('faculties.index');
+    Route::get('institutions/{institution}/faculties/create', [FacultyController::class, 'create'])->name('faculties.create');
+    Route::post('institutions/{institution}/faculties', [FacultyController::class, 'store'])->name('faculties.store');
+    Route::get('faculties/{faculty}/edit', [FacultyController::class, 'edit'])->name('faculties.edit');
+    Route::put('faculties/{faculty}', [FacultyController::class, 'update'])->name('faculties.update');
+
+    Route::get('faculties/{faculty}/departments', [DepartmentController::class, 'index'])->name('departments.index');
+    Route::get('faculties/{faculty}/departments/create', [DepartmentController::class, 'create'])->name('departments.create');
+    Route::post('faculties/{faculty}/departments', [DepartmentController::class, 'store'])->name('departments.store');
+    Route::get('departments/{department}/edit', [DepartmentController::class, 'edit'])->name('departments.edit');
+    Route::put('departments/{department}', [DepartmentController::class, 'update'])->name('departments.update');
+
+    Route::get('exam-types/{examType}/subjects', [ExamSubjectController::class, 'index'])->name('exam-subjects.index');
+    Route::get('exam-types/{examType}/subjects/create', [ExamSubjectController::class, 'create'])->name('exam-subjects.create');
+    Route::post('exam-types/{examType}/subjects', [ExamSubjectController::class, 'store'])->name('exam-subjects.store');
+    Route::get('exam-subjects/{examSubject}/edit', [ExamSubjectController::class, 'edit'])->name('exam-subjects.edit');
+    Route::put('exam-subjects/{examSubject}', [ExamSubjectController::class, 'update'])->name('exam-subjects.update');
 });
 
 require __DIR__.'/settings.php';

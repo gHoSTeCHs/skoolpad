@@ -85,7 +85,7 @@ test('store creates an exam type and redirects', function () {
 test('store validates required fields', function () {
     $this->actingAs($this->admin)
         ->post(route('admin.exam-types.store'), [])
-        ->assertSessionHasErrors(['country_id', 'name', 'slug']);
+        ->assertSessionHasErrors(['country_id', 'name']);
 });
 
 test('store validates unique name and slug', function () {

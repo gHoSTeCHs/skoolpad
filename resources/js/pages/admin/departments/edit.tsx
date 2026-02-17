@@ -1,23 +1,23 @@
 import { Head } from '@inertiajs/react';
+import DepartmentController from '@/actions/App/Http/Controllers/Admin/DepartmentController';
+import FacultyController from '@/actions/App/Http/Controllers/Admin/FacultyController';
+import InstitutionController from '@/actions/App/Http/Controllers/Admin/InstitutionController';
 import AdminLayout from '@/layouts/admin-layout';
 import DepartmentForm from '@/pages/admin/departments/partials/department-form';
 import type { Department } from '@/types/models';
 
-interface FacultyWithInstitution {
-    id: string;
-    name: string;
-    institution_id: string;
-    institution?: { id: string; name: string };
-}
-
 interface Props {
     department: Department;
-    faculties: FacultyWithInstitution[];
 }
 
-export default function AdminDepartmentsEdit({ department, faculties }: Props) {
+export default function AdminDepartmentsEdit({ department }: Props) {
+    const faculty = department.faculty!;
+    const institution = faculty.institution!;
+
     const breadcrumbs = [
-        { title: 'Departments', href: '/admin/departments' },
+        { title: 'Institutions', href: InstitutionController.index.url() },
+        { title: institution.name, href: FacultyController.index.url(institution.id) },
+        { title: faculty.name, href: DepartmentController.index.url(faculty.id) },
         { title: department.name, href: '#' },
     ];
 
@@ -32,7 +32,7 @@ export default function AdminDepartmentsEdit({ department, faculties }: Props) {
                     </p>
                 </div>
                 <div className="max-w-2xl">
-                    <DepartmentForm department={department} faculties={faculties} />
+                    <DepartmentForm department={department} faculty={faculty} />
                 </div>
             </div>
         </AdminLayout>

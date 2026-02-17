@@ -17,7 +17,7 @@ export default function Register() {
         >
             <Head title="Register" />
             <Form
-                {...store.form()}
+                {...store.post()}
                 resetOnSuccess={['password', 'password_confirmation']}
                 disableWhileProcessing
                 className="flex flex-col gap-6"

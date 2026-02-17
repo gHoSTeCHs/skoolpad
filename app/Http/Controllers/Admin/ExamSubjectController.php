@@ -17,15 +17,12 @@ class ExamSubjectController extends Controller
 {
     use Paginates;
 
-    public function index(Request $request): Response
+    public function index(Request $request, ExamType $examType): Response
     {
         $examSubjects = ExamSubject::query()
-            ->with('examType:id,name')
+            ->where('exam_type_id', $examType->id)
             ->when($request->filled('search'), function ($query) use ($request) {
                 $query->where('name', 'like', "%{$request->string('search')}%");
-            })
-            ->when($request->filled('exam_type_id'), function ($query) use ($request) {
-                $query->where('exam_type_id', $request->string('exam_type_id'));
             })
             ->tap(fn ($query) => $this->applySorting($query, $request, ['name', 'is_compulsory']))
             ->paginate(15)
@@ -33,23 +30,23 @@ class ExamSubjectController extends Controller
 
         return Inertia::render('admin/exam-subjects/index', [
             'examSubjects' => $this->paginated($examSubjects),
-            'filters' => $request->only(['search', 'exam_type_id', 'sort', 'direction']),
-            'examTypes' => ExamType::select('id', 'name')->orderBy('name')->get(),
+            'filters' => $request->only(['search', 'sort', 'direction']),
+            'examType' => $examType->only('id', 'name', 'slug'),
         ]);
     }
 
-    public function create(): Response
+    public function create(ExamType $examType): Response
     {
         return Inertia::render('admin/exam-subjects/create', [
-            'examTypes' => ExamType::select('id', 'name')->orderBy('name')->get(),
+            'examType' => $examType->only('id', 'name', 'slug'),
         ]);
     }
 
-    public function store(StoreExamSubjectRequest $request): RedirectResponse
+    public function store(StoreExamSubjectRequest $request, ExamType $examType): RedirectResponse
     {
-        ExamSubject::create($request->validated());
+        $examType->examSubjects()->create($request->validated());
 
-        return to_route('admin.exam-subjects.index')->with('success', 'Exam subject created successfully.');
+        return to_route('admin.exam-subjects.index', $examType)->with('success', 'Exam subject created successfully.');
     }
 
     public function edit(ExamSubject $examSubject): Response
@@ -58,7 +55,6 @@ class ExamSubjectController extends Controller
 
         return Inertia::render('admin/exam-subjects/edit', [
             'examSubject' => $examSubject,
-            'examTypes' => ExamType::select('id', 'name')->orderBy('name')->get(),
         ]);
     }
 
@@ -66,6 +62,6 @@ class ExamSubjectController extends Controller
     {
         $examSubject->update($request->validated());
 
-        return to_route('admin.exam-subjects.index')->with('success', 'Exam subject updated successfully.');
+        return to_route('admin.exam-subjects.index', $examSubject->exam_type_id)->with('success', 'Exam subject updated successfully.');
     }
 }

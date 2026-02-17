@@ -1,25 +1,24 @@
-import { Head, router } from '@inertiajs/react';
+import { Head } from '@inertiajs/react';
 import { BookMarked } from 'lucide-react';
 import DepartmentController from '@/actions/App/Http/Controllers/Admin/DepartmentController';
+import FacultyController from '@/actions/App/Http/Controllers/Admin/FacultyController';
+import InstitutionController from '@/actions/App/Http/Controllers/Admin/InstitutionController';
 import { type ColumnDef, DataTable } from '@/components/admin/data-table';
 import { PageHeader } from '@/components/admin/page-header';
 import { RowActions } from '@/components/admin/row-actions';
 import { SearchInput } from '@/components/admin/search-input';
-import { Button } from '@/components/ui/button';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import AdminLayout from '@/layouts/admin-layout';
 import type { Department, PaginatedData } from '@/types/models';
 
 interface FacultyWithInstitution {
     id: string;
     name: string;
-    institution_id: string;
-    institution?: { id: string; name: string };
+    abbreviation: string | null;
+    institution: { id: string; name: string; abbreviation: string } | null;
 }
 
 interface Filters {
     search?: string;
-    faculty_id?: string;
     sort?: string;
     direction?: string;
 }
@@ -27,10 +26,8 @@ interface Filters {
 interface Props {
     departments: PaginatedData<Department>;
     filters: Filters;
-    faculties: FacultyWithInstitution[];
+    faculty: FacultyWithInstitution;
 }
-
-const breadcrumbs = [{ title: 'Departments', href: '/admin/departments' }];
 
 const columns: ColumnDef<Department>[] = [
     {
@@ -46,44 +43,26 @@ const columns: ColumnDef<Department>[] = [
         ),
         sortable: true,
     },
-    {
-        id: 'faculty',
-        header: 'Faculty',
-        cell: (row) => row.faculty?.name ?? '—',
-    },
-    {
-        id: 'institution',
-        header: 'Institution',
-        cell: (row) => row.faculty?.institution?.name ?? '—',
-    },
 ];
 
-export default function AdminDepartments({ departments, filters, faculties }: Props) {
-    const indexUrl = DepartmentController.index.url();
+export default function AdminDepartments({ departments, filters, faculty }: Props) {
+    const indexUrl = DepartmentController.index.url(faculty.id);
+    const institution = faculty.institution!;
 
-    function handleFilterChange(key: string, value: string | undefined) {
-        router.get(
-            indexUrl,
-            { ...filters, [key]: value || undefined, search: filters.search || undefined },
-            { preserveState: true, preserveScroll: true, replace: true },
-        );
-    }
-
-    function clearFilters() {
-        router.get(
-            indexUrl,
-            { search: filters.search || undefined, sort: filters.sort, direction: filters.direction },
-            { preserveState: true, preserveScroll: true, replace: true },
-        );
-    }
+    const breadcrumbs = [
+        { title: 'Institutions', href: InstitutionController.index.url() },
+        { title: institution.name, href: FacultyController.index.url(institution.id) },
+        { title: faculty.name, href: indexUrl },
+        { title: 'Departments', href: indexUrl },
+    ];
 
     return (
         <AdminLayout breadcrumbs={breadcrumbs}>
-            <Head title="Departments" />
+            <Head title={`${faculty.name} Departments`} />
             <div className="flex flex-col gap-4 p-4 md:p-6">
                 <PageHeader
-                    title="Departments"
-                    action={{ label: 'Add Department', href: DepartmentController.create.url() }}
+                    title={`${faculty.abbreviation ?? faculty.name} Departments`}
+                    action={{ label: 'Add Department', href: DepartmentController.create.url(faculty.id) }}
                 />
 
                 <DataTable
@@ -91,35 +70,12 @@ export default function AdminDepartments({ departments, filters, faculties }: Pr
                     paginatedData={departments}
                     getRowKey={(row) => row.id}
                     toolbar={
-                        <div className="flex flex-wrap items-center gap-3">
-                            <SearchInput
-                                value={filters.search ?? ''}
-                                routeUrl={indexUrl}
-                                placeholder="Search departments..."
-                                queryParams={{ faculty_id: filters.faculty_id, sort: filters.sort, direction: filters.direction }}
-                            />
-                            <Select
-                                value={filters.faculty_id ?? ''}
-                                onValueChange={(value) => handleFilterChange('faculty_id', value === 'all' ? undefined : value)}
-                            >
-                                <SelectTrigger className="w-[260px]">
-                                    <SelectValue placeholder="All Faculties" />
-                                </SelectTrigger>
-                                <SelectContent>
-                                    <SelectItem value="all">All Faculties</SelectItem>
-                                    {faculties.map((faculty) => (
-                                        <SelectItem key={faculty.id} value={faculty.id}>
-                                            {faculty.name}{faculty.institution ? ` — ${faculty.institution.name}` : ''}
-                                        </SelectItem>
-                                    ))}
-                                </SelectContent>
-                            </Select>
-                            {filters.faculty_id && (
-                                <Button variant="ghost" size="sm" onClick={clearFilters}>
-                                    Clear filters
-                                </Button>
-                            )}
-                        </div>
+                        <SearchInput
+                            value={filters.search ?? ''}
+                            routeUrl={indexUrl}
+                            placeholder="Search departments..."
+                            queryParams={{ sort: filters.sort, direction: filters.direction }}
+                        />
                     }
                     renderActions={(row) => (
                         <RowActions editUrl={DepartmentController.edit.url(row.id)} />
@@ -127,7 +83,7 @@ export default function AdminDepartments({ departments, filters, faculties }: Pr
                     emptyState={{
                         icon: BookMarked,
                         title: 'No departments found',
-                        description: 'Try adjusting your search or filter criteria.',
+                        description: 'Try adjusting your search criteria.',
                     }}
                 />
             </div>

@@ -5,20 +5,17 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardFooter } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import type { Faculty } from '@/types/models';
-import React from 'react';
 
 interface FacultyFormProps {
     faculty?: Faculty;
-    institutions: { id: string; name: string; abbreviation?: string }[];
+    institution: { id: string; name: string; abbreviation?: string };
 }
 
-export default function FacultyForm({ faculty, institutions }: FacultyFormProps) {
+export default function FacultyForm({ faculty, institution }: FacultyFormProps) {
     const isEditing = !!faculty?.id;
 
     const form = useForm({
-        institution_id: faculty?.institution_id ?? '',
         name: faculty?.name ?? '',
         abbreviation: faculty?.abbreviation ?? '',
     });
@@ -29,7 +26,7 @@ export default function FacultyForm({ faculty, institutions }: FacultyFormProps)
         if (isEditing) {
             form.put(FacultyController.update.url(faculty!.id));
         } else {
-            form.post(FacultyController.store.url());
+            form.post(FacultyController.store.url(institution.id));
         }
     }
 
@@ -38,23 +35,10 @@ export default function FacultyForm({ faculty, institutions }: FacultyFormProps)
             <Card>
                 <CardContent className="space-y-6">
                     <div className="space-y-2">
-                        <Label htmlFor="institution_id">Institution</Label>
-                        <Select
-                            value={form.data.institution_id}
-                            onValueChange={(value) => form.setData('institution_id', value)}
-                        >
-                            <SelectTrigger id="institution_id">
-                                <SelectValue placeholder="Select institution" />
-                            </SelectTrigger>
-                            <SelectContent>
-                                {institutions.map((institution) => (
-                                    <SelectItem key={institution.id} value={institution.id}>
-                                        {institution.name}{institution.abbreviation ? ` (${institution.abbreviation})` : ''}
-                                    </SelectItem>
-                                ))}
-                            </SelectContent>
-                        </Select>
-                        <InputError message={form.errors.institution_id} />
+                        <Label>Institution</Label>
+                        <p className="text-sm text-muted-foreground">
+                            {institution.name}{institution.abbreviation ? ` (${institution.abbreviation})` : ''}
+                        </p>
                     </div>
 
                     <div className="grid gap-6 sm:grid-cols-2">
@@ -83,7 +67,7 @@ export default function FacultyForm({ faculty, institutions }: FacultyFormProps)
 
                 <CardFooter className="justify-end gap-3 border-t pt-6">
                     <Button variant="outline" asChild>
-                        <Link href={FacultyController.index.url()}>Cancel</Link>
+                        <Link href={FacultyController.index.url(institution.id)}>Cancel</Link>
                     </Button>
                     <Button type="submit" disabled={form.processing}>
                         {isEditing ? 'Update Faculty' : 'Create Faculty'}

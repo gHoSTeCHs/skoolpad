@@ -26,7 +26,7 @@ class StoreInstitutionRequest extends FormRequest
             'state' => ['nullable', 'string', 'max:100'],
             'city' => ['nullable', 'string', 'max:100'],
             'website' => ['nullable', 'url', 'max:255'],
-            'logo_path' => ['nullable', 'string', 'max:500'],
+            'logo' => ['nullable', 'image', 'mimes:jpeg,png,webp', 'max:2048'],
             'is_active' => ['boolean'],
         ];
     }

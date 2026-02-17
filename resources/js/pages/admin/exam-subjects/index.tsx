@@ -1,25 +1,17 @@
-import { Head, router } from '@inertiajs/react';
+import { Head } from '@inertiajs/react';
 import { FileText } from 'lucide-react';
 import ExamSubjectController from '@/actions/App/Http/Controllers/Admin/ExamSubjectController';
+import ExamTypeController from '@/actions/App/Http/Controllers/Admin/ExamTypeController';
 import { type ColumnDef, DataTable } from '@/components/admin/data-table';
 import { PageHeader } from '@/components/admin/page-header';
 import { RowActions } from '@/components/admin/row-actions';
 import { SearchInput } from '@/components/admin/search-input';
 import { Badge } from '@/components/ui/badge';
-import { Button } from '@/components/ui/button';
-import {
-    Select,
-    SelectContent,
-    SelectItem,
-    SelectTrigger,
-    SelectValue,
-} from '@/components/ui/select';
 import AdminLayout from '@/layouts/admin-layout';
 import type { ExamSubject, PaginatedData } from '@/types/models';
 
 interface Filters {
     search?: string;
-    exam_type_id?: string;
     sort?: string;
     direction?: string;
 }
@@ -27,10 +19,8 @@ interface Filters {
 interface Props {
     examSubjects: PaginatedData<ExamSubject>;
     filters: Filters;
-    examTypes: { id: string; name: string }[];
+    examType: { id: string; name: string; slug: string };
 }
-
-const breadcrumbs = [{ title: 'Exam Subjects', href: '/admin/exam-subjects' }];
 
 const columns: ColumnDef<ExamSubject>[] = [
     {
@@ -49,11 +39,6 @@ const columns: ColumnDef<ExamSubject>[] = [
         ),
     },
     {
-        id: 'exam_type',
-        header: 'Exam Type',
-        cell: (row) => row.exam_type?.name ?? '—',
-    },
-    {
         id: 'is_compulsory',
         header: 'Compulsory',
         cell: (row) => (
@@ -65,46 +50,24 @@ const columns: ColumnDef<ExamSubject>[] = [
     },
 ];
 
-export default function AdminExamSubjects({
-    examSubjects,
-    filters,
-    examTypes,
-}: Props) {
-    const indexUrl = ExamSubjectController.index.url();
+export default function AdminExamSubjects({ examSubjects, filters, examType }: Props) {
+    const indexUrl = ExamSubjectController.index.url(examType.id);
 
-    function handleFilterChange(key: string, value: string | undefined) {
-        router.get(
-            indexUrl,
-            {
-                ...filters,
-                [key]: value || undefined,
-                search: filters.search || undefined,
-            },
-            { preserveState: true, preserveScroll: true, replace: true },
-        );
-    }
-
-    function clearFilters() {
-        router.get(
-            indexUrl,
-            {
-                search: filters.search || undefined,
-                sort: filters.sort,
-                direction: filters.direction,
-            },
-            { preserveState: true, preserveScroll: true, replace: true },
-        );
-    }
+    const breadcrumbs = [
+        { title: 'Exam Types', href: ExamTypeController.index.url() },
+        { title: examType.name, href: indexUrl },
+        { title: 'Subjects', href: indexUrl },
+    ];
 
     return (
         <AdminLayout breadcrumbs={breadcrumbs}>
-            <Head title="Exam Subjects" />
+            <Head title={`${examType.name} Subjects`} />
             <div className="flex flex-col gap-4 p-4 md:p-6">
                 <PageHeader
-                    title="Exam Subjects"
+                    title={`${examType.name} Subjects`}
                     action={{
-                        label: 'Add Exam Subject',
-                        href: ExamSubjectController.create.url(),
+                        label: 'Add Subject',
+                        href: ExamSubjectController.create.url(examType.id),
                     }}
                 />
 
@@ -113,64 +76,20 @@ export default function AdminExamSubjects({
                     paginatedData={examSubjects}
                     getRowKey={(row) => row.id}
                     toolbar={
-                        <div className="flex flex-wrap items-center gap-3">
-                            <SearchInput
-                                value={filters.search ?? ''}
-                                routeUrl={indexUrl}
-                                placeholder="Search exam subjects..."
-                                queryParams={{
-                                    exam_type_id: filters.exam_type_id,
-                                    sort: filters.sort,
-                                    direction: filters.direction,
-                                }}
-                            />
-                            <Select
-                                value={filters.exam_type_id ?? ''}
-                                onValueChange={(value) =>
-                                    handleFilterChange(
-                                        'exam_type_id',
-                                        value === 'all' ? undefined : value,
-                                    )
-                                }
-                            >
-                                <SelectTrigger className="w-[200px]">
-                                    <SelectValue placeholder="All Exam Types" />
-                                </SelectTrigger>
-                                <SelectContent>
-                                    <SelectItem value="all">
-                                        All Exam Types
-                                    </SelectItem>
-                                    {examTypes.map((examType) => (
-                                        <SelectItem
-                                            key={examType.id}
-                                            value={examType.id}
-                                        >
-                                            {examType.name}
-                                        </SelectItem>
-                                    ))}
-                                </SelectContent>
-                            </Select>
-                            {filters.exam_type_id && (
-                                <Button
-                                    variant="ghost"
-                                    size="sm"
-                                    onClick={clearFilters}
-                                >
-                                    Clear filters
-                                </Button>
-                            )}
-                        </div>
+                        <SearchInput
+                            value={filters.search ?? ''}
+                            routeUrl={indexUrl}
+                            placeholder="Search subjects..."
+                            queryParams={{ sort: filters.sort, direction: filters.direction }}
+                        />
                     }
                     renderActions={(row) => (
-                        <RowActions
-                            editUrl={ExamSubjectController.edit.url(row.id)}
-                        />
+                        <RowActions editUrl={ExamSubjectController.edit.url(row.id)} />
                     )}
                     emptyState={{
                         icon: FileText,
-                        title: 'No exam subjects found',
-                        description:
-                            'Try adjusting your search or filter criteria.',
+                        title: 'No subjects found',
+                        description: 'Try adjusting your search criteria.',
                     }}
                 />
             </div>

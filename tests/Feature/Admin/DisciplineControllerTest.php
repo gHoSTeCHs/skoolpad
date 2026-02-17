@@ -64,7 +64,7 @@ test('store creates a discipline and redirects', function () {
 test('store validates required fields', function () {
     $this->actingAs($this->admin)
         ->post(route('admin.disciplines.store'), [])
-        ->assertSessionHasErrors(['name', 'slug']);
+        ->assertSessionHasErrors(['name']);
 });
 
 test('store validates unique name', function () {

@@ -5,6 +5,8 @@ use App\Enums\OwnershipType;
 use App\Models\Country;
 use App\Models\Institution;
 use App\Models\User;
+use Illuminate\Http\UploadedFile;
+use Illuminate\Support\Facades\Storage;
 
 beforeEach(function () {
     $this->admin = User::factory()->admin()->create();
@@ -231,6 +233,27 @@ test('non-staff users get 403', function () {
     $this->actingAs($user)
         ->get(route('admin.institutions.index'))
         ->assertForbidden();
+});
+
+test('store uploads a logo', function () {
+    Storage::fake('s3');
+    $country = Country::factory()->create();
+
+    $this->actingAs($this->admin)
+        ->post(route('admin.institutions.store'), [
+            'name' => 'Logo University',
+            'abbreviation' => 'LU',
+            'institution_type' => 'university',
+            'ownership_type' => 'federal',
+            'country_id' => $country->id,
+            'logo' => UploadedFile::fake()->image('logo.png', 200, 200),
+            'is_active' => true,
+        ])
+        ->assertRedirect(route('admin.institutions.index'));
+
+    $institution = Institution::where('abbreviation', 'LU')->first();
+    expect($institution->logo_path)->not->toBeNull();
+    Storage::disk('s3')->assertExists($institution->logo_path);
 });
 
 test('guests cannot access institution routes', function () {

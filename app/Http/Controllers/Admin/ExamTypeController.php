@@ -10,6 +10,7 @@ use App\Models\Country;
 use App\Models\ExamType;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Str;
 use Inertia\Inertia;
 use Inertia\Response;
 
@@ -46,7 +47,12 @@ class ExamTypeController extends Controller
 
     public function store(StoreExamTypeRequest $request): RedirectResponse
     {
-        ExamType::create($request->validated());
+        $data = $request->validated();
+        if (empty($data['slug'])) {
+            $data['slug'] = Str::slug($data['name']);
+        }
+
+        ExamType::create($data);
 
         return to_route('admin.exam-types.index')->with('success', 'Exam type created successfully.');
     }
