@@ -6,6 +6,7 @@ import QuestionCard from '@/components/skoolpad/question-card';
 import SpBadge from '@/components/skoolpad/sp-badge';
 import StatCard from '@/components/skoolpad/stat-card';
 import StreakWidget from '@/components/skoolpad/streak-widget';
+import { Skeleton, SkeletonText } from '@/components/ui/skeleton';
 import { useAppearance } from '@/hooks/use-appearance';
 
 const COURSES = [
@@ -358,47 +359,12 @@ export default function DesignShowcase() {
                                 Skeleton Loading
                             </p>
                             <div className="flex max-w-xs flex-col gap-2">
-                                <div
-                                    className="h-4 w-[65%] rounded-lg"
-                                    style={{
-                                        background: 'linear-gradient(90deg, var(--skeleton-a) 25%, var(--skeleton-b) 50%, var(--skeleton-a) 75%)',
-                                        backgroundSize: '200% 100%',
-                                        animation: 'shimmer 1.8s ease infinite',
-                                    }}
-                                />
-                                <div
-                                    className="h-3 w-full rounded-lg"
-                                    style={{
-                                        background: 'linear-gradient(90deg, var(--skeleton-a) 25%, var(--skeleton-b) 50%, var(--skeleton-a) 75%)',
-                                        backgroundSize: '200% 100%',
-                                        animation: 'shimmer 1.8s ease infinite',
-                                    }}
-                                />
-                                <div
-                                    className="h-3 w-[80%] rounded-lg"
-                                    style={{
-                                        background: 'linear-gradient(90deg, var(--skeleton-a) 25%, var(--skeleton-b) 50%, var(--skeleton-a) 75%)',
-                                        backgroundSize: '200% 100%',
-                                        animation: 'shimmer 1.8s ease infinite',
-                                    }}
-                                />
+                                <SkeletonText className="h-4 w-[65%] rounded-lg" />
+                                <SkeletonText className="h-3 w-full rounded-lg" />
+                                <SkeletonText className="h-3 w-[80%] rounded-lg" />
                                 <div className="mt-1 flex gap-[6px]">
-                                    <div
-                                        className="h-7 w-[72px] rounded-full"
-                                        style={{
-                                            background: 'linear-gradient(90deg, var(--skeleton-a) 25%, var(--skeleton-b) 50%, var(--skeleton-a) 75%)',
-                                            backgroundSize: '200% 100%',
-                                            animation: 'shimmer 1.8s ease infinite',
-                                        }}
-                                    />
-                                    <div
-                                        className="h-7 w-[90px] rounded-full"
-                                        style={{
-                                            background: 'linear-gradient(90deg, var(--skeleton-a) 25%, var(--skeleton-b) 50%, var(--skeleton-a) 75%)',
-                                            backgroundSize: '200% 100%',
-                                            animation: 'shimmer 1.8s ease infinite',
-                                        }}
-                                    />
+                                    <Skeleton className="h-7 w-[72px] rounded-full" />
+                                    <Skeleton className="h-7 w-[90px] rounded-full" />
                                 </div>
                             </div>
                         </div>
