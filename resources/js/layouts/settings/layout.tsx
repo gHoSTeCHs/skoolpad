@@ -1,5 +1,7 @@
-import { Link } from '@inertiajs/react';
+import { Link, usePage } from '@inertiajs/react';
 import type { PropsWithChildren } from 'react';
+import { ErrorBoundary } from '@/components/error-boundary';
+import { LayoutErrorFallback } from '@/components/error-boundary/layout-error-fallback';
 import Heading from '@/components/heading';
 import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
@@ -35,6 +37,7 @@ const sidebarNavItems: NavItem[] = [
 ];
 
 export default function SettingsLayout({ children }: PropsWithChildren) {
+    const { url } = usePage();
     const { isCurrentUrl } = useCurrentUrl();
 
     if (typeof window === 'undefined') {
@@ -82,7 +85,12 @@ export default function SettingsLayout({ children }: PropsWithChildren) {
 
                 <div className="flex-1 md:max-w-2xl">
                     <section className="max-w-xl space-y-12">
-                        {children}
+                        <ErrorBoundary
+                            resetKey={url}
+                            fallback={(props) => <LayoutErrorFallback {...props} dashboardUrl="/settings" dashboardLabel="Go to Settings" />}
+                        >
+                            {children}
+                        </ErrorBoundary>
                     </section>
                 </div>
             </div>

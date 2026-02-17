@@ -1,4 +1,6 @@
-import { Link } from '@inertiajs/react';
+import { Link, usePage } from '@inertiajs/react';
+import { ErrorBoundary } from '@/components/error-boundary';
+import { LayoutErrorFallback } from '@/components/error-boundary/layout-error-fallback';
 import type { OnboardingLayoutProps } from '@/types';
 
 function StepIndicator({ currentStep, totalSteps }: { currentStep: number; totalSteps: number }) {
@@ -30,6 +32,7 @@ export default function OnboardingLayout({
     currentStep,
     totalSteps,
 }: OnboardingLayoutProps) {
+    const { url } = usePage();
     const showProgress = currentStep !== undefined && totalSteps !== undefined;
 
     return (
@@ -65,7 +68,12 @@ export default function OnboardingLayout({
 
             <main className="relative z-10 flex flex-1 flex-col items-center px-6 pt-8 pb-16 sm:px-10 sm:pt-16">
                 <div className="w-full max-w-2xl">
-                    {children}
+                    <ErrorBoundary
+                        resetKey={url}
+                        fallback={(props) => <LayoutErrorFallback {...props} dashboardUrl="/dashboard" />}
+                    >
+                        {children}
+                    </ErrorBoundary>
                 </div>
             </main>
         </div>

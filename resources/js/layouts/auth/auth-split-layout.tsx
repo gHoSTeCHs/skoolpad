@@ -1,4 +1,6 @@
-import { Link } from '@inertiajs/react';
+import { Link, usePage } from '@inertiajs/react';
+import { ErrorBoundary } from '@/components/error-boundary';
+import { LayoutErrorFallback } from '@/components/error-boundary/layout-error-fallback';
 import { home } from '@/routes';
 import type { AuthLayoutProps } from '@/types';
 
@@ -7,6 +9,7 @@ export default function AuthSplitLayout({
     title,
     description,
 }: AuthLayoutProps) {
+    const { url } = usePage();
     return (
         <div className="flex min-h-dvh">
             <div className="relative hidden w-[45%] flex-col justify-between overflow-hidden p-10 lg:flex" style={{ background: 'var(--bg-hero)' }}>
@@ -82,7 +85,12 @@ export default function AuthSplitLayout({
                         )}
                     </div>
 
-                    {children}
+                    <ErrorBoundary
+                        resetKey={url}
+                        fallback={(props) => <LayoutErrorFallback {...props} dashboardUrl="/login" dashboardLabel="Go to Login" />}
+                    >
+                        {children}
+                    </ErrorBoundary>
                 </div>
             </div>
         </div>
