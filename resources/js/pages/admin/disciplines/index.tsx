@@ -1,5 +1,6 @@
 import { Head, Link } from '@inertiajs/react';
 import { Pencil, Shapes } from 'lucide-react';
+import DisciplineController from '@/actions/App/Http/Controllers/Admin/DisciplineController';
 import { PageHeader } from '@/components/admin/page-header';
 import { Pagination } from '@/components/admin/pagination';
 import { SearchInput } from '@/components/admin/search-input';
@@ -27,13 +28,13 @@ export default function AdminDisciplines({ disciplines, filters }: Props) {
             <div className="flex flex-col gap-4 p-4 md:p-6">
                 <PageHeader
                     title="Disciplines"
-                    action={{ label: 'Add Discipline', href: route('admin.disciplines.create') }}
+                    action={{ label: 'Add Discipline', href: DisciplineController.create.url() }}
                 />
 
                 <div className="flex items-center gap-3">
                     <SearchInput
                         value={filters.search ?? ''}
-                        routeName="admin.disciplines.index"
+                        routeUrl={DisciplineController.index.url()}
                         placeholder="Search disciplines..."
                     />
                 </div>
@@ -65,7 +66,7 @@ export default function AdminDisciplines({ disciplines, filters }: Props) {
                                         <TableCell className="text-right">{discipline.canonical_topics_count ?? 0}</TableCell>
                                         <TableCell>
                                             <Button variant="ghost" size="icon" asChild>
-                                                <Link href={route('admin.disciplines.edit', discipline.id)}>
+                                                <Link href={DisciplineController.edit.url(discipline.id)}>
                                                     <Pencil className="size-4" />
                                                 </Link>
                                             </Button>

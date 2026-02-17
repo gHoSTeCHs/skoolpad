@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Admin;
 
+use App\Concerns\Paginates;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Admin\StoreExamTypeRequest;
 use App\Http\Requests\Admin\UpdateExamTypeRequest;
@@ -14,6 +15,7 @@ use Inertia\Response;
 
 class ExamTypeController extends Controller
 {
+    use Paginates;
     public function index(Request $request): Response
     {
         $examTypes = ExamType::query()
@@ -29,7 +31,7 @@ class ExamTypeController extends Controller
             ->withQueryString();
 
         return Inertia::render('admin/exam-types/index', [
-            'examTypes' => $examTypes,
+            'examTypes' => $this->paginated($examTypes),
             'filters' => $request->only(['search', 'is_active']),
         ]);
     }

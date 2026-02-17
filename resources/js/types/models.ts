@@ -34,6 +34,7 @@ export type Faculty = {
     created_at: string;
     updated_at: string;
     departments_count?: number;
+    institution?: { id: string; name: string; abbreviation?: string };
 };
 
 export type Department = {
@@ -43,6 +44,7 @@ export type Department = {
     abbreviation: string | null;
     created_at: string;
     updated_at: string;
+    faculty?: { id: string; name: string; institution_id: string; institution?: { id: string; name: string } };
 };
 
 export type Discipline = {
@@ -78,6 +80,7 @@ export type ExamSubject = {
     is_compulsory: boolean;
     created_at: string;
     updated_at: string;
+    exam_type?: { id: string; name: string };
 };
 
 export type PaginatedData<T> = {

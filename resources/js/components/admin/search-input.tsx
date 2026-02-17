@@ -5,12 +5,12 @@ import { Input } from '@/components/ui/input';
 
 interface SearchInputProps {
     value: string;
-    routeName: string;
+    routeUrl: string;
     placeholder?: string;
     queryParams?: Record<string, string | undefined>;
 }
 
-export function SearchInput({ value, routeName, placeholder = 'Search...', queryParams = {} }: SearchInputProps) {
+export function SearchInput({ value, routeUrl, placeholder = 'Search...', queryParams = {} }: SearchInputProps) {
     const [search, setSearch] = useState(value || '');
     const isInitialMount = useRef(true);
 
@@ -26,7 +26,7 @@ export function SearchInput({ value, routeName, placeholder = 'Search...', query
 
         const timeout = setTimeout(() => {
             router.get(
-                route(routeName),
+                routeUrl,
                 { ...queryParams, search: search || undefined },
                 { preserveState: true, preserveScroll: true, replace: true },
             );

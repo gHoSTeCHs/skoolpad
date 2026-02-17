@@ -17,6 +17,12 @@ test('index displays departments page', function () {
         ->assertInertia(fn ($page) => $page
             ->component('admin/departments/index')
             ->has('departments.data', 3)
+            ->has('departments.meta.current_page')
+            ->has('departments.meta.last_page')
+            ->has('departments.meta.per_page')
+            ->has('departments.meta.total')
+            ->has('departments.links.prev')
+            ->has('departments.links.next')
             ->has('faculties')
         );
 });

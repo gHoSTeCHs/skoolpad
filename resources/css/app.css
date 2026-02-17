@@ -231,6 +231,12 @@
     --streak-dot-now-fg: #B8411F;
     --streak-dot-off-bg: rgba(255, 255, 255, 0.1);
     --streak-dot-off-fg: rgba(255, 255, 255, 0.4);
+
+    --scrollbar-width: 4px;
+    --scrollbar-thumb: rgba(0, 0, 0, 0.14);
+    --scrollbar-thumb-hover: rgba(0, 0, 0, 0.26);
+    --scrollbar-sidebar-thumb: rgba(255, 255, 255, 0.15);
+    --scrollbar-sidebar-thumb-hover: rgba(255, 255, 255, 0.28);
 }
 
 /* =============================================================================
@@ -357,6 +363,12 @@
     --streak-dot-now-fg: #B8411F;
     --streak-dot-off-bg: rgba(255, 255, 255, 0.1);
     --streak-dot-off-fg: rgba(255, 255, 255, 0.4);
+
+    --scrollbar-width: 4px;
+    --scrollbar-thumb: rgba(255, 255, 255, 0.12);
+    --scrollbar-thumb-hover: rgba(255, 255, 255, 0.22);
+    --scrollbar-sidebar-thumb: rgba(255, 255, 255, 0.15);
+    --scrollbar-sidebar-thumb-hover: rgba(255, 255, 255, 0.28);
 }
 
 /* =============================================================================
@@ -483,6 +495,12 @@
     --streak-dot-now-fg: #0A1929;
     --streak-dot-off-bg: rgba(255, 255, 255, 0.04);
     --streak-dot-off-fg: rgba(255, 255, 255, 0.3);
+
+    --scrollbar-width: 4px;
+    --scrollbar-thumb: rgba(255, 255, 255, 0.10);
+    --scrollbar-thumb-hover: rgba(255, 255, 255, 0.20);
+    --scrollbar-sidebar-thumb: rgba(255, 255, 255, 0.12);
+    --scrollbar-sidebar-thumb-hover: rgba(255, 255, 255, 0.22);
 }
 
 /* =============================================================================
@@ -525,4 +543,44 @@
         opacity: 1;
         transform: translateY(0);
     }
+}
+
+/* =============================================================================
+   SCROLLBARS
+   ============================================================================= */
+
+html {
+    scrollbar-width: thin;
+    scrollbar-color: var(--scrollbar-thumb) transparent;
+}
+
+::-webkit-scrollbar {
+    width: var(--scrollbar-width);
+    height: var(--scrollbar-width);
+}
+
+::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+    background-color: var(--scrollbar-thumb);
+    border-radius: 9999px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+    background-color: var(--scrollbar-thumb-hover);
+}
+
+[data-sidebar="content"] {
+    scrollbar-width: thin;
+    scrollbar-color: var(--scrollbar-sidebar-thumb) transparent;
+}
+
+[data-sidebar="content"]::-webkit-scrollbar-thumb {
+    background-color: var(--scrollbar-sidebar-thumb);
+}
+
+[data-sidebar="content"]::-webkit-scrollbar-thumb:hover {
+    background-color: var(--scrollbar-sidebar-thumb-hover);
 }

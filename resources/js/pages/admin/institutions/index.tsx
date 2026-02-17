@@ -1,5 +1,6 @@
 import { Head, Link, router } from '@inertiajs/react';
 import { Building2, Pencil } from 'lucide-react';
+import InstitutionController from '@/actions/App/Http/Controllers/Admin/InstitutionController';
 import { PageHeader } from '@/components/admin/page-header';
 import { Pagination } from '@/components/admin/pagination';
 import { SearchInput } from '@/components/admin/search-input';
@@ -37,9 +38,11 @@ function hasActiveFilters(filters: Filters): boolean {
 }
 
 export default function AdminInstitutions({ institutions, filters, institutionTypes, ownershipTypes }: Props) {
+    const indexUrl = InstitutionController.index.url();
+
     function handleFilterChange(key: string, value: string | undefined) {
         router.get(
-            route('admin.institutions.index'),
+            indexUrl,
             { ...filters, [key]: value || undefined, search: filters.search || undefined },
             { preserveState: true, preserveScroll: true, replace: true },
         );
@@ -47,7 +50,7 @@ export default function AdminInstitutions({ institutions, filters, institutionTy
 
     function clearFilters() {
         router.get(
-            route('admin.institutions.index'),
+            indexUrl,
             { search: filters.search || undefined },
             { preserveState: true, preserveScroll: true, replace: true },
         );
@@ -59,13 +62,13 @@ export default function AdminInstitutions({ institutions, filters, institutionTy
             <div className="flex flex-col gap-4 p-4 md:p-6">
                 <PageHeader
                     title="Institutions"
-                    action={{ label: 'Add Institution', href: route('admin.institutions.create') }}
+                    action={{ label: 'Add Institution', href: InstitutionController.create.url() }}
                 />
 
                 <div className="flex flex-wrap items-center gap-3">
                     <SearchInput
                         value={filters.search ?? ''}
-                        routeName="admin.institutions.index"
+                        routeUrl={indexUrl}
                         placeholder="Search institutions..."
                         queryParams={{
                             institution_type: filters.institution_type,
@@ -159,7 +162,7 @@ export default function AdminInstitutions({ institutions, filters, institutionTy
                                         </TableCell>
                                         <TableCell>
                                             <Button variant="ghost" size="icon" asChild>
-                                                <Link href={route('admin.institutions.edit', institution.id)}>
+                                                <Link href={InstitutionController.edit.url(institution.id)}>
                                                     <Pencil className="size-4" />
                                                 </Link>
                                             </Button>

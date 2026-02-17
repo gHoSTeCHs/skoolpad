@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Admin;
 
+use App\Concerns\Paginates;
 use App\Enums\InstitutionType;
 use App\Enums\OwnershipType;
 use App\Http\Controllers\Controller;
@@ -16,6 +17,7 @@ use Inertia\Response;
 
 class InstitutionController extends Controller
 {
+    use Paginates;
     public function index(Request $request): Response
     {
         $institutions = Institution::query()
@@ -41,7 +43,7 @@ class InstitutionController extends Controller
             ->withQueryString();
 
         return Inertia::render('admin/institutions/index', [
-            'institutions' => $institutions,
+            'institutions' => $this->paginated($institutions),
             'filters' => $request->only(['search', 'institution_type', 'ownership_type', 'is_active']),
             'institutionTypes' => InstitutionType::cases(),
             'ownershipTypes' => OwnershipType::cases(),

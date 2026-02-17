@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Admin;
 
+use App\Concerns\Paginates;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Admin\StoreDisciplineRequest;
 use App\Http\Requests\Admin\UpdateDisciplineRequest;
@@ -13,6 +14,7 @@ use Inertia\Response;
 
 class DisciplineController extends Controller
 {
+    use Paginates;
     public function index(Request $request): Response
     {
         $disciplines = Discipline::query()
@@ -25,7 +27,7 @@ class DisciplineController extends Controller
             ->withQueryString();
 
         return Inertia::render('admin/disciplines/index', [
-            'disciplines' => $disciplines,
+            'disciplines' => $this->paginated($disciplines),
             'filters' => $request->only(['search']),
         ]);
     }

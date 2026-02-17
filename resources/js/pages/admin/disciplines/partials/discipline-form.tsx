@@ -1,5 +1,6 @@
 import { Link, useForm } from '@inertiajs/react';
 import { useRef } from 'react';
+import DisciplineController from '@/actions/App/Http/Controllers/Admin/DisciplineController';
 import InputError from '@/components/input-error';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardFooter } from '@/components/ui/card';
@@ -41,9 +42,9 @@ export default function DisciplineForm({ discipline }: DisciplineFormProps) {
         e.preventDefault();
 
         if (isEditing) {
-            form.put(route('admin.disciplines.update', discipline!.id));
+            form.put(DisciplineController.update.url(discipline!.id));
         } else {
-            form.post(route('admin.disciplines.store'));
+            form.post(DisciplineController.store.url());
         }
     }
 
@@ -101,7 +102,7 @@ export default function DisciplineForm({ discipline }: DisciplineFormProps) {
 
                 <CardFooter className="justify-end gap-3 border-t pt-6">
                     <Button variant="outline" asChild>
-                        <Link href={route('admin.disciplines.index')}>Cancel</Link>
+                        <Link href={DisciplineController.index.url()}>Cancel</Link>
                     </Button>
                     <Button type="submit" disabled={form.processing}>
                         {isEditing ? 'Update Discipline' : 'Create Discipline'}

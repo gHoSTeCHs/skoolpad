@@ -17,6 +17,12 @@ test('index displays faculties page', function () {
         ->assertInertia(fn ($page) => $page
             ->component('admin/faculties/index')
             ->has('faculties.data', 3)
+            ->has('faculties.meta.current_page')
+            ->has('faculties.meta.last_page')
+            ->has('faculties.meta.per_page')
+            ->has('faculties.meta.total')
+            ->has('faculties.links.prev')
+            ->has('faculties.links.next')
             ->has('institutions')
         );
 });

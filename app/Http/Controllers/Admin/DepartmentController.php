@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Admin;
 
+use App\Concerns\Paginates;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Admin\StoreDepartmentRequest;
 use App\Http\Requests\Admin\UpdateDepartmentRequest;
@@ -14,6 +15,7 @@ use Inertia\Response;
 
 class DepartmentController extends Controller
 {
+    use Paginates;
     public function index(Request $request): Response
     {
         $departments = Department::query()
@@ -29,7 +31,7 @@ class DepartmentController extends Controller
             ->withQueryString();
 
         return Inertia::render('admin/departments/index', [
-            'departments' => $departments,
+            'departments' => $this->paginated($departments),
             'filters' => $request->only(['search', 'faculty_id']),
             'faculties' => Faculty::with('institution:id,name')->select('id', 'name', 'institution_id')->orderBy('name')->get(),
         ]);

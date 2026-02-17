@@ -17,6 +17,12 @@ test('index displays exam types page', function () {
         ->assertInertia(fn ($page) => $page
             ->component('admin/exam-types/index')
             ->has('examTypes.data', 3)
+            ->has('examTypes.meta.current_page')
+            ->has('examTypes.meta.last_page')
+            ->has('examTypes.meta.per_page')
+            ->has('examTypes.meta.total')
+            ->has('examTypes.links.prev')
+            ->has('examTypes.links.next')
         );
 });
 

@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Admin;
 
+use App\Concerns\Paginates;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Admin\StoreExamSubjectRequest;
 use App\Http\Requests\Admin\UpdateExamSubjectRequest;
@@ -14,6 +15,7 @@ use Inertia\Response;
 
 class ExamSubjectController extends Controller
 {
+    use Paginates;
     public function index(Request $request): Response
     {
         $examSubjects = ExamSubject::query()
@@ -29,7 +31,7 @@ class ExamSubjectController extends Controller
             ->withQueryString();
 
         return Inertia::render('admin/exam-subjects/index', [
-            'examSubjects' => $examSubjects,
+            'examSubjects' => $this->paginated($examSubjects),
             'filters' => $request->only(['search', 'exam_type_id']),
             'examTypes' => ExamType::select('id', 'name')->orderBy('name')->get(),
         ]);
