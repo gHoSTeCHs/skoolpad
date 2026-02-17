@@ -13,6 +13,8 @@ interface SearchInputProps {
 export function SearchInput({ value, routeUrl, placeholder = 'Search...', queryParams = {} }: SearchInputProps) {
     const [search, setSearch] = useState(value || '');
     const isInitialMount = useRef(true);
+    const queryParamsRef = useRef(queryParams);
+    queryParamsRef.current = queryParams;
 
     useEffect(() => {
         setSearch(value || '');
@@ -27,13 +29,13 @@ export function SearchInput({ value, routeUrl, placeholder = 'Search...', queryP
         const timeout = setTimeout(() => {
             router.get(
                 routeUrl,
-                { ...queryParams, search: search || undefined },
+                { ...queryParamsRef.current, search: search || undefined },
                 { preserveState: true, preserveScroll: true, replace: true },
             );
         }, 300);
 
         return () => clearTimeout(timeout);
-    }, [search]);
+    }, [search, routeUrl]);
 
     return (
         <div className="relative flex-1">

@@ -16,6 +16,7 @@ use Inertia\Response;
 class FacultyController extends Controller
 {
     use Paginates;
+
     public function index(Request $request): Response
     {
         $faculties = Faculty::query()
@@ -27,13 +28,13 @@ class FacultyController extends Controller
             ->when($request->filled('institution_id'), function ($query) use ($request) {
                 $query->where('institution_id', $request->string('institution_id'));
             })
-            ->latest()
+            ->tap(fn ($query) => $this->applySorting($query, $request, ['name', 'departments_count']))
             ->paginate(15)
             ->withQueryString();
 
         return Inertia::render('admin/faculties/index', [
             'faculties' => $this->paginated($faculties),
-            'filters' => $request->only(['search', 'institution_id']),
+            'filters' => $request->only(['search', 'institution_id', 'sort', 'direction']),
             'institutions' => Institution::select('id', 'name')->orderBy('name')->get(),
         ]);
     }

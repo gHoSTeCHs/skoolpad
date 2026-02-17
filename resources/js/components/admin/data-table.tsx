@@ -1,5 +1,6 @@
 import { router } from '@inertiajs/react';
 import type { LucideIcon } from 'lucide-react';
+import { ArrowDown, ArrowUp, ArrowUpDown } from 'lucide-react';
 import type { ReactNode } from 'react';
 import { useEffect, useState } from 'react';
 import { Pagination } from '@/components/admin/pagination';
@@ -16,6 +17,7 @@ export interface ColumnDef<T> {
     align?: 'left' | 'center' | 'right';
     width?: string;
     className?: string;
+    sortable?: boolean;
 }
 
 interface EmptyStateConfig {
@@ -33,11 +35,50 @@ interface DataTableProps<T> {
     emptyState: EmptyStateConfig;
 }
 
+function useCurrentSort(): { sort: string | null; direction: 'asc' | 'desc' } {
+    const params = new URLSearchParams(window.location.search);
+    return {
+        sort: params.get('sort'),
+        direction: params.get('direction') === 'desc' ? 'desc' : 'asc',
+    };
+}
+
+function handleSort(columnId: string) {
+    const params = new URLSearchParams(window.location.search);
+    const currentSort = params.get('sort');
+    const currentDir = params.get('direction');
+
+    if (currentSort === columnId) {
+        params.set('direction', currentDir === 'asc' ? 'desc' : 'asc');
+    } else {
+        params.set('sort', columnId);
+        params.set('direction', 'asc');
+    }
+    params.delete('page');
+
+    router.get(window.location.pathname + '?' + params.toString(), {}, {
+        preserveState: true,
+        preserveScroll: true,
+        replace: true,
+    });
+}
+
+function SortIndicator({ columnId, currentSort }: { columnId: string; currentSort: { sort: string | null; direction: 'asc' | 'desc' } }) {
+    if (currentSort.sort !== columnId) {
+        return <ArrowUpDown className="size-3.5 text-muted-foreground/40" />;
+    }
+    if (currentSort.direction === 'asc') {
+        return <ArrowUp className="size-3.5" />;
+    }
+    return <ArrowDown className="size-3.5" />;
+}
+
 export function DataTable<T>({ columns, paginatedData, getRowKey, toolbar, renderActions, emptyState }: DataTableProps<T>) {
     const { data, meta, links } = paginatedData;
     const Icon = emptyState.icon;
     const hasData = data.length > 0;
     const [isLoading, setIsLoading] = useState(false);
+    const currentSort = useCurrentSort();
 
     useEffect(() => {
         const removeStart = router.on('start', () => setIsLoading(true));
@@ -109,9 +150,21 @@ export function DataTable<T>({ columns, paginatedData, getRowKey, toolbar, rende
                                     col.align === 'center' && 'text-center',
                                     col.width,
                                     col.className,
+                                    col.sortable && 'cursor-pointer select-none hover:text-foreground',
                                 )}
+                                onClick={col.sortable ? () => handleSort(col.id) : undefined}
                             >
-                                {col.header}
+                                {col.sortable ? (
+                                    <span className={cn(
+                                        'inline-flex items-center gap-1',
+                                        col.align === 'right' && 'flex-row-reverse',
+                                    )}>
+                                        {col.header}
+                                        <SortIndicator columnId={col.id} currentSort={currentSort} />
+                                    </span>
+                                ) : (
+                                    col.header
+                                )}
                             </TableHead>
                         ))}
                         {renderActions && (

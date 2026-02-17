@@ -16,6 +16,7 @@ use Inertia\Response;
 class ExamTypeController extends Controller
 {
     use Paginates;
+
     public function index(Request $request): Response
     {
         $examTypes = ExamType::query()
@@ -26,13 +27,13 @@ class ExamTypeController extends Controller
             ->when($request->filled('is_active'), function ($query) use ($request) {
                 $query->where('is_active', $request->boolean('is_active'));
             })
-            ->latest()
+            ->tap(fn ($query) => $this->applySorting($query, $request, ['name', 'duration_minutes', 'questions_per_subject', 'is_active', 'exam_subjects_count']))
             ->paginate(15)
             ->withQueryString();
 
         return Inertia::render('admin/exam-types/index', [
             'examTypes' => $this->paginated($examTypes),
-            'filters' => $request->only(['search', 'is_active']),
+            'filters' => $request->only(['search', 'is_active', 'sort', 'direction']),
         ]);
     }
 

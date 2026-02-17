@@ -10,6 +10,8 @@ import type { Discipline, PaginatedData } from '@/types/models';
 
 interface Filters {
     search?: string;
+    sort?: string;
+    direction?: string;
 }
 
 interface Props {
@@ -24,6 +26,7 @@ const columns: ColumnDef<Discipline>[] = [
         id: 'name',
         header: 'Name',
         cell: (row) => <span className="font-medium">{row.name}</span>,
+        sortable: true,
     },
     {
         id: 'slug',
@@ -41,10 +44,11 @@ const columns: ColumnDef<Discipline>[] = [
         className: 'max-w-[300px]',
     },
     {
-        id: 'topics',
+        id: 'canonical_topics_count',
         header: 'Topics',
         cell: (row) => row.canonical_topics_count ?? 0,
         align: 'right',
+        sortable: true,
     },
 ];
 
@@ -68,6 +72,7 @@ export default function AdminDisciplines({ disciplines, filters }: Props) {
                                 value={filters.search ?? ''}
                                 routeUrl={DisciplineController.index.url()}
                                 placeholder="Search disciplines..."
+                                queryParams={{ sort: filters.sort, direction: filters.direction }}
                             />
                         </div>
                     }

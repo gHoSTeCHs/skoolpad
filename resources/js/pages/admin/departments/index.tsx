@@ -20,6 +20,8 @@ interface FacultyWithInstitution {
 interface Filters {
     search?: string;
     faculty_id?: string;
+    sort?: string;
+    direction?: string;
 }
 
 interface Props {
@@ -42,6 +44,7 @@ const columns: ColumnDef<Department>[] = [
                 )}
             </div>
         ),
+        sortable: true,
     },
     {
         id: 'faculty',
@@ -69,7 +72,7 @@ export default function AdminDepartments({ departments, filters, faculties }: Pr
     function clearFilters() {
         router.get(
             indexUrl,
-            { search: filters.search || undefined },
+            { search: filters.search || undefined, sort: filters.sort, direction: filters.direction },
             { preserveState: true, preserveScroll: true, replace: true },
         );
     }
@@ -93,7 +96,7 @@ export default function AdminDepartments({ departments, filters, faculties }: Pr
                                 value={filters.search ?? ''}
                                 routeUrl={indexUrl}
                                 placeholder="Search departments..."
-                                queryParams={{ faculty_id: filters.faculty_id }}
+                                queryParams={{ faculty_id: filters.faculty_id, sort: filters.sort, direction: filters.direction }}
                             />
                             <Select
                                 value={filters.faculty_id ?? ''}

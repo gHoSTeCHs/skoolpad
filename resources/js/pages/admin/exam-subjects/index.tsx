@@ -7,13 +7,21 @@ import { RowActions } from '@/components/admin/row-actions';
 import { SearchInput } from '@/components/admin/search-input';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import {
+    Select,
+    SelectContent,
+    SelectItem,
+    SelectTrigger,
+    SelectValue,
+} from '@/components/ui/select';
 import AdminLayout from '@/layouts/admin-layout';
 import type { ExamSubject, PaginatedData } from '@/types/models';
 
 interface Filters {
     search?: string;
     exam_type_id?: string;
+    sort?: string;
+    direction?: string;
 }
 
 interface Props {
@@ -29,6 +37,7 @@ const columns: ColumnDef<ExamSubject>[] = [
         id: 'name',
         header: 'Name',
         cell: (row) => <span className="font-medium">{row.name}</span>,
+        sortable: true,
     },
     {
         id: 'slug',
@@ -45,23 +54,32 @@ const columns: ColumnDef<ExamSubject>[] = [
         cell: (row) => row.exam_type?.name ?? '—',
     },
     {
-        id: 'compulsory',
+        id: 'is_compulsory',
         header: 'Compulsory',
         cell: (row) => (
             <Badge variant={row.is_compulsory ? 'default' : 'secondary'}>
                 {row.is_compulsory ? 'Yes' : 'No'}
             </Badge>
         ),
+        sortable: true,
     },
 ];
 
-export default function AdminExamSubjects({ examSubjects, filters, examTypes }: Props) {
+export default function AdminExamSubjects({
+    examSubjects,
+    filters,
+    examTypes,
+}: Props) {
     const indexUrl = ExamSubjectController.index.url();
 
     function handleFilterChange(key: string, value: string | undefined) {
         router.get(
             indexUrl,
-            { ...filters, [key]: value || undefined, search: filters.search || undefined },
+            {
+                ...filters,
+                [key]: value || undefined,
+                search: filters.search || undefined,
+            },
             { preserveState: true, preserveScroll: true, replace: true },
         );
     }
@@ -69,7 +87,11 @@ export default function AdminExamSubjects({ examSubjects, filters, examTypes }: 
     function clearFilters() {
         router.get(
             indexUrl,
-            { search: filters.search || undefined },
+            {
+                search: filters.search || undefined,
+                sort: filters.sort,
+                direction: filters.direction,
+            },
             { preserveState: true, preserveScroll: true, replace: true },
         );
     }
@@ -80,7 +102,10 @@ export default function AdminExamSubjects({ examSubjects, filters, examTypes }: 
             <div className="flex flex-col gap-4 p-4 md:p-6">
                 <PageHeader
                     title="Exam Subjects"
-                    action={{ label: 'Add Exam Subject', href: ExamSubjectController.create.url() }}
+                    action={{
+                        label: 'Add Exam Subject',
+                        href: ExamSubjectController.create.url(),
+                    }}
                 />
 
                 <DataTable
@@ -93,38 +118,59 @@ export default function AdminExamSubjects({ examSubjects, filters, examTypes }: 
                                 value={filters.search ?? ''}
                                 routeUrl={indexUrl}
                                 placeholder="Search exam subjects..."
-                                queryParams={{ exam_type_id: filters.exam_type_id }}
+                                queryParams={{
+                                    exam_type_id: filters.exam_type_id,
+                                    sort: filters.sort,
+                                    direction: filters.direction,
+                                }}
                             />
                             <Select
                                 value={filters.exam_type_id ?? ''}
-                                onValueChange={(value) => handleFilterChange('exam_type_id', value === 'all' ? undefined : value)}
+                                onValueChange={(value) =>
+                                    handleFilterChange(
+                                        'exam_type_id',
+                                        value === 'all' ? undefined : value,
+                                    )
+                                }
                             >
                                 <SelectTrigger className="w-[200px]">
                                     <SelectValue placeholder="All Exam Types" />
                                 </SelectTrigger>
                                 <SelectContent>
-                                    <SelectItem value="all">All Exam Types</SelectItem>
+                                    <SelectItem value="all">
+                                        All Exam Types
+                                    </SelectItem>
                                     {examTypes.map((examType) => (
-                                        <SelectItem key={examType.id} value={examType.id}>
+                                        <SelectItem
+                                            key={examType.id}
+                                            value={examType.id}
+                                        >
                                             {examType.name}
                                         </SelectItem>
                                     ))}
                                 </SelectContent>
                             </Select>
                             {filters.exam_type_id && (
-                                <Button variant="ghost" size="sm" onClick={clearFilters}>
+                                <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    onClick={clearFilters}
+                                >
                                     Clear filters
                                 </Button>
                             )}
                         </div>
                     }
                     renderActions={(row) => (
-                        <RowActions editUrl={ExamSubjectController.edit.url(row.id)} />
+                        <RowActions
+                            editUrl={ExamSubjectController.edit.url(row.id)}
+                        />
                     )}
                     emptyState={{
                         icon: FileText,
                         title: 'No exam subjects found',
-                        description: 'Try adjusting your search or filter criteria.',
+                        description:
+                            'Try adjusting your search or filter criteria.',
                     }}
                 />
             </div>

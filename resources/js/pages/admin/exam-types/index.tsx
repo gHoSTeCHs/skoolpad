@@ -14,6 +14,8 @@ import type { ExamType, PaginatedData } from '@/types/models';
 interface Filters {
     search?: string;
     is_active?: string;
+    sort?: string;
+    direction?: string;
 }
 
 interface Props {
@@ -28,6 +30,7 @@ const columns: ColumnDef<ExamType>[] = [
         id: 'name',
         header: 'Name',
         cell: (row) => <span className="font-medium">{row.name}</span>,
+        sortable: true,
     },
     {
         id: 'slug',
@@ -39,27 +42,31 @@ const columns: ColumnDef<ExamType>[] = [
         ),
     },
     {
-        id: 'duration',
+        id: 'duration_minutes',
         header: 'Duration (mins)',
         cell: (row) => row.duration_minutes ?? '—',
         align: 'right',
+        sortable: true,
     },
     {
-        id: 'questions',
+        id: 'questions_per_subject',
         header: 'Questions/Subject',
         cell: (row) => row.questions_per_subject ?? '—',
         align: 'right',
+        sortable: true,
     },
     {
-        id: 'subjects',
+        id: 'exam_subjects_count',
         header: 'Subjects',
         cell: (row) => row.exam_subjects_count ?? 0,
         align: 'right',
+        sortable: true,
     },
     {
-        id: 'status',
+        id: 'is_active',
         header: 'Status',
         cell: (row) => <StatusBadge isActive={row.is_active} />,
+        sortable: true,
     },
 ];
 
@@ -77,7 +84,7 @@ export default function AdminExamTypes({ examTypes, filters }: Props) {
     function clearFilters() {
         router.get(
             indexUrl,
-            { search: filters.search || undefined },
+            { search: filters.search || undefined, sort: filters.sort, direction: filters.direction },
             { preserveState: true, preserveScroll: true, replace: true },
         );
     }
@@ -101,7 +108,7 @@ export default function AdminExamTypes({ examTypes, filters }: Props) {
                                 value={filters.search ?? ''}
                                 routeUrl={indexUrl}
                                 placeholder="Search exam types..."
-                                queryParams={{ is_active: filters.is_active }}
+                                queryParams={{ is_active: filters.is_active, sort: filters.sort, direction: filters.direction }}
                             />
                             <Select
                                 value={filters.is_active ?? ''}

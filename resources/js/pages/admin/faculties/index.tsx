@@ -13,6 +13,8 @@ import type { Faculty, PaginatedData } from '@/types/models';
 interface Filters {
     search?: string;
     institution_id?: string;
+    sort?: string;
+    direction?: string;
 }
 
 interface Props {
@@ -35,6 +37,7 @@ const columns: ColumnDef<Faculty>[] = [
                 )}
             </div>
         ),
+        sortable: true,
     },
     {
         id: 'institution',
@@ -42,10 +45,11 @@ const columns: ColumnDef<Faculty>[] = [
         cell: (row) => row.institution?.name ?? '—',
     },
     {
-        id: 'departments',
+        id: 'departments_count',
         header: 'Departments',
         cell: (row) => row.departments_count ?? 0,
         align: 'right',
+        sortable: true,
     },
 ];
 
@@ -63,7 +67,7 @@ export default function AdminFaculties({ faculties, filters, institutions }: Pro
     function clearFilters() {
         router.get(
             indexUrl,
-            { search: filters.search || undefined },
+            { search: filters.search || undefined, sort: filters.sort, direction: filters.direction },
             { preserveState: true, preserveScroll: true, replace: true },
         );
     }
@@ -87,7 +91,7 @@ export default function AdminFaculties({ faculties, filters, institutions }: Pro
                                 value={filters.search ?? ''}
                                 routeUrl={indexUrl}
                                 placeholder="Search faculties..."
-                                queryParams={{ institution_id: filters.institution_id }}
+                                queryParams={{ institution_id: filters.institution_id, sort: filters.sort, direction: filters.direction }}
                             />
                             <Select
                                 value={filters.institution_id ?? ''}

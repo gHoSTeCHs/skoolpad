@@ -15,6 +15,7 @@ use Inertia\Response;
 class DisciplineController extends Controller
 {
     use Paginates;
+
     public function index(Request $request): Response
     {
         $disciplines = Discipline::query()
@@ -22,13 +23,13 @@ class DisciplineController extends Controller
             ->when($request->filled('search'), function ($query) use ($request) {
                 $query->where('name', 'ilike', "%{$request->string('search')}%");
             })
-            ->latest()
+            ->tap(fn ($query) => $this->applySorting($query, $request, ['name', 'canonical_topics_count']))
             ->paginate(15)
             ->withQueryString();
 
         return Inertia::render('admin/disciplines/index', [
             'disciplines' => $this->paginated($disciplines),
-            'filters' => $request->only(['search']),
+            'filters' => $request->only(['search', 'sort', 'direction']),
         ]);
     }
 

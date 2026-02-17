@@ -21,6 +21,8 @@ interface Filters {
     institution_type?: string;
     ownership_type?: string;
     is_active?: string;
+    sort?: string;
+    direction?: string;
 }
 
 interface Props {
@@ -46,32 +48,38 @@ const columns: ColumnDef<Institution>[] = [
                 <span className="ml-2 text-muted-foreground">{row.abbreviation}</span>
             </div>
         ),
+        sortable: true,
     },
     {
-        id: 'type',
+        id: 'institution_type',
         header: 'Type',
         cell: (row) => institutionTypeLabels[row.institution_type] ?? row.institution_type,
+        sortable: true,
     },
     {
-        id: 'ownership',
+        id: 'ownership_type',
         header: 'Ownership',
         cell: (row) => ownershipTypeLabels[row.ownership_type] ?? row.ownership_type,
+        sortable: true,
     },
     {
-        id: 'location',
+        id: 'state',
         header: 'Location',
         cell: (row) => [row.city, row.state].filter(Boolean).join(', ') || '—',
+        sortable: true,
     },
     {
-        id: 'faculties',
+        id: 'faculties_count',
         header: 'Faculties',
         cell: (row) => row.faculties_count ?? 0,
         align: 'right',
+        sortable: true,
     },
     {
-        id: 'status',
+        id: 'is_active',
         header: 'Status',
         cell: (row) => <StatusBadge isActive={row.is_active} />,
+        sortable: true,
     },
 ];
 
@@ -89,7 +97,7 @@ export default function AdminInstitutions({ institutions, filters, institutionTy
     function clearFilters() {
         router.get(
             indexUrl,
-            { search: filters.search || undefined },
+            { search: filters.search || undefined, sort: filters.sort, direction: filters.direction },
             { preserveState: true, preserveScroll: true, replace: true },
         );
     }
@@ -117,6 +125,8 @@ export default function AdminInstitutions({ institutions, filters, institutionTy
                                     institution_type: filters.institution_type,
                                     ownership_type: filters.ownership_type,
                                     is_active: filters.is_active,
+                                    sort: filters.sort,
+                                    direction: filters.direction,
                                 }}
                             />
                             <Select

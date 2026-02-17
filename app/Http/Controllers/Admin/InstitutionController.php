@@ -18,6 +18,7 @@ use Inertia\Response;
 class InstitutionController extends Controller
 {
     use Paginates;
+
     public function index(Request $request): Response
     {
         $institutions = Institution::query()
@@ -38,13 +39,13 @@ class InstitutionController extends Controller
             ->when($request->filled('is_active'), function ($query) use ($request) {
                 $query->where('is_active', $request->boolean('is_active'));
             })
-            ->latest()
+            ->tap(fn ($query) => $this->applySorting($query, $request, ['name', 'institution_type', 'ownership_type', 'state', 'is_active', 'faculties_count']))
             ->paginate(15)
             ->withQueryString();
 
         return Inertia::render('admin/institutions/index', [
             'institutions' => $this->paginated($institutions),
-            'filters' => $request->only(['search', 'institution_type', 'ownership_type', 'is_active']),
+            'filters' => $request->only(['search', 'institution_type', 'ownership_type', 'is_active', 'sort', 'direction']),
             'institutionTypes' => InstitutionType::cases(),
             'ownershipTypes' => OwnershipType::cases(),
         ]);
