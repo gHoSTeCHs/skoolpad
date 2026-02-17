@@ -1,5 +1,14 @@
 import type { InstitutionType, OwnershipType } from './enums';
 
+export type Country = {
+    id: string;
+    name: string;
+    code: string;
+    currency_code: string;
+    created_at: string;
+    updated_at: string;
+};
+
 export type Institution = {
     id: string;
     country_id: string;

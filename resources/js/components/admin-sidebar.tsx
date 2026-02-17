@@ -1,11 +1,14 @@
 import { Link } from '@inertiajs/react';
 import {
+    BookMarked,
     BookOpen,
     Building2,
     ClipboardList,
     FileDown,
+    FileText,
     GraduationCap,
     LayoutGrid,
+    Library,
     ListChecks,
     MessageSquareMore,
     Settings,
@@ -47,7 +50,10 @@ const navGroups: NavGroup[] = [
         label: 'Platform',
         items: [
             { title: 'Institutions', href: '/admin/institutions', icon: Building2 },
+            { title: 'Faculties', href: '/admin/faculties', icon: Library },
+            { title: 'Departments', href: '/admin/departments', icon: BookMarked },
             { title: 'Exam Types', href: '/admin/exam-types', icon: ClipboardList },
+            { title: 'Exam Subjects', href: '/admin/exam-subjects', icon: FileText },
             { title: 'Users', href: '/admin/users', icon: Users },
             { title: 'Settings', href: '/admin/settings', icon: Settings },
         ],
