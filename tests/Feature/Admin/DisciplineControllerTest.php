@@ -61,6 +61,20 @@ test('store creates a discipline and redirects', function () {
     ]);
 });
 
+test('store auto-generates slug from name when slug is omitted', function () {
+    $this->actingAs($this->admin)
+        ->post(route('admin.disciplines.store'), [
+            'name' => 'Computer Science',
+            'description' => 'Study of computation',
+        ])
+        ->assertRedirect(route('admin.disciplines.index'));
+
+    $this->assertDatabaseHas('disciplines', [
+        'name' => 'Computer Science',
+        'slug' => 'computer-science',
+    ]);
+});
+
 test('store validates required fields', function () {
     $this->actingAs($this->admin)
         ->post(route('admin.disciplines.store'), [])

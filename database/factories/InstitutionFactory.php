@@ -26,7 +26,7 @@ class InstitutionFactory extends Factory
             ['name' => 'Ahmadu Bello University', 'abbreviation' => 'ABU', 'state' => 'Kaduna', 'city' => 'Zaria'],
         ];
 
-        $pick = fake()->randomElement($institutions);
+        $pick = fake()->unique()->randomElement($institutions);
 
         return [
             'country_id' => Country::factory(),

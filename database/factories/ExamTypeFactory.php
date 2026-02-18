@@ -21,7 +21,7 @@ class ExamTypeFactory extends Factory
             ['name' => 'Post UTME', 'slug' => 'post-utme', 'duration' => 60, 'questions' => 50],
         ];
 
-        $pick = fake()->randomElement($exams);
+        $pick = fake()->unique()->randomElement($exams);
 
         return [
             'country_id' => Country::factory(),

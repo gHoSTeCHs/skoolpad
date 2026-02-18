@@ -28,9 +28,9 @@ class CourseDepartmentOffering extends Model
         ];
     }
 
-    public function institutionCourse(): BelongsTo
+    public function course(): BelongsTo
     {
-        return $this->belongsTo(InstitutionCourse::class);
+        return $this->belongsTo(InstitutionCourse::class, 'institution_course_id');
     }
 
     public function department(): BelongsTo

@@ -4,10 +4,12 @@ namespace App\Models;
 
 use App\Enums\CourseScope;
 use App\Enums\Semester;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class InstitutionCourse extends Model
@@ -36,6 +38,8 @@ class InstitutionCourse extends Model
             'semester' => Semester::class,
             'course_scope' => CourseScope::class,
             'is_elective' => 'boolean',
+            'level' => 'integer',
+            'credit_units' => 'integer',
         ];
     }
 
@@ -54,9 +58,34 @@ class InstitutionCourse extends Model
         return $this->belongsTo(Discipline::class);
     }
 
-    public function courseTopicMappings(): HasMany
+    public function departmentOfferings(): HasMany
     {
-        return $this->hasMany(CourseTopicMapping::class);
+        return $this->hasMany(CourseDepartmentOffering::class, 'institution_course_id');
+    }
+
+    public function offeredToDepartments(): BelongsToMany
+    {
+        return $this->belongsToMany(
+            Department::class,
+            'course_department_offerings',
+            'institution_course_id',
+            'department_id'
+        )->withPivot('is_compulsory');
+    }
+
+    public function topicMappings(): HasMany
+    {
+        return $this->hasMany(CourseTopicMapping::class, 'institution_course_id')->orderBy('sequence_order');
+    }
+
+    public function topics(): BelongsToMany
+    {
+        return $this->belongsToMany(
+            CanonicalTopic::class,
+            'course_topic_mappings',
+            'institution_course_id',
+            'canonical_topic_id'
+        )->withPivot('sequence_order', 'weight')->orderByPivot('sequence_order');
     }
 
     public function questions(): HasMany
@@ -64,13 +93,21 @@ class InstitutionCourse extends Model
         return $this->hasMany(Question::class);
     }
 
-    public function courseDepartmentOfferings(): HasMany
-    {
-        return $this->hasMany(CourseDepartmentOffering::class);
-    }
-
     public function studentCourses(): HasMany
     {
         return $this->hasMany(StudentCourse::class);
+    }
+
+    public function scopeForInstitution(Builder $query, string $institutionId): Builder
+    {
+        return $query->where('institution_id', $institutionId);
+    }
+
+    public function scopeSearch(Builder $query, string $term): Builder
+    {
+        return $query->where(function (Builder $q) use ($term) {
+            $q->where('course_code', 'ilike', "%{$term}%")
+                ->orWhere('course_title', 'ilike', "%{$term}%");
+        });
     }
 }

@@ -1,13 +1,16 @@
 import { Head } from '@inertiajs/react';
-import { useState } from 'react';
+import { useCallback, useState } from 'react';
 import CourseCard from '@/components/skoolpad/course-card';
 import EmptyState from '@/components/skoolpad/empty-state';
 import QuestionCard from '@/components/skoolpad/question-card';
 import SpBadge from '@/components/skoolpad/sp-badge';
 import StatCard from '@/components/skoolpad/stat-card';
 import StreakWidget from '@/components/skoolpad/streak-widget';
+import { TiptapEditor } from '@/components/shared/tiptap-editor';
+import { TiptapRenderer } from '@/components/shared/tiptap-renderer';
 import { Skeleton, SkeletonText } from '@/components/ui/skeleton';
 import { useAppearance } from '@/hooks/use-appearance';
+import type { TiptapJSON } from '@/types/tiptap';
 
 const COURSES = [
     { code: 'CSC 201', name: 'Data Structures & Algorithms', progress: 68, questionCount: 142, variant: 'canopy' as const },
@@ -67,6 +70,11 @@ function SectionTitle({ children }: { children: React.ReactNode }) {
 export default function DesignShowcase() {
     const { appearance, updateAppearance } = useAppearance();
     const [activeTab, setActiveTab] = useState('All');
+    const [editorContent, setEditorContent] = useState<TiptapJSON | null>(null);
+
+    const handleEditorChange = useCallback((json: TiptapJSON) => {
+        setEditorContent(json);
+    }, []);
 
     const modes = [
         { key: 'light' as const, label: 'Light', desc: 'Warm Editorial' },
@@ -462,6 +470,36 @@ export default function DesignShowcase() {
                                     <div style={row.style}>{row.text}</div>
                                 </div>
                             ))}
+                        </div>
+                    </section>
+
+                    {/* ================================================================
+                        RICH TEXT EDITOR
+                       ================================================================ */}
+                    <section className="border-b border-[var(--border-2)] py-14">
+                        <SectionLabel>Components</SectionLabel>
+                        <SectionTitle>Rich Text Editor</SectionTitle>
+
+                        <div className="space-y-8">
+                            <TiptapEditor
+                                value={editorContent}
+                                onChange={handleEditorChange}
+                                placeholder="Start typing to test the editor..."
+                            />
+
+                            {editorContent && (
+                                <div>
+                                    <p
+                                        className="mb-3 text-[10px] font-semibold uppercase tracking-[0.08em] text-muted-foreground"
+                                        style={{ fontFamily: 'var(--font-body)' }}
+                                    >
+                                        Read-only Renderer
+                                    </p>
+                                    <div className="rounded-lg border border-border bg-card p-6">
+                                        <TiptapRenderer content={editorContent} />
+                                    </div>
+                                </div>
+                            )}
                         </div>
                     </section>
 

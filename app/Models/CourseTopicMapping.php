@@ -25,16 +25,17 @@ class CourseTopicMapping extends Model
     {
         return [
             'weight' => TopicWeight::class,
+            'sequence_order' => 'integer',
         ];
     }
 
-    public function institutionCourse(): BelongsTo
+    public function course(): BelongsTo
     {
-        return $this->belongsTo(InstitutionCourse::class);
+        return $this->belongsTo(InstitutionCourse::class, 'institution_course_id');
     }
 
-    public function canonicalTopic(): BelongsTo
+    public function topic(): BelongsTo
     {
-        return $this->belongsTo(CanonicalTopic::class);
+        return $this->belongsTo(CanonicalTopic::class, 'canonical_topic_id');
     }
 }

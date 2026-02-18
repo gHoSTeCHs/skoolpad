@@ -23,7 +23,7 @@ class ExamTypeController extends Controller
         $examTypes = ExamType::query()
             ->withCount('examSubjects')
             ->when($request->filled('search'), function ($query) use ($request) {
-                $query->where('name', 'like', "%{$request->string('search')}%");
+                $query->where('name', 'ilike', "%{$request->string('search')}%");
             })
             ->when($request->filled('is_active'), function ($query) use ($request) {
                 $query->where('is_active', $request->boolean('is_active'));

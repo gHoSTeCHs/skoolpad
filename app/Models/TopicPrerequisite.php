@@ -33,7 +33,7 @@ class TopicPrerequisite extends Model
         return $this->belongsTo(CanonicalTopic::class, 'topic_id');
     }
 
-    public function prerequisiteTopic(): BelongsTo
+    public function prerequisite(): BelongsTo
     {
         return $this->belongsTo(CanonicalTopic::class, 'prerequisite_topic_id');
     }

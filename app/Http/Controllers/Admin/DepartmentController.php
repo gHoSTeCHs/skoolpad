@@ -24,7 +24,7 @@ class DepartmentController extends Controller
         $departments = Department::query()
             ->where('faculty_id', $faculty->id)
             ->when($request->filled('search'), function ($query) use ($request) {
-                $query->where('name', 'like', "%{$request->string('search')}%");
+                $query->where('name', 'ilike', "%{$request->string('search')}%");
             })
             ->tap(fn ($query) => $this->applySorting($query, $request, ['name']))
             ->paginate(15)

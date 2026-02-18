@@ -82,6 +82,26 @@ test('store creates an exam type and redirects', function () {
     ]);
 });
 
+test('store auto-generates slug from name when slug is omitted', function () {
+    $country = Country::factory()->create();
+
+    $this->actingAs($this->admin)
+        ->post(route('admin.exam-types.store'), [
+            'country_id' => $country->id,
+            'name' => 'Test Exam',
+            'description' => 'A test exam type',
+            'duration_minutes' => 120,
+            'questions_per_subject' => 40,
+            'is_active' => true,
+        ])
+        ->assertRedirect(route('admin.exam-types.index'));
+
+    $this->assertDatabaseHas('exam_types', [
+        'name' => 'Test Exam',
+        'slug' => 'test-exam',
+    ]);
+});
+
 test('store validates required fields', function () {
     $this->actingAs($this->admin)
         ->post(route('admin.exam-types.store'), [])
@@ -152,6 +172,14 @@ test('update allows keeping the same name and slug', function () {
             'slug' => 'wassce',
         ])
         ->assertRedirect(route('admin.exam-types.index'));
+});
+
+test('non-staff users get 403', function () {
+    $user = User::factory()->create();
+
+    $this->actingAs($user)
+        ->get(route('admin.exam-types.index'))
+        ->assertForbidden();
 });
 
 test('guests cannot access exam type routes', function () {

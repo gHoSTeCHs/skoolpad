@@ -27,7 +27,7 @@ export default function ExamTypeForm({ examType, countries }: ExamTypeFormProps)
         description: examType?.description ?? '',
         duration_minutes: examType?.duration_minutes?.toString() ?? '',
         questions_per_subject: examType?.questions_per_subject?.toString() ?? '',
-        is_active: examType?.is_active ?? true,
+        is_active: examType?.is_active ?? false,
     });
 
     function generateSlug(name: string): string {

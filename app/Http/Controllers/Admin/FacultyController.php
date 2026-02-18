@@ -23,7 +23,7 @@ class FacultyController extends Controller
             ->where('institution_id', $institution->id)
             ->withCount('departments')
             ->when($request->filled('search'), function ($query) use ($request) {
-                $query->where('name', 'like', "%{$request->string('search')}%");
+                $query->where('name', 'ilike', "%{$request->string('search')}%");
             })
             ->tap(fn ($query) => $this->applySorting($query, $request, ['name', 'departments_count']))
             ->paginate(15)

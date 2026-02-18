@@ -125,6 +125,14 @@ test('update allows keeping the same slug for the same exam subject', function (
         ->assertRedirect(route('admin.exam-subjects.index', $this->examType));
 });
 
+test('non-staff users get 403', function () {
+    $user = User::factory()->create();
+
+    $this->actingAs($user)
+        ->get(route('admin.exam-subjects.index', $this->examType))
+        ->assertForbidden();
+});
+
 test('guests cannot access exam subject routes', function () {
     $examType = ExamType::factory()->create();
     $this->get(route('admin.exam-subjects.index', $examType))->assertRedirect(route('login'));

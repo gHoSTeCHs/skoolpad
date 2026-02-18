@@ -22,7 +22,7 @@ class ExamSubjectController extends Controller
         $examSubjects = ExamSubject::query()
             ->where('exam_type_id', $examType->id)
             ->when($request->filled('search'), function ($query) use ($request) {
-                $query->where('name', 'like', "%{$request->string('search')}%");
+                $query->where('name', 'ilike', "%{$request->string('search')}%");
             })
             ->tap(fn ($query) => $this->applySorting($query, $request, ['name', 'is_compulsory']))
             ->paginate(15)

@@ -121,6 +121,14 @@ test('update allows keeping the same name for the same faculty', function () {
         ->assertRedirect(route('admin.faculties.index', $this->institution));
 });
 
+test('non-staff users get 403', function () {
+    $user = User::factory()->create();
+
+    $this->actingAs($user)
+        ->get(route('admin.faculties.index', $this->institution))
+        ->assertForbidden();
+});
+
 test('guests cannot access faculty routes', function () {
     $institution = Institution::factory()->create();
     $this->get(route('admin.faculties.index', $institution))->assertRedirect(route('login'));
