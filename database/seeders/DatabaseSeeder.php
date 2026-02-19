@@ -3,8 +3,10 @@
 namespace Database\Seeders;
 
 use App\Enums\BillingPeriod;
+use App\Enums\CourseScope;
 use App\Enums\InstitutionType;
 use App\Enums\OwnershipType;
+use App\Enums\Semester;
 use App\Enums\TopicDifficulty;
 use App\Enums\UserRole;
 use App\Models\CanonicalTopic;
@@ -14,6 +16,7 @@ use App\Models\Discipline;
 use App\Models\ExamType;
 use App\Models\Faculty;
 use App\Models\Institution;
+use App\Models\InstitutionCourse;
 use App\Models\PlatformSetting;
 use App\Models\SubscriptionPlan;
 use App\Models\User;
@@ -269,6 +272,58 @@ class DatabaseSeeder extends Seeder
                     'published_at' => now(),
                 ]);
             }
+        }
+
+        $mouau = Institution::where('abbreviation', 'MOUAU')->first();
+        $unn = Institution::where('abbreviation', 'UNN')->first();
+
+        $csDeptMouau = Department::where('name', 'Computer Science')
+            ->whereHas('faculty', fn ($q) => $q->where('institution_id', $mouau->id))
+            ->first();
+        $engDeptMouau = Department::where('name', 'English')
+            ->whereHas('faculty', fn ($q) => $q->where('institution_id', $mouau->id))
+            ->first();
+        $meeDeptMouau = Department::where('name', 'Mechanical Engineering')
+            ->whereHas('faculty', fn ($q) => $q->where('institution_id', $mouau->id))
+            ->first();
+        $mcmDeptMouau = Department::where('name', 'Mass Communication')
+            ->whereHas('faculty', fn ($q) => $q->where('institution_id', $mouau->id))
+            ->first();
+        $csDeptUnn = Department::where('name', 'Computer Science')
+            ->whereHas('faculty', fn ($q) => $q->where('institution_id', $unn->id))
+            ->first();
+        $meeDeptUnn = Department::where('name', 'Mechanical Engineering')
+            ->whereHas('faculty', fn ($q) => $q->where('institution_id', $unn->id))
+            ->first();
+
+        $csDisc = $disciplines->get('computer-science');
+        $engDisc = $disciplines->get('english');
+        $meeDisc = $disciplines->get('mechanical-engineering');
+        $mcmDisc = $disciplines->get('mass-communication');
+
+        $courses = [
+            ['institution_id' => $mouau->id, 'owning_department_id' => $csDeptMouau->id, 'discipline_id' => $csDisc->id, 'course_code' => 'CSC 101', 'course_title' => 'Introduction to Computer Science', 'level' => 100, 'semester' => Semester::First, 'credit_units' => 3, 'course_scope' => CourseScope::Department],
+            ['institution_id' => $mouau->id, 'owning_department_id' => $csDeptMouau->id, 'discipline_id' => $csDisc->id, 'course_code' => 'CSC 102', 'course_title' => 'Introduction to Programming', 'level' => 100, 'semester' => Semester::Second, 'credit_units' => 3, 'course_scope' => CourseScope::Department],
+            ['institution_id' => $mouau->id, 'owning_department_id' => $csDeptMouau->id, 'discipline_id' => $csDisc->id, 'course_code' => 'CSC 201', 'course_title' => 'Data Structures and Algorithms', 'level' => 200, 'semester' => Semester::First, 'credit_units' => 4, 'course_scope' => CourseScope::Department],
+            ['institution_id' => $mouau->id, 'owning_department_id' => $csDeptMouau->id, 'discipline_id' => $csDisc->id, 'course_code' => 'CSC 301', 'course_title' => 'Operating Systems', 'level' => 300, 'semester' => Semester::First, 'credit_units' => 3, 'course_scope' => CourseScope::Department],
+            ['institution_id' => $mouau->id, 'owning_department_id' => $csDeptMouau->id, 'discipline_id' => $csDisc->id, 'course_code' => 'CSC 302', 'course_title' => 'Database Management Systems', 'level' => 300, 'semester' => Semester::Second, 'credit_units' => 3, 'course_scope' => CourseScope::Department],
+            ['institution_id' => $mouau->id, 'owning_department_id' => $csDeptMouau->id, 'discipline_id' => $csDisc->id, 'course_code' => 'CSC 401', 'course_title' => 'Software Engineering', 'level' => 400, 'semester' => Semester::First, 'credit_units' => 4, 'course_scope' => CourseScope::Department],
+            ['institution_id' => $mouau->id, 'owning_department_id' => $engDeptMouau->id, 'discipline_id' => $engDisc->id, 'course_code' => 'ENG 101', 'course_title' => 'Communication Skills I', 'level' => 100, 'semester' => Semester::First, 'credit_units' => 2, 'course_scope' => CourseScope::Faculty, 'is_elective' => false],
+            ['institution_id' => $mouau->id, 'owning_department_id' => $engDeptMouau->id, 'discipline_id' => $engDisc->id, 'course_code' => 'ENG 102', 'course_title' => 'Communication Skills II', 'level' => 100, 'semester' => Semester::Second, 'credit_units' => 2, 'course_scope' => CourseScope::InstitutionWide],
+            ['institution_id' => $mouau->id, 'owning_department_id' => $meeDeptMouau->id, 'discipline_id' => $meeDisc->id, 'course_code' => 'MEE 201', 'course_title' => 'Engineering Mechanics', 'level' => 200, 'semester' => Semester::First, 'credit_units' => 3, 'course_scope' => CourseScope::Faculty],
+            ['institution_id' => $mouau->id, 'owning_department_id' => $meeDeptMouau->id, 'discipline_id' => $meeDisc->id, 'course_code' => 'MEE 301', 'course_title' => 'Thermodynamics I', 'level' => 300, 'semester' => Semester::First, 'credit_units' => 3, 'course_scope' => CourseScope::Department],
+            ['institution_id' => $mouau->id, 'owning_department_id' => $mcmDeptMouau->id, 'discipline_id' => $mcmDisc->id, 'course_code' => 'MCM 101', 'course_title' => 'Introduction to Mass Communication', 'level' => 100, 'semester' => Semester::First, 'credit_units' => 3, 'course_scope' => CourseScope::Department],
+            ['institution_id' => $mouau->id, 'owning_department_id' => $mcmDeptMouau->id, 'discipline_id' => $mcmDisc->id, 'course_code' => 'MCM 201', 'course_title' => 'Media Ethics and Law', 'level' => 200, 'semester' => Semester::Second, 'credit_units' => 2, 'course_scope' => CourseScope::Department, 'is_elective' => true],
+            ['institution_id' => $unn->id, 'owning_department_id' => $csDeptUnn->id, 'discipline_id' => $csDisc->id, 'course_code' => 'COS 101', 'course_title' => 'Introduction to Computing', 'level' => 100, 'semester' => Semester::First, 'credit_units' => 3, 'course_scope' => CourseScope::Department],
+            ['institution_id' => $unn->id, 'owning_department_id' => $csDeptUnn->id, 'discipline_id' => $csDisc->id, 'course_code' => 'COS 201', 'course_title' => 'Computer Programming I', 'level' => 200, 'semester' => Semester::First, 'credit_units' => 4, 'course_scope' => CourseScope::Department],
+            ['institution_id' => $unn->id, 'owning_department_id' => $meeDeptUnn->id, 'discipline_id' => $meeDisc->id, 'course_code' => 'MEE 211', 'course_title' => 'Strength of Materials', 'level' => 200, 'semester' => Semester::Both, 'credit_units' => 3, 'course_scope' => CourseScope::Faculty],
+        ];
+
+        foreach ($courses as $courseData) {
+            InstitutionCourse::create(array_merge(
+                ['is_elective' => false],
+                $courseData,
+            ));
         }
 
         User::create([

@@ -29,11 +29,16 @@ export function PrerequisiteManager({
     const filteredTopics = useMemo(() => {
         if (!search.trim()) return disciplineTopics;
         const query = search.toLowerCase();
-        return disciplineTopics.filter((t) => t.title.toLowerCase().includes(query));
+        return disciplineTopics.filter((t) =>
+            t.title.toLowerCase().includes(query),
+        );
     }, [disciplineTopics, search]);
 
     function handleAdd(topic: AvailableTopic) {
-        onChange([...currentPrerequisites, { id: topic.id, title: topic.title, is_hard_prerequisite: true }]);
+        onChange([
+            ...currentPrerequisites,
+            { id: topic.id, title: topic.title, is_hard_prerequisite: true },
+        ]);
     }
 
     function handleRemove(id: string) {
@@ -43,7 +48,9 @@ export function PrerequisiteManager({
     function handleToggle(id: string) {
         onChange(
             currentPrerequisites.map((p) =>
-                p.id === id ? { ...p, is_hard_prerequisite: !p.is_hard_prerequisite } : p,
+                p.id === id
+                    ? { ...p, is_hard_prerequisite: !p.is_hard_prerequisite }
+                    : p,
             ),
         );
     }
@@ -56,7 +63,7 @@ export function PrerequisiteManager({
             <CardContent className="space-y-6">
                 {currentPrerequisites.length > 0 && (
                     <div className="space-y-3">
-                        <Label className="text-xs uppercase tracking-wider text-muted-foreground">
+                        <Label className="text-xs tracking-wider text-muted-foreground uppercase">
                             Current Prerequisites
                         </Label>
                         <div className="space-y-2">
@@ -71,11 +78,17 @@ export function PrerequisiteManager({
                                     <div className="flex items-center gap-3">
                                         <div className="flex items-center gap-2">
                                             <Switch
-                                                checked={prereq.is_hard_prerequisite}
-                                                onCheckedChange={() => handleToggle(prereq.id)}
+                                                checked={
+                                                    prereq.is_hard_prerequisite
+                                                }
+                                                onCheckedChange={() =>
+                                                    handleToggle(prereq.id)
+                                                }
                                             />
                                             <span className="text-xs text-muted-foreground">
-                                                {prereq.is_hard_prerequisite ? 'Hard' : 'Soft'}
+                                                {prereq.is_hard_prerequisite
+                                                    ? 'Hard'
+                                                    : 'Soft'}
                                             </span>
                                         </div>
                                         <Button
@@ -83,7 +96,9 @@ export function PrerequisiteManager({
                                             variant="ghost"
                                             size="icon"
                                             className="size-7 text-muted-foreground hover:text-destructive"
-                                            onClick={() => handleRemove(prereq.id)}
+                                            onClick={() =>
+                                                handleRemove(prereq.id)
+                                            }
                                         >
                                             <X className="size-4" />
                                         </Button>
@@ -95,11 +110,11 @@ export function PrerequisiteManager({
                 )}
 
                 <div className="space-y-3">
-                    <Label className="text-xs uppercase tracking-wider text-muted-foreground">
+                    <Label className="text-xs tracking-wider text-muted-foreground uppercase">
                         Add Prerequisites
                     </Label>
                     <div className="relative">
-                        <Search className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
+                        <Search className="absolute top-1/2 left-3 size-4 -translate-y-1/2 text-muted-foreground" />
                         <Input
                             value={search}
                             onChange={(e) => setSearch(e.target.value)}

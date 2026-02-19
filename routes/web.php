@@ -1,12 +1,16 @@
 <?php
 
 use App\Http\Controllers\Admin\CanonicalTopicController;
+use App\Http\Controllers\Admin\CourseDepartmentController;
+use App\Http\Controllers\Admin\CourseController;
 use App\Http\Controllers\Admin\DepartmentController;
 use App\Http\Controllers\Admin\DisciplineController;
 use App\Http\Controllers\Admin\ExamSubjectController;
 use App\Http\Controllers\Admin\ExamTypeController;
 use App\Http\Controllers\Admin\FacultyController;
 use App\Http\Controllers\Admin\InstitutionController;
+use App\Models\Department;
+use App\Models\Institution;
 use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
 use Laravel\Fortify\Features;
@@ -54,7 +58,22 @@ Route::middleware(['auth', 'verified', 'staff'])->prefix('admin')->name('admin.'
     Route::get('topics/{topic}/preview', [CanonicalTopicController::class, 'preview'])->name('topics.preview');
     Route::post('topics/{topic}/toggle-publish', [CanonicalTopicController::class, 'togglePublish'])->name('topics.togglePublish');
     Route::get('questions', fn () => Inertia::render('admin/questions/index'))->name('questions.index');
-    Route::get('courses', fn () => Inertia::render('admin/courses/index'))->name('courses.index');
+    Route::get('courses', [CourseController::class, 'index'])->name('courses.index');
+    Route::get('courses/create', [CourseController::class, 'create'])->name('courses.create');
+    Route::post('courses', [CourseController::class, 'store'])->name('courses.store');
+    Route::get('courses/{course}/edit', [CourseController::class, 'edit'])->name('courses.edit');
+    Route::put('courses/{course}', [CourseController::class, 'update'])->name('courses.update');
+
+    Route::get('api/institutions/{institution}/structure', function (Institution $institution) {
+        return response()->json([
+            'faculties' => $institution->faculties()->orderBy('name')->get(['id', 'name']),
+            'departments' => Department::whereHas('faculty',
+                fn ($q) => $q->where('institution_id', $institution->id))
+                ->with('faculty:id,name')
+                ->orderBy('name')
+                ->get(['id', 'faculty_id', 'name', 'abbreviation']),
+        ]);
+    })->name('api.institution.structure');
     Route::get('review-queue', fn () => Inertia::render('admin/review-queue/index'))->name('review-queue.index');
     Route::get('users', fn () => Inertia::render('admin/users/index'))->name('users.index');
     Route::get('imports', fn () => Inertia::render('admin/imports/index'))->name('imports.index');
