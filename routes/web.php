@@ -3,6 +3,7 @@
 use App\Http\Controllers\Admin\CanonicalTopicController;
 use App\Http\Controllers\Admin\CourseController;
 use App\Http\Controllers\Admin\CourseDepartmentController;
+use App\Http\Controllers\Admin\CourseMappingController;
 use App\Http\Controllers\Admin\DepartmentController;
 use App\Http\Controllers\Admin\DisciplineController;
 use App\Http\Controllers\Admin\ExamSubjectController;
@@ -65,6 +66,8 @@ Route::middleware(['auth', 'verified', 'staff'])->prefix('admin')->name('admin.'
     Route::put('courses/{course}', [CourseController::class, 'update'])->name('courses.update');
     Route::get('courses/{course}/departments', [CourseDepartmentController::class, 'index'])->name('courses.departments');
     Route::put('courses/{course}/departments', [CourseDepartmentController::class, 'update'])->name('courses.departments.update');
+    Route::get('courses/{course}/mappings', [CourseMappingController::class, 'index'])->name('courses.mappings');
+    Route::put('courses/{course}/mappings', [CourseMappingController::class, 'update'])->name('courses.mappings.update');
 
     Route::get('api/institutions/{institution}/structure', function (Institution $institution) {
         return response()->json([

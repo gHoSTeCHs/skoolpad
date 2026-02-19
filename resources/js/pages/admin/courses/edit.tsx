@@ -3,6 +3,7 @@ import { ArrowRight, Loader2 } from 'lucide-react';
 import { useCallback, useState } from 'react';
 import CourseDepartmentController from '@/actions/App/Http/Controllers/Admin/CourseDepartmentController';
 import CourseController from '@/actions/App/Http/Controllers/Admin/CourseController';
+import CourseMappingController from '@/actions/App/Http/Controllers/Admin/CourseMappingController';
 import { structure } from '@/routes/admin/api/institution';
 import InputError from '@/components/input-error';
 import { Button } from '@/components/ui/button';
@@ -359,9 +360,9 @@ export default function AdminCoursesEdit({
                                 </p>
                             </div>
                             <Button variant="ghost" size="icon" asChild>
-                                <a href="#">
+                                <Link href={CourseMappingController.index.url(course.id)}>
                                     <ArrowRight className="size-4" />
-                                </a>
+                                </Link>
                             </Button>
                         </CardContent>
                     </Card>
