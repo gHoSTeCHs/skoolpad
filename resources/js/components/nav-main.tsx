@@ -7,10 +7,11 @@ import {
     SidebarMenuItem,
 } from '@/components/ui/sidebar';
 import { useCurrentUrl } from '@/hooks/use-current-url';
+import { toUrl } from '@/lib/utils';
 import type { NavGroup } from '@/types';
 
 export function NavMain({ groups = [] }: { groups: NavGroup[] }) {
-    const { isCurrentUrl } = useCurrentUrl();
+    const { currentUrl } = useCurrentUrl();
 
     return (
         <>
@@ -21,7 +22,9 @@ export function NavMain({ groups = [] }: { groups: NavGroup[] }) {
                     </SidebarGroupLabel>
                     <SidebarMenu>
                         {group.items.map((item) => {
-                            const active = isCurrentUrl(item.href);
+                            const hrefString = toUrl(item.href);
+                            const active = currentUrl === hrefString ||
+                                (hrefString !== '/admin' && currentUrl.startsWith(hrefString + '/'));
 
                             return (
                                 <SidebarMenuItem key={item.title}>

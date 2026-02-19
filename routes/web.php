@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\Admin\BulkImportController;
 use App\Http\Controllers\Admin\CanonicalTopicController;
 use App\Http\Controllers\Admin\CourseController;
 use App\Http\Controllers\Admin\CourseDepartmentController;
@@ -81,7 +82,11 @@ Route::middleware(['auth', 'verified', 'staff'])->prefix('admin')->name('admin.'
     })->name('api.institution.structure');
     Route::get('review-queue', fn () => Inertia::render('admin/review-queue/index'))->name('review-queue.index');
     Route::get('users', fn () => Inertia::render('admin/users/index'))->name('users.index');
-    Route::get('imports', fn () => Inertia::render('admin/imports/index'))->name('imports.index');
+    Route::get('import', [BulkImportController::class, 'index'])->name('import.index');
+    Route::post('import/topics', [BulkImportController::class, 'importTopics'])->name('import.topics');
+    Route::post('import/course-mappings', [BulkImportController::class, 'importCourseMappings'])->name('import.courseMappings');
+    Route::post('import/course-offerings', [BulkImportController::class, 'importCourseOfferings'])->name('import.courseOfferings');
+    Route::get('import/history', [BulkImportController::class, 'history'])->name('import.history');
     Route::get('settings', fn () => Inertia::render('admin/settings/index'))->name('settings.index');
 
     Route::resource('institutions', InstitutionController::class)->except(['show', 'destroy']);

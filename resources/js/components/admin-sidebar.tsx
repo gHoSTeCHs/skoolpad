@@ -3,15 +3,18 @@ import {
     BookOpen,
     Building2,
     ClipboardList,
-    FileDown,
     GraduationCap,
     LayoutGrid,
     ListChecks,
     MessageSquareMore,
     Settings,
     Shapes,
+    Upload,
     Users,
 } from 'lucide-react';
+import BulkImportController from '@/actions/App/Http/Controllers/Admin/BulkImportController';
+import CanonicalTopicController from '@/actions/App/Http/Controllers/Admin/CanonicalTopicController';
+import CourseController from '@/actions/App/Http/Controllers/Admin/CourseController';
 import { NavMain } from '@/components/nav-main';
 import { NavUser } from '@/components/nav-user';
 import {
@@ -36,11 +39,11 @@ const navGroups: NavGroup[] = [
         label: 'Content Management',
         items: [
             { title: 'Disciplines', href: '/admin/disciplines', icon: Shapes },
-            { title: 'Topics', href: '/admin/topics', icon: BookOpen },
+            { title: 'Canonical Topics', href: CanonicalTopicController.index.url(), icon: BookOpen },
             { title: 'Questions', href: '/admin/questions', icon: MessageSquareMore },
-            { title: 'Courses', href: '/admin/courses', icon: GraduationCap },
+            { title: 'Courses', href: CourseController.index.url(), icon: GraduationCap },
             { title: 'Review Queue', href: '/admin/review-queue', icon: ListChecks },
-            { title: 'Imports', href: '/admin/imports', icon: FileDown },
+            { title: 'Bulk Import', href: BulkImportController.index.url(), icon: Upload },
         ],
     },
     {
