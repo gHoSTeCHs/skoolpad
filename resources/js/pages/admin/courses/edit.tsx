@@ -1,6 +1,7 @@
 import { Head, Link, useForm } from '@inertiajs/react';
 import { ArrowRight, Loader2 } from 'lucide-react';
 import { useCallback, useState } from 'react';
+import CourseDepartmentController from '@/actions/App/Http/Controllers/Admin/CourseDepartmentController';
 import CourseController from '@/actions/App/Http/Controllers/Admin/CourseController';
 import { structure } from '@/routes/admin/api/institution';
 import InputError from '@/components/input-error';
@@ -365,23 +366,21 @@ export default function AdminCoursesEdit({
                         </CardContent>
                     </Card>
 
-                    {form.data.course_scope === 'faculty' && (
-                        <Card>
-                            <CardContent className="flex items-center justify-between p-6">
-                                <div>
-                                    <h3 className="font-medium">Manage Department Offerings</h3>
-                                    <p className="mt-1 text-sm text-muted-foreground">
-                                        Configure which departments offer this faculty course.
-                                    </p>
-                                </div>
-                                <Button variant="ghost" size="icon" asChild>
-                                    <a href="#">
-                                        <ArrowRight className="size-4" />
-                                    </a>
-                                </Button>
-                            </CardContent>
-                        </Card>
-                    )}
+                    <Card>
+                        <CardContent className="flex items-center justify-between p-6">
+                            <div>
+                                <h3 className="font-medium">Manage Department Offerings</h3>
+                                <p className="mt-1 text-sm text-muted-foreground">
+                                    Configure which departments offer this course.
+                                </p>
+                            </div>
+                            <Button variant="ghost" size="icon" asChild>
+                                <Link href={CourseDepartmentController.index.url(course.id)}>
+                                    <ArrowRight className="size-4" />
+                                </Link>
+                            </Button>
+                        </CardContent>
+                    </Card>
                 </div>
             </div>
         </AdminLayout>
