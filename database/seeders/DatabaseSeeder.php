@@ -5,7 +5,9 @@ namespace Database\Seeders;
 use App\Enums\BillingPeriod;
 use App\Enums\InstitutionType;
 use App\Enums\OwnershipType;
+use App\Enums\TopicDifficulty;
 use App\Enums\UserRole;
+use App\Models\CanonicalTopic;
 use App\Models\Country;
 use App\Models\Department;
 use App\Models\Discipline;
@@ -216,6 +218,58 @@ class DatabaseSeeder extends Seeder
             ],
             'is_active' => true,
         ]);
+
+        $topicsByDiscipline = [
+            'computer-science' => [
+                ['title' => 'Introduction to Algorithms', 'difficulty' => TopicDifficulty::Foundational, 'minutes' => 15],
+                ['title' => 'Data Structures and Trees', 'difficulty' => TopicDifficulty::Intermediate, 'minutes' => 20],
+                ['title' => 'Database Normalization', 'difficulty' => TopicDifficulty::Intermediate, 'minutes' => 18],
+                ['title' => 'Object Oriented Programming', 'difficulty' => TopicDifficulty::Foundational, 'minutes' => 12],
+                ['title' => 'Operating Systems Concepts', 'difficulty' => TopicDifficulty::Advanced, 'minutes' => 25],
+            ],
+            'english' => [
+                ['title' => 'Parts of Speech', 'difficulty' => TopicDifficulty::Foundational, 'minutes' => 10],
+                ['title' => 'Essay Writing Techniques', 'difficulty' => TopicDifficulty::Intermediate, 'minutes' => 15],
+                ['title' => 'Literary Criticism', 'difficulty' => TopicDifficulty::Advanced, 'minutes' => 22],
+            ],
+            'mass-communication' => [
+                ['title' => 'Introduction to Mass Media', 'difficulty' => TopicDifficulty::Foundational, 'minutes' => 12],
+                ['title' => 'Media Ethics and Law', 'difficulty' => TopicDifficulty::Intermediate, 'minutes' => 18],
+            ],
+            'mechanical-engineering' => [
+                ['title' => 'Thermodynamics', 'difficulty' => TopicDifficulty::Intermediate, 'minutes' => 20],
+                ['title' => 'Engineering Mechanics', 'difficulty' => TopicDifficulty::Foundational, 'minutes' => 16],
+            ],
+        ];
+
+        foreach ($topicsByDiscipline as $disciplineSlug => $topics) {
+            $discipline = $disciplines->get($disciplineSlug);
+            foreach ($topics as $topicData) {
+                CanonicalTopic::create([
+                    'discipline_id' => $discipline->id,
+                    'title' => $topicData['title'],
+                    'slug' => Str::slug($topicData['title']),
+                    'content' => [
+                        'type' => 'doc',
+                        'content' => [
+                            [
+                                'type' => 'paragraph',
+                                'content' => [
+                                    ['type' => 'text', 'text' => "This is the content for {$topicData['title']}. A comprehensive guide covering key concepts and practical applications."],
+                                ],
+                            ],
+                        ],
+                    ],
+                    'content_plain' => "This is the content for {$topicData['title']}. A comprehensive guide covering key concepts and practical applications.",
+                    'summary' => "An overview of {$topicData['title']} covering fundamental principles and applications.",
+                    'difficulty_level' => $topicData['difficulty'],
+                    'estimated_read_minutes' => $topicData['minutes'],
+                    'language' => 'en',
+                    'is_published' => true,
+                    'published_at' => now(),
+                ]);
+            }
+        }
 
         User::create([
             'name' => 'Super Admin',

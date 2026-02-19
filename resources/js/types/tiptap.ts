@@ -1,2 +1,3 @@
 /** Tiptap document JSON structure */
-export type TiptapJSON = Record<string, unknown>;
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+export type TiptapJSON = Record<string, any>;

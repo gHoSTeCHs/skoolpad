@@ -5,10 +5,7 @@ import Image from '@tiptap/extension-image';
 import Link from '@tiptap/extension-link';
 import Mathematics from '@tiptap/extension-mathematics';
 import Placeholder from '@tiptap/extension-placeholder';
-import { Table } from '@tiptap/extension-table';
-import TableCell from '@tiptap/extension-table-cell';
-import TableHeader from '@tiptap/extension-table-header';
-import TableRow from '@tiptap/extension-table-row';
+import { Table, TableCell, TableHeader, TableRow } from '@tiptap/extension-table';
 import Underline from '@tiptap/extension-underline';
 import {
     type Editor,
@@ -113,6 +110,7 @@ export function TiptapEditor({
     className,
     disabled = false,
 }: TiptapEditorProps) {
+    'use no memo';
     const { t } = useTranslation();
     const lastEmittedJson = useRef<TiptapJSON | null>(value);
     const [linkDialogOpen, setLinkDialogOpen] = useState(false);
@@ -120,7 +118,7 @@ export function TiptapEditor({
 
     const extensions = useMemo(
         () => [
-            StarterKit.configure({ codeBlock: false }),
+            StarterKit.configure({ codeBlock: false, link: false, underline: false }),
             Underline,
             Link.configure({
                 openOnClick: false,
@@ -248,6 +246,7 @@ function EditorToolbar({
     onLinkClick,
     onImageClick,
 }: EditorToolbarProps) {
+    'use no memo';
     const { t } = useTranslation();
     const iconSize = 'size-4';
 

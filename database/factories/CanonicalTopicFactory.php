@@ -35,7 +35,17 @@ class CanonicalTopicFactory extends Factory
             'parent_topic_id' => null,
             'title' => $title,
             'slug' => Str::slug($title).'-'.Str::random(4),
-            'content' => [['type' => 'paragraph', 'text' => fake()->paragraph()]],
+            'content' => [
+                'type' => 'doc',
+                'content' => [
+                    [
+                        'type' => 'paragraph',
+                        'content' => [
+                            ['type' => 'text', 'text' => fake()->paragraph()],
+                        ],
+                    ],
+                ],
+            ],
             'content_plain' => fake()->paragraph(),
             'summary' => fake()->sentence(),
             'difficulty_level' => fake()->randomElement(TopicDifficulty::cases()),

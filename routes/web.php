@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\Admin\CanonicalTopicController;
 use App\Http\Controllers\Admin\DepartmentController;
 use App\Http\Controllers\Admin\DisciplineController;
 use App\Http\Controllers\Admin\ExamSubjectController;
@@ -45,7 +46,13 @@ Route::middleware(['auth', 'verified', 'onboarded'])->group(function () {
 
 Route::middleware(['auth', 'verified', 'staff'])->prefix('admin')->name('admin.')->group(function () {
     Route::get('/', fn () => Inertia::render('admin/dashboard'))->name('dashboard');
-    Route::get('topics', fn () => Inertia::render('admin/topics/index'))->name('topics.index');
+    Route::get('topics', [CanonicalTopicController::class, 'index'])->name('topics.index');
+    Route::get('topics/create', [CanonicalTopicController::class, 'create'])->name('topics.create');
+    Route::post('topics', [CanonicalTopicController::class, 'store'])->name('topics.store');
+    Route::get('topics/{topic}/edit', [CanonicalTopicController::class, 'edit'])->name('topics.edit');
+    Route::put('topics/{topic}', [CanonicalTopicController::class, 'update'])->name('topics.update');
+    Route::get('topics/{topic}/preview', [CanonicalTopicController::class, 'preview'])->name('topics.preview');
+    Route::post('topics/{topic}/toggle-publish', [CanonicalTopicController::class, 'togglePublish'])->name('topics.togglePublish');
     Route::get('questions', fn () => Inertia::render('admin/questions/index'))->name('questions.index');
     Route::get('courses', fn () => Inertia::render('admin/courses/index'))->name('courses.index');
     Route::get('review-queue', fn () => Inertia::render('admin/review-queue/index'))->name('review-queue.index');

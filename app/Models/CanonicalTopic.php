@@ -78,7 +78,7 @@ class CanonicalTopic extends Model
             'topic_prerequisites',
             'topic_id',
             'prerequisite_topic_id'
-        )->withPivot('is_hard_prerequisite');
+        )->using(TopicPrerequisite::class)->withPivot('is_hard_prerequisite');
     }
 
     public function requiredBy(): BelongsToMany
@@ -88,7 +88,7 @@ class CanonicalTopic extends Model
             'topic_prerequisites',
             'prerequisite_topic_id',
             'topic_id'
-        )->withPivot('is_hard_prerequisite');
+        )->using(TopicPrerequisite::class)->withPivot('is_hard_prerequisite');
     }
 
     public function courseMappings(): HasMany

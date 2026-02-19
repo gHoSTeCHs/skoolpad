@@ -3,14 +3,16 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
-use Illuminate\Database\Eloquent\Factories\HasFactory;
-use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\Pivot;
 
-class TopicPrerequisite extends Model
+class TopicPrerequisite extends Pivot
 {
-    /** @use HasFactory<\Database\Factories\TopicPrerequisiteFactory> */
-    use HasFactory, HasUuids;
+    use HasUuids;
+
+    protected $table = 'topic_prerequisites';
+
+    public $incrementing = false;
 
     const UPDATED_AT = null;
 
