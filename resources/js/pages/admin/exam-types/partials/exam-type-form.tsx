@@ -1,5 +1,4 @@
 import { Link, useForm } from '@inertiajs/react';
-import { useRef } from 'react';
 import ExamTypeController from '@/actions/App/Http/Controllers/Admin/ExamTypeController';
 import InputError from '@/components/input-error';
 import { Button } from '@/components/ui/button';
@@ -9,6 +8,7 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Switch } from '@/components/ui/switch';
 import { Textarea } from '@/components/ui/textarea';
+import { useSlug } from '@/hooks/use-slug';
 import type { Country, ExamType } from '@/types/models';
 
 interface ExamTypeFormProps {
@@ -18,7 +18,7 @@ interface ExamTypeFormProps {
 
 export default function ExamTypeForm({ examType, countries }: ExamTypeFormProps) {
     const isEditing = !!examType?.id;
-    const slugTouched = useRef(false);
+    const { generateSlug, slugManuallyEdited } = useSlug();
 
     const form = useForm({
         name: examType?.name ?? '',
@@ -30,16 +30,9 @@ export default function ExamTypeForm({ examType, countries }: ExamTypeFormProps)
         is_active: examType?.is_active ?? false,
     });
 
-    function generateSlug(name: string): string {
-        return name
-            .toLowerCase()
-            .replace(/\s+/g, '-')
-            .replace(/[^a-z0-9-]/g, '');
-    }
-
     function handleNameChange(value: string) {
         form.setData('name', value);
-        if (!slugTouched.current) {
+        if (!slugManuallyEdited.current) {
             form.setData((prev) => ({ ...prev, name: value, slug: generateSlug(value) }));
         }
     }
@@ -75,7 +68,7 @@ export default function ExamTypeForm({ examType, countries }: ExamTypeFormProps)
                                 id="slug"
                                 value={form.data.slug}
                                 onChange={(e) => {
-                                    slugTouched.current = true;
+                                    slugManuallyEdited.current = true;
                                     form.setData('slug', e.target.value);
                                 }}
                                 placeholder="e.g. jamb-utme"

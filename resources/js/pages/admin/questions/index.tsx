@@ -15,6 +15,7 @@ import {
     DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { useFilterHandlers } from '@/hooks/use-filter-handlers';
 import AdminLayout from '@/layouts/admin-layout';
 import type { PaginatedData } from '@/types/models';
 import type {
@@ -73,19 +74,6 @@ const typeLabels: Record<string, string> = {
     theory: 'Theory',
     fill_in_blank: 'Fill in Blank',
 };
-
-function hasActiveFilters(filters: QuestionFilters): boolean {
-    return !!(
-        filters.institution_id ||
-        filters.institution_course_id ||
-        filters.year ||
-        filters.semester ||
-        filters.question_type ||
-        filters.status ||
-        filters.difficulty_level ||
-        filters.source
-    );
-}
 
 function formatDate(dateString: string): string {
     return new Date(dateString).toLocaleDateString('en-NG', {
@@ -175,7 +163,10 @@ const columns: ColumnDef<QuestionListItem>[] = [
 ];
 
 export default function AdminQuestions({ questions, institutions, filters, enum_options }: Props) {
-    const indexUrl = QuestionController.index.url();
+    const { handleFilterChange, clearFilters: baseClearFilters, hasActiveFilters } = useFilterHandlers({
+        indexUrl: QuestionController.index.url(),
+        filters,
+    });
     const [courses, setCourses] = useState<CourseOption[]>([]);
 
     useEffect(() => {
@@ -187,19 +178,11 @@ export default function AdminQuestions({ questions, institutions, filters, enum_
         }
     }, []);
 
-    function handleFilterChange(key: string, value: string | undefined) {
-        router.get(
-            indexUrl,
-            { ...filters, [key]: value || undefined, search: filters.search || undefined },
-            { preserveState: true, preserveScroll: true, replace: true },
-        );
-    }
-
     function handleInstitutionChange(value: string) {
         if (value === 'all') {
             setCourses([]);
             const { institution_id, institution_course_id, ...rest } = filters;
-            router.get(indexUrl, { ...rest, search: filters.search || undefined }, {
+            router.get(QuestionController.index.url(), { ...rest, search: filters.search || undefined }, {
                 preserveState: true,
                 preserveScroll: true,
                 replace: true,
@@ -213,7 +196,7 @@ export default function AdminQuestions({ questions, institutions, filters, enum_
             .catch(() => setCourses([]));
 
         const { institution_course_id, ...rest } = filters;
-        router.get(indexUrl, { ...rest, institution_id: value, search: filters.search || undefined }, {
+        router.get(QuestionController.index.url(), { ...rest, institution_id: value, search: filters.search || undefined }, {
             preserveState: true,
             preserveScroll: true,
             replace: true,
@@ -222,11 +205,7 @@ export default function AdminQuestions({ questions, institutions, filters, enum_
 
     function clearFilters() {
         setCourses([]);
-        router.get(
-            indexUrl,
-            { search: filters.search || undefined, sort: filters.sort, direction: filters.direction },
-            { preserveState: true, preserveScroll: true, replace: true },
-        );
+        baseClearFilters();
     }
 
     return (
@@ -246,7 +225,7 @@ export default function AdminQuestions({ questions, institutions, filters, enum_
                         <div className="flex flex-wrap items-center gap-3">
                             <SearchInput
                                 value={filters.search ?? ''}
-                                routeUrl={indexUrl}
+                                routeUrl={QuestionController.index.url()}
                                 placeholder="Search questions..."
                                 queryParams={{
                                     institution_id: filters.institution_id,
@@ -391,7 +370,7 @@ export default function AdminQuestions({ questions, institutions, filters, enum_
                                     ))}
                                 </SelectContent>
                             </Select>
-                            {hasActiveFilters(filters) && (
+                            {hasActiveFilters && (
                                 <Button variant="ghost" size="sm" onClick={clearFilters}>
                                     Clear filters
                                 </Button>

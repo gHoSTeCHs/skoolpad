@@ -12,18 +12,22 @@ import {
     DropdownMenuItem,
     DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import {
+    Select,
+    SelectContent,
+    SelectItem,
+    SelectTrigger,
+    SelectValue,
+} from '@/components/ui/select';
+import { useFilterHandlers, type BaseFilters } from '@/hooks/use-filter-handlers';
 import AdminLayout from '@/layouts/admin-layout';
 import type { PaginatedData } from '@/types/models';
 import type { Discipline, TopicListItem } from '@/types/topics';
 
-interface Filters {
-    search?: string;
+interface Filters extends BaseFilters {
     discipline_id?: string;
     difficulty_level?: string;
     is_published?: string;
-    sort?: string;
-    direction?: string;
 }
 
 interface Props {
@@ -41,14 +45,11 @@ const difficultyLabels: Record<string, string> = {
 };
 
 const difficultyStyles: Record<string, string> = {
-    foundational: 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400 reader:bg-blue-900/30 reader:text-blue-400',
+    foundational:
+        'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400 reader:bg-blue-900/30 reader:text-blue-400',
     intermediate: 'bg-[var(--badge-reward-bg)] text-[var(--badge-reward-fg)]',
     advanced: 'bg-[var(--badge-danger-bg)] text-[var(--badge-danger-fg)]',
 };
-
-function hasActiveFilters(filters: Filters): boolean {
-    return !!(filters.discipline_id || filters.difficulty_level || filters.is_published);
-}
 
 function formatDate(dateString: string): string {
     return new Date(dateString).toLocaleDateString('en-NG', {
@@ -111,7 +112,10 @@ const columns: ColumnDef<TopicListItem>[] = [
     {
         id: 'estimated_read_minutes',
         header: 'Read Time',
-        cell: (row) => row.estimated_read_minutes ? `${row.estimated_read_minutes} min` : '—',
+        cell: (row) =>
+            row.estimated_read_minutes
+                ? `${row.estimated_read_minutes} min`
+                : '—',
         align: 'right',
     },
     {
@@ -123,26 +127,17 @@ const columns: ColumnDef<TopicListItem>[] = [
 ];
 
 export default function AdminTopics({ topics, disciplines, filters }: Props) {
-    const indexUrl = CanonicalTopicController.index.url();
-
-    function handleFilterChange(key: string, value: string | undefined) {
-        router.get(
-            indexUrl,
-            { ...filters, [key]: value || undefined, search: filters.search || undefined },
-            { preserveState: true, preserveScroll: true, replace: true },
-        );
-    }
-
-    function clearFilters() {
-        router.get(
-            indexUrl,
-            { search: filters.search || undefined, sort: filters.sort, direction: filters.direction },
-            { preserveState: true, preserveScroll: true, replace: true },
-        );
-    }
+    const { handleFilterChange, clearFilters, hasActiveFilters } = useFilterHandlers({
+        indexUrl: CanonicalTopicController.index.url(),
+        filters,
+    });
 
     function handleTogglePublish(topicId: string) {
-        router.post(CanonicalTopicController.togglePublish.url(topicId), {}, { preserveScroll: true });
+        router.post(
+            CanonicalTopicController.togglePublish.url(topicId),
+            {},
+            { preserveScroll: true },
+        );
     }
 
     return (
@@ -151,7 +146,10 @@ export default function AdminTopics({ topics, disciplines, filters }: Props) {
             <div className="flex flex-col gap-4 p-4 md:p-6">
                 <PageHeader
                     title="Topics"
-                    action={{ label: 'Create Topic', href: CanonicalTopicController.create.url() }}
+                    action={{
+                        label: 'Create Topic',
+                        href: CanonicalTopicController.create.url(),
+                    }}
                 />
 
                 <DataTable
@@ -162,7 +160,7 @@ export default function AdminTopics({ topics, disciplines, filters }: Props) {
                         <div className="flex flex-wrap items-center gap-3">
                             <SearchInput
                                 value={filters.search ?? ''}
-                                routeUrl={indexUrl}
+                                routeUrl={CanonicalTopicController.index.url()}
                                 placeholder="Search topics..."
                                 queryParams={{
                                     discipline_id: filters.discipline_id,
@@ -174,13 +172,20 @@ export default function AdminTopics({ topics, disciplines, filters }: Props) {
                             />
                             <Select
                                 value={filters.discipline_id ?? ''}
-                                onValueChange={(value) => handleFilterChange('discipline_id', value === 'all' ? undefined : value)}
+                                onValueChange={(value) =>
+                                    handleFilterChange(
+                                        'discipline_id',
+                                        value === 'all' ? undefined : value,
+                                    )
+                                }
                             >
                                 <SelectTrigger className="w-[180px]">
                                     <SelectValue placeholder="All Disciplines" />
                                 </SelectTrigger>
                                 <SelectContent>
-                                    <SelectItem value="all">All Disciplines</SelectItem>
+                                    <SelectItem value="all">
+                                        All Disciplines
+                                    </SelectItem>
                                     {disciplines.map((d) => (
                                         <SelectItem key={d.id} value={d.id}>
                                             {d.name}
@@ -190,33 +195,57 @@ export default function AdminTopics({ topics, disciplines, filters }: Props) {
                             </Select>
                             <Select
                                 value={filters.difficulty_level ?? ''}
-                                onValueChange={(value) => handleFilterChange('difficulty_level', value === 'all' ? undefined : value)}
+                                onValueChange={(value) =>
+                                    handleFilterChange(
+                                        'difficulty_level',
+                                        value === 'all' ? undefined : value,
+                                    )
+                                }
                             >
                                 <SelectTrigger className="w-[180px]">
                                     <SelectValue placeholder="All Difficulty" />
                                 </SelectTrigger>
                                 <SelectContent>
-                                    <SelectItem value="all">All Difficulty</SelectItem>
-                                    <SelectItem value="foundational">Foundational</SelectItem>
-                                    <SelectItem value="intermediate">Intermediate</SelectItem>
-                                    <SelectItem value="advanced">Advanced</SelectItem>
+                                    <SelectItem value="all">
+                                        All Difficulty
+                                    </SelectItem>
+                                    <SelectItem value="foundational">
+                                        Foundational
+                                    </SelectItem>
+                                    <SelectItem value="intermediate">
+                                        Intermediate
+                                    </SelectItem>
+                                    <SelectItem value="advanced">
+                                        Advanced
+                                    </SelectItem>
                                 </SelectContent>
                             </Select>
                             <Select
                                 value={filters.is_published ?? ''}
-                                onValueChange={(value) => handleFilterChange('is_published', value === 'all' ? undefined : value)}
+                                onValueChange={(value) =>
+                                    handleFilterChange(
+                                        'is_published',
+                                        value === 'all' ? undefined : value,
+                                    )
+                                }
                             >
                                 <SelectTrigger className="w-[180px]">
                                     <SelectValue placeholder="All Status" />
                                 </SelectTrigger>
                                 <SelectContent>
-                                    <SelectItem value="all">All Status</SelectItem>
+                                    <SelectItem value="all">
+                                        All Status
+                                    </SelectItem>
                                     <SelectItem value="1">Published</SelectItem>
                                     <SelectItem value="0">Draft</SelectItem>
                                 </SelectContent>
                             </Select>
-                            {hasActiveFilters(filters) && (
-                                <Button variant="ghost" size="sm" onClick={clearFilters}>
+                            {hasActiveFilters && (
+                                <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    onClick={clearFilters}
+                                >
                                     Clear filters
                                 </Button>
                             )}
@@ -225,25 +254,39 @@ export default function AdminTopics({ topics, disciplines, filters }: Props) {
                     renderActions={(row) => (
                         <DropdownMenu>
                             <DropdownMenuTrigger asChild>
-                                <Button variant="ghost" size="icon" className="size-8">
+                                <Button
+                                    variant="ghost"
+                                    size="icon"
+                                    className="size-8"
+                                >
                                     <MoreHorizontal className="size-4" />
                                     <span className="sr-only">Open menu</span>
                                 </Button>
                             </DropdownMenuTrigger>
                             <DropdownMenuContent align="end">
                                 <DropdownMenuItem asChild>
-                                    <Link href={CanonicalTopicController.edit.url(row.id)}>
+                                    <Link
+                                        href={CanonicalTopicController.edit.url(
+                                            row.id,
+                                        )}
+                                    >
                                         <Pencil className="size-4" />
                                         Edit
                                     </Link>
                                 </DropdownMenuItem>
                                 <DropdownMenuItem asChild>
-                                    <Link href={CanonicalTopicController.preview.url(row.id)}>
+                                    <Link
+                                        href={CanonicalTopicController.preview.url(
+                                            row.id,
+                                        )}
+                                    >
                                         <Eye className="size-4" />
                                         Preview
                                     </Link>
                                 </DropdownMenuItem>
-                                <DropdownMenuItem onClick={() => handleTogglePublish(row.id)}>
+                                <DropdownMenuItem
+                                    onClick={() => handleTogglePublish(row.id)}
+                                >
                                     {row.is_published ? 'Unpublish' : 'Publish'}
                                 </DropdownMenuItem>
                             </DropdownMenuContent>
@@ -252,7 +295,8 @@ export default function AdminTopics({ topics, disciplines, filters }: Props) {
                     emptyState={{
                         icon: BookOpen,
                         title: 'No topics found',
-                        description: 'Try adjusting your search or filter criteria.',
+                        description:
+                            'Try adjusting your search or filter criteria.',
                     }}
                 />
             </div>

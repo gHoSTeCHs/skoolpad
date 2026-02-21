@@ -1,4 +1,4 @@
-import { Head, router } from '@inertiajs/react';
+import { Head } from '@inertiajs/react';
 import { Building2 } from 'lucide-react';
 import FacultyController from '@/actions/App/Http/Controllers/Admin/FacultyController';
 import InstitutionController from '@/actions/App/Http/Controllers/Admin/InstitutionController';
@@ -9,6 +9,7 @@ import { SearchInput } from '@/components/admin/search-input';
 import { StatusBadge } from '@/components/admin/status-badge';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { useFilterHandlers, type BaseFilters } from '@/hooks/use-filter-handlers';
 import AdminLayout from '@/layouts/admin-layout';
 import { institutionTypeLabels, ownershipTypeLabels } from '@/lib/enum-labels';
 import type { Institution, PaginatedData } from '@/types/models';
@@ -17,13 +18,10 @@ interface EnumCase {
     value: string;
 }
 
-interface Filters {
-    search?: string;
+interface Filters extends BaseFilters {
     institution_type?: string;
     ownership_type?: string;
     is_active?: string;
-    sort?: string;
-    direction?: string;
 }
 
 interface Props {
@@ -34,10 +32,6 @@ interface Props {
 }
 
 const breadcrumbs = [{ title: 'Institutions', href: '/admin/institutions' }];
-
-function hasActiveFilters(filters: Filters): boolean {
-    return !!(filters.institution_type || filters.ownership_type || filters.is_active);
-}
 
 const columns: ColumnDef<Institution>[] = [
     {
@@ -85,23 +79,10 @@ const columns: ColumnDef<Institution>[] = [
 ];
 
 export default function AdminInstitutions({ institutions, filters, institutionTypes, ownershipTypes }: Props) {
-    const indexUrl = InstitutionController.index.url();
-
-    function handleFilterChange(key: string, value: string | undefined) {
-        router.get(
-            indexUrl,
-            { ...filters, [key]: value || undefined, search: filters.search || undefined },
-            { preserveState: true, preserveScroll: true, replace: true },
-        );
-    }
-
-    function clearFilters() {
-        router.get(
-            indexUrl,
-            { search: filters.search || undefined, sort: filters.sort, direction: filters.direction },
-            { preserveState: true, preserveScroll: true, replace: true },
-        );
-    }
+    const { handleFilterChange, clearFilters, hasActiveFilters } = useFilterHandlers({
+        indexUrl: InstitutionController.index.url(),
+        filters,
+    });
 
     return (
         <AdminLayout breadcrumbs={breadcrumbs}>
@@ -120,7 +101,7 @@ export default function AdminInstitutions({ institutions, filters, institutionTy
                         <div className="flex flex-wrap items-center gap-3">
                             <SearchInput
                                 value={filters.search ?? ''}
-                                routeUrl={indexUrl}
+                                routeUrl={InstitutionController.index.url()}
                                 placeholder="Search institutions..."
                                 queryParams={{
                                     institution_type: filters.institution_type,
@@ -175,7 +156,7 @@ export default function AdminInstitutions({ institutions, filters, institutionTy
                                     <SelectItem value="0">Inactive</SelectItem>
                                 </SelectContent>
                             </Select>
-                            {hasActiveFilters(filters) && (
+                            {hasActiveFilters && (
                                 <Button variant="ghost" size="sm" onClick={clearFilters}>
                                     Clear filters
                                 </Button>

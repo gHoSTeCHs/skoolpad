@@ -1,4 +1,4 @@
-import { Head, router } from '@inertiajs/react';
+import { Head } from '@inertiajs/react';
 import { AlertCircle, FileUp } from 'lucide-react';
 import { useState } from 'react';
 import { history } from '@/actions/App/Http/Controllers/Admin/BulkImportController';
@@ -14,15 +14,20 @@ import {
     DialogTitle,
 } from '@/components/ui/dialog';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { useFilterHandlers, type BaseFilters } from '@/hooks/use-filter-handlers';
 import AdminLayout from '@/layouts/admin-layout';
 import { importStatusLabels, importTypeLabels } from '@/lib/enum-labels';
 import type { ImportLogItem, ImportStatus } from '@/types/import';
 import type { PaginatedData } from '@/types/models';
 
+interface Filters extends BaseFilters {
+    import_type?: string;
+}
+
 interface Props {
     logs: PaginatedData<ImportLogItem>;
     importTypes: string[];
-    filters: { import_type?: string; sort?: string; direction?: string };
+    filters: Filters;
 }
 
 const breadcrumbs = [
@@ -47,23 +52,11 @@ function formatDate(dateString: string): { date: string; time: string } {
 
 export default function ImportHistory({ logs, importTypes, filters }: Props) {
     const [errorDialogLog, setErrorDialogLog] = useState<ImportLogItem | null>(null);
-    const historyUrl = history.url();
-
-    function handleFilterChange(key: string, value: string | undefined) {
-        router.get(
-            historyUrl,
-            { ...filters, [key]: value || undefined },
-            { preserveState: true, preserveScroll: true, replace: true },
-        );
-    }
-
-    function clearFilters() {
-        router.get(
-            historyUrl,
-            { sort: filters.sort, direction: filters.direction },
-            { preserveState: true, preserveScroll: true, replace: true },
-        );
-    }
+    const { handleFilterChange, clearFilters, hasActiveFilters } = useFilterHandlers({
+        indexUrl: history.url(),
+        filters,
+        preserveSearch: false,
+    });
 
     const columns: ColumnDef<ImportLogItem>[] = [
         {
@@ -185,7 +178,7 @@ export default function ImportHistory({ logs, importTypes, filters }: Props) {
                                     ))}
                                 </SelectContent>
                             </Select>
-                            {filters.import_type && (
+                            {hasActiveFilters && (
                                 <Button variant="ghost" size="sm" onClick={clearFilters}>
                                     Clear filters
                                 </Button>

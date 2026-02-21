@@ -1,6 +1,5 @@
 import { Head, Link, useForm } from '@inertiajs/react';
 import { Info } from 'lucide-react';
-import { useRef } from 'react';
 import CanonicalTopicController from '@/actions/App/Http/Controllers/Admin/CanonicalTopicController';
 import InputError from '@/components/input-error';
 import { TiptapEditor } from '@/components/shared/tiptap-editor';
@@ -12,6 +11,7 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Switch } from '@/components/ui/switch';
 import { Textarea } from '@/components/ui/textarea';
+import { useSlug } from '@/hooks/use-slug';
 import AdminLayout from '@/layouts/admin-layout';
 import type { TiptapJSON } from '@/types/tiptap';
 import type { DifficultyOption, Discipline, TopicDifficulty, TopicPrerequisite } from '@/types/topics';
@@ -26,18 +26,8 @@ const breadcrumbs = [
     { title: 'Create', href: '/admin/topics/create' },
 ];
 
-function generateSlug(title: string): string {
-    return title
-        .toLowerCase()
-        .trim()
-        .replace(/[^\w\s-]/g, '')
-        .replace(/[\s_]+/g, '-')
-        .replace(/-+/g, '-')
-        .replace(/^-|-$/g, '');
-}
-
 export default function AdminTopicsCreate({ disciplines, difficulty_levels }: Props) {
-    const slugManuallyEdited = useRef(false);
+    const { generateSlug, slugManuallyEdited } = useSlug();
 
     const form = useForm({
         title: '',

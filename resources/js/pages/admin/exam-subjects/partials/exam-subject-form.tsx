@@ -1,5 +1,4 @@
 import { Link, useForm } from '@inertiajs/react';
-import { useRef } from 'react';
 import ExamSubjectController from '@/actions/App/Http/Controllers/Admin/ExamSubjectController';
 import InputError from '@/components/input-error';
 import { Button } from '@/components/ui/button';
@@ -7,6 +6,7 @@ import { Card, CardContent, CardFooter } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
+import { useSlug } from '@/hooks/use-slug';
 import type { ExamSubject } from '@/types/models';
 
 interface ExamSubjectFormProps {
@@ -16,7 +16,7 @@ interface ExamSubjectFormProps {
 
 export default function ExamSubjectForm({ examSubject, examType }: ExamSubjectFormProps) {
     const isEditing = !!examSubject?.id;
-    const slugTouched = useRef(false);
+    const { generateSlug, slugManuallyEdited } = useSlug();
 
     const form = useForm({
         name: examSubject?.name ?? '',
@@ -24,16 +24,9 @@ export default function ExamSubjectForm({ examSubject, examType }: ExamSubjectFo
         is_compulsory: examSubject?.is_compulsory ?? false,
     });
 
-    function generateSlug(name: string): string {
-        return name
-            .toLowerCase()
-            .replace(/\s+/g, '-')
-            .replace(/[^a-z0-9-]/g, '');
-    }
-
     function handleNameChange(value: string) {
         form.setData('name', value);
-        if (!slugTouched.current) {
+        if (!slugManuallyEdited.current) {
             form.setData((prev) => ({ ...prev, name: value, slug: generateSlug(value) }));
         }
     }
@@ -74,7 +67,7 @@ export default function ExamSubjectForm({ examSubject, examType }: ExamSubjectFo
                                 id="slug"
                                 value={form.data.slug}
                                 onChange={(e) => {
-                                    slugTouched.current = true;
+                                    slugManuallyEdited.current = true;
                                     form.setData('slug', e.target.value);
                                 }}
                                 placeholder="e.g. mathematics"

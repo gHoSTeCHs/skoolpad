@@ -100,8 +100,9 @@ export interface AnswerDepthData {
     } | null;
 }
 
-export interface QuestionFilters {
-    search?: string;
+import type { BaseFilters } from '@/hooks/use-filter-handlers';
+
+export interface QuestionFilters extends BaseFilters {
     institution_id?: string;
     institution_course_id?: string;
     year?: string;
@@ -110,6 +111,4 @@ export interface QuestionFilters {
     status?: string;
     difficulty_level?: string;
     source?: string;
-    sort?: string;
-    direction?: string;
 }

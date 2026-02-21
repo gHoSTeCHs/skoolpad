@@ -1,4 +1,4 @@
-import { Head, Link, router } from '@inertiajs/react';
+import { Head, Link } from '@inertiajs/react';
 import { GraduationCap, MoreHorizontal, Pencil } from 'lucide-react';
 import CourseController from '@/actions/App/Http/Controllers/Admin/CourseController';
 import { type ColumnDef, DataTable } from '@/components/admin/data-table';
@@ -13,18 +13,16 @@ import {
     DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { useFilterHandlers, type BaseFilters } from '@/hooks/use-filter-handlers';
 import AdminLayout from '@/layouts/admin-layout';
 import type { PaginatedData } from '@/types/models';
 import type { CourseListItem, CourseSemester, CourseScope, InstitutionOption } from '@/types/courses';
 
-interface Filters {
-    search?: string;
+interface Filters extends BaseFilters {
     institution_id?: string;
     level?: string;
     semester?: string;
     course_scope?: string;
-    sort?: string;
-    direction?: string;
 }
 
 interface Props {
@@ -52,10 +50,6 @@ const scopeStyles: Record<CourseScope, string> = {
     faculty: 'bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-400 reader:bg-purple-900/30 reader:text-purple-400',
     institution_wide: 'bg-[var(--badge-primary-bg)] text-[var(--badge-primary-fg)]',
 };
-
-function hasActiveFilters(filters: Filters): boolean {
-    return !!(filters.institution_id || filters.level || filters.semester || filters.course_scope);
-}
 
 const columns: ColumnDef<CourseListItem>[] = [
     {
@@ -119,23 +113,10 @@ const columns: ColumnDef<CourseListItem>[] = [
 ];
 
 export default function AdminCourses({ courses, institutions, filters }: Props) {
-    const indexUrl = CourseController.index.url();
-
-    function handleFilterChange(key: string, value: string | undefined) {
-        router.get(
-            indexUrl,
-            { ...filters, [key]: value || undefined, search: filters.search || undefined },
-            { preserveState: true, preserveScroll: true, replace: true },
-        );
-    }
-
-    function clearFilters() {
-        router.get(
-            indexUrl,
-            { search: filters.search || undefined, sort: filters.sort, direction: filters.direction },
-            { preserveState: true, preserveScroll: true, replace: true },
-        );
-    }
+    const { handleFilterChange, clearFilters, hasActiveFilters } = useFilterHandlers({
+        indexUrl: CourseController.index.url(),
+        filters,
+    });
 
     return (
         <AdminLayout breadcrumbs={breadcrumbs}>
@@ -154,7 +135,7 @@ export default function AdminCourses({ courses, institutions, filters }: Props) 
                         <div className="flex flex-wrap items-center gap-3">
                             <SearchInput
                                 value={filters.search ?? ''}
-                                routeUrl={indexUrl}
+                                routeUrl={CourseController.index.url()}
                                 placeholder="Search courses..."
                                 queryParams={{
                                     institution_id: filters.institution_id,
@@ -225,7 +206,7 @@ export default function AdminCourses({ courses, institutions, filters }: Props) 
                                     <SelectItem value="institution_wide">Institution Wide</SelectItem>
                                 </SelectContent>
                             </Select>
-                            {hasActiveFilters(filters) && (
+                            {hasActiveFilters && (
                                 <Button variant="ghost" size="sm" onClick={clearFilters}>
                                     Clear filters
                                 </Button>

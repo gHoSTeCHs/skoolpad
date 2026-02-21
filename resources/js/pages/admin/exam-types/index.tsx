@@ -1,4 +1,4 @@
-import { Head, router } from '@inertiajs/react';
+import { Head } from '@inertiajs/react';
 import { ClipboardList } from 'lucide-react';
 import ExamSubjectController from '@/actions/App/Http/Controllers/Admin/ExamSubjectController';
 import ExamTypeController from '@/actions/App/Http/Controllers/Admin/ExamTypeController';
@@ -9,14 +9,12 @@ import { SearchInput } from '@/components/admin/search-input';
 import { StatusBadge } from '@/components/admin/status-badge';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { useFilterHandlers, type BaseFilters } from '@/hooks/use-filter-handlers';
 import AdminLayout from '@/layouts/admin-layout';
 import type { ExamType, PaginatedData } from '@/types/models';
 
-interface Filters {
-    search?: string;
+interface Filters extends BaseFilters {
     is_active?: string;
-    sort?: string;
-    direction?: string;
 }
 
 interface Props {
@@ -72,23 +70,10 @@ const columns: ColumnDef<ExamType>[] = [
 ];
 
 export default function AdminExamTypes({ examTypes, filters }: Props) {
-    const indexUrl = ExamTypeController.index.url();
-
-    function handleFilterChange(key: string, value: string | undefined) {
-        router.get(
-            indexUrl,
-            { ...filters, [key]: value || undefined, search: filters.search || undefined },
-            { preserveState: true, preserveScroll: true, replace: true },
-        );
-    }
-
-    function clearFilters() {
-        router.get(
-            indexUrl,
-            { search: filters.search || undefined, sort: filters.sort, direction: filters.direction },
-            { preserveState: true, preserveScroll: true, replace: true },
-        );
-    }
+    const { handleFilterChange, clearFilters, hasActiveFilters } = useFilterHandlers({
+        indexUrl: ExamTypeController.index.url(),
+        filters,
+    });
 
     return (
         <AdminLayout breadcrumbs={breadcrumbs}>
@@ -107,7 +92,7 @@ export default function AdminExamTypes({ examTypes, filters }: Props) {
                         <div className="flex flex-wrap items-center gap-3">
                             <SearchInput
                                 value={filters.search ?? ''}
-                                routeUrl={indexUrl}
+                                routeUrl={ExamTypeController.index.url()}
                                 placeholder="Search exam types..."
                                 queryParams={{ is_active: filters.is_active, sort: filters.sort, direction: filters.direction }}
                             />
@@ -124,7 +109,7 @@ export default function AdminExamTypes({ examTypes, filters }: Props) {
                                     <SelectItem value="0">Inactive</SelectItem>
                                 </SelectContent>
                             </Select>
-                            {filters.is_active && (
+                            {hasActiveFilters && (
                                 <Button variant="ghost" size="sm" onClick={clearFilters}>
                                     Clear filters
                                 </Button>
