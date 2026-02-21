@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\Admin\AnswerController;
 use App\Http\Controllers\Admin\BulkImportController;
 use App\Http\Controllers\Admin\CanonicalTopicController;
 use App\Http\Controllers\Admin\CourseController;
@@ -11,8 +12,12 @@ use App\Http\Controllers\Admin\ExamSubjectController;
 use App\Http\Controllers\Admin\ExamTypeController;
 use App\Http\Controllers\Admin\FacultyController;
 use App\Http\Controllers\Admin\InstitutionController;
+use App\Http\Controllers\Admin\QuestionController;
+use App\Models\CanonicalTopic;
 use App\Models\Department;
 use App\Models\Institution;
+use App\Models\InstitutionCourse;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
 use Laravel\Fortify\Features;
@@ -59,7 +64,14 @@ Route::middleware(['auth', 'verified', 'staff'])->prefix('admin')->name('admin.'
     Route::put('topics/{topic}', [CanonicalTopicController::class, 'update'])->name('topics.update');
     Route::get('topics/{topic}/preview', [CanonicalTopicController::class, 'preview'])->name('topics.preview');
     Route::post('topics/{topic}/toggle-publish', [CanonicalTopicController::class, 'togglePublish'])->name('topics.togglePublish');
-    Route::get('questions', fn () => Inertia::render('admin/questions/index'))->name('questions.index');
+    Route::get('questions', [QuestionController::class, 'index'])->name('questions.index');
+    Route::get('questions/create', [QuestionController::class, 'create'])->name('questions.create');
+    Route::post('questions', [QuestionController::class, 'store'])->name('questions.store');
+    Route::get('questions/{question}/edit', [QuestionController::class, 'edit'])->name('questions.edit');
+    Route::put('questions/{question}', [QuestionController::class, 'update'])->name('questions.update');
+    Route::get('questions/{question}/answers', [AnswerController::class, 'index'])->name('questions.answers');
+    Route::post('questions/{question}/answers', [AnswerController::class, 'store'])->name('questions.answers.store');
+    Route::put('questions/{question}/answers/{answer}', [AnswerController::class, 'update'])->name('questions.answers.update');
     Route::get('courses', [CourseController::class, 'index'])->name('courses.index');
     Route::get('courses/create', [CourseController::class, 'create'])->name('courses.create');
     Route::post('courses', [CourseController::class, 'store'])->name('courses.store');
@@ -80,6 +92,21 @@ Route::middleware(['auth', 'verified', 'staff'])->prefix('admin')->name('admin.'
                 ->get(['id', 'faculty_id', 'name', 'abbreviation']),
         ]);
     })->name('api.institution.structure');
+    Route::get('api/topics/search', function (Request $request) {
+        return CanonicalTopic::query()
+            ->where('is_published', true)
+            ->when($request->filled('q'), fn ($q) => $q->where('title', 'ilike', '%'.$request->string('q').'%'))
+            ->orderBy('title')
+            ->limit(20)
+            ->get(['id', 'title']);
+    })->name('api.topics.search');
+    Route::get('api/institutions/{institution}/courses', function (Institution $institution, Request $request) {
+        return InstitutionCourse::query()
+            ->where('institution_id', $institution->id)
+            ->when($request->filled('q'), fn ($q) => $q->where('course_code', 'ilike', '%'.$request->string('q').'%'))
+            ->orderBy('course_code')
+            ->get(['id', 'course_code', 'course_title']);
+    })->name('api.institution.courses');
     Route::get('review-queue', fn () => Inertia::render('admin/review-queue/index'))->name('review-queue.index');
     Route::get('users', fn () => Inertia::render('admin/users/index'))->name('users.index');
     Route::get('import', [BulkImportController::class, 'index'])->name('import.index');
