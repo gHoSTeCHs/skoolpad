@@ -23,6 +23,7 @@ class ProcessCsvImport implements ShouldQueue
         public string $importLogId,
         public array $rows,
         public string $importType,
+        public string $defaultStatus = 'draft',
     ) {
         $this->onQueue('default');
     }
@@ -36,6 +37,7 @@ class ProcessCsvImport implements ShouldQueue
             'topics' => $service->importTopics($this->rows, $log),
             'course_mappings' => $service->importCourseMappings($this->rows, $log),
             'course_offerings' => $service->importCourseOfferings($this->rows, $log),
+            'questions' => $service->importQuestions($this->rows, $log, $this->defaultStatus),
         };
 
         $log->update([

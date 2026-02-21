@@ -8,10 +8,17 @@ export type * from './ui';
 import type { Appearance } from '@/hooks/use-appearance';
 import type { Auth } from './auth';
 
+export type Flash = {
+    success?: string | null;
+    error?: string | null;
+    importErrors?: string[] | null;
+};
+
 export type SharedData = {
     name: string;
     auth: Auth;
     appearance: Appearance;
     sidebarOpen: boolean;
+    flash: Flash;
     [key: string]: unknown;
 };

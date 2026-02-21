@@ -1,4 +1,4 @@
-export type ImportType = 'topics' | 'course_mappings' | 'course_offerings';
+export type ImportType = 'topics' | 'course_mappings' | 'course_offerings' | 'questions';
 export type ImportStatus = 'pending' | 'processing' | 'completed' | 'failed';
 
 export interface ImportTypeOption {

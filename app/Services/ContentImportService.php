@@ -4,7 +4,12 @@ namespace App\Services;
 
 use App\DataTransferObjects\ImportResult;
 use App\DataTransferObjects\ValidationResult;
+use App\Enums\AnswerDepthLevel;
 use App\Enums\CourseScope;
+use App\Enums\QuestionDifficulty;
+use App\Enums\QuestionSource;
+use App\Enums\QuestionStatus;
+use App\Enums\QuestionType;
 use App\Enums\TopicDifficulty;
 use App\Enums\TopicWeight;
 use App\Models\CanonicalTopic;
@@ -15,6 +20,10 @@ use App\Models\Discipline;
 use App\Models\ImportLog;
 use App\Models\Institution;
 use App\Models\InstitutionCourse;
+use App\Models\Question;
+use App\Models\QuestionAnswer;
+use App\Models\QuestionOption;
+use App\Models\QuestionTopicLink;
 use Illuminate\Support\Str;
 
 class ContentImportService
@@ -26,6 +35,7 @@ class ContentImportService
             'topics' => $this->validateTopicRows($rows),
             'course_mappings' => $this->validateCourseMappingRows($rows),
             'course_offerings' => $this->validateCourseOfferingRows($rows),
+            'questions' => $this->validateQuestionRows($rows),
             default => ["Unknown import type: {$importType}"],
         };
 
@@ -307,6 +317,188 @@ class ContentImportService
 
             if (! empty($row['is_compulsory']) && ! in_array(strtolower($row['is_compulsory']), ['true', 'false'], true)) {
                 $errors[] = "Row {$rowNumber}: is_compulsory must be 'true' or 'false'.";
+            }
+        }
+
+        return $errors;
+    }
+
+    /** @param array<int, array<string, string>> $rows */
+    public function importQuestions(array $rows, ImportLog $log, string $defaultStatus = 'draft'): ImportResult
+    {
+        $successCount = 0;
+        $errorCount = 0;
+        $errors = [];
+
+        $status = $defaultStatus === 'published' ? QuestionStatus::Published : QuestionStatus::Draft;
+
+        foreach ($rows as $index => $row) {
+            $rowNumber = $index + 2;
+            try {
+                $institutionId = Institution::where('abbreviation', $row['institution_abbreviation'])->value('id');
+                $institutionCourseId = InstitutionCourse::where('institution_id', $institutionId)
+                    ->where('course_code', $row['course_code'])
+                    ->value('id');
+                $topicId = CanonicalTopic::where('slug', $row['topic_slug'])
+                    ->where('is_published', true)
+                    ->value('id');
+
+                $question = Question::create([
+                    'institution_course_id' => $institutionCourseId,
+                    'question_type' => $row['question_type'],
+                    'content' => $row['content'],
+                    'year' => ! empty($row['year']) ? (int) $row['year'] : null,
+                    'semester' => ! empty($row['semester']) ? $row['semester'] : null,
+                    'difficulty_level' => ! empty($row['difficulty_level']) ? $row['difficulty_level'] : null,
+                    'source' => QuestionSource::BulkImport,
+                    'status' => $status,
+                    'created_by' => $log->processed_by,
+                    'published_at' => $status === QuestionStatus::Published ? now() : null,
+                ]);
+
+                if ($row['question_type'] === 'mcq') {
+                    $this->createMcqOptions($question, $row);
+                }
+
+                QuestionTopicLink::create([
+                    'question_id' => $question->id,
+                    'canonical_topic_id' => $topicId,
+                    'is_primary' => true,
+                ]);
+
+                if (! empty($row['quick_answer'])) {
+                    QuestionAnswer::create([
+                        'question_id' => $question->id,
+                        'depth_level' => AnswerDepthLevel::Quick,
+                        'content' => $this->markdownToTiptap($row['quick_answer']),
+                        'content_plain' => strip_tags($row['quick_answer']),
+                        'is_published' => $status === QuestionStatus::Published,
+                        'created_by' => $log->processed_by,
+                    ]);
+                }
+
+                if (! empty($row['standard_answer'])) {
+                    QuestionAnswer::create([
+                        'question_id' => $question->id,
+                        'depth_level' => AnswerDepthLevel::Standard,
+                        'content' => $this->markdownToTiptap($row['standard_answer']),
+                        'content_plain' => strip_tags($row['standard_answer']),
+                        'is_published' => $status === QuestionStatus::Published,
+                        'created_by' => $log->processed_by,
+                    ]);
+                }
+
+                $successCount++;
+            } catch (\Throwable $e) {
+                $errorCount++;
+                $errors[] = "Row {$rowNumber}: {$e->getMessage()}";
+            }
+        }
+
+        return new ImportResult(
+            success: $errorCount === 0,
+            totalRows: count($rows),
+            successCount: $successCount,
+            errorCount: $errorCount,
+            errors: $errors,
+        );
+    }
+
+    private function createMcqOptions(Question $question, array $row): void
+    {
+        $labels = ['A', 'B', 'C', 'D', 'E'];
+        $columns = ['option_a', 'option_b', 'option_c', 'option_d', 'option_e'];
+        $correctOption = strtoupper($row['correct_option'] ?? '');
+
+        foreach ($labels as $i => $label) {
+            $column = $columns[$i];
+            if (empty($row[$column] ?? '')) {
+                continue;
+            }
+
+            QuestionOption::create([
+                'question_id' => $question->id,
+                'label' => $label,
+                'content' => $row[$column],
+                'is_correct' => $label === $correctOption,
+                'sort_order' => $i + 1,
+            ]);
+        }
+    }
+
+    /**
+     * @param  array<int, array<string, string>>  $rows
+     * @return array<int, string>
+     */
+    private function validateQuestionRows(array $rows): array
+    {
+        $errors = [];
+        $required = ['institution_abbreviation', 'course_code', 'question_type', 'content', 'topic_slug'];
+        $validTypes = QuestionType::values();
+        $validDifficulties = QuestionDifficulty::values();
+        $validSemesters = ['first', 'second'];
+
+        foreach ($rows as $index => $row) {
+            $rowNumber = $index + 2;
+
+            foreach ($required as $column) {
+                if (empty($row[$column] ?? '')) {
+                    $errors[] = "Row {$rowNumber}: Missing required column '{$column}'.";
+                }
+            }
+
+            if (! empty($row['institution_abbreviation'])) {
+                $institutionId = Institution::where('abbreviation', $row['institution_abbreviation'])->value('id');
+                if (! $institutionId) {
+                    $errors[] = "Row {$rowNumber}: Institution '{$row['institution_abbreviation']}' not found.";
+                } elseif (! empty($row['course_code'])) {
+                    $courseId = InstitutionCourse::where('institution_id', $institutionId)
+                        ->where('course_code', $row['course_code'])
+                        ->value('id');
+                    if (! $courseId) {
+                        $errors[] = "Row {$rowNumber}: Course '{$row['course_code']}' not found at institution '{$row['institution_abbreviation']}'.";
+                    }
+                }
+            }
+
+            if (! empty($row['topic_slug'])) {
+                $topicId = CanonicalTopic::where('slug', $row['topic_slug'])
+                    ->where('is_published', true)
+                    ->value('id');
+                if (! $topicId) {
+                    $errors[] = "Row {$rowNumber}: Topic '{$row['topic_slug']}' not found or not published.";
+                }
+            }
+
+            if (! empty($row['question_type']) && ! in_array($row['question_type'], $validTypes, true)) {
+                $errors[] = "Row {$rowNumber}: Invalid question_type '{$row['question_type']}'. Valid types: ".implode(', ', $validTypes).'.';
+            }
+
+            if (! empty($row['difficulty_level']) && ! in_array($row['difficulty_level'], $validDifficulties, true)) {
+                $errors[] = "Row {$rowNumber}: Invalid difficulty_level '{$row['difficulty_level']}'.";
+            }
+
+            if (! empty($row['semester']) && ! in_array(strtolower($row['semester']), $validSemesters, true)) {
+                $errors[] = "Row {$rowNumber}: Invalid semester '{$row['semester']}'. Must be 'first' or 'second'.";
+            }
+
+            if (($row['question_type'] ?? '') === 'mcq') {
+                if (empty($row['option_a'] ?? '') || empty($row['option_b'] ?? '')) {
+                    $errors[] = "Row {$rowNumber}: MCQ questions require at least option_a and option_b.";
+                }
+
+                $correctOption = strtoupper($row['correct_option'] ?? '');
+                if (empty($correctOption)) {
+                    $errors[] = "Row {$rowNumber}: MCQ questions require a correct_option (A-E).";
+                } elseif (! in_array($correctOption, ['A', 'B', 'C', 'D', 'E'], true)) {
+                    $errors[] = "Row {$rowNumber}: Invalid correct_option '{$row['correct_option']}'. Must be A-E.";
+                } else {
+                    $optionColumns = ['A' => 'option_a', 'B' => 'option_b', 'C' => 'option_c', 'D' => 'option_d', 'E' => 'option_e'];
+                    $correctColumn = $optionColumns[$correctOption];
+                    if (empty($row[$correctColumn] ?? '')) {
+                        $errors[] = "Row {$rowNumber}: correct_option is '{$correctOption}' but '{$correctColumn}' is empty.";
+                    }
+                }
             }
         }
 

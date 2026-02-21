@@ -113,6 +113,7 @@ Route::middleware(['auth', 'verified', 'staff'])->prefix('admin')->name('admin.'
     Route::post('import/topics', [BulkImportController::class, 'importTopics'])->name('import.topics');
     Route::post('import/course-mappings', [BulkImportController::class, 'importCourseMappings'])->name('import.courseMappings');
     Route::post('import/course-offerings', [BulkImportController::class, 'importCourseOfferings'])->name('import.courseOfferings');
+    Route::post('import/questions', [BulkImportController::class, 'importQuestions'])->name('import.questions');
     Route::get('import/history', [BulkImportController::class, 'history'])->name('import.history');
     Route::get('settings', fn () => Inertia::render('admin/settings/index'))->name('settings.index');
 

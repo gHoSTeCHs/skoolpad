@@ -9,7 +9,7 @@ use App\Http\Controllers\Controller;
 use App\Jobs\ProcessCsvImport;
 use App\Models\ImportLog;
 use App\Services\ContentImportService;
-use Illuminate\Http\JsonResponse;
+use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\UploadedFile;
 use Inertia\Inertia;
@@ -29,103 +29,41 @@ class BulkImportController extends Controller
         ]);
     }
 
-    public function importTopics(Request $request): JsonResponse
+    public function importTopics(Request $request): RedirectResponse
     {
         $request->validate(['file' => 'required|file|mimes:csv,txt|max:5120']);
 
-        $rows = $this->parseCsv($request->file('file'));
-        $log = ImportLog::create([
-            'import_type' => ImportType::Topics,
-            'original_filename' => $request->file('file')->getClientOriginalName(),
-            'status' => ImportStatus::Pending,
-            'total_rows' => count($rows),
-            'processed_by' => $request->user()->id,
-        ]);
-
-        $service = new ContentImportService;
-        $validation = $service->validateCsv($rows, 'topics');
-
-        if (! $validation->isValid) {
-            $log->update([
-                'status' => ImportStatus::Failed,
-                'errors' => $validation->errors,
-            ]);
-
-            return response()->json([
-                'message' => 'Validation failed.',
-                'errors' => $validation->errors,
-            ], 422);
-        }
-
-        ProcessCsvImport::dispatch($log->id, $rows, 'topics');
-
-        return response()->json(['message' => 'Import queued successfully.', 'import_log_id' => $log->id]);
+        return $this->processImport($request, ImportType::Topics, 'topics');
     }
 
-    public function importCourseMappings(Request $request): JsonResponse
+    public function importCourseMappings(Request $request): RedirectResponse
     {
         $request->validate(['file' => 'required|file|mimes:csv,txt|max:5120']);
 
-        $rows = $this->parseCsv($request->file('file'));
-        $log = ImportLog::create([
-            'import_type' => ImportType::CourseMappings,
-            'original_filename' => $request->file('file')->getClientOriginalName(),
-            'status' => ImportStatus::Pending,
-            'total_rows' => count($rows),
-            'processed_by' => $request->user()->id,
-        ]);
-
-        $service = new ContentImportService;
-        $validation = $service->validateCsv($rows, 'course_mappings');
-
-        if (! $validation->isValid) {
-            $log->update([
-                'status' => ImportStatus::Failed,
-                'errors' => $validation->errors,
-            ]);
-
-            return response()->json([
-                'message' => 'Validation failed.',
-                'errors' => $validation->errors,
-            ], 422);
-        }
-
-        ProcessCsvImport::dispatch($log->id, $rows, 'course_mappings');
-
-        return response()->json(['message' => 'Import queued successfully.', 'import_log_id' => $log->id]);
+        return $this->processImport($request, ImportType::CourseMappings, 'course_mappings');
     }
 
-    public function importCourseOfferings(Request $request): JsonResponse
+    public function importCourseOfferings(Request $request): RedirectResponse
     {
         $request->validate(['file' => 'required|file|mimes:csv,txt|max:5120']);
 
-        $rows = $this->parseCsv($request->file('file'));
-        $log = ImportLog::create([
-            'import_type' => ImportType::CourseOfferings,
-            'original_filename' => $request->file('file')->getClientOriginalName(),
-            'status' => ImportStatus::Pending,
-            'total_rows' => count($rows),
-            'processed_by' => $request->user()->id,
+        return $this->processImport($request, ImportType::CourseOfferings, 'course_offerings');
+    }
+
+    public function importQuestions(Request $request): RedirectResponse
+    {
+        $request->validate([
+            'file' => 'required|file|mimes:csv,txt|max:5120',
+            'default_status' => 'nullable|string|in:draft,published',
         ]);
 
-        $service = new ContentImportService;
-        $validation = $service->validateCsv($rows, 'course_offerings');
+        $defaultStatus = $request->input('default_status', 'draft');
 
-        if (! $validation->isValid) {
-            $log->update([
-                'status' => ImportStatus::Failed,
-                'errors' => $validation->errors,
-            ]);
-
-            return response()->json([
-                'message' => 'Validation failed.',
-                'errors' => $validation->errors,
-            ], 422);
+        if ($defaultStatus === 'published' && ! $request->user()->role->hasPermission('publish_content')) {
+            abort(403, 'You do not have permission to publish questions directly.');
         }
 
-        ProcessCsvImport::dispatch($log->id, $rows, 'course_offerings');
-
-        return response()->json(['message' => 'Import queued successfully.', 'import_log_id' => $log->id]);
+        return $this->processImport($request, ImportType::Questions, 'questions', $defaultStatus);
     }
 
     public function history(Request $request): Response
@@ -162,6 +100,34 @@ class BulkImportController extends Controller
             'filters' => $request->only(['import_type', 'sort', 'direction']),
             'importTypes' => ImportType::values(),
         ]);
+    }
+
+    private function processImport(Request $request, ImportType $importType, string $validationType, string $defaultStatus = 'draft'): RedirectResponse
+    {
+        $rows = $this->parseCsv($request->file('file'));
+        $log = ImportLog::create([
+            'import_type' => $importType,
+            'original_filename' => $request->file('file')->getClientOriginalName(),
+            'status' => ImportStatus::Pending,
+            'total_rows' => count($rows),
+            'processed_by' => $request->user()->id,
+        ]);
+
+        $service = new ContentImportService;
+        $validation = $service->validateCsv($rows, $validationType);
+
+        if (! $validation->isValid) {
+            $log->update([
+                'status' => ImportStatus::Failed,
+                'errors' => $validation->errors,
+            ]);
+
+            return back()->with('importErrors', $validation->errors);
+        }
+
+        ProcessCsvImport::dispatch($log->id, $rows, $validationType, $defaultStatus);
+
+        return back()->with('success', 'Import queued successfully.');
     }
 
     /** @return array<int, array<string, string>> */

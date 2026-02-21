@@ -9,6 +9,10 @@ use App\Models\Faculty;
 use App\Models\ImportLog;
 use App\Models\Institution;
 use App\Models\InstitutionCourse;
+use App\Models\Question;
+use App\Models\QuestionAnswer;
+use App\Models\QuestionOption;
+use App\Models\QuestionTopicLink;
 use App\Models\User;
 use App\Services\ContentImportService;
 use Illuminate\Http\UploadedFile;
@@ -50,8 +54,8 @@ test('topics import rejects CSV with invalid discipline_slug', function () {
     $file = UploadedFile::fake()->createWithContent('test.csv', $csv);
 
     $this->post(route('admin.import.topics'), ['file' => $file])
-        ->assertStatus(422)
-        ->assertJsonStructure(['errors']);
+        ->assertRedirect()
+        ->assertSessionHas('importErrors');
 
     $this->assertDatabaseHas('import_logs', ['status' => 'failed']);
 });
@@ -62,8 +66,8 @@ test('topics import rejects CSV with invalid difficulty_level', function () {
     $file = UploadedFile::fake()->createWithContent('test.csv', $csv);
 
     $this->post(route('admin.import.topics'), ['file' => $file])
-        ->assertStatus(422)
-        ->assertJsonStructure(['errors']);
+        ->assertRedirect()
+        ->assertSessionHas('importErrors');
 });
 
 test('topics import does not create any records when one row fails validation', function () {
@@ -72,7 +76,8 @@ test('topics import does not create any records when one row fails validation', 
     $file = UploadedFile::fake()->createWithContent('test.csv', $csv);
 
     $this->post(route('admin.import.topics'), ['file' => $file])
-        ->assertStatus(422);
+        ->assertRedirect()
+        ->assertSessionHas('importErrors');
 
     $this->assertDatabaseCount('canonical_topics', 0);
 });
@@ -84,8 +89,8 @@ test('topics import dispatches job for valid CSV', function () {
     $file = UploadedFile::fake()->createWithContent('topics.csv', $csv);
 
     $this->post(route('admin.import.topics'), ['file' => $file])
-        ->assertOk()
-        ->assertJson(['message' => 'Import queued successfully.']);
+        ->assertRedirect()
+        ->assertSessionHas('success', 'Import queued successfully.');
 
     Queue::assertPushed(ProcessCsvImport::class);
     $this->assertDatabaseHas('import_logs', ['status' => 'pending', 'import_type' => 'topics']);
@@ -162,7 +167,7 @@ test('course offerings import uses institution_course_id UUID', function () {
     $institution = Institution::factory()->create(['abbreviation' => 'UNILAG']);
     $faculty = Faculty::factory()->create(['institution_id' => $institution->id]);
     $dept = Department::factory()->create(['faculty_id' => $faculty->id, 'abbreviation' => 'CSC']);
-    $owningDept = Department::factory()->create(['faculty_id' => $faculty->id]);
+    $owningDept = Department::factory()->create(['faculty_id' => $faculty->id, 'name' => 'Software Engineering', 'abbreviation' => 'SWE']);
 
     $course = InstitutionCourse::factory()->create([
         'institution_id' => $institution->id,
@@ -203,8 +208,8 @@ test('course offerings import rejects non-faculty-scoped course', function () {
     $file = UploadedFile::fake()->createWithContent('offerings.csv', $csv);
 
     $this->post(route('admin.import.courseOfferings'), ['file' => $file])
-        ->assertStatus(422)
-        ->assertJsonStructure(['errors']);
+        ->assertRedirect()
+        ->assertSessionHas('importErrors');
 });
 
 test('import creates import log entry for history', function () {
@@ -239,5 +244,264 @@ test('non-staff users get 403', function () {
 
     $this->actingAs($user)
         ->get(route('admin.import.index'))
+        ->assertForbidden();
+});
+
+test('questions import dispatches job for valid CSV', function () {
+    Queue::fake();
+    $institution = Institution::factory()->create(['abbreviation' => 'MOUAU']);
+    $faculty = Faculty::factory()->create(['institution_id' => $institution->id]);
+    $dept = Department::factory()->create(['faculty_id' => $faculty->id]);
+    $course = InstitutionCourse::factory()->create([
+        'institution_id' => $institution->id,
+        'owning_department_id' => $dept->id,
+        'course_code' => 'CSC201',
+    ]);
+    $topic = CanonicalTopic::factory()->create(['slug' => 'binary-search', 'is_published' => true]);
+
+    $csv = "institution_abbreviation,course_code,question_type,content,year,semester,difficulty,option_a,option_b,option_c,option_d,option_e,correct_option,topic_slug,quick_answer,standard_answer\nMOUAU,CSC201,mcq,\"What is binary search complexity?\",2023,first,medium,O(1),O(log n),O(n),O(n log n),,B,binary-search,,";
+    $file = UploadedFile::fake()->createWithContent('questions.csv', $csv);
+
+    $this->post(route('admin.import.questions'), ['file' => $file])
+        ->assertRedirect()
+        ->assertSessionHas('success', 'Import queued successfully.');
+
+    Queue::assertPushed(ProcessCsvImport::class);
+    $this->assertDatabaseHas('import_logs', ['status' => 'pending', 'import_type' => 'questions']);
+});
+
+test('questions import rejects CSV with missing required columns', function () {
+    $csv = "institution_abbreviation,course_code,question_type\nMOUAU,CSC201,mcq";
+    $file = UploadedFile::fake()->createWithContent('questions.csv', $csv);
+
+    $this->post(route('admin.import.questions'), ['file' => $file])
+        ->assertRedirect()
+        ->assertSessionHas('importErrors');
+});
+
+test('questions import rejects invalid question_type', function () {
+    $institution = Institution::factory()->create(['abbreviation' => 'MOUAU']);
+    $faculty = Faculty::factory()->create(['institution_id' => $institution->id]);
+    $dept = Department::factory()->create(['faculty_id' => $faculty->id]);
+    InstitutionCourse::factory()->create([
+        'institution_id' => $institution->id,
+        'owning_department_id' => $dept->id,
+        'course_code' => 'CSC201',
+    ]);
+    CanonicalTopic::factory()->create(['slug' => 'binary-search', 'is_published' => true]);
+
+    $csv = "institution_abbreviation,course_code,question_type,content,topic_slug\nMOUAU,CSC201,essay,Some question,binary-search";
+    $file = UploadedFile::fake()->createWithContent('questions.csv', $csv);
+
+    $this->post(route('admin.import.questions'), ['file' => $file])
+        ->assertRedirect()
+        ->assertSessionHas('importErrors');
+});
+
+test('questions import rejects MCQ without required options', function () {
+    $institution = Institution::factory()->create(['abbreviation' => 'MOUAU']);
+    $faculty = Faculty::factory()->create(['institution_id' => $institution->id]);
+    $dept = Department::factory()->create(['faculty_id' => $faculty->id]);
+    InstitutionCourse::factory()->create([
+        'institution_id' => $institution->id,
+        'owning_department_id' => $dept->id,
+        'course_code' => 'CSC201',
+    ]);
+    CanonicalTopic::factory()->create(['slug' => 'binary-search', 'is_published' => true]);
+
+    $csv = "institution_abbreviation,course_code,question_type,content,option_a,option_b,correct_option,topic_slug\nMOUAU,CSC201,mcq,Some question,,,A,binary-search";
+    $file = UploadedFile::fake()->createWithContent('questions.csv', $csv);
+
+    $this->post(route('admin.import.questions'), ['file' => $file])
+        ->assertRedirect()
+        ->assertSessionHas('importErrors');
+});
+
+test('questions import rejects invalid correct_option', function () {
+    $institution = Institution::factory()->create(['abbreviation' => 'MOUAU']);
+    $faculty = Faculty::factory()->create(['institution_id' => $institution->id]);
+    $dept = Department::factory()->create(['faculty_id' => $faculty->id]);
+    InstitutionCourse::factory()->create([
+        'institution_id' => $institution->id,
+        'owning_department_id' => $dept->id,
+        'course_code' => 'CSC201',
+    ]);
+    CanonicalTopic::factory()->create(['slug' => 'binary-search', 'is_published' => true]);
+
+    $csv = "institution_abbreviation,course_code,question_type,content,option_a,option_b,correct_option,topic_slug\nMOUAU,CSC201,mcq,Some question,Option A,Option B,Z,binary-search";
+    $file = UploadedFile::fake()->createWithContent('questions.csv', $csv);
+
+    $this->post(route('admin.import.questions'), ['file' => $file])
+        ->assertRedirect()
+        ->assertSessionHas('importErrors');
+});
+
+test('questions import rejects non-existent topic_slug', function () {
+    $institution = Institution::factory()->create(['abbreviation' => 'MOUAU']);
+    $faculty = Faculty::factory()->create(['institution_id' => $institution->id]);
+    $dept = Department::factory()->create(['faculty_id' => $faculty->id]);
+    InstitutionCourse::factory()->create([
+        'institution_id' => $institution->id,
+        'owning_department_id' => $dept->id,
+        'course_code' => 'CSC201',
+    ]);
+
+    $csv = "institution_abbreviation,course_code,question_type,content,option_a,option_b,correct_option,topic_slug\nMOUAU,CSC201,mcq,Some question,Option A,Option B,A,nonexistent-topic";
+    $file = UploadedFile::fake()->createWithContent('questions.csv', $csv);
+
+    $this->post(route('admin.import.questions'), ['file' => $file])
+        ->assertRedirect()
+        ->assertSessionHas('importErrors');
+});
+
+test('questions import creates question with options and topic link', function () {
+    $institution = Institution::factory()->create(['abbreviation' => 'MOUAU']);
+    $faculty = Faculty::factory()->create(['institution_id' => $institution->id]);
+    $dept = Department::factory()->create(['faculty_id' => $faculty->id]);
+    $course = InstitutionCourse::factory()->create([
+        'institution_id' => $institution->id,
+        'owning_department_id' => $dept->id,
+        'course_code' => 'CSC201',
+    ]);
+    $topic = CanonicalTopic::factory()->create(['slug' => 'binary-search', 'is_published' => true]);
+    $log = ImportLog::factory()->pending()->create([
+        'import_type' => 'questions',
+        'processed_by' => $this->admin->id,
+    ]);
+
+    $rows = [[
+        'institution_abbreviation' => 'MOUAU',
+        'course_code' => 'CSC201',
+        'question_type' => 'mcq',
+        'content' => 'What is the time complexity of binary search?',
+        'year' => '2023',
+        'semester' => 'first',
+        'difficulty_level' => 'medium',
+        'option_a' => 'O(1)',
+        'option_b' => 'O(log n)',
+        'option_c' => 'O(n)',
+        'option_d' => 'O(n log n)',
+        'option_e' => '',
+        'correct_option' => 'B',
+        'topic_slug' => 'binary-search',
+        'quick_answer' => '',
+        'standard_answer' => '',
+    ]];
+
+    $service = new ContentImportService;
+    $result = $service->importQuestions($rows, $log);
+
+    expect($result->success)->toBeTrue();
+    expect($result->successCount)->toBe(1);
+
+    $question = Question::where('institution_course_id', $course->id)->first();
+    expect($question)->not->toBeNull();
+    expect($question->question_type->value)->toBe('mcq');
+    expect($question->source->value)->toBe('bulk_import');
+    expect($question->created_by)->toBe($this->admin->id);
+
+    expect(QuestionOption::where('question_id', $question->id)->count())->toBe(4);
+    expect(QuestionOption::where('question_id', $question->id)->where('is_correct', true)->first()->label)->toBe('B');
+
+    expect(QuestionTopicLink::where('question_id', $question->id)->where('canonical_topic_id', $topic->id)->exists())->toBeTrue();
+});
+
+test('questions import creates answers when provided', function () {
+    $institution = Institution::factory()->create(['abbreviation' => 'MOUAU']);
+    $faculty = Faculty::factory()->create(['institution_id' => $institution->id]);
+    $dept = Department::factory()->create(['faculty_id' => $faculty->id]);
+    InstitutionCourse::factory()->create([
+        'institution_id' => $institution->id,
+        'owning_department_id' => $dept->id,
+        'course_code' => 'CSC201',
+    ]);
+    CanonicalTopic::factory()->create(['slug' => 'binary-search', 'is_published' => true]);
+    $log = ImportLog::factory()->pending()->create([
+        'import_type' => 'questions',
+        'processed_by' => $this->admin->id,
+    ]);
+
+    $rows = [[
+        'institution_abbreviation' => 'MOUAU',
+        'course_code' => 'CSC201',
+        'question_type' => 'mcq',
+        'content' => 'What is binary search complexity?',
+        'year' => '2023',
+        'semester' => 'first',
+        'difficulty_level' => 'medium',
+        'option_a' => 'O(1)',
+        'option_b' => 'O(log n)',
+        'option_c' => 'O(n)',
+        'option_d' => '',
+        'option_e' => '',
+        'correct_option' => 'B',
+        'topic_slug' => 'binary-search',
+        'quick_answer' => 'O(log n)',
+        'standard_answer' => 'Binary search divides the array in half each step.',
+    ]];
+
+    $service = new ContentImportService;
+    $service->importQuestions($rows, $log);
+
+    $question = Question::first();
+    expect(QuestionAnswer::where('question_id', $question->id)->count())->toBe(2);
+    expect(QuestionAnswer::where('question_id', $question->id)->where('depth_level', 'quick')->exists())->toBeTrue();
+    expect(QuestionAnswer::where('question_id', $question->id)->where('depth_level', 'standard')->exists())->toBeTrue();
+
+    $quickAnswer = QuestionAnswer::where('question_id', $question->id)->where('depth_level', 'quick')->first();
+    expect($quickAnswer->created_by)->toBe($this->admin->id);
+    expect($quickAnswer->content_plain)->toContain('O(log n)');
+});
+
+test('questions import with default_status published sets published_at', function () {
+    $institution = Institution::factory()->create(['abbreviation' => 'MOUAU']);
+    $faculty = Faculty::factory()->create(['institution_id' => $institution->id]);
+    $dept = Department::factory()->create(['faculty_id' => $faculty->id]);
+    InstitutionCourse::factory()->create([
+        'institution_id' => $institution->id,
+        'owning_department_id' => $dept->id,
+        'course_code' => 'CSC201',
+    ]);
+    CanonicalTopic::factory()->create(['slug' => 'binary-search', 'is_published' => true]);
+    $log = ImportLog::factory()->pending()->create([
+        'import_type' => 'questions',
+        'processed_by' => $this->admin->id,
+    ]);
+
+    $rows = [[
+        'institution_abbreviation' => 'MOUAU',
+        'course_code' => 'CSC201',
+        'question_type' => 'theory',
+        'content' => 'Explain binary search.',
+        'year' => '',
+        'semester' => '',
+        'difficulty_level' => '',
+        'option_a' => '',
+        'option_b' => '',
+        'option_c' => '',
+        'option_d' => '',
+        'option_e' => '',
+        'correct_option' => '',
+        'topic_slug' => 'binary-search',
+        'quick_answer' => '',
+        'standard_answer' => '',
+    ]];
+
+    $service = new ContentImportService;
+    $service->importQuestions($rows, $log, 'published');
+
+    $question = Question::first();
+    expect($question->status->value)->toBe('published');
+    expect($question->published_at)->not->toBeNull();
+});
+
+test('questions import with default_status published rejected for non-publisher', function () {
+    $moderator = User::factory()->institutionModerator()->create();
+    $this->actingAs($moderator);
+
+    $csv = "institution_abbreviation,course_code,question_type,content,topic_slug\nMOUAU,CSC201,mcq,Question,binary-search";
+    $file = UploadedFile::fake()->createWithContent('questions.csv', $csv);
+
+    $this->post(route('admin.import.questions'), ['file' => $file, 'default_status' => 'published'])
         ->assertForbidden();
 });
