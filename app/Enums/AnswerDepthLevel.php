@@ -16,4 +16,19 @@ enum AnswerDepthLevel: string
             self::DeepDive => 'Deep Dive',
         };
     }
+
+    /** @return array<int, string> */
+    public static function values(): array
+    {
+        return array_column(self::cases(), 'value');
+    }
+
+    public function description(): string
+    {
+        return match ($this) {
+            self::Quick => '1-2 sentence direct answer. Available to Free tier.',
+            self::Standard => 'Step-by-step explanation with reasoning. Available to Scholar tier.',
+            self::DeepDive => 'Comprehensive explanation with examples, diagrams, related concepts. Available to Scholar Pro tier.',
+        };
+    }
 }

@@ -6,7 +6,7 @@ use App\Enums\QuestionDifficulty;
 use App\Enums\QuestionSource;
 use App\Enums\QuestionStatus;
 use App\Enums\QuestionType;
-use App\Enums\Semester;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
@@ -43,7 +43,7 @@ class Question extends Model
     {
         return [
             'question_type' => QuestionType::class,
-            'semester' => Semester::class,
+            'semester' => 'string',
             'difficulty_level' => QuestionDifficulty::class,
             'source' => QuestionSource::class,
             'status' => QuestionStatus::class,
@@ -71,17 +71,17 @@ class Question extends Model
         return $this->belongsTo(User::class, 'reviewed_by');
     }
 
-    public function questionOptions(): HasMany
+    public function options(): HasMany
     {
         return $this->hasMany(QuestionOption::class);
     }
 
-    public function questionAnswers(): HasMany
+    public function answers(): HasMany
     {
         return $this->hasMany(QuestionAnswer::class);
     }
 
-    public function questionTopicLinks(): HasMany
+    public function topicLinks(): HasMany
     {
         return $this->hasMany(QuestionTopicLink::class);
     }
@@ -94,5 +94,55 @@ class Question extends Model
             'question_id',
             'canonical_topic_id'
         );
+    }
+
+    public function scopeSearch(Builder $query, string $term): Builder
+    {
+        return $query->whereRaw("search_vector @@ plainto_tsquery('english', ?)", [$term]);
+    }
+
+    public function scopePublished(Builder $query): Builder
+    {
+        return $query->where('status', QuestionStatus::Published);
+    }
+
+    public function scopeByStatus(Builder $query, string $status): Builder
+    {
+        return $query->where('status', $status);
+    }
+
+    public function scopeByType(Builder $query, string $type): Builder
+    {
+        return $query->where('question_type', $type);
+    }
+
+    public function scopeByDifficulty(Builder $query, string $difficulty): Builder
+    {
+        return $query->where('difficulty_level', $difficulty);
+    }
+
+    public function scopeBySource(Builder $query, string $source): Builder
+    {
+        return $query->where('source', $source);
+    }
+
+    public function scopeByYear(Builder $query, int $year): Builder
+    {
+        return $query->where('year', $year);
+    }
+
+    public function scopeBySemester(Builder $query, string $semester): Builder
+    {
+        return $query->where('semester', $semester);
+    }
+
+    public function scopeForCourse(Builder $query, string $courseId): Builder
+    {
+        return $query->where('institution_course_id', $courseId);
+    }
+
+    public function scopeForInstitution(Builder $query, string $institutionId): Builder
+    {
+        return $query->whereHas('institutionCourse', fn (Builder $q) => $q->where('institution_id', $institutionId));
     }
 }

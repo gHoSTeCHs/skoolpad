@@ -6,7 +6,6 @@ use App\Enums\QuestionDifficulty;
 use App\Enums\QuestionSource;
 use App\Enums\QuestionStatus;
 use App\Enums\QuestionType;
-use App\Enums\Semester;
 use App\Models\InstitutionCourse;
 use App\Models\User;
 use Illuminate\Database\Eloquent\Factories\Factory;
@@ -24,7 +23,7 @@ class QuestionFactory extends Factory
             'question_type' => QuestionType::Mcq,
             'content' => fake()->paragraph(),
             'year' => fake()->numberBetween(2018, 2025),
-            'semester' => fake()->randomElement(Semester::cases()),
+            'semester' => fake()->randomElement(['first', 'second']),
             'marks' => fake()->randomElement([1, 2, 5, 10]),
             'difficulty_level' => fake()->randomElement(QuestionDifficulty::cases()),
             'attempt_count' => 0,

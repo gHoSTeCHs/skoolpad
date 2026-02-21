@@ -7,6 +7,7 @@ enum ImportType: string
     case Topics = 'topics';
     case CourseMappings = 'course_mappings';
     case CourseOfferings = 'course_offerings';
+    case Questions = 'questions';
 
     public function label(): string
     {
@@ -14,6 +15,7 @@ enum ImportType: string
             self::Topics => 'Topics',
             self::CourseMappings => 'Course Mappings',
             self::CourseOfferings => 'Course Offerings',
+            self::Questions => 'Questions',
         };
     }
 

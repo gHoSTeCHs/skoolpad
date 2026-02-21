@@ -18,7 +18,17 @@ class QuestionAnswerFactory extends Factory
         return [
             'question_id' => Question::factory(),
             'depth_level' => AnswerDepthLevel::Standard,
-            'content' => [['type' => 'paragraph', 'text' => fake()->paragraph()]],
+            'content' => [
+                'type' => 'doc',
+                'content' => [
+                    [
+                        'type' => 'paragraph',
+                        'content' => [
+                            ['type' => 'text', 'text' => fake()->paragraph()],
+                        ],
+                    ],
+                ],
+            ],
             'content_plain' => fake()->paragraph(),
             'is_published' => true,
             'created_by' => User::factory(),
