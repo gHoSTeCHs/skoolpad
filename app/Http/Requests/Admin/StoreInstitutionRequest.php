@@ -2,6 +2,7 @@
 
 namespace App\Http\Requests\Admin;
 
+use App\Concerns\HasSharedValidationRules;
 use App\Enums\InstitutionType;
 use App\Enums\OwnershipType;
 use Illuminate\Foundation\Http\FormRequest;
@@ -9,17 +10,17 @@ use Illuminate\Validation\Rule;
 
 class StoreInstitutionRequest extends FormRequest
 {
+    use HasSharedValidationRules;
+
     public function authorize(): bool
     {
         return true;
     }
 
     /** @return array<string, array<int, mixed>> */
-    public function rules(): array
+    protected function sharedRules(): array
     {
         return [
-            'name' => ['required', 'string', 'max:255', Rule::unique('institutions')],
-            'abbreviation' => ['required', 'string', 'max:50', Rule::unique('institutions')],
             'institution_type' => ['required', Rule::enum(InstitutionType::class)],
             'ownership_type' => ['required', Rule::enum(OwnershipType::class)],
             'country_id' => ['required', 'exists:countries,id'],
@@ -28,6 +29,15 @@ class StoreInstitutionRequest extends FormRequest
             'website' => ['nullable', 'url', 'max:255'],
             'logo' => ['nullable', 'image', 'mimes:jpeg,png,webp', 'max:2048'],
             'is_active' => ['boolean'],
+        ];
+    }
+
+    /** @return array<string, array<int, mixed>> */
+    protected function uniqueRules(): array
+    {
+        return [
+            'name' => ['required', 'string', 'max:255', $this->uniqueForStore('institutions')],
+            'abbreviation' => ['required', 'string', 'max:50', $this->uniqueForStore('institutions')],
         ];
     }
 }

@@ -1,8 +1,7 @@
-import { Link, useForm } from '@inertiajs/react';
+import { useForm } from '@inertiajs/react';
 import DepartmentController from '@/actions/App/Http/Controllers/Admin/DepartmentController';
-import InputError from '@/components/input-error';
-import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardFooter } from '@/components/ui/card';
+import { FormField } from '@/components/ui/form-field';
+import { FormWrapper } from '@/components/ui/form-wrapper';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import type { Department } from '@/types/models';
@@ -37,49 +36,38 @@ export default function DepartmentForm({ department, faculty }: DepartmentFormPr
     }
 
     return (
-        <form onSubmit={handleSubmit}>
-            <Card>
-                <CardContent className="space-y-6">
-                    <div className="space-y-2">
-                        <Label>Faculty</Label>
-                        <p className="text-sm text-muted-foreground">
-                            {faculty.name}{faculty.institution ? ` — ${faculty.institution.name}` : ''}
-                        </p>
-                    </div>
+        <FormWrapper
+            onSubmit={handleSubmit}
+            cancelUrl={DepartmentController.index.url(faculty.id)}
+            submitLabel={isEditing ? 'Update Department' : 'Create Department'}
+            isSubmitting={form.processing}
+        >
+            <div className="space-y-2">
+                <Label>Faculty</Label>
+                <p className="text-sm text-muted-foreground">
+                    {faculty.name}{faculty.institution ? ` — ${faculty.institution.name}` : ''}
+                </p>
+            </div>
 
-                    <div className="grid gap-6 sm:grid-cols-2">
-                        <div className="space-y-2">
-                            <Label htmlFor="name">Name</Label>
-                            <Input
-                                id="name"
-                                value={form.data.name}
-                                onChange={(e) => form.setData('name', e.target.value)}
-                                placeholder="e.g. Department of Computer Science"
-                            />
-                            <InputError message={form.errors.name} />
-                        </div>
-                        <div className="space-y-2">
-                            <Label htmlFor="abbreviation">Abbreviation</Label>
-                            <Input
-                                id="abbreviation"
-                                value={form.data.abbreviation}
-                                onChange={(e) => form.setData('abbreviation', e.target.value)}
-                                placeholder="e.g. CSC"
-                            />
-                            <InputError message={form.errors.abbreviation} />
-                        </div>
-                    </div>
-                </CardContent>
+            <div className="grid gap-6 sm:grid-cols-2">
+                <FormField label="Name" name="name" error={form.errors.name} required>
+                    <Input
+                        id="name"
+                        value={form.data.name}
+                        onChange={(e) => form.setData('name', e.target.value)}
+                        placeholder="e.g. Department of Computer Science"
+                    />
+                </FormField>
 
-                <CardFooter className="justify-end gap-3 border-t pt-6">
-                    <Button variant="outline" asChild>
-                        <Link href={DepartmentController.index.url(faculty.id)}>Cancel</Link>
-                    </Button>
-                    <Button type="submit" disabled={form.processing}>
-                        {isEditing ? 'Update Department' : 'Create Department'}
-                    </Button>
-                </CardFooter>
-            </Card>
-        </form>
+                <FormField label="Abbreviation" name="abbreviation" error={form.errors.abbreviation}>
+                    <Input
+                        id="abbreviation"
+                        value={form.data.abbreviation}
+                        onChange={(e) => form.setData('abbreviation', e.target.value)}
+                        placeholder="e.g. CSC"
+                    />
+                </FormField>
+            </div>
+        </FormWrapper>
     );
 }

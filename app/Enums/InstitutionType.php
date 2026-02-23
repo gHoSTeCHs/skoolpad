@@ -2,8 +2,12 @@
 
 namespace App\Enums;
 
+use App\Concerns\HasSelectOptions;
+
 enum InstitutionType: string
 {
+    use HasSelectOptions;
+
     case University = 'university';
     case Polytechnic = 'polytechnic';
     case CollegeOfEducation = 'college_of_education';

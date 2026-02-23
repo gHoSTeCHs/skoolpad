@@ -2,23 +2,38 @@
 
 namespace App\Http\Requests\Admin;
 
+use App\Concerns\HasSharedValidationRules;
 use Illuminate\Foundation\Http\FormRequest;
-use Illuminate\Validation\Rule;
 
 class StoreExamSubjectRequest extends FormRequest
 {
+    use HasSharedValidationRules;
+
     public function authorize(): bool
     {
         return true;
     }
 
     /** @return array<string, array<int, mixed>> */
-    public function rules(): array
+    protected function sharedRules(): array
     {
         return [
             'name' => ['required', 'string', 'max:255'],
-            'slug' => ['required', 'string', 'max:255', 'alpha_dash', Rule::unique('exam_subjects')->where('exam_type_id', $this->route('examType')->id)],
             'is_compulsory' => ['boolean'],
+        ];
+    }
+
+    /** @return array<string, array<int, mixed>> */
+    protected function uniqueRules(): array
+    {
+        return [
+            'slug' => [
+                'required',
+                'string',
+                'max:255',
+                'alpha_dash',
+                $this->uniqueForStore('exam_subjects', fn ($rule, $request) => $rule->where('exam_type_id', $request->route('examType')->id)),
+            ],
         ];
     }
 }

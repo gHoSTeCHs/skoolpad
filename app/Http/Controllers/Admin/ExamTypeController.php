@@ -22,14 +22,12 @@ class ExamTypeController extends Controller
     {
         $examTypes = ExamType::query()
             ->withCount('examSubjects')
-            ->when($request->filled('search'), function ($query) use ($request) {
-                $query->where('name', 'ilike', "%{$request->string('search')}%");
-            })
+            ->when($request->filled('search'), fn ($q) => $q->search($request->string('search')))
             ->when($request->filled('is_active'), function ($query) use ($request) {
                 $query->where('is_active', $request->boolean('is_active'));
             })
             ->tap(fn ($query) => $this->applySorting($query, $request, ['name', 'duration_minutes', 'questions_per_subject', 'is_active', 'exam_subjects_count']))
-            ->paginate(15)
+            ->paginate(self::DEFAULT_PER_PAGE)
             ->withQueryString();
 
         return Inertia::render('admin/exam-types/index', [

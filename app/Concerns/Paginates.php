@@ -8,6 +8,8 @@ use Illuminate\Pagination\LengthAwarePaginator;
 
 trait Paginates
 {
+    protected const DEFAULT_PER_PAGE = 15;
+
     protected function applySorting(Builder $query, Request $request, array $sortable, string $default = 'updated_at', string $defaultDirection = 'desc'): Builder
     {
         $sort = $request->string('sort');

@@ -1,8 +1,7 @@
-import { Link, useForm } from '@inertiajs/react';
+import { useForm } from '@inertiajs/react';
 import ExamSubjectController from '@/actions/App/Http/Controllers/Admin/ExamSubjectController';
-import InputError from '@/components/input-error';
-import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardFooter } from '@/components/ui/card';
+import { FormField } from '@/components/ui/form-field';
+import { FormWrapper } from '@/components/ui/form-wrapper';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
@@ -42,59 +41,48 @@ export default function ExamSubjectForm({ examSubject, examType }: ExamSubjectFo
     }
 
     return (
-        <form onSubmit={handleSubmit}>
-            <Card>
-                <CardContent className="space-y-6">
-                    <div className="space-y-2">
-                        <Label>Exam Type</Label>
-                        <p className="text-sm text-muted-foreground">{examType.name}</p>
-                    </div>
+        <FormWrapper
+            onSubmit={handleSubmit}
+            cancelUrl={ExamSubjectController.index.url(examType.id)}
+            submitLabel={isEditing ? 'Update Subject' : 'Create Subject'}
+            isSubmitting={form.processing}
+        >
+            <div className="space-y-2">
+                <Label>Exam Type</Label>
+                <p className="text-sm text-muted-foreground">{examType.name}</p>
+            </div>
 
-                    <div className="grid gap-6 sm:grid-cols-2">
-                        <div className="space-y-2">
-                            <Label htmlFor="name">Name</Label>
-                            <Input
-                                id="name"
-                                value={form.data.name}
-                                onChange={(e) => handleNameChange(e.target.value)}
-                                placeholder="e.g. Mathematics"
-                            />
-                            <InputError message={form.errors.name} />
-                        </div>
-                        <div className="space-y-2">
-                            <Label htmlFor="slug">Slug</Label>
-                            <Input
-                                id="slug"
-                                value={form.data.slug}
-                                onChange={(e) => {
-                                    slugManuallyEdited.current = true;
-                                    form.setData('slug', e.target.value);
-                                }}
-                                placeholder="e.g. mathematics"
-                            />
-                            <InputError message={form.errors.slug} />
-                        </div>
-                    </div>
+            <div className="grid gap-6 sm:grid-cols-2">
+                <FormField label="Name" name="name" error={form.errors.name} required>
+                    <Input
+                        id="name"
+                        value={form.data.name}
+                        onChange={(e) => handleNameChange(e.target.value)}
+                        placeholder="e.g. Mathematics"
+                    />
+                </FormField>
 
-                    <div className="flex items-center gap-3">
-                        <Switch
-                            id="is_compulsory"
-                            checked={form.data.is_compulsory}
-                            onCheckedChange={(checked) => form.setData('is_compulsory', checked)}
-                        />
-                        <Label htmlFor="is_compulsory">Compulsory</Label>
-                    </div>
-                </CardContent>
+                <FormField label="Slug" name="slug" error={form.errors.slug} required>
+                    <Input
+                        id="slug"
+                        value={form.data.slug}
+                        onChange={(e) => {
+                            slugManuallyEdited.current = true;
+                            form.setData('slug', e.target.value);
+                        }}
+                        placeholder="e.g. mathematics"
+                    />
+                </FormField>
+            </div>
 
-                <CardFooter className="justify-end gap-3 border-t pt-6">
-                    <Button variant="outline" asChild>
-                        <Link href={ExamSubjectController.index.url(examType.id)}>Cancel</Link>
-                    </Button>
-                    <Button type="submit" disabled={form.processing}>
-                        {isEditing ? 'Update Subject' : 'Create Subject'}
-                    </Button>
-                </CardFooter>
-            </Card>
-        </form>
+            <div className="flex items-center gap-3">
+                <Switch
+                    id="is_compulsory"
+                    checked={form.data.is_compulsory}
+                    onCheckedChange={(checked) => form.setData('is_compulsory', checked)}
+                />
+                <Label htmlFor="is_compulsory">Compulsory</Label>
+            </div>
+        </FormWrapper>
     );
 }

@@ -115,4 +115,18 @@ class CanonicalTopic extends Model
     {
         return $query->where('title', 'ilike', "%{$term}%");
     }
+
+    /**
+     * Sync prerequisites with pivot data
+     *
+     * @param  array<array{id: string, is_hard_prerequisite: bool}>  $prerequisites
+     */
+    public function syncPrerequisites(array $prerequisites): void
+    {
+        $this->prerequisites()->sync(
+            collect($prerequisites)->mapWithKeys(fn ($p) => [
+                $p['id'] => ['is_hard_prerequisite' => $p['is_hard_prerequisite']],
+            ])->all()
+        );
+    }
 }

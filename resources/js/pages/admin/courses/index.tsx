@@ -25,9 +25,15 @@ interface Filters extends BaseFilters {
     course_scope?: string;
 }
 
+interface EnumOption {
+    value: string;
+    label: string;
+}
+
 interface Props {
     courses: PaginatedData<CourseListItem>;
     institutions: InstitutionOption[];
+    course_scopes: EnumOption[];
     filters: Filters;
 }
 
@@ -37,12 +43,6 @@ const semesterLabels: Record<CourseSemester, string> = {
     first: 'First',
     second: 'Second',
     both: 'Both',
-};
-
-const scopeLabels: Record<CourseScope, string> = {
-    department: 'Department',
-    faculty: 'Faculty',
-    institution_wide: 'Institution Wide',
 };
 
 const scopeStyles: Record<CourseScope, string> = {
@@ -100,7 +100,7 @@ const columns: ColumnDef<CourseListItem>[] = [
                 variant="secondary"
                 className={scopeStyles[row.course_scope] ?? ''}
             >
-                {scopeLabels[row.course_scope] ?? row.course_scope}
+                {row.course_scope_label}
             </Badge>
         ),
     },
@@ -112,7 +112,7 @@ const columns: ColumnDef<CourseListItem>[] = [
     },
 ];
 
-export default function AdminCourses({ courses, institutions, filters }: Props) {
+export default function AdminCourses({ courses, institutions, course_scopes, filters }: Props) {
     const { handleFilterChange, clearFilters, hasActiveFilters } = useFilterHandlers({
         indexUrl: CourseController.index.url(),
         filters,
@@ -201,9 +201,11 @@ export default function AdminCourses({ courses, institutions, filters }: Props) 
                                 </SelectTrigger>
                                 <SelectContent>
                                     <SelectItem value="all">All Scopes</SelectItem>
-                                    <SelectItem value="department">Department</SelectItem>
-                                    <SelectItem value="faculty">Faculty</SelectItem>
-                                    <SelectItem value="institution_wide">Institution Wide</SelectItem>
+                                    {course_scopes.map((scope) => (
+                                        <SelectItem key={scope.value} value={scope.value}>
+                                            {scope.label}
+                                        </SelectItem>
+                                    ))}
                                 </SelectContent>
                             </Select>
                             {hasActiveFilters && (

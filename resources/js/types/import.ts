@@ -9,8 +9,10 @@ export interface ImportTypeOption {
 export interface ImportLogItem {
     id: string;
     import_type: ImportType;
+    import_type_label: string;
     original_filename: string;
     status: ImportStatus;
+    status_label: string;
     total_rows: number;
     success_count: number;
     error_count: number;

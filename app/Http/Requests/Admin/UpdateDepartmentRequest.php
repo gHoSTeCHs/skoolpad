@@ -2,22 +2,36 @@
 
 namespace App\Http\Requests\Admin;
 
+use App\Concerns\HasSharedValidationRules;
 use Illuminate\Foundation\Http\FormRequest;
-use Illuminate\Validation\Rule;
 
 class UpdateDepartmentRequest extends FormRequest
 {
+    use HasSharedValidationRules;
+
     public function authorize(): bool
     {
         return true;
     }
 
     /** @return array<string, array<int, mixed>> */
-    public function rules(): array
+    protected function sharedRules(): array
     {
         return [
-            'name' => ['required', 'string', 'max:255', Rule::unique('departments')->where('faculty_id', $this->route('department')->faculty_id)->ignore($this->route('department'))],
             'abbreviation' => ['nullable', 'string', 'max:50'],
+        ];
+    }
+
+    /** @return array<string, array<int, mixed>> */
+    protected function uniqueRules(): array
+    {
+        return [
+            'name' => [
+                'required',
+                'string',
+                'max:255',
+                $this->uniqueForUpdate('departments', 'department', fn ($rule, $request) => $rule->where('faculty_id', $request->route('department')->faculty_id)),
+            ],
         ];
     }
 }

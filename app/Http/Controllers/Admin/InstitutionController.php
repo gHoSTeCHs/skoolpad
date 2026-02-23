@@ -24,13 +24,7 @@ class InstitutionController extends Controller
     {
         $institutions = Institution::query()
             ->withCount('faculties')
-            ->when($request->filled('search'), function ($query) use ($request) {
-                $search = $request->string('search');
-                $query->where(function ($q) use ($search) {
-                    $q->where('name', 'ilike', "%{$search}%")
-                        ->orWhere('abbreviation', 'ilike', "%{$search}%");
-                });
-            })
+            ->when($request->filled('search'), fn ($q) => $q->search($request->string('search')))
             ->when($request->filled('institution_type'), function ($query) use ($request) {
                 $query->where('institution_type', $request->string('institution_type'));
             })
@@ -41,22 +35,30 @@ class InstitutionController extends Controller
                 $query->where('is_active', $request->boolean('is_active'));
             })
             ->tap(fn ($query) => $this->applySorting($query, $request, ['name', 'institution_type', 'ownership_type', 'state', 'is_active', 'faculties_count']))
-            ->paginate(15)
+            ->paginate(self::DEFAULT_PER_PAGE)
             ->withQueryString();
 
+        $institutionsWithLabels = $institutions->through(fn ($institution) => array_merge(
+            $institution->toArray(),
+            [
+                'institution_type_label' => $institution->institution_type->label(),
+                'ownership_type_label' => $institution->ownership_type->label(),
+            ]
+        ));
+
         return Inertia::render('admin/institutions/index', [
-            'institutions' => $this->paginated($institutions),
+            'institutions' => $this->paginated($institutionsWithLabels),
             'filters' => $request->only(['search', 'institution_type', 'ownership_type', 'is_active', 'sort', 'direction']),
-            'institutionTypes' => InstitutionType::cases(),
-            'ownershipTypes' => OwnershipType::cases(),
+            'institutionTypes' => InstitutionType::toSelectOptions(),
+            'ownershipTypes' => OwnershipType::toSelectOptions(),
         ]);
     }
 
     public function create(): Response
     {
         return Inertia::render('admin/institutions/create', [
-            'institutionTypes' => InstitutionType::cases(),
-            'ownershipTypes' => OwnershipType::cases(),
+            'institutionTypes' => InstitutionType::toSelectOptions(),
+            'ownershipTypes' => OwnershipType::toSelectOptions(),
             'countries' => Country::all(),
         ]);
     }
@@ -79,8 +81,8 @@ class InstitutionController extends Controller
     {
         return Inertia::render('admin/institutions/edit', [
             'institution' => $institution,
-            'institutionTypes' => InstitutionType::cases(),
-            'ownershipTypes' => OwnershipType::cases(),
+            'institutionTypes' => InstitutionType::toSelectOptions(),
+            'ownershipTypes' => OwnershipType::toSelectOptions(),
             'countries' => Country::all(),
         ]);
     }

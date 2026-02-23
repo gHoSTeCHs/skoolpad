@@ -21,11 +21,9 @@ class DisciplineController extends Controller
     {
         $disciplines = Discipline::query()
             ->withCount('canonicalTopics')
-            ->when($request->filled('search'), function ($query) use ($request) {
-                $query->where('name', 'ilike', "%{$request->string('search')}%");
-            })
+            ->when($request->filled('search'), fn ($q) => $q->search($request->string('search')))
             ->tap(fn ($query) => $this->applySorting($query, $request, ['name', 'canonical_topics_count']))
-            ->paginate(15)
+            ->paginate(self::DEFAULT_PER_PAGE)
             ->withQueryString();
 
         return Inertia::render('admin/disciplines/index', [

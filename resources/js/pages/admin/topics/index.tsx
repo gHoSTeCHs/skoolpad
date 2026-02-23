@@ -21,6 +21,7 @@ import {
 } from '@/components/ui/select';
 import { useFilterHandlers, type BaseFilters } from '@/hooks/use-filter-handlers';
 import AdminLayout from '@/layouts/admin-layout';
+import { formatDate } from '@/lib/utils';
 import type { PaginatedData } from '@/types/models';
 import type { Discipline, TopicListItem } from '@/types/topics';
 
@@ -38,26 +39,12 @@ interface Props {
 
 const breadcrumbs = [{ title: 'Topics', href: '/admin/topics' }];
 
-const difficultyLabels: Record<string, string> = {
-    foundational: 'Foundational',
-    intermediate: 'Intermediate',
-    advanced: 'Advanced',
-};
-
 const difficultyStyles: Record<string, string> = {
     foundational:
         'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400 reader:bg-blue-900/30 reader:text-blue-400',
     intermediate: 'bg-[var(--badge-reward-bg)] text-[var(--badge-reward-fg)]',
     advanced: 'bg-[var(--badge-danger-bg)] text-[var(--badge-danger-fg)]',
 };
-
-function formatDate(dateString: string): string {
-    return new Date(dateString).toLocaleDateString('en-NG', {
-        year: 'numeric',
-        month: 'short',
-        day: 'numeric',
-    });
-}
 
 const columns: ColumnDef<TopicListItem>[] = [
     {
@@ -88,7 +75,7 @@ const columns: ColumnDef<TopicListItem>[] = [
                 variant="secondary"
                 className={difficultyStyles[row.difficulty_level] ?? ''}
             >
-                {difficultyLabels[row.difficulty_level] ?? row.difficulty_level}
+                {row.difficulty_level_label}
             </Badge>
         ),
         sortable: true,

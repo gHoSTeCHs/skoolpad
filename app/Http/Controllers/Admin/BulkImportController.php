@@ -22,10 +22,7 @@ class BulkImportController extends Controller
     public function index(): Response
     {
         return Inertia::render('admin/import/index', [
-            'import_types' => array_map(
-                fn (ImportType $type) => ['value' => $type->value, 'label' => $type->label()],
-                ImportType::cases()
-            ),
+            'import_types' => ImportType::toSelectOptions(),
         ]);
     }
 
@@ -80,12 +77,14 @@ class BulkImportController extends Controller
                 'created_at',
                 'desc'
             ))
-            ->paginate(15)
+            ->paginate(self::DEFAULT_PER_PAGE)
             ->through(fn ($log) => [
                 'id' => $log->id,
                 'import_type' => $log->import_type->value,
+                'import_type_label' => $log->import_type->label(),
                 'original_filename' => $log->original_filename,
                 'status' => $log->status->value,
+                'status_label' => $log->status->label(),
                 'total_rows' => $log->total_rows,
                 'success_count' => $log->success_count,
                 'error_count' => $log->error_count,
@@ -98,7 +97,8 @@ class BulkImportController extends Controller
         return Inertia::render('admin/import/history', [
             'logs' => $this->paginated($logs),
             'filters' => $request->only(['import_type', 'sort', 'direction']),
-            'importTypes' => ImportType::values(),
+            'import_types' => ImportType::toSelectOptions(),
+            'import_statuses' => ImportStatus::toSelectOptions(),
         ]);
     }
 

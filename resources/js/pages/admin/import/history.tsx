@@ -16,7 +16,6 @@ import {
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useFilterHandlers, type BaseFilters } from '@/hooks/use-filter-handlers';
 import AdminLayout from '@/layouts/admin-layout';
-import { importStatusLabels, importTypeLabels } from '@/lib/enum-labels';
 import type { ImportLogItem, ImportStatus } from '@/types/import';
 import type { PaginatedData } from '@/types/models';
 
@@ -24,9 +23,15 @@ interface Filters extends BaseFilters {
     import_type?: string;
 }
 
+interface EnumOption {
+    value: string;
+    label: string;
+}
+
 interface Props {
     logs: PaginatedData<ImportLogItem>;
-    importTypes: string[];
+    import_types: EnumOption[];
+    import_statuses: EnumOption[];
     filters: Filters;
 }
 
@@ -50,7 +55,7 @@ function formatDate(dateString: string): { date: string; time: string } {
     };
 }
 
-export default function ImportHistory({ logs, importTypes, filters }: Props) {
+export default function ImportHistory({ logs, import_types, import_statuses, filters }: Props) {
     const [errorDialogLog, setErrorDialogLog] = useState<ImportLogItem | null>(null);
     const { handleFilterChange, clearFilters, hasActiveFilters } = useFilterHandlers({
         indexUrl: history.url(),
@@ -76,7 +81,7 @@ export default function ImportHistory({ logs, importTypes, filters }: Props) {
                     variant="secondary"
                     className="bg-[var(--badge-neutral-bg)] text-[var(--badge-neutral-fg)] hover:bg-[var(--badge-neutral-bg)]"
                 >
-                    {importTypeLabels[row.import_type] ?? row.import_type}
+                    {row.import_type_label}
                 </Badge>
             ),
             sortable: true,
@@ -86,7 +91,7 @@ export default function ImportHistory({ logs, importTypes, filters }: Props) {
             header: 'Status',
             cell: (row) => (
                 <Badge variant="secondary" className={statusStyles[row.status]}>
-                    {importStatusLabels[row.status] ?? row.status}
+                    {row.status_label}
                 </Badge>
             ),
             sortable: true,
@@ -171,9 +176,9 @@ export default function ImportHistory({ logs, importTypes, filters }: Props) {
                                 </SelectTrigger>
                                 <SelectContent>
                                     <SelectItem value="all">All Import Types</SelectItem>
-                                    {importTypes.map((type) => (
-                                        <SelectItem key={type} value={type}>
-                                            {importTypeLabels[type] ?? type}
+                                    {import_types.map((type) => (
+                                        <SelectItem key={type.value} value={type.value}>
+                                            {type.label}
                                         </SelectItem>
                                     ))}
                                 </SelectContent>

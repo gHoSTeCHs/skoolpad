@@ -1,7 +1,6 @@
-import { Head } from '@inertiajs/react';
 import ExamSubjectController from '@/actions/App/Http/Controllers/Admin/ExamSubjectController';
 import ExamTypeController from '@/actions/App/Http/Controllers/Admin/ExamTypeController';
-import AdminLayout from '@/layouts/admin-layout';
+import { FormPageLayout } from '@/components/layouts/form-page-layout';
 import ExamSubjectForm from '@/pages/admin/exam-subjects/partials/exam-subject-form';
 
 interface Props {
@@ -16,19 +15,12 @@ export default function AdminExamSubjectsCreate({ examType }: Props) {
     ];
 
     return (
-        <AdminLayout breadcrumbs={breadcrumbs}>
-            <Head title="Create Exam Subject" />
-            <div className="flex flex-col gap-4 p-4 md:p-6">
-                <div>
-                    <h1 className="font-display text-2xl font-bold tracking-tight">Create Subject</h1>
-                    <p className="mt-1 text-sm text-muted-foreground">
-                        Add a new subject to {examType.name}.
-                    </p>
-                </div>
-                <div className="max-w-2xl">
-                    <ExamSubjectForm examType={examType} />
-                </div>
-            </div>
-        </AdminLayout>
+        <FormPageLayout
+            title="Create Subject"
+            description={`Add a new subject to ${examType.name}.`}
+            breadcrumbs={breadcrumbs}
+        >
+            <ExamSubjectForm examType={examType} />
+        </FormPageLayout>
     );
 }

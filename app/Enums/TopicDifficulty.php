@@ -2,8 +2,11 @@
 
 namespace App\Enums;
 
+use App\Concerns\HasSelectOptions;
+
 enum TopicDifficulty: string
 {
+    use HasSelectOptions;
     case Foundational = 'foundational';
     case Intermediate = 'intermediate';
     case Advanced = 'advanced';

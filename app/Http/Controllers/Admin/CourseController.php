@@ -33,7 +33,7 @@ class CourseController extends Controller
             ->when($request->filled('course_scope'), fn ($q) => $q->where('course_scope', $request->string('course_scope')))
             ->when($request->filled('search'), fn ($q) => $q->search($request->string('search')))
             ->tap(fn ($q) => $this->applySorting($q, $request, ['course_code', 'course_title', 'level', 'semester'], 'course_code', 'asc'))
-            ->paginate(25)
+            ->paginate(self::DEFAULT_PER_PAGE)
             ->withQueryString();
 
         $courses->through(fn ($course) => [
@@ -52,12 +52,14 @@ class CourseController extends Controller
             'semester' => $course->semester->value,
             'credit_units' => $course->credit_units,
             'course_scope' => $course->course_scope->value,
+            'course_scope_label' => $course->course_scope->label(),
             'topics_count' => $course->topic_mappings_count,
         ]);
 
         return Inertia::render('admin/courses/index', [
             'courses' => $this->paginated($courses),
             'institutions' => Institution::orderBy('name')->get(['id', 'name', 'abbreviation']),
+            'course_scopes' => CourseScope::toSelectOptions(),
             'filters' => $request->only(['search', 'institution_id', 'level', 'semester', 'course_scope', 'sort', 'direction']),
         ]);
     }
@@ -68,10 +70,7 @@ class CourseController extends Controller
             'institutions' => Institution::orderBy('name')->get(['id', 'name', 'abbreviation']),
             'disciplines' => Discipline::orderBy('name')->get(['id', 'name']),
             'levels' => [100, 200, 300, 400, 500],
-            'course_scopes' => array_map(fn ($case) => [
-                'value' => $case->value,
-                'label' => $case->label(),
-            ], CourseScope::cases()),
+            'course_scopes' => CourseScope::toSelectOptions(),
             'semesters' => array_map(fn ($case) => [
                 'value' => $case->value,
                 'label' => $case->label(),
@@ -108,10 +107,7 @@ class CourseController extends Controller
             'institutions' => Institution::orderBy('name')->get(['id', 'name', 'abbreviation']),
             'disciplines' => Discipline::orderBy('name')->get(['id', 'name']),
             'levels' => [100, 200, 300, 400, 500],
-            'course_scopes' => array_map(fn ($case) => [
-                'value' => $case->value,
-                'label' => $case->label(),
-            ], CourseScope::cases()),
+            'course_scopes' => CourseScope::toSelectOptions(),
             'semesters' => array_map(fn ($case) => [
                 'value' => $case->value,
                 'label' => $case->label(),

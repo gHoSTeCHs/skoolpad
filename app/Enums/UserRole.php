@@ -162,4 +162,10 @@ enum UserRole: string
             ->mapWithKeys(fn ($role) => [$role->value => $role->label()])
             ->toArray();
     }
+
+    /** @return list<string> */
+    public static function values(): array
+    {
+        return array_map(fn (self $case) => $case->value, self::cases());
+    }
 }

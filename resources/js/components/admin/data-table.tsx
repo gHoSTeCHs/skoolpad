@@ -2,7 +2,7 @@ import { router } from '@inertiajs/react';
 import type { LucideIcon } from 'lucide-react';
 import { ArrowDown, ArrowUp, ArrowUpDown } from 'lucide-react';
 import type { ReactNode } from 'react';
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Pagination } from '@/components/admin/pagination';
 import { Card } from '@/components/ui/card';
 import { Skeleton, SkeletonText } from '@/components/ui/skeleton';
@@ -79,10 +79,22 @@ export function DataTable<T>({ columns, paginatedData, getRowKey, toolbar, rende
     const hasData = data.length > 0;
     const [isLoading, setIsLoading] = useState(false);
     const currentSort = useCurrentSort();
+    const currentPathRef = useRef(window.location.pathname);
 
     useEffect(() => {
-        const removeStart = router.on('start', () => setIsLoading(true));
+        currentPathRef.current = window.location.pathname;
+    }, []);
+
+    useEffect(() => {
+        const removeStart = router.on('start', (event) => {
+            const targetUrl = new URL(event.detail.visit.url, window.location.origin);
+            if (targetUrl.pathname === currentPathRef.current) {
+                setIsLoading(true);
+            }
+        });
+
         const removeFinish = router.on('finish', () => setIsLoading(false));
+
         return () => { removeStart(); removeFinish(); };
     }, []);
 

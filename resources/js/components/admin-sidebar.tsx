@@ -15,6 +15,10 @@ import {
 import BulkImportController from '@/actions/App/Http/Controllers/Admin/BulkImportController';
 import CanonicalTopicController from '@/actions/App/Http/Controllers/Admin/CanonicalTopicController';
 import CourseController from '@/actions/App/Http/Controllers/Admin/CourseController';
+import DisciplineController from '@/actions/App/Http/Controllers/Admin/DisciplineController';
+import ExamTypeController from '@/actions/App/Http/Controllers/Admin/ExamTypeController';
+import InstitutionController from '@/actions/App/Http/Controllers/Admin/InstitutionController';
+import QuestionController from '@/actions/App/Http/Controllers/Admin/QuestionController';
 import { NavMain } from '@/components/nav-main';
 import { NavUser } from '@/components/nav-user';
 import {
@@ -38,9 +42,9 @@ const navGroups: NavGroup[] = [
     {
         label: 'Content Management',
         items: [
-            { title: 'Disciplines', href: '/admin/disciplines', icon: Shapes },
+            { title: 'Disciplines', href: DisciplineController.index.url(), icon: Shapes },
             { title: 'Canonical Topics', href: CanonicalTopicController.index.url(), icon: BookOpen },
-            { title: 'Questions', href: '/admin/questions', icon: MessageSquareMore },
+            { title: 'Questions', href: QuestionController.index.url(), icon: MessageSquareMore },
             { title: 'Courses', href: CourseController.index.url(), icon: GraduationCap },
             { title: 'Review Queue', href: '/admin/review-queue', icon: ListChecks },
             { title: 'Bulk Import', href: BulkImportController.index.url(), icon: Upload },
@@ -49,8 +53,8 @@ const navGroups: NavGroup[] = [
     {
         label: 'Institutions',
         items: [
-            { title: 'All Institutions', href: '/admin/institutions', icon: Building2 },
-            { title: 'Exam Types', href: '/admin/exam-types', icon: ClipboardList },
+            { title: 'All Institutions', href: InstitutionController.index.url(), icon: Building2 },
+            { title: 'Exam Types', href: ExamTypeController.index.url(), icon: ClipboardList },
         ],
     },
     {

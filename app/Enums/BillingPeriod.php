@@ -2,8 +2,12 @@
 
 namespace App\Enums;
 
+use App\Concerns\HasSelectOptions;
+
 enum BillingPeriod: string
 {
+    use HasSelectOptions;
+
     case Monthly = 'monthly';
     case Semesterly = 'semesterly';
     case Yearly = 'yearly';

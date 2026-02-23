@@ -59,6 +59,7 @@ export interface CourseListItem {
     semester: CourseSemester;
     credit_units: number | null;
     course_scope: CourseScope;
+    course_scope_label: string;
     topics_count: number;
 }
 

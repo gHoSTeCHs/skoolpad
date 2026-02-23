@@ -2,8 +2,11 @@
 
 namespace App\Enums;
 
+use App\Concerns\HasSelectOptions;
+
 enum ImportStatus: string
 {
+    use HasSelectOptions;
     case Pending = 'pending';
     case Processing = 'processing';
     case Completed = 'completed';

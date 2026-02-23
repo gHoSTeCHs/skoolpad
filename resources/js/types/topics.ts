@@ -19,6 +19,7 @@ export interface TopicListItem {
     discipline: { id: string; name: string } | null;
     parent: { id: string; title: string } | null;
     difficulty_level: TopicDifficulty;
+    difficulty_level_label: string;
     is_published: boolean;
     estimated_read_minutes: number | null;
     created_at: string;

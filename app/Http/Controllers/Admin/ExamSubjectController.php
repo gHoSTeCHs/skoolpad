@@ -21,11 +21,9 @@ class ExamSubjectController extends Controller
     {
         $examSubjects = ExamSubject::query()
             ->where('exam_type_id', $examType->id)
-            ->when($request->filled('search'), function ($query) use ($request) {
-                $query->where('name', 'ilike', "%{$request->string('search')}%");
-            })
+            ->when($request->filled('search'), fn ($q) => $q->search($request->string('search')))
             ->tap(fn ($query) => $this->applySorting($query, $request, ['name', 'is_compulsory']))
-            ->paginate(15)
+            ->paginate(self::DEFAULT_PER_PAGE)
             ->withQueryString();
 
         return Inertia::render('admin/exam-subjects/index', [

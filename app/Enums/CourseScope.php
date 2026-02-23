@@ -2,8 +2,11 @@
 
 namespace App\Enums;
 
+use App\Concerns\HasSelectOptions;
+
 enum CourseScope: string
 {
+    use HasSelectOptions;
     case Department = 'department';
     case Faculty = 'faculty';
     case InstitutionWide = 'institution_wide';

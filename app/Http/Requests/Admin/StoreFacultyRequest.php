@@ -2,22 +2,36 @@
 
 namespace App\Http\Requests\Admin;
 
+use App\Concerns\HasSharedValidationRules;
 use Illuminate\Foundation\Http\FormRequest;
-use Illuminate\Validation\Rule;
 
 class StoreFacultyRequest extends FormRequest
 {
+    use HasSharedValidationRules;
+
     public function authorize(): bool
     {
         return true;
     }
 
     /** @return array<string, array<int, mixed>> */
-    public function rules(): array
+    protected function sharedRules(): array
     {
         return [
-            'name' => ['required', 'string', 'max:255', Rule::unique('faculties')->where('institution_id', $this->route('institution')->id)],
             'abbreviation' => ['nullable', 'string', 'max:50'],
+        ];
+    }
+
+    /** @return array<string, array<int, mixed>> */
+    protected function uniqueRules(): array
+    {
+        return [
+            'name' => [
+                'required',
+                'string',
+                'max:255',
+                $this->uniqueForStore('faculties', fn ($rule, $request) => $rule->where('institution_id', $request->route('institution')->id)),
+            ],
         ];
     }
 }

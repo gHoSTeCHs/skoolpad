@@ -11,11 +11,16 @@ import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useFilterHandlers, type BaseFilters } from '@/hooks/use-filter-handlers';
 import AdminLayout from '@/layouts/admin-layout';
-import { institutionTypeLabels, ownershipTypeLabels } from '@/lib/enum-labels';
 import type { Institution, PaginatedData } from '@/types/models';
 
-interface EnumCase {
+interface EnumOption {
     value: string;
+    label: string;
+}
+
+interface InstitutionWithLabels extends Institution {
+    institution_type_label: string;
+    ownership_type_label: string;
 }
 
 interface Filters extends BaseFilters {
@@ -25,15 +30,15 @@ interface Filters extends BaseFilters {
 }
 
 interface Props {
-    institutions: PaginatedData<Institution>;
+    institutions: PaginatedData<InstitutionWithLabels>;
     filters: Filters;
-    institutionTypes: EnumCase[];
-    ownershipTypes: EnumCase[];
+    institutionTypes: EnumOption[];
+    ownershipTypes: EnumOption[];
 }
 
 const breadcrumbs = [{ title: 'Institutions', href: '/admin/institutions' }];
 
-const columns: ColumnDef<Institution>[] = [
+const columns: ColumnDef<InstitutionWithLabels>[] = [
     {
         id: 'name',
         header: 'Name',
@@ -48,13 +53,13 @@ const columns: ColumnDef<Institution>[] = [
     {
         id: 'institution_type',
         header: 'Type',
-        cell: (row) => institutionTypeLabels[row.institution_type] ?? row.institution_type,
+        cell: (row) => row.institution_type_label,
         sortable: true,
     },
     {
         id: 'ownership_type',
         header: 'Ownership',
-        cell: (row) => ownershipTypeLabels[row.ownership_type] ?? row.ownership_type,
+        cell: (row) => row.ownership_type_label,
         sortable: true,
     },
     {
@@ -122,7 +127,7 @@ export default function AdminInstitutions({ institutions, filters, institutionTy
                                     <SelectItem value="all">All Types</SelectItem>
                                     {institutionTypes.map((type) => (
                                         <SelectItem key={type.value} value={type.value}>
-                                            {institutionTypeLabels[type.value] ?? type.value}
+                                            {type.label}
                                         </SelectItem>
                                     ))}
                                 </SelectContent>
@@ -138,7 +143,7 @@ export default function AdminInstitutions({ institutions, filters, institutionTy
                                     <SelectItem value="all">All Ownership</SelectItem>
                                     {ownershipTypes.map((type) => (
                                         <SelectItem key={type.value} value={type.value}>
-                                            {ownershipTypeLabels[type.value] ?? type.value}
+                                            {type.label}
                                         </SelectItem>
                                     ))}
                                 </SelectContent>

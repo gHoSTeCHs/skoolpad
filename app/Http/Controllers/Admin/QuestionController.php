@@ -39,7 +39,7 @@ class QuestionController extends Controller
             ->when($request->filled('source'), fn ($q) => $q->bySource($request->string('source')))
             ->when($request->filled('search'), fn ($q) => $q->search($request->string('search')))
             ->tap(fn ($q) => $this->applySorting($q, $request, ['year', 'question_type', 'status', 'created_at'], 'created_at', 'desc'))
-            ->paginate(20)
+            ->paginate(self::DEFAULT_PER_PAGE)
             ->withQueryString();
 
         $questions->through(fn ($question) => [

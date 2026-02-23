@@ -2,8 +2,11 @@
 
 namespace App\Enums;
 
+use App\Concerns\HasSelectOptions;
+
 enum ImportType: string
 {
+    use HasSelectOptions;
     case Topics = 'topics';
     case CourseMappings = 'course_mappings';
     case CourseOfferings = 'course_offerings';

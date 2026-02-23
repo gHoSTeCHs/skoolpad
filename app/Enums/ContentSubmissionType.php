@@ -2,8 +2,12 @@
 
 namespace App\Enums;
 
+use App\Concerns\HasSelectOptions;
+
 enum ContentSubmissionType: string
 {
+    use HasSelectOptions;
+
     case Question = 'question';
     case Correction = 'correction';
     case TopicContent = 'topic_content';

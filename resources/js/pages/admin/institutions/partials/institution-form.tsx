@@ -1,23 +1,22 @@
-import { Link, useForm } from '@inertiajs/react';
+import { useForm } from '@inertiajs/react';
 import InstitutionController from '@/actions/App/Http/Controllers/Admin/InstitutionController';
-import InputError from '@/components/input-error';
-import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardFooter } from '@/components/ui/card';
+import { FormField } from '@/components/ui/form-field';
+import { FormWrapper } from '@/components/ui/form-wrapper';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Switch } from '@/components/ui/switch';
-import { institutionTypeLabels, ownershipTypeLabels } from '@/lib/enum-labels';
 import type { Country, Institution } from '@/types/models';
 
-interface EnumCase {
+interface EnumOption {
     value: string;
+    label: string;
 }
 
 interface InstitutionFormProps {
     institution?: Institution;
-    institutionTypes: EnumCase[];
-    ownershipTypes: EnumCase[];
+    institutionTypes: EnumOption[];
+    ownershipTypes: EnumOption[];
     countries: Country[];
 }
 
@@ -48,35 +47,34 @@ export default function InstitutionForm({ institution, institutionTypes, ownersh
     }
 
     return (
-        <form onSubmit={handleSubmit}>
-            <Card>
-                <CardContent className="space-y-6">
-                    <div className="grid gap-6 sm:grid-cols-2">
-                        <div className="space-y-2">
-                            <Label htmlFor="name">Name</Label>
+        <FormWrapper
+            onSubmit={handleSubmit}
+            cancelUrl={InstitutionController.index.url()}
+            submitLabel={isEditing ? 'Update Institution' : 'Create Institution'}
+            isSubmitting={form.processing}
+        >
+            <div className="grid gap-6 sm:grid-cols-2">
+                        <FormField label="Name" name="name" error={form.errors.name} required>
                             <Input
                                 id="name"
                                 value={form.data.name}
                                 onChange={(e) => form.setData('name', e.target.value)}
                                 placeholder="e.g. University of Lagos"
                             />
-                            <InputError message={form.errors.name} />
-                        </div>
-                        <div className="space-y-2">
-                            <Label htmlFor="abbreviation">Abbreviation</Label>
+                        </FormField>
+
+                        <FormField label="Abbreviation" name="abbreviation" error={form.errors.abbreviation}>
                             <Input
                                 id="abbreviation"
                                 value={form.data.abbreviation}
                                 onChange={(e) => form.setData('abbreviation', e.target.value)}
                                 placeholder="e.g. UNILAG"
                             />
-                            <InputError message={form.errors.abbreviation} />
-                        </div>
+                        </FormField>
                     </div>
 
                     <div className="grid gap-6 sm:grid-cols-2">
-                        <div className="space-y-2">
-                            <Label htmlFor="institution_type">Institution Type</Label>
+                        <FormField label="Institution Type" name="institution_type" error={form.errors.institution_type} required>
                             <Select
                                 value={form.data.institution_type}
                                 onValueChange={(value) => form.setData('institution_type', value)}
@@ -87,15 +85,14 @@ export default function InstitutionForm({ institution, institutionTypes, ownersh
                                 <SelectContent>
                                     {institutionTypes.map((type) => (
                                         <SelectItem key={type.value} value={type.value}>
-                                            {institutionTypeLabels[type.value] ?? type.value}
+                                            {type.label}
                                         </SelectItem>
                                     ))}
                                 </SelectContent>
                             </Select>
-                            <InputError message={form.errors.institution_type} />
-                        </div>
-                        <div className="space-y-2">
-                            <Label htmlFor="ownership_type">Ownership Type</Label>
+                        </FormField>
+
+                        <FormField label="Ownership Type" name="ownership_type" error={form.errors.ownership_type} required>
                             <Select
                                 value={form.data.ownership_type}
                                 onValueChange={(value) => form.setData('ownership_type', value)}
@@ -106,17 +103,15 @@ export default function InstitutionForm({ institution, institutionTypes, ownersh
                                 <SelectContent>
                                     {ownershipTypes.map((type) => (
                                         <SelectItem key={type.value} value={type.value}>
-                                            {ownershipTypeLabels[type.value] ?? type.value}
+                                            {type.label}
                                         </SelectItem>
                                     ))}
                                 </SelectContent>
                             </Select>
-                            <InputError message={form.errors.ownership_type} />
-                        </div>
+                        </FormField>
                     </div>
 
-                    <div className="space-y-2">
-                        <Label htmlFor="country_id">Country</Label>
+                    <FormField label="Country" name="country_id" error={form.errors.country_id} required>
                         <Select
                             value={form.data.country_id}
                             onValueChange={(value) => form.setData('country_id', value)}
@@ -132,48 +127,47 @@ export default function InstitutionForm({ institution, institutionTypes, ownersh
                                 ))}
                             </SelectContent>
                         </Select>
-                        <InputError message={form.errors.country_id} />
-                    </div>
+                    </FormField>
 
                     <div className="grid gap-6 sm:grid-cols-2">
-                        <div className="space-y-2">
-                            <Label htmlFor="state">State</Label>
+                        <FormField label="State" name="state" error={form.errors.state}>
                             <Input
                                 id="state"
                                 value={form.data.state}
                                 onChange={(e) => form.setData('state', e.target.value)}
                                 placeholder="e.g. Lagos"
                             />
-                            <InputError message={form.errors.state} />
-                        </div>
-                        <div className="space-y-2">
-                            <Label htmlFor="city">City</Label>
+                        </FormField>
+
+                        <FormField label="City" name="city" error={form.errors.city}>
                             <Input
                                 id="city"
                                 value={form.data.city}
                                 onChange={(e) => form.setData('city', e.target.value)}
                                 placeholder="e.g. Akoka"
                             />
-                            <InputError message={form.errors.city} />
-                        </div>
+                        </FormField>
                     </div>
 
-                    <div className="space-y-2">
-                        <Label htmlFor="logo">Logo</Label>
-                        {isEditing && institution?.logo_path && !form.data.logo && (
-                            <p className="text-xs text-muted-foreground">Current logo uploaded. Upload a new one to replace it.</p>
-                        )}
+                    <FormField
+                        label="Logo"
+                        name="logo"
+                        error={form.errors.logo}
+                        description={
+                            isEditing && institution?.logo_path && !form.data.logo
+                                ? 'Current logo uploaded. Upload a new one to replace it.'
+                                : undefined
+                        }
+                    >
                         <Input
                             id="logo"
                             type="file"
                             accept="image/jpeg,image/png,image/webp"
                             onChange={(e) => form.setData('logo', e.target.files?.[0] ?? null)}
                         />
-                        <InputError message={form.errors.logo} />
-                    </div>
+                    </FormField>
 
-                    <div className="space-y-2">
-                        <Label htmlFor="website">Website</Label>
+                    <FormField label="Website" name="website" error={form.errors.website}>
                         <Input
                             id="website"
                             type="url"
@@ -181,28 +175,16 @@ export default function InstitutionForm({ institution, institutionTypes, ownersh
                             onChange={(e) => form.setData('website', e.target.value)}
                             placeholder="e.g. https://unilag.edu.ng"
                         />
-                        <InputError message={form.errors.website} />
-                    </div>
+                    </FormField>
 
-                    <div className="flex items-center gap-3">
-                        <Switch
-                            id="is_active"
-                            checked={form.data.is_active}
-                            onCheckedChange={(checked) => form.setData('is_active', checked)}
-                        />
-                        <Label htmlFor="is_active">Active</Label>
-                    </div>
-                </CardContent>
-
-                <CardFooter className="justify-end gap-3 border-t pt-6">
-                    <Button variant="outline" asChild>
-                        <Link href={InstitutionController.index.url()}>Cancel</Link>
-                    </Button>
-                    <Button type="submit" disabled={form.processing}>
-                        {isEditing ? 'Update Institution' : 'Create Institution'}
-                    </Button>
-                </CardFooter>
-            </Card>
-        </form>
+            <div className="flex items-center gap-3">
+                <Switch
+                    id="is_active"
+                    checked={form.data.is_active}
+                    onCheckedChange={(checked) => form.setData('is_active', checked)}
+                />
+                <Label htmlFor="is_active">Active</Label>
+            </div>
+        </FormWrapper>
     );
 }

@@ -14,6 +14,7 @@ interface Props {
         content: TiptapJSON | null;
         summary: string | null;
         difficulty_level: TopicDifficulty;
+        difficulty_level_label: string;
         estimated_read_minutes: number | null;
     };
 }
@@ -22,12 +23,6 @@ const breadcrumbs = [
     { title: 'Topics', href: '/admin/topics' },
     { title: 'Preview', href: '#' },
 ];
-
-const difficultyLabels: Record<string, string> = {
-    foundational: 'Foundational',
-    intermediate: 'Intermediate',
-    advanced: 'Advanced',
-};
 
 const difficultyStyles: Record<string, string> = {
     foundational: 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400 reader:bg-blue-900/30 reader:text-blue-400',
@@ -67,7 +62,7 @@ export default function AdminTopicsPreview({ topic }: Props) {
                             variant="secondary"
                             className={difficultyStyles[topic.difficulty_level] ?? ''}
                         >
-                            {difficultyLabels[topic.difficulty_level] ?? topic.difficulty_level}
+                            {topic.difficulty_level_label}
                         </Badge>
                         {topic.estimated_read_minutes && (
                             <span className="inline-flex items-center gap-1.5 text-sm text-muted-foreground">

@@ -2,10 +2,15 @@
 
 namespace Database\Seeders;
 
+use App\Enums\AnswerDepthLevel;
 use App\Enums\BillingPeriod;
 use App\Enums\CourseScope;
 use App\Enums\InstitutionType;
 use App\Enums\OwnershipType;
+use App\Enums\QuestionDifficulty;
+use App\Enums\QuestionSource;
+use App\Enums\QuestionStatus;
+use App\Enums\QuestionType;
 use App\Enums\Semester;
 use App\Enums\TopicDifficulty;
 use App\Enums\UserRole;
@@ -18,6 +23,10 @@ use App\Models\Faculty;
 use App\Models\Institution;
 use App\Models\InstitutionCourse;
 use App\Models\PlatformSetting;
+use App\Models\Question;
+use App\Models\QuestionAnswer;
+use App\Models\QuestionOption;
+use App\Models\QuestionTopicLink;
 use App\Models\SubscriptionPlan;
 use App\Models\User;
 use Illuminate\Database\Seeder;
@@ -326,12 +335,351 @@ class DatabaseSeeder extends Seeder
             ));
         }
 
-        User::create([
+        $admin = User::create([
             'name' => 'Super Admin',
             'email' => 'admin@skoolpad.com',
             'role' => UserRole::SuperAdmin,
             'password' => 'password',
             'is_active' => true,
         ]);
+
+        $this->seedQuestions($admin, $mouau, $unn);
+    }
+
+    private function seedQuestions(User $admin, Institution $mouau, Institution $unn): void
+    {
+        $tiptap = fn (string $text): array => [
+            'type' => 'doc',
+            'content' => [
+                ['type' => 'paragraph', 'content' => [['type' => 'text', 'text' => $text]]],
+            ],
+        ];
+
+        $csc201 = InstitutionCourse::where('institution_id', $mouau->id)->where('course_code', 'CSC 201')->first();
+        $csc301 = InstitutionCourse::where('institution_id', $mouau->id)->where('course_code', 'CSC 301')->first();
+        $csc302 = InstitutionCourse::where('institution_id', $mouau->id)->where('course_code', 'CSC 302')->first();
+        $csc101 = InstitutionCourse::where('institution_id', $mouau->id)->where('course_code', 'CSC 101')->first();
+        $mee201 = InstitutionCourse::where('institution_id', $mouau->id)->where('course_code', 'MEE 201')->first();
+        $mee301 = InstitutionCourse::where('institution_id', $mouau->id)->where('course_code', 'MEE 301')->first();
+        $eng101 = InstitutionCourse::where('institution_id', $mouau->id)->where('course_code', 'ENG 101')->first();
+        $mcm101 = InstitutionCourse::where('institution_id', $mouau->id)->where('course_code', 'MCM 101')->first();
+        $cos101 = InstitutionCourse::where('institution_id', $unn->id)->where('course_code', 'COS 101')->first();
+        $cos201 = InstitutionCourse::where('institution_id', $unn->id)->where('course_code', 'COS 201')->first();
+
+        $algoTopic = CanonicalTopic::where('slug', 'introduction-to-algorithms')->first();
+        $dsTopic = CanonicalTopic::where('slug', 'data-structures-and-trees')->first();
+        $dbTopic = CanonicalTopic::where('slug', 'database-normalization')->first();
+        $oopTopic = CanonicalTopic::where('slug', 'object-oriented-programming')->first();
+        $osTopic = CanonicalTopic::where('slug', 'operating-systems-concepts')->first();
+        $thermoTopic = CanonicalTopic::where('slug', 'thermodynamics')->first();
+        $mechTopic = CanonicalTopic::where('slug', 'engineering-mechanics')->first();
+        $posTopic = CanonicalTopic::where('slug', 'parts-of-speech')->first();
+        $massTopic = CanonicalTopic::where('slug', 'introduction-to-mass-media')->first();
+
+        $questions = [
+            [
+                'course' => $csc201,
+                'type' => QuestionType::Mcq,
+                'content' => 'What is the time complexity of binary search on a sorted array of n elements?',
+                'year' => 2023, 'semester' => 'first', 'marks' => 2,
+                'difficulty' => QuestionDifficulty::Medium,
+                'status' => QuestionStatus::Published,
+                'topic' => $algoTopic,
+                'options' => [
+                    ['label' => 'A', 'content' => 'O(n)', 'is_correct' => false],
+                    ['label' => 'B', 'content' => 'O(log n)', 'is_correct' => true],
+                    ['label' => 'C', 'content' => 'O(n log n)', 'is_correct' => false],
+                    ['label' => 'D', 'content' => 'O(1)', 'is_correct' => false],
+                ],
+                'answers' => [
+                    ['depth' => AnswerDepthLevel::Quick, 'text' => 'O(log n). Binary search halves the search space with each comparison.'],
+                    ['depth' => AnswerDepthLevel::Standard, 'text' => 'Binary search works by repeatedly dividing the sorted array in half. At each step, we compare the target with the middle element and discard one half. Since the array size halves each iteration, the maximum number of comparisons is log₂(n), giving O(log n) time complexity.'],
+                ],
+            ],
+            [
+                'course' => $csc201,
+                'type' => QuestionType::Mcq,
+                'content' => 'Which data structure uses LIFO (Last In, First Out) principle?',
+                'year' => 2023, 'semester' => 'first', 'marks' => 2,
+                'difficulty' => QuestionDifficulty::Easy,
+                'status' => QuestionStatus::Published,
+                'topic' => $dsTopic,
+                'options' => [
+                    ['label' => 'A', 'content' => 'Queue', 'is_correct' => false],
+                    ['label' => 'B', 'content' => 'Stack', 'is_correct' => true],
+                    ['label' => 'C', 'content' => 'Linked List', 'is_correct' => false],
+                    ['label' => 'D', 'content' => 'Tree', 'is_correct' => false],
+                ],
+                'answers' => [
+                    ['depth' => AnswerDepthLevel::Quick, 'text' => 'Stack. Elements are added and removed from the same end (the top).'],
+                ],
+            ],
+            [
+                'course' => $csc201,
+                'type' => QuestionType::Theory,
+                'content' => 'Explain the difference between a stack and a queue. Give one real-world example of each.',
+                'year' => 2022, 'semester' => 'first', 'marks' => 10,
+                'difficulty' => QuestionDifficulty::Medium,
+                'status' => QuestionStatus::Published,
+                'topic' => $dsTopic,
+                'options' => [],
+                'answers' => [
+                    ['depth' => AnswerDepthLevel::Quick, 'text' => 'A stack follows LIFO (Last In, First Out) while a queue follows FIFO (First In, First Out). Example: stack of plates (stack), bank queue (queue).'],
+                    ['depth' => AnswerDepthLevel::Standard, 'text' => "A stack is a linear data structure where insertion (push) and deletion (pop) happen at the same end called the 'top'. It follows LIFO — the last element added is the first removed. Real-world example: browser back button history.\n\nA queue is a linear data structure where insertion (enqueue) happens at the rear and deletion (dequeue) at the front. It follows FIFO — the first element added is the first removed. Real-world example: print job scheduling.\n\nKey operations differ: Stack has push/pop/peek, Queue has enqueue/dequeue/front."],
+                    ['depth' => AnswerDepthLevel::DeepDive, 'text' => "Stacks and queues are both abstract data types (ADTs) that represent collections of elements with restricted access patterns.\n\nSTACK (LIFO):\n- Operations: push(item), pop(), peek(), isEmpty()\n- All operations are O(1)\n- Can be implemented using arrays or linked lists\n- Applications: function call stack, expression evaluation, undo operations, DFS traversal, parenthesis matching\n- Example: The 'undo' feature in text editors maintains a stack of operations\n\nQUEUE (FIFO):\n- Operations: enqueue(item), dequeue(), front(), isEmpty()\n- All operations are O(1) with proper implementation\n- Can be implemented using circular arrays or linked lists\n- Variants: Priority Queue, Double-Ended Queue (Deque), Circular Queue\n- Applications: BFS traversal, CPU scheduling, IO buffers, print spooling\n- Example: Operating system process scheduler uses a ready queue\n\nBoth can be implemented in O(1) time for their core operations but differ fundamentally in their access patterns, making them suitable for different algorithmic problems."],
+                ],
+            ],
+            [
+                'course' => $csc201,
+                'type' => QuestionType::Mcq,
+                'content' => 'What is the worst-case time complexity of inserting an element into a balanced binary search tree?',
+                'year' => 2023, 'semester' => 'first', 'marks' => 2,
+                'difficulty' => QuestionDifficulty::Hard,
+                'status' => QuestionStatus::Published,
+                'topic' => $dsTopic,
+                'options' => [
+                    ['label' => 'A', 'content' => 'O(1)', 'is_correct' => false],
+                    ['label' => 'B', 'content' => 'O(n)', 'is_correct' => false],
+                    ['label' => 'C', 'content' => 'O(log n)', 'is_correct' => true],
+                    ['label' => 'D', 'content' => 'O(n²)', 'is_correct' => false],
+                ],
+                'answers' => [
+                    ['depth' => AnswerDepthLevel::Quick, 'text' => 'O(log n). A balanced BST maintains height of log n, so traversal from root to leaf is O(log n).'],
+                ],
+            ],
+            [
+                'course' => $csc302,
+                'type' => QuestionType::Mcq,
+                'content' => 'Which normal form eliminates transitive dependencies?',
+                'year' => 2022, 'semester' => 'second', 'marks' => 2,
+                'difficulty' => QuestionDifficulty::Medium,
+                'status' => QuestionStatus::Published,
+                'topic' => $dbTopic,
+                'options' => [
+                    ['label' => 'A', 'content' => 'First Normal Form (1NF)', 'is_correct' => false],
+                    ['label' => 'B', 'content' => 'Second Normal Form (2NF)', 'is_correct' => false],
+                    ['label' => 'C', 'content' => 'Third Normal Form (3NF)', 'is_correct' => true],
+                    ['label' => 'D', 'content' => 'Boyce-Codd Normal Form (BCNF)', 'is_correct' => false],
+                ],
+                'answers' => [
+                    ['depth' => AnswerDepthLevel::Quick, 'text' => '3NF. Third Normal Form requires that no non-prime attribute is transitively dependent on the primary key.'],
+                    ['depth' => AnswerDepthLevel::Standard, 'text' => 'Third Normal Form (3NF) eliminates transitive dependencies. A relation is in 3NF if it is in 2NF and every non-prime attribute is non-transitively dependent on every candidate key. A transitive dependency occurs when A → B → C, where C depends on A indirectly through B. For example, if Student_ID → Department → HOD_Name, the HOD_Name transitively depends on Student_ID. To achieve 3NF, decompose into separate tables.'],
+                ],
+            ],
+            [
+                'course' => $csc302,
+                'type' => QuestionType::Theory,
+                'content' => 'Define the following terms as used in relational database design: (a) Primary Key (b) Foreign Key (c) Normalization',
+                'year' => 2023, 'semester' => 'second', 'marks' => 15,
+                'difficulty' => QuestionDifficulty::Easy,
+                'status' => QuestionStatus::Published,
+                'topic' => $dbTopic,
+                'options' => [],
+                'answers' => [
+                    ['depth' => AnswerDepthLevel::Quick, 'text' => '(a) Primary Key: a column or set of columns that uniquely identifies each row. (b) Foreign Key: a column that references the primary key of another table. (c) Normalization: the process of organizing data to reduce redundancy and improve integrity.'],
+                ],
+            ],
+            [
+                'course' => $csc301,
+                'type' => QuestionType::Mcq,
+                'content' => 'Which scheduling algorithm gives the minimum average waiting time for a given set of processes?',
+                'year' => 2023, 'semester' => 'first', 'marks' => 2,
+                'difficulty' => QuestionDifficulty::Medium,
+                'status' => QuestionStatus::Published,
+                'topic' => $osTopic,
+                'options' => [
+                    ['label' => 'A', 'content' => 'First Come First Serve (FCFS)', 'is_correct' => false],
+                    ['label' => 'B', 'content' => 'Shortest Job First (SJF)', 'is_correct' => true],
+                    ['label' => 'C', 'content' => 'Round Robin', 'is_correct' => false],
+                    ['label' => 'D', 'content' => 'Priority Scheduling', 'is_correct' => false],
+                ],
+                'answers' => [
+                    ['depth' => AnswerDepthLevel::Quick, 'text' => 'Shortest Job First (SJF). It is provably optimal for minimizing average waiting time among non-preemptive algorithms.'],
+                ],
+            ],
+            [
+                'course' => $csc301,
+                'type' => QuestionType::Theory,
+                'content' => 'Explain the concept of virtual memory. How does it benefit a computer system?',
+                'year' => 2022, 'semester' => 'first', 'marks' => 10,
+                'difficulty' => QuestionDifficulty::Hard,
+                'status' => QuestionStatus::Draft,
+                'topic' => $osTopic,
+                'options' => [],
+                'answers' => [],
+            ],
+            [
+                'course' => $csc101,
+                'type' => QuestionType::Mcq,
+                'content' => 'Which of the following is NOT a characteristic of Object-Oriented Programming?',
+                'year' => 2023, 'semester' => 'first', 'marks' => 2,
+                'difficulty' => QuestionDifficulty::Easy,
+                'status' => QuestionStatus::Published,
+                'topic' => $oopTopic,
+                'options' => [
+                    ['label' => 'A', 'content' => 'Encapsulation', 'is_correct' => false],
+                    ['label' => 'B', 'content' => 'Inheritance', 'is_correct' => false],
+                    ['label' => 'C', 'content' => 'Goto statements', 'is_correct' => true],
+                    ['label' => 'D', 'content' => 'Polymorphism', 'is_correct' => false],
+                ],
+                'answers' => [
+                    ['depth' => AnswerDepthLevel::Quick, 'text' => 'Goto statements. The four pillars of OOP are Encapsulation, Inheritance, Polymorphism, and Abstraction.'],
+                ],
+            ],
+            [
+                'course' => $csc101,
+                'type' => QuestionType::Theory,
+                'content' => 'Explain the concept of polymorphism in object-oriented programming with a suitable example.',
+                'year' => 2022, 'semester' => 'first', 'marks' => 10,
+                'difficulty' => QuestionDifficulty::Medium,
+                'status' => QuestionStatus::InReview,
+                'topic' => $oopTopic,
+                'options' => [],
+                'answers' => [
+                    ['depth' => AnswerDepthLevel::Quick, 'text' => 'Polymorphism means "many forms" — it allows objects of different classes to be treated as objects of a common parent class while behaving differently.'],
+                ],
+            ],
+            [
+                'course' => $mee201,
+                'type' => QuestionType::Mcq,
+                'content' => 'A force of 10N acts on a body of mass 2kg. What is the acceleration?',
+                'year' => 2023, 'semester' => 'first', 'marks' => 2,
+                'difficulty' => QuestionDifficulty::Easy,
+                'status' => QuestionStatus::Published,
+                'topic' => $mechTopic,
+                'options' => [
+                    ['label' => 'A', 'content' => '2 m/s²', 'is_correct' => false],
+                    ['label' => 'B', 'content' => '5 m/s²', 'is_correct' => true],
+                    ['label' => 'C', 'content' => '10 m/s²', 'is_correct' => false],
+                    ['label' => 'D', 'content' => '20 m/s²', 'is_correct' => false],
+                ],
+                'answers' => [
+                    ['depth' => AnswerDepthLevel::Quick, 'text' => '5 m/s². Using Newton\'s second law: F = ma, so a = F/m = 10/2 = 5 m/s².'],
+                ],
+            ],
+            [
+                'course' => $mee301,
+                'type' => QuestionType::Theory,
+                'content' => 'State the first and second laws of thermodynamics. Explain the significance of each in engineering applications.',
+                'year' => 2022, 'semester' => 'first', 'marks' => 15,
+                'difficulty' => QuestionDifficulty::Hard,
+                'status' => QuestionStatus::Published,
+                'topic' => $thermoTopic,
+                'options' => [],
+                'answers' => [
+                    ['depth' => AnswerDepthLevel::Quick, 'text' => 'First law: Energy cannot be created or destroyed, only transformed (conservation of energy). Second law: Heat flows spontaneously from hot to cold; entropy of an isolated system always increases.'],
+                    ['depth' => AnswerDepthLevel::Standard, 'text' => "First Law of Thermodynamics (Conservation of Energy): Energy can be converted from one form to another but cannot be created or destroyed. For a closed system: ΔU = Q - W, where ΔU is internal energy change, Q is heat added, and W is work done by the system. Engineering significance: forms the basis for energy balance calculations in power plants, engines, and refrigeration systems.\n\nSecond Law of Thermodynamics: It is impossible for heat to flow spontaneously from a colder body to a hotter body without external work. Alternatively, no heat engine can convert all heat into work — some must be rejected. Engineering significance: defines the theoretical maximum efficiency of heat engines (Carnot efficiency), guides the design of power cycles, and explains why perpetual motion machines are impossible."],
+                ],
+            ],
+            [
+                'course' => $eng101,
+                'type' => QuestionType::Mcq,
+                'content' => 'Which of the following is an example of a pronoun?',
+                'year' => 2023, 'semester' => 'first', 'marks' => 1,
+                'difficulty' => QuestionDifficulty::Easy,
+                'status' => QuestionStatus::Published,
+                'topic' => $posTopic,
+                'options' => [
+                    ['label' => 'A', 'content' => 'Beautiful', 'is_correct' => false],
+                    ['label' => 'B', 'content' => 'She', 'is_correct' => true],
+                    ['label' => 'C', 'content' => 'Quickly', 'is_correct' => false],
+                    ['label' => 'D', 'content' => 'Running', 'is_correct' => false],
+                ],
+                'answers' => [
+                    ['depth' => AnswerDepthLevel::Quick, 'text' => '"She" is a pronoun — a word used in place of a noun to avoid repetition.'],
+                ],
+            ],
+            [
+                'course' => $mcm101,
+                'type' => QuestionType::Theory,
+                'content' => 'Discuss the role of mass media in national development with specific reference to Nigeria.',
+                'year' => 2023, 'semester' => 'first', 'marks' => 20,
+                'difficulty' => QuestionDifficulty::Hard,
+                'status' => QuestionStatus::Draft,
+                'topic' => $massTopic,
+                'options' => [],
+                'answers' => [],
+            ],
+            [
+                'course' => $cos101,
+                'type' => QuestionType::Mcq,
+                'content' => 'Which of the following is the correct way to declare a variable in Python?',
+                'year' => 2023, 'semester' => 'first', 'marks' => 2,
+                'difficulty' => QuestionDifficulty::Easy,
+                'status' => QuestionStatus::Published,
+                'topic' => $oopTopic,
+                'options' => [
+                    ['label' => 'A', 'content' => 'int x = 5;', 'is_correct' => false],
+                    ['label' => 'B', 'content' => 'x = 5', 'is_correct' => true],
+                    ['label' => 'C', 'content' => 'var x = 5', 'is_correct' => false],
+                    ['label' => 'D', 'content' => 'dim x as integer', 'is_correct' => false],
+                ],
+                'answers' => [
+                    ['depth' => AnswerDepthLevel::Quick, 'text' => 'x = 5. Python uses dynamic typing — variables do not require explicit type declarations.'],
+                ],
+            ],
+            [
+                'course' => $cos201,
+                'type' => QuestionType::Mcq,
+                'content' => 'What is the output of the following C code: printf("%d", 5 + 3 * 2);',
+                'year' => 2022, 'semester' => 'first', 'marks' => 2,
+                'difficulty' => QuestionDifficulty::Medium,
+                'status' => QuestionStatus::Published,
+                'topic' => $algoTopic,
+                'options' => [
+                    ['label' => 'A', 'content' => '16', 'is_correct' => false],
+                    ['label' => 'B', 'content' => '11', 'is_correct' => true],
+                    ['label' => 'C', 'content' => '13', 'is_correct' => false],
+                    ['label' => 'D', 'content' => '10', 'is_correct' => false],
+                ],
+                'answers' => [
+                    ['depth' => AnswerDepthLevel::Quick, 'text' => '11. Multiplication has higher precedence than addition: 3 * 2 = 6, then 5 + 6 = 11.'],
+                ],
+            ],
+        ];
+
+        foreach ($questions as $qData) {
+            $question = Question::create([
+                'institution_course_id' => $qData['course']->id,
+                'question_type' => $qData['type'],
+                'content' => $qData['content'],
+                'year' => $qData['year'],
+                'semester' => $qData['semester'],
+                'marks' => $qData['marks'],
+                'difficulty_level' => $qData['difficulty'],
+                'source' => QuestionSource::Manual,
+                'status' => $qData['status'],
+                'created_by' => $admin->id,
+                'reviewed_by' => $qData['status'] === QuestionStatus::Published ? $admin->id : null,
+                'published_at' => $qData['status'] === QuestionStatus::Published ? now() : null,
+            ]);
+
+            foreach ($qData['options'] as $sortOrder => $option) {
+                QuestionOption::create([
+                    'question_id' => $question->id,
+                    'label' => $option['label'],
+                    'content' => $option['content'],
+                    'is_correct' => $option['is_correct'],
+                    'sort_order' => $sortOrder + 1,
+                ]);
+            }
+
+            QuestionTopicLink::create([
+                'question_id' => $question->id,
+                'canonical_topic_id' => $qData['topic']->id,
+                'is_primary' => true,
+            ]);
+
+            foreach ($qData['answers'] as $answerData) {
+                QuestionAnswer::create([
+                    'question_id' => $question->id,
+                    'depth_level' => $answerData['depth'],
+                    'content' => $tiptap($answerData['text']),
+                    'content_plain' => $answerData['text'],
+                    'is_published' => $qData['status'] === QuestionStatus::Published,
+                    'created_by' => $admin->id,
+                ]);
+            }
+        }
     }
 }

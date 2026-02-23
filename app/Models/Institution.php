@@ -4,6 +4,7 @@ namespace App\Models;
 
 use App\Enums\InstitutionType;
 use App\Enums\OwnershipType;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
@@ -51,5 +52,13 @@ class Institution extends Model
     public function institutionCourses(): HasMany
     {
         return $this->hasMany(InstitutionCourse::class);
+    }
+
+    public function scopeSearch(Builder $query, string $term): Builder
+    {
+        return $query->where(function (Builder $q) use ($term) {
+            $q->where('name', 'ilike', "%{$term}%")
+                ->orWhere('abbreviation', 'ilike', "%{$term}%");
+        });
     }
 }

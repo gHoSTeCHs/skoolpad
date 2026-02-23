@@ -27,7 +27,7 @@ class CanonicalTopicController extends Controller
             ->when($request->has('is_published'), fn ($q) => $q->where('is_published', $request->boolean('is_published')))
             ->when($request->filled('search'), fn ($q) => $q->search($request->string('search')))
             ->tap(fn ($q) => $this->applySorting($q, $request, ['title', 'difficulty_level', 'created_at'], 'created_at', 'desc'))
-            ->paginate(20)
+            ->paginate(self::DEFAULT_PER_PAGE)
             ->withQueryString();
 
         $topics->through(fn ($topic) => [
@@ -35,6 +35,7 @@ class CanonicalTopicController extends Controller
             'title' => $topic->title,
             'slug' => $topic->slug,
             'difficulty_level' => $topic->difficulty_level,
+            'difficulty_level_label' => $topic->difficulty_level->label(),
             'is_published' => $topic->is_published,
             'published_at' => $topic->published_at,
             'estimated_read_minutes' => $topic->estimated_read_minutes,
@@ -60,10 +61,7 @@ class CanonicalTopicController extends Controller
     {
         return Inertia::render('admin/topics/create', [
             'disciplines' => Discipline::all(['id', 'name']),
-            'difficulty_levels' => array_map(fn ($case) => [
-                'value' => $case->value,
-                'label' => $case->label(),
-            ], TopicDifficulty::cases()),
+            'difficulty_levels' => TopicDifficulty::toSelectOptions(),
         ]);
     }
 
@@ -80,11 +78,7 @@ class CanonicalTopicController extends Controller
         $topic = CanonicalTopic::create($data);
 
         if ($prerequisites) {
-            $topic->prerequisites()->sync(
-                collect($prerequisites)->mapWithKeys(fn ($p) => [
-                    $p['id'] => ['is_hard_prerequisite' => $p['is_hard_prerequisite']],
-                ])->all()
-            );
+            $topic->syncPrerequisites($prerequisites);
         }
 
         return to_route('admin.topics.edit', $topic)->with('success', 'Topic created.');
@@ -115,10 +109,7 @@ class CanonicalTopicController extends Controller
                 ]),
             ],
             'disciplines' => Discipline::all(['id', 'name']),
-            'difficulty_levels' => array_map(fn ($case) => [
-                'value' => $case->value,
-                'label' => $case->label(),
-            ], TopicDifficulty::cases()),
+            'difficulty_levels' => TopicDifficulty::toSelectOptions(),
             'available_topics' => CanonicalTopic::query()
                 ->where('discipline_id', $topic->discipline_id)
                 ->where('id', '!=', $topic->id)
@@ -137,12 +128,7 @@ class CanonicalTopicController extends Controller
         }
 
         $topic->update($data);
-
-        $topic->prerequisites()->sync(
-            collect($prerequisites)->mapWithKeys(fn ($p) => [
-                $p['id'] => ['is_hard_prerequisite' => $p['is_hard_prerequisite']],
-            ])->all()
-        );
+        $topic->syncPrerequisites($prerequisites);
 
         return to_route('admin.topics.edit', $topic)->with('success', 'Topic updated.');
     }
@@ -155,6 +141,7 @@ class CanonicalTopicController extends Controller
                 'content' => $topic->content,
                 'summary' => $topic->summary,
                 'difficulty_level' => $topic->difficulty_level,
+                'difficulty_level_label' => $topic->difficulty_level->label(),
                 'estimated_read_minutes' => $topic->estimated_read_minutes,
             ],
         ]);

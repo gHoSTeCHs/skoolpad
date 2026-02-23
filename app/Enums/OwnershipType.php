@@ -2,8 +2,12 @@
 
 namespace App\Enums;
 
+use App\Concerns\HasSelectOptions;
+
 enum OwnershipType: string
 {
+    use HasSelectOptions;
+
     case Federal = 'federal';
     case State = 'state';
     case Private = 'private';
