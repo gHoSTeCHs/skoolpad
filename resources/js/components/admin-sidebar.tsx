@@ -19,6 +19,7 @@ import DisciplineController from '@/actions/App/Http/Controllers/Admin/Disciplin
 import ExamTypeController from '@/actions/App/Http/Controllers/Admin/ExamTypeController';
 import InstitutionController from '@/actions/App/Http/Controllers/Admin/InstitutionController';
 import QuestionController from '@/actions/App/Http/Controllers/Admin/QuestionController';
+import SettingsController from '@/actions/App/Http/Controllers/Admin/SettingsController';
 import UserController from '@/actions/App/Http/Controllers/Admin/UserController';
 import { NavMain } from '@/components/nav-main';
 import { NavUser } from '@/components/nav-user';
@@ -62,7 +63,7 @@ const navGroups: NavGroup[] = [
         label: 'Platform',
         items: [
             { title: 'Users', href: UserController.index.url(), icon: Users },
-            { title: 'Settings', href: '/admin/settings', icon: Settings },
+            { title: 'Settings', href: SettingsController.index.url(), icon: Settings },
         ],
     },
 ];

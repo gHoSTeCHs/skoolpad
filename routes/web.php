@@ -13,6 +13,8 @@ use App\Http\Controllers\Admin\ExamTypeController;
 use App\Http\Controllers\Admin\FacultyController;
 use App\Http\Controllers\Admin\InstitutionController;
 use App\Http\Controllers\Admin\QuestionController;
+use App\Http\Controllers\Admin\SettingsController;
+use App\Http\Controllers\Admin\SubscriptionPlanController;
 use App\Http\Controllers\Admin\UserController;
 use App\Models\CanonicalTopic;
 use App\Models\Department;
@@ -119,7 +121,11 @@ Route::middleware(['auth', 'verified', 'staff'])->prefix('admin')->name('admin.'
     Route::post('import/course-offerings', [BulkImportController::class, 'importCourseOfferings'])->name('import.courseOfferings');
     Route::post('import/questions', [BulkImportController::class, 'importQuestions'])->name('import.questions');
     Route::get('import/history', [BulkImportController::class, 'history'])->name('import.history');
-    Route::get('settings', fn () => Inertia::render('admin/settings/index'))->name('settings.index');
+    Route::get('settings', [SettingsController::class, 'index'])->name('settings.index');
+    Route::put('settings', [SettingsController::class, 'update'])->name('settings.update');
+    Route::get('settings/plans', [SubscriptionPlanController::class, 'index'])->name('settings.plans.index');
+    Route::get('settings/plans/{plan}/edit', [SubscriptionPlanController::class, 'edit'])->name('settings.plans.edit');
+    Route::put('settings/plans/{plan}', [SubscriptionPlanController::class, 'update'])->name('settings.plans.update');
 
     Route::resource('institutions', InstitutionController::class)->except(['show', 'destroy']);
     Route::resource('disciplines', DisciplineController::class)->except(['show', 'destroy']);

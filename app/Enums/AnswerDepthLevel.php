@@ -2,8 +2,11 @@
 
 namespace App\Enums;
 
+use App\Concerns\HasSelectOptions;
+
 enum AnswerDepthLevel: string
 {
+    use HasSelectOptions;
     case Quick = 'quick';
     case Standard = 'standard';
     case DeepDive = 'deep_dive';
