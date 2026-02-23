@@ -27,6 +27,7 @@ use App\Models\Question;
 use App\Models\QuestionAnswer;
 use App\Models\QuestionOption;
 use App\Models\QuestionTopicLink;
+use App\Models\StudentProfile;
 use App\Models\SubscriptionPlan;
 use App\Models\User;
 use Illuminate\Database\Seeder;
@@ -341,6 +342,49 @@ class DatabaseSeeder extends Seeder
             'role' => UserRole::SuperAdmin,
             'password' => 'password',
             'is_active' => true,
+        ]);
+
+        User::create([
+            'name' => 'Content Manager',
+            'email' => 'content@skoolpad.com',
+            'role' => UserRole::ContentManager,
+            'password' => 'password',
+            'is_active' => true,
+        ]);
+
+        User::create([
+            'name' => 'Content Reviewer',
+            'email' => 'reviewer@skoolpad.com',
+            'role' => UserRole::ContentReviewer,
+            'password' => 'password',
+            'is_active' => true,
+        ]);
+
+        $mouauColpasFaculty = Faculty::where('institution_id', $mouau->id)->where('name', 'COLPAS')->first();
+
+        $studentUser = User::create([
+            'name' => 'Demo Student',
+            'email' => 'student@skoolpad.com',
+            'role' => UserRole::Student,
+            'password' => 'password',
+            'is_active' => true,
+        ]);
+
+        StudentProfile::create([
+            'user_id' => $studentUser->id,
+            'institution_id' => $mouau->id,
+            'faculty_id' => $mouauColpasFaculty->id,
+            'department_id' => $csDeptMouau->id,
+            'level' => 300,
+            'matric_number' => 'MOUAU/CSC/19/1234',
+        ]);
+
+        User::create([
+            'name' => 'Inactive User',
+            'email' => 'inactive@skoolpad.com',
+            'role' => UserRole::Student,
+            'password' => 'password',
+            'is_active' => false,
         ]);
 
         $this->seedQuestions($admin, $mouau, $unn);
