@@ -3,6 +3,7 @@ import {
     BookOpen,
     Building2,
     ClipboardList,
+    Globe,
     GraduationCap,
     LayoutGrid,
     ListChecks,
@@ -16,6 +17,7 @@ import BulkImportController from '@/actions/App/Http/Controllers/Admin/BulkImpor
 import CanonicalTopicController from '@/actions/App/Http/Controllers/Admin/CanonicalTopicController';
 import CourseController from '@/actions/App/Http/Controllers/Admin/CourseController';
 import DisciplineController from '@/actions/App/Http/Controllers/Admin/DisciplineController';
+import EducationSystemController from '@/actions/App/Http/Controllers/Admin/EducationSystemController';
 import ExamTypeController from '@/actions/App/Http/Controllers/Admin/ExamTypeController';
 import InstitutionController from '@/actions/App/Http/Controllers/Admin/InstitutionController';
 import QuestionController from '@/actions/App/Http/Controllers/Admin/QuestionController';
@@ -56,6 +58,7 @@ const navGroups: NavGroup[] = [
         label: 'Institutions',
         items: [
             { title: 'All Institutions', href: InstitutionController.index.url(), icon: Building2 },
+            { title: 'Education Systems', href: EducationSystemController.index.url(), icon: Globe },
             { title: 'Exam Types', href: ExamTypeController.index.url(), icon: ClipboardList },
         ],
     },
