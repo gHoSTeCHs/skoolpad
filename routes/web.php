@@ -9,6 +9,7 @@ use App\Http\Controllers\Admin\CourseMappingController;
 use App\Http\Controllers\Admin\DashboardController;
 use App\Http\Controllers\Admin\DepartmentController;
 use App\Http\Controllers\Admin\DisciplineController;
+use App\Http\Controllers\Admin\EducationSystemController;
 use App\Http\Controllers\Admin\ExamSubjectController;
 use App\Http\Controllers\Admin\ExamTypeController;
 use App\Http\Controllers\Admin\FacultyController;
@@ -140,6 +141,7 @@ Route::middleware(['auth', 'verified', 'staff'])->prefix('admin')->name('admin.'
 
     Route::resource('institutions', InstitutionController::class)->except(['show', 'destroy']);
     Route::resource('disciplines', DisciplineController::class)->except(['show', 'destroy']);
+    Route::resource('education-systems', EducationSystemController::class)->except(['destroy']);
     Route::resource('exam-types', ExamTypeController::class)->except(['show', 'destroy']);
 
     Route::get('institutions/{institution}/faculties', [FacultyController::class, 'index'])->name('faculties.index');
