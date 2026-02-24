@@ -8,7 +8,9 @@ use App\Http\Controllers\Controller;
 use App\Http\Requests\Admin\StoreEducationSystemRequest;
 use App\Http\Requests\Admin\UpdateEducationSystemRequest;
 use App\Models\Country;
+use App\Models\Discipline;
 use App\Models\EducationSystem;
+use App\Models\GradingScale;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Str;
@@ -80,6 +82,8 @@ class EducationSystemController extends Controller
 
         return Inertia::render('admin/education-systems/show', [
             'educationSystem' => $educationSystem,
+            'disciplines' => Discipline::orderBy('name')->get(['id', 'name']),
+            'gradingScales' => GradingScale::orderBy('name')->get(['id', 'name']),
         ]);
     }
 
