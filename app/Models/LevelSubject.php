@@ -6,6 +6,7 @@ use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class LevelSubject extends Model
 {
@@ -50,5 +51,15 @@ class LevelSubject extends Model
     public function stream(): BelongsTo
     {
         return $this->belongsTo(Stream::class);
+    }
+
+    public function courseBlockMappings(): HasMany
+    {
+        return $this->hasMany(CourseBlockMapping::class, 'curriculum_subject_level_id');
+    }
+
+    public function schemeOfWorkItems(): HasMany
+    {
+        return $this->hasMany(SchemeOfWorkItem::class, 'curriculum_subject_level_id');
     }
 }
