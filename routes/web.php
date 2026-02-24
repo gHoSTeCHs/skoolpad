@@ -17,6 +17,7 @@ use App\Http\Controllers\Admin\EducationSystemController;
 use App\Http\Controllers\Admin\ExamSubjectController;
 use App\Http\Controllers\Admin\ExamTypeController;
 use App\Http\Controllers\Admin\FacultyController;
+use App\Http\Controllers\Admin\GradingScaleController;
 use App\Http\Controllers\Admin\InstitutionController;
 use App\Http\Controllers\Admin\QuestionController;
 use App\Http\Controllers\Admin\ReviewQueueController;
@@ -169,6 +170,7 @@ Route::middleware(['auth', 'verified', 'staff'])->prefix('admin')->name('admin.'
     Route::delete('assessment-types/{assessment_type}', [AssessmentTypeController::class, 'destroy'])->name('assessment-types.destroy');
 
     Route::resource('exam-types', ExamTypeController::class)->except(['show', 'destroy']);
+    Route::resource('grading-scales', GradingScaleController::class)->except(['show', 'destroy']);
 
     Route::get('institutions/{institution}/faculties', [FacultyController::class, 'index'])->name('faculties.index');
     Route::get('institutions/{institution}/faculties/create', [FacultyController::class, 'create'])->name('faculties.create');
