@@ -20,7 +20,7 @@ class UpdateAssessmentTypeRequest extends FormRequest
             'tier_id' => ['nullable', 'uuid', 'exists:curriculum_tiers,id'],
             'is_exit_exam' => ['required', 'boolean'],
             'is_entrance_exam' => ['required', 'boolean'],
-            'grading_scale_id' => ['nullable', 'uuid', 'exists:grading_scales,id'],
+            'grading_scale_id' => ['required', 'uuid', 'exists:grading_scales,id'],
         ];
     }
 }

@@ -60,7 +60,7 @@ export default function AssessmentsTab({ assessments, tiers, gradingScales, syst
         tier_id: '' as string | null,
         is_exit_exam: false,
         is_entrance_exam: false,
-        grading_scale_id: '' as string | null,
+        grading_scale_id: '',
     });
 
     function handleNameChange(value: string) {
@@ -87,7 +87,7 @@ export default function AssessmentsTab({ assessments, tiers, gradingScales, syst
             tier_id: assessment.tier_id ?? '',
             is_exit_exam: assessment.is_exit_exam,
             is_entrance_exam: assessment.is_entrance_exam,
-            grading_scale_id: assessment.grading_scale_id ?? '',
+            grading_scale_id: assessment.grading_scale_id,
         });
         setDialogOpen(true);
     }
@@ -97,7 +97,6 @@ export default function AssessmentsTab({ assessments, tiers, gradingScales, syst
         const data = {
             ...form.data,
             tier_id: form.data.tier_id || null,
-            grading_scale_id: form.data.grading_scale_id || null,
         };
 
         if (editing) {
@@ -291,16 +290,15 @@ export default function AssessmentsTab({ assessments, tiers, gradingScales, syst
                             </div>
                         </FormField>
 
-                        <FormField label="Grading Scale" name="grading_scale_id" error={form.errors.grading_scale_id}>
+                        <FormField label="Grading Scale" name="grading_scale_id" error={form.errors.grading_scale_id} required>
                             <Select
-                                value={form.data.grading_scale_id ?? ''}
-                                onValueChange={(value) => form.setData('grading_scale_id', value === 'none' ? '' : value)}
+                                value={form.data.grading_scale_id}
+                                onValueChange={(value) => form.setData('grading_scale_id', value)}
                             >
                                 <SelectTrigger id="grading_scale_id">
                                     <SelectValue placeholder="Select grading scale..." />
                                 </SelectTrigger>
                                 <SelectContent>
-                                    <SelectItem value="none">None</SelectItem>
                                     {gradingScales.map((scale) => (
                                         <SelectItem key={scale.id} value={scale.id}>
                                             {scale.name}

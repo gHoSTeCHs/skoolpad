@@ -180,7 +180,7 @@ export type AssessmentTypeModel = {
     tier_id: string | null;
     is_exit_exam: boolean;
     is_entrance_exam: boolean;
-    grading_scale_id: string | null;
+    grading_scale_id: string;
     created_at: string;
     updated_at: string;
     tier?: { id: string; name: string };
