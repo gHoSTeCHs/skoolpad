@@ -25,6 +25,11 @@ class Discipline extends Model
         return $this->hasMany(CanonicalTopic::class);
     }
 
+    public function curriculumSubjects(): HasMany
+    {
+        return $this->hasMany(CurriculumSubject::class);
+    }
+
     public function scopeSearch(Builder $query, string $term): Builder
     {
         return $query->where('name', 'ilike', "%{$term}%");

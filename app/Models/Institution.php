@@ -9,6 +9,7 @@ use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class Institution extends Model
@@ -52,6 +53,16 @@ class Institution extends Model
     public function institutionCourses(): HasMany
     {
         return $this->hasMany(InstitutionCourse::class);
+    }
+
+    public function educationSystems(): BelongsToMany
+    {
+        return $this->belongsToMany(EducationSystem::class, 'institution_education_systems');
+    }
+
+    public function calendarTerms(): HasMany
+    {
+        return $this->hasMany(CalendarTerm::class);
     }
 
     public function scopeSearch(Builder $query, string $term): Builder

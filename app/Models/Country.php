@@ -27,4 +27,14 @@ class Country extends Model
     {
         return $this->hasMany(ExamType::class);
     }
+
+    public function educationSystems(): HasMany
+    {
+        return $this->hasMany(EducationSystem::class);
+    }
+
+    public function institutionTypes(): HasMany
+    {
+        return $this->hasMany(\App\Models\InstitutionType::class);
+    }
 }
