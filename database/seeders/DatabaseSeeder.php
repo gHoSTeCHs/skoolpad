@@ -4,6 +4,8 @@ namespace Database\Seeders;
 
 use App\Enums\AnswerDepthLevel;
 use App\Enums\BillingPeriod;
+use App\Enums\ContentSubmissionStatus;
+use App\Enums\ContentSubmissionType;
 use App\Enums\CourseScope;
 use App\Enums\InstitutionType;
 use App\Enums\OwnershipType;
@@ -15,6 +17,7 @@ use App\Enums\Semester;
 use App\Enums\TopicDifficulty;
 use App\Enums\UserRole;
 use App\Models\CanonicalTopic;
+use App\Models\ContentSubmission;
 use App\Models\Country;
 use App\Models\Department;
 use App\Models\Discipline;
@@ -388,6 +391,7 @@ class DatabaseSeeder extends Seeder
         ]);
 
         $this->seedQuestions($admin, $mouau, $unn);
+        $this->seedContentSubmissions($admin, $studentUser, $mouau);
     }
 
     private function seedQuestions(User $admin, Institution $mouau, Institution $unn): void
@@ -725,5 +729,106 @@ class DatabaseSeeder extends Seeder
                 ]);
             }
         }
+    }
+
+    private function seedContentSubmissions(User $admin, User $student, Institution $mouau): void
+    {
+        $csc201 = InstitutionCourse::where('institution_id', $mouau->id)->where('course_code', 'CSC 201')->first();
+        $csc301 = InstitutionCourse::where('institution_id', $mouau->id)->where('course_code', 'CSC 301')->first();
+        $firstQuestion = Question::first();
+
+        ContentSubmission::create([
+            'submitted_by' => $student->id,
+            'submission_type' => ContentSubmissionType::Question,
+            'content' => [
+                'question_type' => 'mcq',
+                'content' => 'What is the space complexity of merge sort?',
+                'options' => [
+                    ['content' => 'O(1)', 'is_correct' => false],
+                    ['content' => 'O(n)', 'is_correct' => true],
+                    ['content' => 'O(log n)', 'is_correct' => false],
+                    ['content' => 'O(n²)', 'is_correct' => false],
+                ],
+            ],
+            'institution_course_id' => $csc201->id,
+            'exam_year' => 2024,
+            'status' => ContentSubmissionStatus::Pending,
+        ]);
+
+        ContentSubmission::create([
+            'submitted_by' => $student->id,
+            'submission_type' => ContentSubmissionType::Question,
+            'content' => [
+                'question_type' => 'theory',
+                'content' => 'Explain the concept of deadlock in operating systems. What are the four necessary conditions?',
+            ],
+            'institution_course_id' => $csc301->id,
+            'exam_year' => 2023,
+            'status' => ContentSubmissionStatus::Pending,
+        ]);
+
+        ContentSubmission::create([
+            'submitted_by' => $student->id,
+            'submission_type' => ContentSubmissionType::PastQuestionUpload,
+            'content' => ['description' => 'CSC 201 past questions from 2023 first semester exam'],
+            'images' => [
+                'https://placehold.co/800x1200/e2e8f0/64748b?text=Page+1',
+                'https://placehold.co/800x1200/e2e8f0/64748b?text=Page+2',
+            ],
+            'institution_course_id' => $csc201->id,
+            'exam_year' => 2023,
+            'exam_semester' => Semester::First,
+            'status' => ContentSubmissionStatus::Pending,
+        ]);
+
+        ContentSubmission::create([
+            'submitted_by' => $student->id,
+            'submission_type' => ContentSubmissionType::PastQuestionUpload,
+            'content' => ['description' => 'CSC 301 OS questions, second semester 2022'],
+            'images' => [
+                'https://placehold.co/800x1200/e2e8f0/64748b?text=OS+Exam+Page+1',
+            ],
+            'institution_course_id' => $csc301->id,
+            'exam_year' => 2022,
+            'exam_semester' => Semester::Second,
+            'status' => ContentSubmissionStatus::Pending,
+        ]);
+
+        ContentSubmission::create([
+            'submitted_by' => $student->id,
+            'submission_type' => ContentSubmissionType::Correction,
+            'content' => ['correction' => 'The correct answer should be O(n log n), not O(n²). Merge sort always runs in O(n log n) time.'],
+            'related_question_id' => $firstQuestion?->id,
+            'status' => ContentSubmissionStatus::Pending,
+        ]);
+
+        ContentSubmission::create([
+            'submitted_by' => $student->id,
+            'submission_type' => ContentSubmissionType::Question,
+            'content' => [
+                'question_type' => 'mcq',
+                'content' => 'Which protocol operates at the transport layer of the OSI model?',
+                'options' => [
+                    ['content' => 'HTTP', 'is_correct' => false],
+                    ['content' => 'TCP', 'is_correct' => true],
+                    ['content' => 'IP', 'is_correct' => false],
+                    ['content' => 'ARP', 'is_correct' => false],
+                ],
+            ],
+            'institution_course_id' => $csc301->id,
+            'status' => ContentSubmissionStatus::Approved,
+            'reviewer_id' => $admin->id,
+            'reviewed_at' => now()->subDays(2),
+        ]);
+
+        ContentSubmission::create([
+            'submitted_by' => $student->id,
+            'submission_type' => ContentSubmissionType::TopicContent,
+            'content' => ['suggestion' => 'The section on binary trees could include more examples of AVL tree rotations.'],
+            'status' => ContentSubmissionStatus::Rejected,
+            'reviewer_id' => $admin->id,
+            'reviewer_notes' => 'This topic is already covered in the advanced data structures section.',
+            'reviewed_at' => now()->subDay(),
+        ]);
     }
 }

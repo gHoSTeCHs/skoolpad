@@ -1,0 +1,158 @@
+<?php
+
+namespace App\Services;
+
+use App\Enums\ContentSubmissionStatus;
+use App\Enums\ContentSubmissionType;
+use App\Enums\QuestionSource;
+use App\Enums\QuestionStatus;
+use App\Models\ContentSubmission;
+use App\Models\Question;
+use App\Models\User;
+use Illuminate\Support\Facades\DB;
+
+class ContentReviewService
+{
+    public function approveSubmission(ContentSubmission $submission, User $reviewer): void
+    {
+        if ($submission->status !== ContentSubmissionStatus::Pending) {
+            throw new \InvalidArgumentException('Only pending submissions can be approved.');
+        }
+
+        $submission->update([
+            'status' => ContentSubmissionStatus::Approved,
+            'reviewer_id' => $reviewer->id,
+            'reviewed_at' => now(),
+        ]);
+
+        if ($submission->submission_type === ContentSubmissionType::Question && is_array($submission->content)) {
+            $this->createQuestionFromSubmission($submission);
+        }
+    }
+
+    public function rejectSubmission(ContentSubmission $submission, User $reviewer, string $notes): void
+    {
+        if ($submission->status !== ContentSubmissionStatus::Pending) {
+            throw new \InvalidArgumentException('Only pending submissions can be rejected.');
+        }
+
+        $submission->update([
+            'status' => ContentSubmissionStatus::Rejected,
+            'reviewer_id' => $reviewer->id,
+            'reviewer_notes' => $notes,
+            'reviewed_at' => now(),
+        ]);
+    }
+
+    /**
+     * @param array<int, array{
+     *   institution_course_id: string,
+     *   question_type: string,
+     *   content: string,
+     *   year: ?int,
+     *   semester: ?string,
+     *   difficulty_level: ?string,
+     *   options: ?array<int, array{content: string, is_correct: bool}>,
+     *   topic_id: string,
+     * }> $questions
+     * @return array<int, string>
+     */
+    public function transcribeUpload(ContentSubmission $submission, array $questions, User $reviewer): array
+    {
+        if ($submission->submission_type !== ContentSubmissionType::PastQuestionUpload) {
+            throw new \InvalidArgumentException('Only past question uploads can be transcribed.');
+        }
+
+        if (! in_array($submission->status, [ContentSubmissionStatus::Pending, ContentSubmissionStatus::Approved])) {
+            throw new \InvalidArgumentException('Only pending or approved submissions can be transcribed.');
+        }
+
+        return DB::transaction(function () use ($submission, $questions, $reviewer) {
+            $labels = ['A', 'B', 'C', 'D', 'E'];
+            $createdIds = [];
+
+            foreach ($questions as $qData) {
+                $question = Question::create([
+                    'institution_course_id' => $qData['institution_course_id'],
+                    'question_type' => $qData['question_type'],
+                    'content' => $qData['content'],
+                    'year' => $qData['year'] ?? null,
+                    'semester' => $qData['semester'] ?? null,
+                    'difficulty_level' => $qData['difficulty_level'] ?? null,
+                    'source' => QuestionSource::Crowdsourced,
+                    'status' => QuestionStatus::Draft,
+                    'created_by' => $reviewer->id,
+                ]);
+
+                if ($qData['question_type'] === 'mcq' && ! empty($qData['options'])) {
+                    foreach ($qData['options'] as $index => $option) {
+                        $question->options()->create([
+                            'label' => $labels[$index] ?? $labels[0],
+                            'content' => $option['content'],
+                            'is_correct' => (bool) $option['is_correct'],
+                            'sort_order' => $index + 1,
+                        ]);
+                    }
+                }
+
+                if (! empty($qData['topic_id'])) {
+                    $question->topicLinks()->create([
+                        'canonical_topic_id' => $qData['topic_id'],
+                        'is_primary' => true,
+                    ]);
+                }
+
+                $createdIds[] = $question->id;
+            }
+
+            if ($submission->status === ContentSubmissionStatus::Pending) {
+                $submission->update([
+                    'status' => ContentSubmissionStatus::Approved,
+                    'reviewer_id' => $reviewer->id,
+                    'reviewed_at' => now(),
+                ]);
+            }
+
+            return $createdIds;
+        });
+    }
+
+    private function createQuestionFromSubmission(ContentSubmission $submission): void
+    {
+        $content = $submission->content;
+
+        if (empty($content['content']) || empty($content['question_type'])) {
+            return;
+        }
+
+        $question = Question::create([
+            'institution_course_id' => $submission->institution_course_id,
+            'question_type' => $content['question_type'],
+            'content' => $content['content'],
+            'year' => $submission->exam_year,
+            'semester' => $submission->exam_semester?->value,
+            'source' => QuestionSource::Crowdsourced,
+            'status' => QuestionStatus::Draft,
+            'created_by' => $submission->submitted_by,
+        ]);
+
+        if ($content['question_type'] === 'mcq' && ! empty($content['options'])) {
+            $labels = ['A', 'B', 'C', 'D', 'E'];
+            foreach ($content['options'] as $index => $option) {
+                $question->options()->create([
+                    'label' => $labels[$index] ?? $labels[0],
+                    'content' => $option['content'],
+                    'is_correct' => (bool) ($option['is_correct'] ?? false),
+                    'sort_order' => $index + 1,
+                ]);
+            }
+        }
+
+        if (! empty($content['topic_id'])) {
+            $question->topicLinks()->create([
+                'canonical_topic_id' => $content['topic_id'],
+                'is_primary' => true,
+            ]);
+        }
+    }
+}

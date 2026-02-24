@@ -6,6 +6,7 @@ use App\Http\Controllers\Admin\CanonicalTopicController;
 use App\Http\Controllers\Admin\CourseController;
 use App\Http\Controllers\Admin\CourseDepartmentController;
 use App\Http\Controllers\Admin\CourseMappingController;
+use App\Http\Controllers\Admin\DashboardController;
 use App\Http\Controllers\Admin\DepartmentController;
 use App\Http\Controllers\Admin\DisciplineController;
 use App\Http\Controllers\Admin\ExamSubjectController;
@@ -13,6 +14,7 @@ use App\Http\Controllers\Admin\ExamTypeController;
 use App\Http\Controllers\Admin\FacultyController;
 use App\Http\Controllers\Admin\InstitutionController;
 use App\Http\Controllers\Admin\QuestionController;
+use App\Http\Controllers\Admin\ReviewQueueController;
 use App\Http\Controllers\Admin\SettingsController;
 use App\Http\Controllers\Admin\SubscriptionPlanController;
 use App\Http\Controllers\Admin\UserController;
@@ -35,6 +37,10 @@ Route::get('design-showcase', function () {
     return Inertia::render('design-showcase');
 })->name('design-showcase');
 
+Route::get('architecture-showcase', function () {
+    return Inertia::render('architecture-showcase');
+})->name('architecture-showcase');
+
 Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('onboarding', fn () => Inertia::render('onboarding/index'))->name('onboarding.index');
 });
@@ -47,8 +53,8 @@ Route::middleware(['auth', 'verified', 'onboarded'])->group(function () {
     Route::get('questions', fn () => Inertia::render('questions/index'))->name('questions.index');
     Route::get('questions/{question}', fn (string $question) => Inertia::render('questions/show', ['question' => $question]))->name('questions.show');
     Route::get('practice', fn () => Inertia::render('practice/index'))->name('practice.index');
-    Route::get('review-queue', fn () => Inertia::render('review-queue/index'))->name('review-queue.index');
     Route::get('notes', fn () => Inertia::render('notes/index'))->name('notes.index');
+    Route::get('review-queue', fn () => Inertia::render('review-queue/index'))->name('review-queue.index');
     Route::get('knowledge-graph', fn () => Inertia::render('knowledge-graph/index'))->name('knowledge-graph.index');
     Route::get('search', fn () => Inertia::render('search/index'))->name('search.index');
     Route::get('cgpa-simulator', fn () => Inertia::render('cgpa-simulator/index'))->name('cgpa-simulator.index');
@@ -59,7 +65,7 @@ Route::middleware(['auth', 'verified', 'onboarded'])->group(function () {
 });
 
 Route::middleware(['auth', 'verified', 'staff'])->prefix('admin')->name('admin.')->group(function () {
-    Route::get('/', fn () => Inertia::render('admin/dashboard'))->name('dashboard');
+    Route::get('/', [DashboardController::class, 'index'])->name('dashboard');
     Route::get('topics', [CanonicalTopicController::class, 'index'])->name('topics.index');
     Route::get('topics/create', [CanonicalTopicController::class, 'create'])->name('topics.create');
     Route::post('topics', [CanonicalTopicController::class, 'store'])->name('topics.store');
@@ -110,7 +116,12 @@ Route::middleware(['auth', 'verified', 'staff'])->prefix('admin')->name('admin.'
             ->orderBy('course_code')
             ->get(['id', 'course_code', 'course_title']);
     })->name('api.institution.courses');
-    Route::get('review-queue', fn () => Inertia::render('admin/review-queue/index'))->name('review-queue.index');
+    Route::get('review-queue', [ReviewQueueController::class, 'index'])->name('review-queue.index');
+    Route::get('review-queue/uploads', [ReviewQueueController::class, 'uploads'])->name('review-queue.uploads');
+    Route::post('review-queue/uploads/{submission}/transcribe', [ReviewQueueController::class, 'transcribe'])->name('review-queue.transcribe');
+    Route::get('review-queue/{submission}', [ReviewQueueController::class, 'show'])->name('review-queue.show');
+    Route::post('review-queue/{submission}/approve', [ReviewQueueController::class, 'approve'])->name('review-queue.approve');
+    Route::post('review-queue/{submission}/reject', [ReviewQueueController::class, 'reject'])->name('review-queue.reject');
     Route::get('users', [UserController::class, 'index'])->name('users.index');
     Route::get('users/{user}', [UserController::class, 'show'])->name('users.show');
     Route::get('users/{user}/edit', [UserController::class, 'edit'])->name('users.edit');

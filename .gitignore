@@ -26,9 +26,9 @@ yarn-error.log
 /.nova
 /.vscode
 /.zed
-phpunit.xml
-.claude/
-.mcp.json
-CLAUDE.md
-nul
-boost.json
+#phpunit.xml
+#.claude/
+#.mcp.json
+#CLAUDE.md
+#nul
+#boost.json
