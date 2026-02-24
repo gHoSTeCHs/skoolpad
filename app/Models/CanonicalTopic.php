@@ -111,6 +111,11 @@ class CanonicalTopic extends Model
         return $this->hasMany(SchemeOfWorkItem::class);
     }
 
+    public function verificationAttempts(): HasMany
+    {
+        return $this->hasMany(VerificationAttempt::class);
+    }
+
     public function scopePublished(Builder $query): Builder
     {
         return $query->where('is_published', true);

@@ -62,4 +62,9 @@ class LevelSubject extends Model
     {
         return $this->hasMany(SchemeOfWorkItem::class, 'curriculum_subject_level_id');
     }
+
+    public function examReadinessCaches(): HasMany
+    {
+        return $this->hasMany(ExamReadinessCache::class, 'curriculum_subject_level_id');
+    }
 }

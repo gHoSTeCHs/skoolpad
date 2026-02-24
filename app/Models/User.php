@@ -77,6 +77,16 @@ class User extends Authenticatable
         return $this->hasOne(StudentProfile::class);
     }
 
+    public function parentProfile(): HasOne
+    {
+        return $this->hasOne(ParentProfile::class);
+    }
+
+    public function examReadinessCaches(): HasMany
+    {
+        return $this->hasMany(ExamReadinessCache::class);
+    }
+
     public function practiceSessions(): HasMany
     {
         return $this->hasMany(PracticeSession::class);
