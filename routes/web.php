@@ -1,14 +1,18 @@
 <?php
 
 use App\Http\Controllers\Admin\AnswerController;
+use App\Http\Controllers\Admin\AssessmentTypeController;
 use App\Http\Controllers\Admin\BulkImportController;
 use App\Http\Controllers\Admin\CanonicalTopicController;
 use App\Http\Controllers\Admin\CourseController;
 use App\Http\Controllers\Admin\CourseDepartmentController;
 use App\Http\Controllers\Admin\CourseMappingController;
+use App\Http\Controllers\Admin\CurriculumSubjectController;
+use App\Http\Controllers\Admin\CurriculumTierController;
 use App\Http\Controllers\Admin\DashboardController;
 use App\Http\Controllers\Admin\DepartmentController;
 use App\Http\Controllers\Admin\DisciplineController;
+use App\Http\Controllers\Admin\EducationLevelController;
 use App\Http\Controllers\Admin\EducationSystemController;
 use App\Http\Controllers\Admin\ExamSubjectController;
 use App\Http\Controllers\Admin\ExamTypeController;
@@ -17,6 +21,7 @@ use App\Http\Controllers\Admin\InstitutionController;
 use App\Http\Controllers\Admin\QuestionController;
 use App\Http\Controllers\Admin\ReviewQueueController;
 use App\Http\Controllers\Admin\SettingsController;
+use App\Http\Controllers\Admin\StreamController;
 use App\Http\Controllers\Admin\SubscriptionPlanController;
 use App\Http\Controllers\Admin\UserController;
 use App\Models\CanonicalTopic;
@@ -142,6 +147,27 @@ Route::middleware(['auth', 'verified', 'staff'])->prefix('admin')->name('admin.'
     Route::resource('institutions', InstitutionController::class)->except(['show', 'destroy']);
     Route::resource('disciplines', DisciplineController::class)->except(['show', 'destroy']);
     Route::resource('education-systems', EducationSystemController::class)->except(['destroy']);
+
+    Route::post('education-systems/{education_system}/tiers', [CurriculumTierController::class, 'store'])->name('curriculum-tiers.store');
+    Route::put('curriculum-tiers/{curriculum_tier}', [CurriculumTierController::class, 'update'])->name('curriculum-tiers.update');
+    Route::delete('curriculum-tiers/{curriculum_tier}', [CurriculumTierController::class, 'destroy'])->name('curriculum-tiers.destroy');
+
+    Route::post('curriculum-tiers/{curriculum_tier}/levels', [EducationLevelController::class, 'store'])->name('education-levels.store');
+    Route::put('education-levels/{education_level}', [EducationLevelController::class, 'update'])->name('education-levels.update');
+    Route::delete('education-levels/{education_level}', [EducationLevelController::class, 'destroy'])->name('education-levels.destroy');
+
+    Route::post('education-systems/{education_system}/streams', [StreamController::class, 'store'])->name('streams.store');
+    Route::put('streams/{stream}', [StreamController::class, 'update'])->name('streams.update');
+    Route::delete('streams/{stream}', [StreamController::class, 'destroy'])->name('streams.destroy');
+
+    Route::post('education-systems/{education_system}/subjects', [CurriculumSubjectController::class, 'store'])->name('curriculum-subjects.store');
+    Route::put('curriculum-subjects/{curriculum_subject}', [CurriculumSubjectController::class, 'update'])->name('curriculum-subjects.update');
+    Route::delete('curriculum-subjects/{curriculum_subject}', [CurriculumSubjectController::class, 'destroy'])->name('curriculum-subjects.destroy');
+
+    Route::post('education-systems/{education_system}/assessments', [AssessmentTypeController::class, 'store'])->name('assessment-types.store');
+    Route::put('assessment-types/{assessment_type}', [AssessmentTypeController::class, 'update'])->name('assessment-types.update');
+    Route::delete('assessment-types/{assessment_type}', [AssessmentTypeController::class, 'destroy'])->name('assessment-types.destroy');
+
     Route::resource('exam-types', ExamTypeController::class)->except(['show', 'destroy']);
 
     Route::get('institutions/{institution}/faculties', [FacultyController::class, 'index'])->name('faculties.index');
