@@ -6,6 +6,7 @@ use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class AssessmentType extends Model
 {
@@ -44,5 +45,15 @@ class AssessmentType extends Model
     public function gradingScale(): BelongsTo
     {
         return $this->belongsTo(GradingScale::class);
+    }
+
+    public function questionPapers(): HasMany
+    {
+        return $this->hasMany(QuestionPaper::class);
+    }
+
+    public function questionAssessmentLinks(): HasMany
+    {
+        return $this->hasMany(QuestionAssessmentLink::class);
     }
 }

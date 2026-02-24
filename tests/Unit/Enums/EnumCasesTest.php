@@ -29,7 +29,7 @@ dataset('enums', [
     'TopicWeight' => [TopicWeight::class, 3],
     'TopicDifficulty' => [TopicDifficulty::class, 3],
     'QuestionDifficulty' => [QuestionDifficulty::class, 3],
-    'QuestionType' => [QuestionType::class, 3],
+    'QuestionType' => [QuestionType::class, 16],
     'QuestionStatus' => [QuestionStatus::class, 4],
     'QuestionSource' => [QuestionSource::class, 4],
     'AnswerDepthLevel' => [AnswerDepthLevel::class, 3],

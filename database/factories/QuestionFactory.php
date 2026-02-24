@@ -22,10 +22,13 @@ class QuestionFactory extends Factory
             'institution_course_id' => InstitutionCourse::factory(),
             'question_type' => QuestionType::Mcq,
             'content' => fake()->paragraph(),
-            'year' => fake()->numberBetween(2018, 2025),
-            'semester' => fake()->randomElement(['first', 'second']),
             'marks' => fake()->randomElement([1, 2, 5, 10]),
             'difficulty_level' => fake()->randomElement(QuestionDifficulty::cases()),
+            'sort_order' => 0,
+            'depth_level' => 0,
+            'is_published' => false,
+            'year' => fake()->numberBetween(2018, 2025),
+            'semester' => fake()->randomElement(['first', 'second']),
             'attempt_count' => 0,
             'correct_count' => 0,
             'avg_time_seconds' => null,
@@ -49,6 +52,39 @@ class QuestionFactory extends Factory
     {
         return $this->state(fn (array $attributes) => [
             'question_type' => QuestionType::Theory,
+        ]);
+    }
+
+    public function forPaper(): static
+    {
+        return $this->state(fn (array $attributes) => [
+            'question_paper_id' => \App\Models\QuestionPaper::factory(),
+            'question_number' => '1',
+            'display_label' => 'Question 1',
+            'institution_course_id' => null,
+        ]);
+    }
+
+    public function group(): static
+    {
+        return $this->state(fn (array $attributes) => [
+            'question_type' => QuestionType::Group,
+            'marks' => null,
+            'response_config' => null,
+        ]);
+    }
+
+    public function withResponseConfig(): static
+    {
+        return $this->state(fn (array $attributes) => [
+            'response_config' => [
+                'options' => [
+                    ['label' => 'A', 'content' => fake()->sentence(), 'is_correct' => true],
+                    ['label' => 'B', 'content' => fake()->sentence(), 'is_correct' => false],
+                    ['label' => 'C', 'content' => fake()->sentence(), 'is_correct' => false],
+                    ['label' => 'D', 'content' => fake()->sentence(), 'is_correct' => false],
+                ],
+            ],
         ]);
     }
 }

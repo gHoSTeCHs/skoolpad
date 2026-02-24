@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Enums\BloomLevel;
 use App\Enums\QuestionDifficulty;
 use App\Enums\QuestionSource;
 use App\Enums\QuestionStatus;
@@ -22,12 +23,24 @@ class Question extends Model
     protected $fillable = [
         'institution_course_id',
         'exam_subject_id',
+        'question_paper_id',
+        'question_section_id',
+        'parent_question_id',
         'question_type',
+        'question_number',
+        'display_label',
         'content',
+        'marks',
+        'sort_order',
+        'depth_level',
+        'response_config',
+        'choice_group',
+        'explanation',
+        'difficulty_level',
+        'bloom_level',
+        'is_published',
         'year',
         'semester',
-        'marks',
-        'difficulty_level',
         'attempt_count',
         'correct_count',
         'avg_time_seconds',
@@ -43,12 +56,37 @@ class Question extends Model
     {
         return [
             'question_type' => QuestionType::class,
-            'semester' => 'string',
             'difficulty_level' => QuestionDifficulty::class,
+            'bloom_level' => BloomLevel::class,
             'source' => QuestionSource::class,
             'status' => QuestionStatus::class,
+            'response_config' => 'array',
+            'choice_group' => 'array',
+            'is_published' => 'boolean',
+            'sort_order' => 'integer',
+            'depth_level' => 'integer',
             'published_at' => 'datetime',
         ];
+    }
+
+    public function questionPaper(): BelongsTo
+    {
+        return $this->belongsTo(QuestionPaper::class);
+    }
+
+    public function questionSection(): BelongsTo
+    {
+        return $this->belongsTo(QuestionSection::class);
+    }
+
+    public function parent(): BelongsTo
+    {
+        return $this->belongsTo(self::class, 'parent_question_id');
+    }
+
+    public function children(): HasMany
+    {
+        return $this->hasMany(self::class, 'parent_question_id')->orderBy('sort_order');
     }
 
     public function institutionCourse(): BelongsTo
@@ -94,6 +132,51 @@ class Question extends Model
             'question_id',
             'canonical_topic_id'
         );
+    }
+
+    public function questionContextLinks(): HasMany
+    {
+        return $this->hasMany(QuestionContextLink::class);
+    }
+
+    public function contexts(): BelongsToMany
+    {
+        return $this->belongsToMany(
+            QuestionContext::class,
+            'question_context_links',
+            'question_id',
+            'question_context_id'
+        )->using(QuestionContextLink::class)->withPivot('sort_order', 'label');
+    }
+
+    public function questionBlockLinks(): HasMany
+    {
+        return $this->hasMany(QuestionBlockLink::class);
+    }
+
+    public function contentBlocks(): BelongsToMany
+    {
+        return $this->belongsToMany(
+            ContentBlock::class,
+            'question_block_links',
+            'question_id',
+            'content_block_id'
+        )->using(QuestionBlockLink::class)->withPivot('relevance');
+    }
+
+    public function questionAssessmentLinks(): HasMany
+    {
+        return $this->hasMany(QuestionAssessmentLink::class);
+    }
+
+    public function assessmentTypes(): BelongsToMany
+    {
+        return $this->belongsToMany(
+            AssessmentType::class,
+            'question_assessment_links',
+            'question_id',
+            'assessment_type_id'
+        )->using(QuestionAssessmentLink::class)->withPivot('year');
     }
 
     public function scopeSearch(Builder $query, string $term): Builder

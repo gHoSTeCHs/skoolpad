@@ -290,7 +290,7 @@ test('questions import rejects invalid question_type', function () {
     ]);
     CanonicalTopic::factory()->create(['slug' => 'binary-search', 'is_published' => true]);
 
-    $csv = "institution_abbreviation,course_code,question_type,content,topic_slug\nMOUAU,CSC201,essay,Some question,binary-search";
+    $csv = "institution_abbreviation,course_code,question_type,content,topic_slug\nMOUAU,CSC201,invalid_type,Some question,binary-search";
     $file = UploadedFile::fake()->createWithContent('questions.csv', $csv);
 
     $this->post(route('admin.import.questions'), ['file' => $file])

@@ -73,4 +73,9 @@ class ContentBlock extends Model
     {
         return $this->hasMany(SchemeOfWorkItem::class);
     }
+
+    public function questionBlockLinks(): HasMany
+    {
+        return $this->hasMany(QuestionBlockLink::class);
+    }
 }
