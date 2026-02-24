@@ -24,6 +24,15 @@ class StudentProfile extends Model
         'admission_year',
         'academic_status',
         'academic_status_changed_at',
+        'institution_type_id',
+        'education_system_id',
+        'education_level_id',
+        'stream_id',
+        'school_name',
+        'state_or_region',
+        'invite_code',
+        'exam_goals',
+        'study_preferences',
     ];
 
     /** @return array<string, string> */
@@ -32,6 +41,8 @@ class StudentProfile extends Model
         return [
             'academic_status' => AcademicStatus::class,
             'academic_status_changed_at' => 'datetime',
+            'exam_goals' => 'array',
+            'study_preferences' => 'array',
         ];
     }
 
@@ -58,5 +69,30 @@ class StudentProfile extends Model
     public function studentCourses(): HasMany
     {
         return $this->hasMany(StudentCourse::class);
+    }
+
+    public function institutionType(): BelongsTo
+    {
+        return $this->belongsTo(\App\Models\InstitutionType::class);
+    }
+
+    public function educationSystem(): BelongsTo
+    {
+        return $this->belongsTo(EducationSystem::class);
+    }
+
+    public function educationLevel(): BelongsTo
+    {
+        return $this->belongsTo(EducationLevel::class);
+    }
+
+    public function stream(): BelongsTo
+    {
+        return $this->belongsTo(Stream::class);
+    }
+
+    public function parentChildLinks(): HasMany
+    {
+        return $this->hasMany(ParentChildLink::class);
     }
 }

@@ -2,18 +2,48 @@
 
 namespace App\Enums;
 
+use App\Concerns\HasSelectOptions;
+
 enum QuestionType: string
 {
+    use HasSelectOptions;
+
     case Mcq = 'mcq';
+    case MultiSelectMcq = 'multi_select_mcq';
     case Theory = 'theory';
-    case FillInBlank = 'fill_in_blank';
+    case ShortAnswer = 'short_answer';
+    case Essay = 'essay';
+    case FillBlank = 'fill_blank';
+    case Cloze = 'cloze';
+    case Matching = 'matching';
+    case Ordering = 'ordering';
+    case TrueFalse = 'true_false';
+    case DiagramLabel = 'diagram_label';
+    case Calculation = 'calculation';
+    case AssertionReason = 'assertion_reason';
+    case MatrixMatching = 'matrix_matching';
+    case NumericEntry = 'numeric_entry';
+    case Group = 'group';
 
     public function label(): string
     {
         return match ($this) {
             self::Mcq => 'MCQ',
+            self::MultiSelectMcq => 'Multi-Select MCQ',
             self::Theory => 'Theory',
-            self::FillInBlank => 'Fill in Blank',
+            self::ShortAnswer => 'Short Answer',
+            self::Essay => 'Essay',
+            self::FillBlank => 'Fill in Blank',
+            self::Cloze => 'Cloze',
+            self::Matching => 'Matching',
+            self::Ordering => 'Ordering',
+            self::TrueFalse => 'True / False',
+            self::DiagramLabel => 'Diagram Label',
+            self::Calculation => 'Calculation',
+            self::AssertionReason => 'Assertion & Reason',
+            self::MatrixMatching => 'Matrix Matching',
+            self::NumericEntry => 'Numeric Entry',
+            self::Group => 'Group',
         };
     }
 

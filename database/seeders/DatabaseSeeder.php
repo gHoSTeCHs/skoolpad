@@ -7,29 +7,40 @@ use App\Enums\BillingPeriod;
 use App\Enums\ContentSubmissionStatus;
 use App\Enums\ContentSubmissionType;
 use App\Enums\CourseScope;
+use App\Enums\EducationSystemType;
 use App\Enums\InstitutionType;
 use App\Enums\OwnershipType;
 use App\Enums\QuestionDifficulty;
 use App\Enums\QuestionSource;
 use App\Enums\QuestionStatus;
 use App\Enums\QuestionType;
+use App\Enums\ScaleType;
 use App\Enums\Semester;
 use App\Enums\TopicDifficulty;
 use App\Enums\UserRole;
+use App\Models\AssessmentType;
 use App\Models\CanonicalTopic;
 use App\Models\ContentSubmission;
 use App\Models\Country;
+use App\Models\CurriculumSubject;
+use App\Models\CurriculumTier;
 use App\Models\Department;
 use App\Models\Discipline;
+use App\Models\EducationLevel;
+use App\Models\EducationSystem;
 use App\Models\ExamType;
 use App\Models\Faculty;
+use App\Models\GradingScale;
 use App\Models\Institution;
 use App\Models\InstitutionCourse;
+use App\Models\InstitutionType as InstitutionTypeModel;
+use App\Models\LevelSubject;
 use App\Models\PlatformSetting;
 use App\Models\Question;
 use App\Models\QuestionAnswer;
 use App\Models\QuestionOption;
 use App\Models\QuestionTopicLink;
+use App\Models\Stream;
 use App\Models\StudentProfile;
 use App\Models\SubscriptionPlan;
 use App\Models\User;
@@ -46,11 +57,113 @@ class DatabaseSeeder extends Seeder
             'currency_code' => 'NGN',
         ]);
 
+        $nerdc = EducationSystem::create([
+            'name' => 'Nigerian Educational Research and Development Council',
+            'slug' => 'nerdc',
+            'country_id' => $nigeria->id,
+            'system_type' => EducationSystemType::National,
+        ]);
+
+        $waecBoard = EducationSystem::create([
+            'name' => 'West African Examinations Council',
+            'slug' => 'waec',
+            'country_id' => null,
+            'system_type' => EducationSystemType::ExamBoard,
+        ]);
+
+        $juniorSecondary = CurriculumTier::create([
+            'education_system_id' => $nerdc->id,
+            'name' => 'Junior Secondary School',
+            'slug' => 'junior-secondary',
+            'sort_order' => 1,
+            'is_tertiary' => false,
+        ]);
+
+        $seniorSecondary = CurriculumTier::create([
+            'education_system_id' => $nerdc->id,
+            'name' => 'Senior Secondary School',
+            'slug' => 'senior-secondary',
+            'sort_order' => 2,
+            'is_tertiary' => false,
+        ]);
+
+        $tertiaryTier = CurriculumTier::create([
+            'education_system_id' => $nerdc->id,
+            'name' => 'Tertiary',
+            'slug' => 'tertiary',
+            'sort_order' => 3,
+            'is_tertiary' => true,
+        ]);
+
+        $jss1 = EducationLevel::create(['curriculum_tier_id' => $juniorSecondary->id, 'name' => 'JSS 1', 'display_name' => 'JSS 1', 'sort_order' => 1, 'typical_age_min' => 10, 'typical_age_max' => 12]);
+        $jss2 = EducationLevel::create(['curriculum_tier_id' => $juniorSecondary->id, 'name' => 'JSS 2', 'display_name' => 'JSS 2', 'sort_order' => 2, 'typical_age_min' => 11, 'typical_age_max' => 13]);
+        $jss3 = EducationLevel::create(['curriculum_tier_id' => $juniorSecondary->id, 'name' => 'JSS 3', 'display_name' => 'JSS 3', 'sort_order' => 3, 'typical_age_min' => 12, 'typical_age_max' => 14]);
+
+        $ss1 = EducationLevel::create(['curriculum_tier_id' => $seniorSecondary->id, 'name' => 'SS 1', 'display_name' => 'SS 1', 'sort_order' => 1, 'typical_age_min' => 13, 'typical_age_max' => 16]);
+        $ss2 = EducationLevel::create(['curriculum_tier_id' => $seniorSecondary->id, 'name' => 'SS 2', 'display_name' => 'SS 2', 'sort_order' => 2, 'typical_age_min' => 14, 'typical_age_max' => 17]);
+        $ss3 = EducationLevel::create(['curriculum_tier_id' => $seniorSecondary->id, 'name' => 'SS 3', 'display_name' => 'SS 3', 'sort_order' => 3, 'typical_age_min' => 15, 'typical_age_max' => 18]);
+
+        $level100 = EducationLevel::create(['curriculum_tier_id' => $tertiaryTier->id, 'name' => '100 Level', 'display_name' => '100L', 'sort_order' => 1, 'typical_age_min' => 16, 'typical_age_max' => 20]);
+        $level200 = EducationLevel::create(['curriculum_tier_id' => $tertiaryTier->id, 'name' => '200 Level', 'display_name' => '200L', 'sort_order' => 2, 'typical_age_min' => 17, 'typical_age_max' => 21]);
+        $level300 = EducationLevel::create(['curriculum_tier_id' => $tertiaryTier->id, 'name' => '300 Level', 'display_name' => '300L', 'sort_order' => 3, 'typical_age_min' => 18, 'typical_age_max' => 22]);
+        $level400 = EducationLevel::create(['curriculum_tier_id' => $tertiaryTier->id, 'name' => '400 Level', 'display_name' => '400L', 'sort_order' => 4, 'typical_age_min' => 19, 'typical_age_max' => 23]);
+        $level500 = EducationLevel::create(['curriculum_tier_id' => $tertiaryTier->id, 'name' => '500 Level', 'display_name' => '500L', 'sort_order' => 5, 'typical_age_min' => 20, 'typical_age_max' => 24]);
+
+        $scienceStream = Stream::create(['education_system_id' => $nerdc->id, 'name' => 'Science', 'applies_from_tier_id' => $seniorSecondary->id]);
+        $artsStream = Stream::create(['education_system_id' => $nerdc->id, 'name' => 'Arts', 'applies_from_tier_id' => $seniorSecondary->id]);
+        $commercialStream = Stream::create(['education_system_id' => $nerdc->id, 'name' => 'Commercial', 'applies_from_tier_id' => $seniorSecondary->id]);
+
+        $waecGrading = GradingScale::create([
+            'name' => 'WAEC A1-F9',
+            'scale_type' => ScaleType::Points,
+            'scale_min' => 1,
+            'scale_max' => 9,
+            'pass_threshold' => 6,
+            'grade_boundaries' => [
+                ['label' => 'A1', 'min' => 75, 'max' => 100, 'points' => 1, 'is_pass' => true],
+                ['label' => 'B2', 'min' => 70, 'max' => 74, 'points' => 2, 'is_pass' => true],
+                ['label' => 'B3', 'min' => 65, 'max' => 69, 'points' => 3, 'is_pass' => true],
+                ['label' => 'C4', 'min' => 60, 'max' => 64, 'points' => 4, 'is_pass' => true],
+                ['label' => 'C5', 'min' => 55, 'max' => 59, 'points' => 5, 'is_pass' => true],
+                ['label' => 'C6', 'min' => 50, 'max' => 54, 'points' => 6, 'is_pass' => true],
+                ['label' => 'D7', 'min' => 45, 'max' => 49, 'points' => 7, 'is_pass' => false],
+                ['label' => 'E8', 'min' => 40, 'max' => 44, 'points' => 8, 'is_pass' => false],
+                ['label' => 'F9', 'min' => 0, 'max' => 39, 'points' => 9, 'is_pass' => false],
+            ],
+        ]);
+
+        $universityCgpa = GradingScale::create([
+            'name' => 'Nigerian University CGPA (5-point)',
+            'scale_type' => ScaleType::Cgpa,
+            'scale_min' => 0,
+            'scale_max' => 5,
+            'pass_threshold' => 1,
+            'grade_boundaries' => [
+                ['label' => 'A', 'min' => 70, 'max' => 100, 'gp' => 5, 'is_pass' => true],
+                ['label' => 'B', 'min' => 60, 'max' => 69, 'gp' => 4, 'is_pass' => true],
+                ['label' => 'C', 'min' => 50, 'max' => 59, 'gp' => 3, 'is_pass' => true],
+                ['label' => 'D', 'min' => 45, 'max' => 49, 'gp' => 2, 'is_pass' => true],
+                ['label' => 'E', 'min' => 40, 'max' => 44, 'gp' => 1, 'is_pass' => true],
+                ['label' => 'F', 'min' => 0, 'max' => 39, 'gp' => 0, 'is_pass' => false],
+            ],
+            'classification_labels' => [
+                ['label' => 'First Class', 'min_cgpa' => 4.5],
+                ['label' => 'Second Class Upper', 'min_cgpa' => 3.5],
+                ['label' => 'Second Class Lower', 'min_cgpa' => 2.4],
+                ['label' => 'Third Class', 'min_cgpa' => 1.5],
+                ['label' => 'Pass', 'min_cgpa' => 1.0],
+            ],
+        ]);
+
         $disciplines = collect([
             'Computer Science',
             'Mass Communication',
             'English',
             'Mechanical Engineering',
+            'Mathematics',
+            'Physics',
+            'Chemistry',
+            'Biology',
         ])->mapWithKeys(fn (string $name) => [
             Str::slug($name) => Discipline::create([
                 'name' => $name,
@@ -152,6 +265,84 @@ class DatabaseSeeder extends Seeder
                     ]);
                 }
             }
+        }
+
+        $mathSubject = CurriculumSubject::create(['education_system_id' => $nerdc->id, 'name' => 'Mathematics', 'slug' => 'mathematics', 'discipline_id' => $disciplines->get('mathematics')->id]);
+        $englishSubject = CurriculumSubject::create(['education_system_id' => $nerdc->id, 'name' => 'English Language', 'slug' => 'english-language', 'discipline_id' => $disciplines->get('english')->id]);
+        $physicsSubject = CurriculumSubject::create(['education_system_id' => $nerdc->id, 'name' => 'Physics', 'slug' => 'physics', 'discipline_id' => $disciplines->get('physics')->id]);
+        $chemistrySubject = CurriculumSubject::create(['education_system_id' => $nerdc->id, 'name' => 'Chemistry', 'slug' => 'chemistry', 'discipline_id' => $disciplines->get('chemistry')->id]);
+        $biologySubject = CurriculumSubject::create(['education_system_id' => $nerdc->id, 'name' => 'Biology', 'slug' => 'biology', 'discipline_id' => $disciplines->get('biology')->id]);
+        $csSubject = CurriculumSubject::create(['education_system_id' => $nerdc->id, 'name' => 'Computer Studies', 'slug' => 'computer-studies', 'discipline_id' => $disciplines->get('computer-science')->id]);
+
+        $coreJssSubjects = [$mathSubject, $englishSubject, $csSubject];
+        foreach ([$jss1, $jss2, $jss3] as $level) {
+            foreach ($coreJssSubjects as $subject) {
+                LevelSubject::create(['education_level_id' => $level->id, 'curriculum_subject_id' => $subject->id, 'is_compulsory' => true]);
+            }
+        }
+
+        $coreSsSubjects = [$mathSubject, $englishSubject];
+        foreach ([$ss1, $ss2, $ss3] as $level) {
+            foreach ($coreSsSubjects as $subject) {
+                LevelSubject::create(['education_level_id' => $level->id, 'curriculum_subject_id' => $subject->id, 'is_compulsory' => true]);
+            }
+            foreach ([$physicsSubject, $chemistrySubject, $biologySubject] as $scienceSubject) {
+                LevelSubject::create(['education_level_id' => $level->id, 'curriculum_subject_id' => $scienceSubject->id, 'is_compulsory' => false, 'stream_id' => $scienceStream->id]);
+            }
+        }
+
+        AssessmentType::create([
+            'education_system_id' => $waecBoard->id,
+            'name' => 'WASSCE',
+            'slug' => 'wassce',
+            'tier_id' => $seniorSecondary->id,
+            'is_exit_exam' => true,
+            'is_entrance_exam' => false,
+            'grading_scale_id' => $waecGrading->id,
+        ]);
+
+        AssessmentType::create([
+            'education_system_id' => $nerdc->id,
+            'name' => 'BECE',
+            'slug' => 'bece',
+            'tier_id' => $juniorSecondary->id,
+            'is_exit_exam' => true,
+            'is_entrance_exam' => false,
+            'grading_scale_id' => $waecGrading->id,
+        ]);
+
+        $universityType = InstitutionTypeModel::create([
+            'country_id' => $nigeria->id,
+            'name' => 'University',
+            'slug' => 'university',
+            'level_progression' => ['100L', '200L', '300L', '400L', '500L'],
+            'credit_system' => 'Credit Units',
+            'grading_scale_id' => $universityCgpa->id,
+            'qualification_names' => ['B.Sc.', 'B.A.', 'B.Eng.', 'B.Tech.'],
+        ]);
+
+        InstitutionTypeModel::create([
+            'country_id' => $nigeria->id,
+            'name' => 'Polytechnic',
+            'slug' => 'polytechnic',
+            'level_progression' => ['ND I', 'ND II', 'HND I', 'HND II'],
+            'credit_system' => 'Credit Units',
+            'grading_scale_id' => $universityCgpa->id,
+            'qualification_names' => ['ND', 'HND'],
+        ]);
+
+        InstitutionTypeModel::create([
+            'country_id' => $nigeria->id,
+            'name' => 'College of Education',
+            'slug' => 'college-of-education',
+            'level_progression' => ['NCE I', 'NCE II', 'NCE III'],
+            'credit_system' => 'Credit Units',
+            'grading_scale_id' => $universityCgpa->id,
+            'qualification_names' => ['NCE'],
+        ]);
+
+        foreach (Institution::all() as $inst) {
+            $inst->educationSystems()->attach($nerdc->id);
         }
 
         ExamType::create([

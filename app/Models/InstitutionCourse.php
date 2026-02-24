@@ -98,6 +98,16 @@ class InstitutionCourse extends Model
         return $this->hasMany(StudentCourse::class);
     }
 
+    public function courseBlockMappings(): HasMany
+    {
+        return $this->hasMany(CourseBlockMapping::class);
+    }
+
+    public function questionPapers(): HasMany
+    {
+        return $this->hasMany(QuestionPaper::class);
+    }
+
     public function scopeForInstitution(Builder $query, string $institutionId): Builder
     {
         return $query->where('institution_id', $institutionId);
