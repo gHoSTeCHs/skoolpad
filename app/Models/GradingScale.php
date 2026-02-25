@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use App\Enums\ScaleType;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
@@ -34,6 +35,11 @@ class GradingScale extends Model
             'grade_boundaries' => 'array',
             'classification_labels' => 'array',
         ];
+    }
+
+    public function scopeSearch(Builder $query, string $term): Builder
+    {
+        return $query->where('name', 'ilike', "%{$term}%");
     }
 
     public function assessmentTypes(): HasMany

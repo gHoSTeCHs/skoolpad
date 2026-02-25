@@ -9,6 +9,7 @@ use App\Enums\BlockType;
 use App\Enums\BloomLevel;
 use App\Enums\ContentSubmissionStatus;
 use App\Enums\ContentSubmissionType;
+use App\Enums\ContextType;
 use App\Enums\CourseScope;
 use App\Enums\EducationSystemType;
 use App\Enums\InstitutionType;
@@ -44,6 +45,10 @@ use App\Models\LevelSubject;
 use App\Models\PlatformSetting;
 use App\Models\Question;
 use App\Models\QuestionAnswer;
+use App\Models\QuestionContext;
+use App\Models\QuestionContextLink;
+use App\Models\QuestionPaper;
+use App\Models\QuestionSection;
 use App\Models\QuestionTopicLink;
 use App\Models\SchemeOfWorkItem;
 use App\Models\Stream;
@@ -588,6 +593,7 @@ class DatabaseSeeder extends Seeder
         ]);
 
         $this->seedQuestions($admin, $mouau, $unn);
+        $this->seedQuestionPapers($admin, $mouau);
         $this->seedContentSubmissions($admin, $studentUser, $mouau);
         $this->seedContentBlocks();
         $this->seedCourseBlockMappings($mouau, $unn);
@@ -927,6 +933,263 @@ class DatabaseSeeder extends Seeder
                     'created_by' => $admin->id,
                 ]);
             }
+        }
+    }
+
+    private function seedQuestionPapers(User $admin, Institution $mouau): void
+    {
+        $csc201 = InstitutionCourse::where('institution_id', $mouau->id)->where('course_code', 'CSC 201')->first();
+        $wassce = AssessmentType::where('slug', 'wassce')->first();
+        $algoTopic = CanonicalTopic::where('slug', 'introduction-to-algorithms')->first();
+        $dsTopic = CanonicalTopic::where('slug', 'data-structures-and-trees')->first();
+
+        $paper1 = QuestionPaper::create([
+            'institution_course_id' => $csc201->id,
+            'title' => 'CSC 201 First Semester Examination 2023/2024',
+            'academic_session' => '2023/2024',
+            'semester' => 'First Semester',
+            'year' => 2024,
+            'total_marks' => 60,
+            'duration_minutes' => 120,
+            'instructions' => 'Answer ALL questions in Section A. Answer any TWO questions from Section B.',
+            'is_published' => true,
+        ]);
+
+        $sectionA = QuestionSection::create([
+            'question_paper_id' => $paper1->id,
+            'label' => 'Section A',
+            'instruction' => 'Answer ALL questions. Each question carries 2 marks.',
+            'marks' => 30,
+            'sort_order' => 0,
+        ]);
+
+        $sectionB = QuestionSection::create([
+            'question_paper_id' => $paper1->id,
+            'label' => 'Section B',
+            'instruction' => 'Answer any TWO questions. Each question carries 15 marks.',
+            'marks' => 30,
+            'required_count' => 2,
+            'sort_order' => 1,
+        ]);
+
+        $passage = QuestionContext::create([
+            'question_paper_id' => $paper1->id,
+            'context_type' => ContextType::Passage,
+            'title' => 'Algorithm Analysis',
+            'content' => "Consider the following pseudocode:\n\nfunction search(arr, target):\n  for i = 0 to length(arr) - 1:\n    if arr[i] == target:\n      return i\n  return -1",
+        ]);
+
+        $sectionAQuestions = [
+            [
+                'type' => QuestionType::Mcq, 'number' => '1', 'sort' => 0,
+                'content' => 'What is the time complexity of the search function shown above?',
+                'marks' => 2, 'difficulty' => QuestionDifficulty::Easy,
+                'config' => ['options' => [
+                    ['label' => 'A', 'text' => 'O(1)', 'is_correct' => false],
+                    ['label' => 'B', 'text' => 'O(log n)', 'is_correct' => false],
+                    ['label' => 'C', 'text' => 'O(n)', 'is_correct' => true],
+                    ['label' => 'D', 'text' => 'O(n²)', 'is_correct' => false],
+                ]],
+                'topic' => $algoTopic, 'context' => $passage,
+            ],
+            [
+                'type' => QuestionType::TrueFalse, 'number' => '2', 'sort' => 1,
+                'content' => 'A binary search tree always guarantees O(log n) search time.',
+                'marks' => 2, 'difficulty' => QuestionDifficulty::Medium,
+                'config' => ['correct_answer' => false, 'requires_justification' => true],
+                'topic' => $dsTopic,
+            ],
+            [
+                'type' => QuestionType::Mcq, 'number' => '3', 'sort' => 2,
+                'content' => 'Which traversal visits the root node first?',
+                'marks' => 2, 'difficulty' => QuestionDifficulty::Easy,
+                'config' => ['options' => [
+                    ['label' => 'A', 'text' => 'Inorder', 'is_correct' => false],
+                    ['label' => 'B', 'text' => 'Preorder', 'is_correct' => true],
+                    ['label' => 'C', 'text' => 'Postorder', 'is_correct' => false],
+                    ['label' => 'D', 'text' => 'Level-order', 'is_correct' => false],
+                ]],
+                'topic' => $dsTopic,
+            ],
+            [
+                'type' => QuestionType::FillBlank, 'number' => '4', 'sort' => 3,
+                'content' => 'A stack follows the _____ principle while a queue follows the _____ principle.',
+                'marks' => 2, 'difficulty' => QuestionDifficulty::Easy,
+                'config' => ['blanks' => [
+                    ['position' => 1, 'correct_answers' => ['LIFO', 'Last In First Out']],
+                    ['position' => 2, 'correct_answers' => ['FIFO', 'First In First Out']],
+                ], 'case_sensitive' => false],
+                'topic' => $dsTopic,
+            ],
+            [
+                'type' => QuestionType::Matching, 'number' => '5', 'sort' => 4,
+                'content' => 'Match each data structure with its primary use case.',
+                'marks' => 4, 'difficulty' => QuestionDifficulty::Medium,
+                'config' => ['pairs' => [
+                    ['left' => 'Stack', 'right' => 'Function call management'],
+                    ['left' => 'Queue', 'right' => 'Print job scheduling'],
+                    ['left' => 'Hash Table', 'right' => 'Fast key-value lookup'],
+                    ['left' => 'Heap', 'right' => 'Priority queue implementation'],
+                ], 'distractors' => ['Sorting large datasets']],
+                'topic' => $dsTopic,
+            ],
+        ];
+
+        foreach ($sectionAQuestions as $qData) {
+            $q = Question::create([
+                'question_paper_id' => $paper1->id,
+                'question_section_id' => $sectionA->id,
+                'question_type' => $qData['type'],
+                'question_number' => $qData['number'],
+                'display_label' => 'Question '.$qData['number'],
+                'content' => $qData['content'],
+                'marks' => $qData['marks'],
+                'difficulty_level' => $qData['difficulty'],
+                'response_config' => $qData['config'],
+                'sort_order' => $qData['sort'],
+                'source' => QuestionSource::Manual,
+                'status' => QuestionStatus::Published,
+                'created_by' => $admin->id,
+                'reviewed_by' => $admin->id,
+                'published_at' => now(),
+            ]);
+
+            if (isset($qData['topic'])) {
+                QuestionTopicLink::create([
+                    'question_id' => $q->id,
+                    'canonical_topic_id' => $qData['topic']->id,
+                    'is_primary' => true,
+                ]);
+            }
+
+            if (isset($qData['context'])) {
+                QuestionContextLink::create([
+                    'question_id' => $q->id,
+                    'question_context_id' => $qData['context']->id,
+                    'sort_order' => 0,
+                ]);
+            }
+        }
+
+        $groupQ = Question::create([
+            'question_paper_id' => $paper1->id,
+            'question_section_id' => $sectionB->id,
+            'question_type' => QuestionType::Group,
+            'question_number' => '6',
+            'display_label' => 'Question 6',
+            'content' => 'Consider the following array: [38, 27, 43, 3, 9, 82, 10]',
+            'marks' => null,
+            'sort_order' => 0,
+            'source' => QuestionSource::Manual,
+            'status' => QuestionStatus::Published,
+            'created_by' => $admin->id,
+            'published_at' => now(),
+        ]);
+
+        Question::create([
+            'question_paper_id' => $paper1->id,
+            'question_section_id' => $sectionB->id,
+            'parent_question_id' => $groupQ->id,
+            'question_type' => QuestionType::Theory,
+            'question_number' => '6a',
+            'display_label' => '(a)',
+            'content' => 'Show the steps of merge sort applied to the array above.',
+            'marks' => 8,
+            'difficulty_level' => QuestionDifficulty::Hard,
+            'sort_order' => 0,
+            'depth_level' => 1,
+            'source' => QuestionSource::Manual,
+            'status' => QuestionStatus::Published,
+            'created_by' => $admin->id,
+            'published_at' => now(),
+        ]);
+
+        Question::create([
+            'question_paper_id' => $paper1->id,
+            'question_section_id' => $sectionB->id,
+            'parent_question_id' => $groupQ->id,
+            'question_type' => QuestionType::Calculation,
+            'question_number' => '6b',
+            'display_label' => '(b)',
+            'content' => 'What is the total number of comparisons made during the merge sort process?',
+            'marks' => 7,
+            'difficulty_level' => QuestionDifficulty::Hard,
+            'response_config' => ['answer' => '12', 'tolerance' => 2, 'requires_working' => true],
+            'sort_order' => 1,
+            'depth_level' => 1,
+            'source' => QuestionSource::Manual,
+            'status' => QuestionStatus::Published,
+            'created_by' => $admin->id,
+            'published_at' => now(),
+        ]);
+
+        $paper2 = QuestionPaper::create([
+            'assessment_type_id' => $wassce->id,
+            'title' => 'WASSCE Mathematics Paper 1 — 2023',
+            'year' => 2023,
+            'total_marks' => 50,
+            'duration_minutes' => 90,
+            'instructions' => 'Answer ALL questions. Each question carries 2 marks.',
+            'is_published' => true,
+        ]);
+
+        $objSection = QuestionSection::create([
+            'question_paper_id' => $paper2->id,
+            'label' => 'Objectives',
+            'instruction' => 'Select the correct option for each question.',
+            'marks' => 50,
+            'sort_order' => 0,
+        ]);
+
+        $paper2Questions = [
+            [
+                'type' => QuestionType::Mcq, 'number' => '1', 'sort' => 0,
+                'content' => 'Simplify: 2³ × 2⁴',
+                'marks' => 2, 'difficulty' => QuestionDifficulty::Easy,
+                'config' => ['options' => [
+                    ['label' => 'A', 'text' => '2⁷', 'is_correct' => true],
+                    ['label' => 'B', 'text' => '2¹²', 'is_correct' => false],
+                    ['label' => 'C', 'text' => '4⁷', 'is_correct' => false],
+                    ['label' => 'D', 'text' => '4¹²', 'is_correct' => false],
+                ]],
+            ],
+            [
+                'type' => QuestionType::NumericEntry, 'number' => '2', 'sort' => 1,
+                'content' => 'If x + 5 = 12, find the value of x.',
+                'marks' => 2, 'difficulty' => QuestionDifficulty::Easy,
+                'config' => ['answer' => 7, 'tolerance' => 0],
+            ],
+            [
+                'type' => QuestionType::Mcq, 'number' => '3', 'sort' => 2,
+                'content' => 'The sum of angles in a triangle is:',
+                'marks' => 2, 'difficulty' => QuestionDifficulty::Easy,
+                'config' => ['options' => [
+                    ['label' => 'A', 'text' => '90°', 'is_correct' => false],
+                    ['label' => 'B', 'text' => '180°', 'is_correct' => true],
+                    ['label' => 'C', 'text' => '270°', 'is_correct' => false],
+                    ['label' => 'D', 'text' => '360°', 'is_correct' => false],
+                ]],
+            ],
+        ];
+
+        foreach ($paper2Questions as $qData) {
+            Question::create([
+                'question_paper_id' => $paper2->id,
+                'question_section_id' => $objSection->id,
+                'question_type' => $qData['type'],
+                'question_number' => $qData['number'],
+                'display_label' => 'Question '.$qData['number'],
+                'content' => $qData['content'],
+                'marks' => $qData['marks'],
+                'difficulty_level' => $qData['difficulty'],
+                'response_config' => $qData['config'],
+                'sort_order' => $qData['sort'],
+                'source' => QuestionSource::Manual,
+                'status' => QuestionStatus::Published,
+                'created_by' => $admin->id,
+                'reviewed_by' => $admin->id,
+                'published_at' => now(),
+            ]);
         }
     }
 

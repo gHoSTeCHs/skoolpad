@@ -4,6 +4,7 @@ import {
     Building2,
     CalendarDays,
     ClipboardList,
+    FileText,
     Globe,
     GraduationCap,
     LayoutGrid,
@@ -24,6 +25,7 @@ import ExamTypeController from '@/actions/App/Http/Controllers/Admin/ExamTypeCon
 import GradingScaleController from '@/actions/App/Http/Controllers/Admin/GradingScaleController';
 import InstitutionController from '@/actions/App/Http/Controllers/Admin/InstitutionController';
 import QuestionController from '@/actions/App/Http/Controllers/Admin/QuestionController';
+import QuestionPaperController from '@/actions/App/Http/Controllers/Admin/QuestionPaperController';
 import SchemeOfWorkController from '@/actions/App/Http/Controllers/Admin/SchemeOfWorkController';
 import SettingsController from '@/actions/App/Http/Controllers/Admin/SettingsController';
 import UserController from '@/actions/App/Http/Controllers/Admin/UserController';
@@ -53,6 +55,7 @@ const navGroups: NavGroup[] = [
             { title: 'Disciplines', href: DisciplineController.index.url(), icon: Shapes },
             { title: 'Canonical Topics', href: CanonicalTopicController.index.url(), icon: BookOpen },
             { title: 'Questions', href: QuestionController.index.url(), icon: MessageSquareMore },
+            { title: 'Question Papers', href: QuestionPaperController.index.url(), icon: FileText },
             { title: 'Courses', href: CourseController.index.url(), icon: GraduationCap },
             { title: 'Scheme of Work', href: SchemeOfWorkController.index.url(), icon: CalendarDays },
             { title: 'Review Queue', href: '/admin/review-queue', icon: ListChecks },
