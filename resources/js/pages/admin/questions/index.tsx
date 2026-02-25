@@ -1,11 +1,12 @@
 import { Head, Link, router } from '@inertiajs/react';
-import { HelpCircle, MessageSquare, MoreHorizontal, Pencil } from 'lucide-react';
+import { FileText, HelpCircle, MessageSquare, MoreHorizontal, Pencil } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import AnswerController from '@/actions/App/Http/Controllers/Admin/AnswerController';
 import QuestionController from '@/actions/App/Http/Controllers/Admin/QuestionController';
+import QuestionPaperController from '@/actions/App/Http/Controllers/Admin/QuestionPaperController';
 import { type ColumnDef, DataTable } from '@/components/admin/data-table';
-import { PageHeader } from '@/components/admin/page-header';
 import { SearchInput } from '@/components/admin/search-input';
+import { QuestionTypeBadge } from '@/components/skoolpad/questions';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import {
@@ -37,12 +38,6 @@ interface Props {
 
 const breadcrumbs = [{ title: 'Questions', href: '/admin/questions' }];
 
-const typeStyles: Record<string, string> = {
-    mcq: 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400 reader:bg-blue-900/30 reader:text-blue-400',
-    theory: 'bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-400 reader:bg-purple-900/30 reader:text-purple-400',
-    fill_in_blank: 'bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-400 reader:bg-orange-900/30 reader:text-orange-400',
-};
-
 const statusStyles: Record<string, string> = {
     draft: 'bg-[var(--badge-neutral-bg)] text-[var(--badge-neutral-fg)] hover:bg-[var(--badge-neutral-bg)]',
     in_review: 'bg-[var(--badge-reward-bg)] text-[var(--badge-reward-fg)] hover:bg-[var(--badge-reward-bg)]',
@@ -67,12 +62,6 @@ const difficultyLabels: Record<string, string> = {
     easy: 'Easy',
     medium: 'Medium',
     hard: 'Hard',
-};
-
-const typeLabels: Record<string, string> = {
-    mcq: 'MCQ',
-    theory: 'Theory',
-    fill_in_blank: 'Fill in Blank',
 };
 
 function formatDate(dateString: string): string {
@@ -113,11 +102,7 @@ const columns: ColumnDef<QuestionListItem>[] = [
     {
         id: 'question_type',
         header: 'Type',
-        cell: (row) => (
-            <Badge variant="secondary" className={typeStyles[row.question_type] ?? ''}>
-                {typeLabels[row.question_type] ?? row.question_type}
-            </Badge>
-        ),
+        cell: (row) => <QuestionTypeBadge type={row.question_type} />,
         sortable: true,
     },
     {
@@ -212,10 +197,20 @@ export default function AdminQuestions({ questions, institutions, filters, enum_
         <AdminLayout breadcrumbs={breadcrumbs}>
             <Head title="Questions" />
             <div className="flex flex-col gap-4 p-4 md:p-6">
-                <PageHeader
-                    title="Questions"
-                    action={{ label: 'Create Question', href: QuestionController.create.url() }}
-                />
+                <div className="flex items-center justify-between">
+                    <h1 className="font-display text-2xl font-bold tracking-tight">Questions</h1>
+                    <div className="flex items-center gap-3">
+                        <Button variant="outline" asChild>
+                            <Link href={QuestionPaperController.index.url()}>
+                                <FileText className="size-4" />
+                                Question Papers
+                            </Link>
+                        </Button>
+                        <Button asChild>
+                            <Link href={QuestionController.create.url()}>Create Question</Link>
+                        </Button>
+                    </div>
+                </div>
 
                 <DataTable
                     columns={columns}

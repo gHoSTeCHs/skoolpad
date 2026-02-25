@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Concerns\Paginates;
+use App\Enums\BloomLevel;
 use App\Enums\QuestionDifficulty;
 use App\Enums\QuestionSource;
 use App\Enums\QuestionStatus;
@@ -87,6 +88,7 @@ class QuestionController extends Controller
             'enum_options' => [
                 'question_types' => array_map(fn ($c) => ['value' => $c->value, 'label' => $c->label()], QuestionType::cases()),
                 'difficulties' => array_map(fn ($c) => ['value' => $c->value, 'label' => $c->label()], QuestionDifficulty::cases()),
+                'bloom_levels' => array_map(fn ($c) => ['value' => $c->value, 'label' => $c->label()], BloomLevel::cases()),
                 'sources' => array_map(fn ($c) => ['value' => $c->value, 'label' => $c->label()], QuestionSource::cases()),
                 'semesters' => [
                     ['value' => 'first', 'label' => 'First'],
@@ -146,6 +148,7 @@ class QuestionController extends Controller
                 'semester' => $question->semester,
                 'marks' => $question->marks,
                 'difficulty_level' => $question->difficulty_level,
+                'bloom_level' => $question->bloom_level,
                 'source' => $question->source,
                 'status' => $question->status,
                 'response_config' => $question->response_config,
@@ -160,6 +163,7 @@ class QuestionController extends Controller
                 'question_types' => array_map(fn ($c) => ['value' => $c->value, 'label' => $c->label()], QuestionType::cases()),
                 'statuses' => array_map(fn ($c) => ['value' => $c->value, 'label' => $c->label()], QuestionStatus::cases()),
                 'difficulties' => array_map(fn ($c) => ['value' => $c->value, 'label' => $c->label()], QuestionDifficulty::cases()),
+                'bloom_levels' => array_map(fn ($c) => ['value' => $c->value, 'label' => $c->label()], BloomLevel::cases()),
                 'sources' => array_map(fn ($c) => ['value' => $c->value, 'label' => $c->label()], QuestionSource::cases()),
                 'semesters' => [
                     ['value' => 'first', 'label' => 'First'],
