@@ -1,6 +1,9 @@
 import { Head } from '@inertiajs/react';
 import { useState } from 'react';
 import { BlockTypeIcon, DifficultyBadge } from '@/components/skoolpad/block-tree';
+import { QuestionTypeBadge, QuestionRenderer, ContextCard, QUESTION_TYPE_META } from '@/components/skoolpad/questions';
+import type { ShowcaseQuestion } from '@/components/skoolpad/questions';
+import type { ContextCardData } from '@/components/skoolpad/questions';
 import SpBadge from '@/components/skoolpad/sp-badge';
 import { useAppearance } from '@/hooks/use-appearance';
 
@@ -52,58 +55,13 @@ interface FlatQuestion {
     marks: number;
 }
 
-type QuestionType = 'mcq' | 'multi_select_mcq' | 'theory' | 'short_answer' | 'essay' | 'fill_blank' | 'cloze' | 'matching' | 'ordering' | 'true_false' | 'diagram_label' | 'calculation' | 'assertion_reason' | 'matrix_matching' | 'numeric_entry';
-
-interface QuestionContext {
-    id: string;
-    contextType: 'passage' | 'diagram' | 'table' | 'case_study' | 'code_snippet' | 'map' | 'graph' | 'word_bank' | 'equation_set';
-    title: string;
-    content?: string;
-    mediaUrl?: string;
-    tableData?: { headers: string[]; rows: string[][] };
-    wordBank?: string[];
-}
-
-interface PaperQuestion {
-    number: string;
-    displayLabel: string;
-    type: QuestionType | 'group';
-    content: string;
-    marks: number | null;
-    sharedContext?: string;
-    contextId?: string;
-    contextIds?: string[];
-    options?: { label: string; text: string; isCorrect?: boolean }[];
-    matchingPairs?: { left: string; right: string }[];
-    matchingDistractors?: string[];
-    orderItems?: string[];
-    correctOrder?: number[];
-    trueFalseAnswer?: boolean;
-    requiresJustification?: boolean;
-    diagramLabels?: { label: string; answer: string }[];
-    calculationAnswer?: string;
-    calculationUnit?: string;
-    gapOptions?: { position: number; options: string[]; correct: number }[];
-    fillBlanks?: string[];
-    assertion?: string;
-    reason?: string;
-    matrixLeft?: string[];
-    matrixRight?: string[];
-    matrixMapping?: Record<number, number[]>;
-    numericAnswer?: number;
-    numericTolerance?: number;
-    numericUnit?: string;
-    choiceGroup?: { required: string[]; chooseN: number; optional: string[] };
-    children: PaperQuestion[];
-}
-
 interface FormatExample {
     title: string;
     examSource: string;
     contextType?: string;
-    context?: QuestionContext;
-    contexts?: QuestionContext[];
-    questions: PaperQuestion[];
+    context?: ContextCardData;
+    contexts?: ContextCardData[];
+    questions: ShowcaseQuestion[];
     description: string;
 }
 
@@ -478,7 +436,7 @@ const FLAT_QUESTIONS: FlatQuestion[] = [
     { num: 10, text: 'Implement BST deletion', type: 'theory', marks: 10 },
 ];
 
-const PAPER_QUESTIONS: { section: string; instruction: string; marks: number; questions: PaperQuestion[] }[] = [
+const PAPER_QUESTIONS: { section: string; instruction: string; marks: number; questions: ShowcaseQuestion[] }[] = [
     {
         section: 'A',
         instruction: 'Answer ALL questions',
@@ -1247,31 +1205,6 @@ function SectionTitle({ children }: { children: React.ReactNode }) {
 }
 
 
-const QUESTION_TYPE_META: Record<string, { label: string; variant: 'primary' | 'danger' | 'reward' | 'neutral' | 'solid' }> = {
-    group: { label: 'group', variant: 'neutral' },
-    mcq: { label: 'MCQ', variant: 'solid' },
-    multi_select_mcq: { label: 'multi-select', variant: 'solid' },
-    theory: { label: 'theory', variant: 'primary' },
-    short_answer: { label: 'short answer', variant: 'primary' },
-    essay: { label: 'essay', variant: 'primary' },
-    fill_blank: { label: 'fill blank', variant: 'reward' },
-    cloze: { label: 'cloze', variant: 'reward' },
-    matching: { label: 'matching', variant: 'reward' },
-    ordering: { label: 'ordering', variant: 'reward' },
-    true_false: { label: 'true/false', variant: 'danger' },
-    diagram_label: { label: 'diagram', variant: 'danger' },
-    calculation: { label: 'calculation', variant: 'danger' },
-    assertion_reason: { label: 'assert-reason', variant: 'solid' },
-    matrix_matching: { label: 'matrix match', variant: 'reward' },
-    numeric_entry: { label: 'numeric', variant: 'danger' },
-};
-
-function QuestionTypeBadge({ type }: { type: string }) {
-    const meta = QUESTION_TYPE_META[type];
-    if (!meta) return null;
-    return <SpBadge variant={meta.variant} className="text-[9px] px-[5px] py-0">{meta.label}</SpBadge>;
-}
-
 function TreeNode({ block, expanded, selectedId, onToggle, onSelect, depth = 0 }: {
     block: Block;
     expanded: Record<string, boolean>;
@@ -1447,276 +1380,6 @@ function CoverageCardComponent({ card }: { card: CoverageCard }) {
     );
 }
 
-function PaperQuestionNode({ q, depth = 0 }: { q: PaperQuestion; depth?: number }) {
-    const [isOpen, setIsOpen] = useState(true);
-    const hasChildren = q.children.length > 0;
-    const isLeaf = !hasChildren;
-
-    return (
-        <div className={depth > 0 ? 'ml-5 border-l border-border/40 pl-4' : ''}>
-            <div
-                className={'flex items-start gap-2 rounded-lg px-3 py-2 transition-colors' + (isLeaf ? ' hover:bg-[var(--bg-raised)]' : '')}
-            >
-                {hasChildren ? (
-                    <button onClick={() => setIsOpen(!isOpen)} className="mt-0.5 cursor-pointer border-none bg-transparent p-0 text-[10px] text-muted-foreground transition-transform duration-150" style={{ transform: isOpen ? 'rotate(90deg)' : 'none' }}>
-                        {'\u25B6'}
-                    </button>
-                ) : (
-                    <span className="mt-1 inline-block h-1.5 w-1.5 shrink-0 rounded-full bg-primary/40" />
-                )}
-
-                <div className="flex-1">
-                    <div className="flex items-center gap-2">
-                        <span className="text-[12px] font-bold text-primary" style={{ fontFamily: 'var(--font-body)' }}>{q.number}</span>
-                        <QuestionTypeBadge type={q.type} />
-                    </div>
-                    {q.content && (
-                        <p className="mt-1 text-[13px] leading-relaxed" style={{ fontFamily: 'var(--font-content)' }}>{q.content}</p>
-                    )}
-                    {q.options && (
-                        <div className="mt-2 space-y-1">
-                            {q.options.map((opt) => (
-                                <div
-                                    key={opt.label}
-                                    className={'flex items-center gap-2 rounded-lg border px-3 py-1.5 text-[12px]'
-                                        + (opt.isCorrect
-                                            ? ' border-[var(--opt-correct-border)] bg-[var(--opt-correct-bg)]'
-                                            : ' border-border')}
-                                    style={{ fontFamily: 'var(--font-body)' }}
-                                >
-                                    <span className={'inline-flex h-5 w-5 items-center justify-center rounded-full text-[10px] font-bold'
-                                        + (opt.isCorrect ? ' bg-[var(--opt-correct-dot)] text-white' : ' bg-[var(--bg-raised)]')}>
-                                        {opt.isCorrect ? '\u2713' : opt.label}
-                                    </span>
-                                    <span>{opt.text}</span>
-                                </div>
-                            ))}
-                        </div>
-                    )}
-                    {q.matchingPairs && (
-                        <div className="mt-2 space-y-1">
-                            {q.matchingPairs.map((pair, i) => (
-                                <div key={i} className="flex items-center gap-2 text-[12px]" style={{ fontFamily: 'var(--font-body)' }}>
-                                    <span className="w-[140px] shrink-0 rounded border border-border bg-[var(--bg-raised)] px-2 py-1 text-center font-medium">{pair.left}</span>
-                                    <span className="text-primary">{'\u2194'}</span>
-                                    <span className="flex-1 rounded border border-[var(--opt-correct-border)] bg-[var(--opt-correct-bg)] px-2 py-1">{pair.right}</span>
-                                </div>
-                            ))}
-                            {q.matchingDistractors && q.matchingDistractors.length > 0 && (
-                                <div className="mt-1 flex flex-wrap gap-1">
-                                    {q.matchingDistractors.map((d, i) => (
-                                        <span key={i} className="rounded border border-border bg-[var(--bg-raised)] px-2 py-0.5 text-[10px] text-muted-foreground line-through">{d}</span>
-                                    ))}
-                                </div>
-                            )}
-                        </div>
-                    )}
-                    {q.orderItems && (
-                        <div className="mt-2 space-y-1">
-                            {q.orderItems.map((item, i) => (
-                                <div key={i} className="flex items-center gap-2 rounded border border-border px-3 py-1.5 text-[12px]" style={{ fontFamily: 'var(--font-body)' }}>
-                                    <span className="inline-flex h-5 w-5 shrink-0 items-center justify-center rounded bg-primary/10 text-[10px] font-bold text-primary">
-                                        {q.correctOrder ? q.correctOrder[i] : i + 1}
-                                    </span>
-                                    <span>{item}</span>
-                                </div>
-                            ))}
-                        </div>
-                    )}
-                    {q.type === 'true_false' && q.trueFalseAnswer !== undefined && (
-                        <div className="mt-2 flex items-center gap-3">
-                            <span className={'rounded-md px-3 py-1 text-[11px] font-bold' + (q.trueFalseAnswer ? ' bg-[var(--opt-correct-bg)] text-[var(--opt-correct-dot)]' : ' bg-[var(--bg-raised)] text-muted-foreground')}>TRUE</span>
-                            <span className={'rounded-md px-3 py-1 text-[11px] font-bold' + (!q.trueFalseAnswer ? ' bg-[var(--destructive)]/10 text-[var(--destructive)]' : ' bg-[var(--bg-raised)] text-muted-foreground')}>FALSE</span>
-                            {q.requiresJustification && <span className="text-[10px] italic text-muted-foreground">(justify your answer)</span>}
-                        </div>
-                    )}
-                    {q.diagramLabels && (
-                        <div className="mt-2 grid grid-cols-2 gap-1">
-                            {q.diagramLabels.map((dl, i) => (
-                                <div key={i} className="flex items-center gap-2 rounded border border-border px-2 py-1 text-[11px]" style={{ fontFamily: 'var(--font-body)' }}>
-                                    <span className="font-bold text-primary">{dl.label}:</span>
-                                    <span className="text-muted-foreground">{dl.answer}</span>
-                                </div>
-                            ))}
-                        </div>
-                    )}
-                    {q.type === 'calculation' && q.calculationAnswer && (
-                        <div className="mt-2 flex items-center gap-2">
-                            <span className="rounded border border-[var(--opt-correct-border)] bg-[var(--opt-correct-bg)] px-3 py-1 text-[12px] font-bold" style={{ fontFamily: 'var(--font-body)' }}>
-                                = {q.calculationAnswer}{q.calculationUnit ? ` ${q.calculationUnit}` : ''}
-                            </span>
-                        </div>
-                    )}
-                    {q.gapOptions && (
-                        <div className="mt-2 space-y-1">
-                            {q.gapOptions.map((gap) => (
-                                <div key={gap.position} className="flex items-center gap-2 text-[11px]" style={{ fontFamily: 'var(--font-body)' }}>
-                                    <span className="shrink-0 font-bold text-primary">Gap {gap.position}:</span>
-                                    <div className="flex flex-wrap gap-1">
-                                        {gap.options.map((opt, oi) => (
-                                            <span key={oi} className={'rounded px-2 py-0.5' + (oi === gap.correct ? ' border border-[var(--opt-correct-border)] bg-[var(--opt-correct-bg)] font-bold' : ' bg-[var(--bg-raised)]')}>{opt}</span>
-                                        ))}
-                                    </div>
-                                </div>
-                            ))}
-                        </div>
-                    )}
-                    {q.type === 'assertion_reason' && q.assertion && q.reason && (
-                        <div className="mt-2 space-y-1.5 rounded-md border border-border bg-[var(--bg-raised)] p-3">
-                            <div className="text-[11px]" style={{ fontFamily: 'var(--font-body)' }}>
-                                <span className="font-bold text-primary">Assertion:</span> <span>{q.assertion}</span>
-                            </div>
-                            <div className="text-[11px]" style={{ fontFamily: 'var(--font-body)' }}>
-                                <span className="font-bold text-[var(--warning)]">Reason:</span> <span>{q.reason}</span>
-                            </div>
-                        </div>
-                    )}
-                    {q.type === 'matrix_matching' && q.matrixLeft && q.matrixRight && q.matrixMapping && (
-                        <div className="mt-2 overflow-x-auto rounded-md border border-border">
-                            <table className="w-full text-[11px]" style={{ fontFamily: 'var(--font-body)' }}>
-                                <thead>
-                                    <tr className="bg-[var(--bg-raised)]">
-                                        <th className="border-b border-r border-border px-2 py-1.5 text-left font-bold">Column I</th>
-                                        {q.matrixRight.map((r, i) => (
-                                            <th key={i} className="border-b border-border px-2 py-1.5 text-center font-bold text-primary">{String.fromCharCode(80 + i)}</th>
-                                        ))}
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    {q.matrixLeft.map((item, li) => (
-                                        <tr key={li} className="border-b border-border/30 last:border-b-0">
-                                            <td className="border-r border-border px-2 py-1.5 font-medium">{li + 1}. {item}</td>
-                                            {q.matrixRight!.map((_, ri) => (
-                                                <td key={ri} className="px-2 py-1.5 text-center">
-                                                    {q.matrixMapping![li]?.includes(ri)
-                                                        ? <span className="inline-flex h-4 w-4 items-center justify-center rounded-full bg-[var(--opt-correct-dot)] text-[9px] text-white">{'\u2713'}</span>
-                                                        : <span className="text-border">{'\u2013'}</span>}
-                                                </td>
-                                            ))}
-                                        </tr>
-                                    ))}
-                                </tbody>
-                            </table>
-                            <div className="border-t border-border bg-[var(--bg-raised)] px-2 py-1.5">
-                                <span className="text-[10px] font-medium text-muted-foreground">Column II: </span>
-                                {q.matrixRight.map((r, i) => (
-                                    <span key={i} className="text-[10px] text-muted-foreground">
-                                        <strong className="text-primary">{String.fromCharCode(80 + i)}</strong> = {r}{i < q.matrixRight!.length - 1 ? ', ' : ''}
-                                    </span>
-                                ))}
-                            </div>
-                        </div>
-                    )}
-                    {q.type === 'numeric_entry' && q.numericAnswer !== undefined && (
-                        <div className="mt-2 flex items-center gap-2">
-                            <div className="inline-flex items-center gap-1 rounded border-2 border-dashed border-primary/30 bg-[var(--bg-raised)] px-3 py-1.5">
-                                <span className="text-[12px] font-bold" style={{ fontFamily: 'var(--font-body)' }}>{q.numericAnswer}</span>
-                                {q.numericUnit && <span className="text-[10px] text-muted-foreground">{q.numericUnit}</span>}
-                            </div>
-                            {q.numericTolerance !== undefined && q.numericTolerance > 0 && (
-                                <span className="text-[10px] text-muted-foreground" style={{ fontFamily: 'var(--font-body)' }}>{'\u00B1'}{q.numericTolerance}</span>
-                            )}
-                        </div>
-                    )}
-                    {q.choiceGroup && (
-                        <div className="mt-2 rounded border border-[var(--warning)]/30 bg-[var(--warning)]/5 px-3 py-1.5">
-                            <span className="text-[10px] font-bold text-[var(--warning)]" style={{ fontFamily: 'var(--font-body)' }}>
-                                Answer {q.choiceGroup.required.join(', ')} (required) + choose {q.choiceGroup.chooseN} from {q.choiceGroup.optional.join(', ')}
-                            </span>
-                        </div>
-                    )}
-                </div>
-
-                {q.marks !== null && (
-                    <span className="shrink-0 rounded-md bg-[var(--bg-raised)] px-2 py-0.5 text-[10px] font-bold text-muted-foreground" style={{ fontFamily: 'var(--font-body)' }}>
-                        {q.marks}m
-                    </span>
-                )}
-            </div>
-
-            {hasChildren && isOpen && (
-                <div className="mt-1">
-                    {q.children.map((child) => (
-                        <PaperQuestionNode key={child.number} q={child} depth={depth + 1} />
-                    ))}
-                </div>
-            )}
-        </div>
-    );
-}
-
-function ContextCard({ context }: { context: QuestionContext }) {
-    const typeStyles: Record<string, { bg: string; border: string; icon: string }> = {
-        passage: { bg: 'var(--primary)/5', border: 'var(--primary)/20', icon: '\uD83D\uDCC4' },
-        diagram: { bg: 'var(--warning)/5', border: 'var(--warning)/20', icon: '\uD83D\uDDBC\uFE0F' },
-        table: { bg: 'var(--destructive)/5', border: 'var(--destructive)/20', icon: '\uD83D\uDCCA' },
-        case_study: { bg: 'var(--primary)/5', border: 'var(--primary)/20', icon: '\uD83D\uDCCB' },
-        code_snippet: { bg: 'var(--primary)/5', border: 'var(--primary)/20', icon: '\uD83D\uDCBB' },
-        word_bank: { bg: 'var(--warning)/5', border: 'var(--warning)/20', icon: '\uD83D\uDCD6' },
-        equation_set: { bg: 'var(--destructive)/5', border: 'var(--destructive)/20', icon: '\uD83E\uDDEE' },
-        map: { bg: 'var(--warning)/5', border: 'var(--warning)/20', icon: '\uD83D\uDDFA\uFE0F' },
-        graph: { bg: 'var(--primary)/5', border: 'var(--primary)/20', icon: '\uD83D\uDCC8' },
-    };
-    const style = typeStyles[context.contextType] ?? typeStyles.passage;
-
-    return (
-        <div className="rounded-lg border bg-card p-4" style={{ borderColor: style.border }}>
-            <div className="mb-2 flex items-center gap-2">
-                <span className="text-lg">{style.icon}</span>
-                <span className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground" style={{ fontFamily: 'var(--font-body)' }}>
-                    {context.contextType.replace('_', ' ')} context
-                </span>
-                <SpBadge variant="neutral" className="ml-auto text-[9px]">id: {context.id}</SpBadge>
-            </div>
-            {context.title && (
-                <p className="mb-2 text-[12px] font-medium italic text-muted-foreground" style={{ fontFamily: 'var(--font-body)' }}>{context.title}</p>
-            )}
-            {context.content && (
-                <div className="rounded-md bg-[var(--bg-raised)] p-3">
-                    <p className="text-[12px] leading-relaxed" style={{ fontFamily: 'var(--font-content)' }}>{context.content}</p>
-                </div>
-            )}
-            {context.contextType === 'diagram' && context.mediaUrl && (
-                <div className="flex h-[120px] items-center justify-center rounded-md border-2 border-dashed border-border bg-[var(--bg-raised)]">
-                    <div className="text-center">
-                        <div className="text-2xl">{'\uD83D\uDDBC\uFE0F'}</div>
-                        <p className="mt-1 text-[10px] text-muted-foreground" style={{ fontFamily: 'var(--font-body)' }}>Diagram: {context.mediaUrl}</p>
-                    </div>
-                </div>
-            )}
-            {context.tableData && (
-                <div className="overflow-x-auto rounded-md border border-border">
-                    <table className="w-full text-[11px]" style={{ fontFamily: 'var(--font-body)' }}>
-                        <thead>
-                            <tr className="bg-[var(--bg-raised)]">
-                                {context.tableData.headers.map((h) => (
-                                    <th key={h} className="border-b border-border px-3 py-2 text-left font-bold">{h}</th>
-                                ))}
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {context.tableData.rows.map((row, ri) => (
-                                <tr key={ri} className="border-b border-border/30 last:border-b-0">
-                                    {row.map((cell, ci) => (
-                                        <td key={ci} className={'px-3 py-1.5' + (ci === 0 ? ' font-medium' : '')}>{cell}</td>
-                                    ))}
-                                </tr>
-                            ))}
-                        </tbody>
-                    </table>
-                </div>
-            )}
-            {context.wordBank && (
-                <div className="flex flex-wrap gap-1.5">
-                    {context.wordBank.map((w) => (
-                        <span key={w} className="rounded border border-border bg-[var(--bg-raised)] px-2 py-0.5 text-[11px]">{w}</span>
-                    ))}
-                </div>
-            )}
-        </div>
-    );
-}
-
 function FormatExampleCard({ example, isExpanded, onToggle }: { example: FormatExample; isExpanded: boolean; onToggle: () => void }) {
     const contextTypeColors: Record<string, string> = {
         passage: 'var(--primary)',
@@ -1763,7 +1426,7 @@ function FormatExampleCard({ example, isExpanded, onToggle }: { example: FormatE
                             Derived Questions
                         </p>
                         {example.questions.map((q) => (
-                            <PaperQuestionNode key={q.number} q={q} />
+                            <QuestionRenderer key={q.number} q={q} />
                         ))}
                     </div>
                 </div>
@@ -2208,7 +1871,7 @@ export default function ArchitectureShowcase() {
                                                 </div>
                                                 <div>
                                                     {section.questions.map((q) => (
-                                                        <PaperQuestionNode key={q.number} q={q} />
+                                                        <QuestionRenderer key={q.number} q={q} />
                                                     ))}
                                                 </div>
                                             </div>

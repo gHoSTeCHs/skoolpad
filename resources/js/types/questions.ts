@@ -1,6 +1,15 @@
 import type { TiptapJSON } from '@/types/tiptap';
 
-export type QuestionType = 'mcq' | 'theory' | 'fill_in_blank';
+export type QuestionType =
+    | 'mcq' | 'multi_select_mcq' | 'theory' | 'short_answer' | 'essay'
+    | 'fill_blank' | 'cloze' | 'matching' | 'ordering' | 'true_false'
+    | 'diagram_label' | 'calculation' | 'assertion_reason' | 'matrix_matching'
+    | 'numeric_entry' | 'group';
+
+export type ContextType =
+    | 'passage' | 'diagram' | 'table' | 'case_study' | 'code_snippet'
+    | 'map' | 'graph' | 'word_bank' | 'equation_set';
+
 export type QuestionStatus = 'draft' | 'in_review' | 'published' | 'archived';
 export type QuestionDifficulty = 'easy' | 'medium' | 'hard';
 export type QuestionSource = 'manual' | 'crowdsourced' | 'ai_generated' | 'bulk_import';
@@ -10,6 +19,138 @@ export type QuestionSemester = 'first' | 'second';
 export interface EnumOption<T extends string = string> {
     value: T;
     label: string;
+}
+
+export interface McqConfig {
+    options: { label: string; text: string; is_correct: boolean }[];
+}
+
+export interface MultiSelectMcqConfig extends McqConfig {
+    min_correct?: number;
+    max_correct?: number;
+}
+
+export interface TrueFalseConfig {
+    correct_answer: boolean;
+    requires_justification?: boolean;
+}
+
+export interface FillBlankConfig {
+    blanks: { position: number; correct_answers: string[] }[];
+    case_sensitive?: boolean;
+}
+
+export interface ClozeConfig {
+    gaps: { position: number; options: string[]; correct: number }[];
+}
+
+export interface MatchingConfig {
+    pairs: { left: string; right: string }[];
+    distractors?: string[];
+}
+
+export interface MatrixMatchingConfig {
+    left: string[];
+    right: string[];
+    mapping: Record<number, number[]>;
+}
+
+export interface OrderingConfig {
+    items: string[];
+    correct_order: number[];
+}
+
+export interface DiagramLabelConfig {
+    labels: { label: string; answer: string; x?: number; y?: number }[];
+}
+
+export interface CalculationConfig {
+    answer: string;
+    unit?: string;
+    tolerance?: number;
+    requires_working?: boolean;
+}
+
+export interface NumericEntryConfig {
+    answer: number;
+    tolerance?: number;
+    unit?: string;
+}
+
+export interface AssertionReasonConfig {
+    assertion: string;
+    reason: string;
+    options: { label: string; text: string; is_correct: boolean }[];
+}
+
+export type ResponseConfig =
+    | McqConfig | MultiSelectMcqConfig | TrueFalseConfig | FillBlankConfig
+    | ClozeConfig | MatchingConfig | MatrixMatchingConfig | OrderingConfig
+    | DiagramLabelConfig | CalculationConfig | NumericEntryConfig
+    | AssertionReasonConfig | null;
+
+export interface QuestionPaper {
+    id: string;
+    title: string;
+    institution_course_id?: string;
+    assessment_type_id?: string;
+    academic_session?: string;
+    semester?: string;
+    year?: number;
+    total_marks?: number;
+    duration_minutes?: number;
+    instructions?: string;
+    is_published: boolean;
+    sections: QuestionSection[];
+    contexts: QuestionContextData[];
+}
+
+export interface QuestionSection {
+    id: string;
+    label: string;
+    instruction?: string;
+    marks?: number;
+    required_count?: number;
+    sort_order: number;
+    questions: QuestionNode[];
+}
+
+export interface QuestionContextData {
+    id: string;
+    context_type: ContextType;
+    title?: string;
+    content?: string;
+    media_url?: string;
+    table_data?: { headers: string[]; rows: string[][] };
+    word_bank?: string[];
+    language?: string;
+}
+
+export interface QuestionNode {
+    id: string;
+    question_type: QuestionType;
+    question_number?: string;
+    display_label?: string;
+    content: string;
+    marks: number | null;
+    sort_order: number;
+    depth_level: number;
+    response_config: ResponseConfig;
+    choice_group?: { required: string[]; chooseN: number; optional: string[] };
+    difficulty_level?: string;
+    bloom_level?: string;
+    status: string;
+    context_links?: { context_id: string; sort_order: number; label?: string }[];
+    children: QuestionNode[];
+}
+
+/** @deprecated Use McqConfig.options instead */
+export interface QuestionOption {
+    id?: string;
+    label?: string;
+    content: string;
+    is_correct: boolean;
+    sort_order?: number;
 }
 
 export interface QuestionListItem {
@@ -26,14 +167,6 @@ export interface QuestionListItem {
     topic_links_count: number;
     answers_count: number;
     created_at: string;
-}
-
-export interface QuestionOption {
-    id?: string;
-    label?: string;
-    content: string;
-    is_correct: boolean;
-    sort_order?: number;
 }
 
 export interface TopicLink {
@@ -61,15 +194,20 @@ export interface TopicSearchResult {
 
 export interface QuestionFormData {
     institution_course_id: string;
+    question_paper_id?: string;
+    question_section_id?: string;
+    parent_question_id?: string;
+    exam_subject_id?: string;
     question_type: QuestionType;
     content: string;
     year: number | '';
     semester: QuestionSemester | '';
     marks: number | '';
     difficulty_level: QuestionDifficulty | '';
+    bloom_level?: string;
     source: QuestionSource;
     status: QuestionStatus;
-    options: QuestionOption[];
+    response_config: ResponseConfig;
     topic_ids: string[];
     primary_topic_id: string;
 }
@@ -86,6 +224,8 @@ export interface QuestionEnumOptions {
     difficulties: EnumOption<QuestionDifficulty>[];
     sources: EnumOption<QuestionSource>[];
     semesters: EnumOption<QuestionSemester>[];
+    bloom_levels?: EnumOption[];
+    context_types?: EnumOption[];
 }
 
 export interface AnswerDepthData {
