@@ -4,6 +4,7 @@ use App\Http\Controllers\Admin\AnswerController;
 use App\Http\Controllers\Admin\AssessmentTypeController;
 use App\Http\Controllers\Admin\BulkImportController;
 use App\Http\Controllers\Admin\CanonicalTopicController;
+use App\Http\Controllers\Admin\ContentBlockController;
 use App\Http\Controllers\Admin\CourseController;
 use App\Http\Controllers\Admin\CourseDepartmentController;
 use App\Http\Controllers\Admin\CourseMappingController;
@@ -97,6 +98,12 @@ Route::middleware(['auth', 'verified', 'staff'])->prefix('admin')->name('admin.'
     Route::put('courses/{course}/departments', [CourseDepartmentController::class, 'update'])->name('courses.departments.update');
     Route::get('courses/{course}/mappings', [CourseMappingController::class, 'index'])->name('courses.mappings');
     Route::put('courses/{course}/mappings', [CourseMappingController::class, 'update'])->name('courses.mappings.update');
+
+    Route::get('topics/{topic}/blocks', [ContentBlockController::class, 'index'])->name('content-blocks.index');
+    Route::post('topics/{topic}/blocks', [ContentBlockController::class, 'store'])->name('content-blocks.store');
+    Route::put('blocks/{block}', [ContentBlockController::class, 'update'])->name('content-blocks.update');
+    Route::delete('blocks/{block}', [ContentBlockController::class, 'destroy'])->name('content-blocks.destroy');
+    Route::put('topics/{topic}/blocks/reorder', [ContentBlockController::class, 'reorder'])->name('content-blocks.reorder');
 
     Route::get('api/institutions/{institution}/structure', function (Institution $institution) {
         return response()->json([
