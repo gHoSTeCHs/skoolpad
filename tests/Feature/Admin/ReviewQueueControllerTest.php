@@ -153,7 +153,8 @@ test('transcribe creates questions with options', function () {
 
     $question = Question::first();
     expect($question->content)->toBe('What is 2+2?')
-        ->and($question->options)->toHaveCount(2)
+        ->and($question->response_config)->toBeArray()
+        ->and($question->response_config['options'])->toHaveCount(2)
         ->and($question->topicLinks)->toHaveCount(1);
 
     $submission->refresh();

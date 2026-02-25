@@ -11,7 +11,6 @@ use App\Models\Institution;
 use App\Models\InstitutionCourse;
 use App\Models\Question;
 use App\Models\QuestionAnswer;
-use App\Models\QuestionOption;
 use App\Models\QuestionTopicLink;
 use App\Models\User;
 use App\Services\ContentImportService;
@@ -400,8 +399,11 @@ test('questions import creates question with options and topic link', function (
     expect($question->source->value)->toBe('bulk_import');
     expect($question->created_by)->toBe($this->admin->id);
 
-    expect(QuestionOption::where('question_id', $question->id)->count())->toBe(4);
-    expect(QuestionOption::where('question_id', $question->id)->where('is_correct', true)->first()->label)->toBe('B');
+    expect($question->response_config)->toBeArray();
+    expect($question->response_config['options'])->toHaveCount(4);
+    $correctOptions = collect($question->response_config['options'])->where('is_correct', true);
+    expect($correctOptions)->toHaveCount(1);
+    expect($correctOptions->first()['label'])->toBe('B');
 
     expect(QuestionTopicLink::where('question_id', $question->id)->where('canonical_topic_id', $topic->id)->exists())->toBeTrue();
 });

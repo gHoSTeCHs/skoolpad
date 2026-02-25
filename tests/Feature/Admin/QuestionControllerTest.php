@@ -29,10 +29,12 @@ function validQuestionData(array $overrides = []): array
         'difficulty_level' => 'medium',
         'source' => 'manual',
         'status' => 'draft',
-        'options' => [
-            ['content' => 'O(1)', 'is_correct' => false],
-            ['content' => 'O(log n)', 'is_correct' => true],
-            ['content' => 'O(n)', 'is_correct' => false],
+        'response_config' => [
+            'options' => [
+                ['label' => 'A', 'text' => 'O(1)', 'is_correct' => false],
+                ['label' => 'B', 'text' => 'O(log n)', 'is_correct' => true],
+                ['label' => 'C', 'text' => 'O(n)', 'is_correct' => false],
+            ],
         ],
         'topic_ids' => [test()->topic->id],
         'primary_topic_id' => test()->topic->id,
@@ -112,26 +114,26 @@ test('create returns create page with institutions and enum_options', function (
         );
 });
 
-test('store creates question with MCQ options and topic links', function () {
+test('store creates question with response_config and topic links', function () {
     $this->actingAs($this->admin)
         ->post(route('admin.questions.store'), validQuestionData())
         ->assertRedirect()
         ->assertSessionHas('success', 'Question created.');
 
     $question = Question::first();
-    expect($question)->not->toBeNull();
-    expect($question->options)->toHaveCount(3);
-    expect($question->topicLinks)->toHaveCount(1);
-    expect($question->topicLinks->first()->is_primary)->toBeTrue();
-    expect($question->created_by)->toBe($this->admin->id);
+    expect($question)->not->toBeNull()
+        ->and($question->response_config)->toBeArray()
+        ->and($question->response_config['options'])->toHaveCount(3)
+        ->and($question->topicLinks)->toHaveCount(1)
+        ->and($question->topicLinks->first()->is_primary)->toBeTrue()
+        ->and($question->created_by)->toBe($this->admin->id);
 });
 
-test('store creates theory question without options', function () {
+test('store creates theory question without response_config', function () {
     $data = validQuestionData([
         'question_type' => 'theory',
-        'options' => null,
+        'response_config' => null,
     ]);
-    unset($data['options']);
 
     $this->actingAs($this->admin)
         ->post(route('admin.questions.store'), $data)
@@ -139,8 +141,8 @@ test('store creates theory question without options', function () {
         ->assertSessionHas('success', 'Question created.');
 
     $question = Question::first();
-    expect($question->question_type)->toBe(QuestionType::Theory);
-    expect($question->options)->toHaveCount(0);
+    expect($question->question_type)->toBe(QuestionType::Theory)
+        ->and($question->response_config)->toBeNull();
 });
 
 test('store validates required fields', function () {
@@ -150,17 +152,6 @@ test('store validates required fields', function () {
             'institution_course_id', 'question_type', 'content',
             'source', 'status', 'topic_ids', 'primary_topic_id',
         ]);
-});
-
-test('store rejects MCQ with zero correct options', function () {
-    $this->actingAs($this->admin)
-        ->post(route('admin.questions.store'), validQuestionData([
-            'options' => [
-                ['content' => 'Option A', 'is_correct' => false],
-                ['content' => 'Option B', 'is_correct' => false],
-            ],
-        ]))
-        ->assertSessionHasErrors(['options']);
 });
 
 test('store rejects published status on create', function () {
@@ -190,9 +181,8 @@ test('store rejects primary_topic_id not in topic_ids', function () {
         ->assertSessionHasErrors(['primary_topic_id']);
 });
 
-test('edit returns edit page with question, options, and topic_links', function () {
+test('edit returns edit page with question response_config and topic_links', function () {
     $question = Question::factory()->for($this->course)->create(['created_by' => $this->admin->id]);
-    $question->options()->create(['label' => 'A', 'content' => 'Option A', 'is_correct' => true, 'sort_order' => 1]);
     $question->topicLinks()->create(['canonical_topic_id' => $this->topic->id, 'is_primary' => true]);
 
     $this->actingAs($this->admin)
@@ -202,7 +192,7 @@ test('edit returns edit page with question, options, and topic_links', function 
             ->component('admin/questions/edit')
             ->has('question')
             ->where('question.id', $question->id)
-            ->has('question.options', 1)
+            ->has('question.response_config.options', 4)
             ->has('question.topic_links', 1)
             ->has('institutions')
             ->has('enum_options')
@@ -221,8 +211,8 @@ test('update modifies question and redirects', function () {
         ->assertSessionHas('success', 'Question updated.');
 
     $question->refresh();
-    expect($question->content)->toBe('Updated question content');
-    expect($question->status)->toBe(QuestionStatus::InReview);
+    expect($question->content)->toBe('Updated question content')
+        ->and($question->status)->toBe(QuestionStatus::InReview);
 });
 
 test('update sets published_at and reviewed_by when publishing', function () {
@@ -235,9 +225,9 @@ test('update sets published_at and reviewed_by when publishing', function () {
         ->assertRedirect();
 
     $question->refresh();
-    expect($question->status)->toBe(QuestionStatus::Published);
-    expect($question->published_at)->not->toBeNull();
-    expect($question->reviewed_by)->toBe($this->admin->id);
+    expect($question->status)->toBe(QuestionStatus::Published)
+        ->and($question->published_at)->not->toBeNull()
+        ->and($question->reviewed_by)->toBe($this->admin->id);
 });
 
 test('update rejects publish without permission', function () {
@@ -251,24 +241,21 @@ test('update rejects publish without permission', function () {
         ->assertSessionHasErrors(['status']);
 });
 
-test('update deletes options when type changes from MCQ to theory', function () {
+test('update changes response_config when type changes', function () {
     $question = Question::factory()->for($this->course)->draft()->create(['created_by' => $this->admin->id]);
-    $question->options()->create(['label' => 'A', 'content' => 'Option A', 'is_correct' => true, 'sort_order' => 1]);
-    $question->options()->create(['label' => 'B', 'content' => 'Option B', 'is_correct' => false, 'sort_order' => 2]);
 
-    expect($question->options()->count())->toBe(2);
-
-    $data = validQuestionData([
-        'question_type' => 'theory',
-        'status' => 'draft',
-    ]);
-    unset($data['options']);
+    expect($question->response_config['options'])->toHaveCount(4);
 
     $this->actingAs($this->admin)
-        ->put(route('admin.questions.update', $question), $data)
+        ->put(route('admin.questions.update', $question), validQuestionData([
+            'question_type' => 'theory',
+            'status' => 'draft',
+            'response_config' => null,
+        ]))
         ->assertRedirect();
 
-    expect($question->options()->count())->toBe(0);
+    $question->refresh();
+    expect($question->response_config)->toBeNull();
 });
 
 test('guests cannot access question routes', function () {

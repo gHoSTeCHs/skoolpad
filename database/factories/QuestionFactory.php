@@ -32,6 +32,14 @@ class QuestionFactory extends Factory
             'attempt_count' => 0,
             'correct_count' => 0,
             'avg_time_seconds' => null,
+            'response_config' => [
+                'options' => [
+                    ['label' => 'A', 'text' => fake()->sentence(), 'is_correct' => false],
+                    ['label' => 'B', 'text' => fake()->sentence(), 'is_correct' => true],
+                    ['label' => 'C', 'text' => fake()->sentence(), 'is_correct' => false],
+                    ['label' => 'D', 'text' => fake()->sentence(), 'is_correct' => false],
+                ],
+            ],
             'source' => QuestionSource::Manual,
             'status' => QuestionStatus::Published,
             'created_by' => User::factory(),
@@ -52,6 +60,30 @@ class QuestionFactory extends Factory
     {
         return $this->state(fn (array $attributes) => [
             'question_type' => QuestionType::Theory,
+            'response_config' => null,
+        ]);
+    }
+
+    public function trueFalse(): static
+    {
+        return $this->state(fn (array $attributes) => [
+            'question_type' => QuestionType::TrueFalse,
+            'response_config' => [
+                'correct_answer' => true,
+                'requires_justification' => false,
+            ],
+        ]);
+    }
+
+    public function calculation(): static
+    {
+        return $this->state(fn (array $attributes) => [
+            'question_type' => QuestionType::Calculation,
+            'response_config' => [
+                'answer' => '42',
+                'unit' => 'cm',
+                'tolerance' => 0.1,
+            ],
         ]);
     }
 
@@ -71,20 +103,6 @@ class QuestionFactory extends Factory
             'question_type' => QuestionType::Group,
             'marks' => null,
             'response_config' => null,
-        ]);
-    }
-
-    public function withResponseConfig(): static
-    {
-        return $this->state(fn (array $attributes) => [
-            'response_config' => [
-                'options' => [
-                    ['label' => 'A', 'content' => fake()->sentence(), 'is_correct' => true],
-                    ['label' => 'B', 'content' => fake()->sentence(), 'is_correct' => false],
-                    ['label' => 'C', 'content' => fake()->sentence(), 'is_correct' => false],
-                    ['label' => 'D', 'content' => fake()->sentence(), 'is_correct' => false],
-                ],
-            ],
         ]);
     }
 }

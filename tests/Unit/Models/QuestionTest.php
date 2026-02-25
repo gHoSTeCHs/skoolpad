@@ -42,8 +42,7 @@ test('search scope uses full-text search', function () {
 test('renamed relationships work', function () {
     $question = Question::factory()->create();
 
-    expect($question->options())->toBeInstanceOf(Illuminate\Database\Eloquent\Relations\HasMany::class)
-        ->and($question->answers())->toBeInstanceOf(Illuminate\Database\Eloquent\Relations\HasMany::class)
+    expect($question->answers())->toBeInstanceOf(Illuminate\Database\Eloquent\Relations\HasMany::class)
         ->and($question->topicLinks())->toBeInstanceOf(Illuminate\Database\Eloquent\Relations\HasMany::class);
 });
 

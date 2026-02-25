@@ -22,7 +22,6 @@ use App\Models\Institution;
 use App\Models\InstitutionCourse;
 use App\Models\Question;
 use App\Models\QuestionAnswer;
-use App\Models\QuestionOption;
 use App\Models\QuestionTopicLink;
 use Illuminate\Support\Str;
 
@@ -357,7 +356,7 @@ class ContentImportService
                 ]);
 
                 if ($row['question_type'] === 'mcq') {
-                    $this->createMcqOptions($question, $row);
+                    $question->update(['response_config' => $this->buildMcqResponseConfig($row)]);
                 }
 
                 QuestionTopicLink::create([
@@ -404,11 +403,16 @@ class ContentImportService
         );
     }
 
-    private function createMcqOptions(Question $question, array $row): void
+    /**
+     * @param  array<string, string>  $row
+     * @return array{options: array<int, array{label: string, text: string, is_correct: bool}>}
+     */
+    private function buildMcqResponseConfig(array $row): array
     {
         $labels = ['A', 'B', 'C', 'D', 'E'];
         $columns = ['option_a', 'option_b', 'option_c', 'option_d', 'option_e'];
         $correctOption = strtoupper($row['correct_option'] ?? '');
+        $options = [];
 
         foreach ($labels as $i => $label) {
             $column = $columns[$i];
@@ -416,14 +420,14 @@ class ContentImportService
                 continue;
             }
 
-            QuestionOption::create([
-                'question_id' => $question->id,
+            $options[] = [
                 'label' => $label,
-                'content' => $row[$column],
+                'text' => $row[$column],
                 'is_correct' => $label === $correctOption,
-                'sort_order' => $i + 1,
-            ]);
+            ];
         }
+
+        return ['options' => $options];
     }
 
     /**

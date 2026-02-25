@@ -100,15 +100,12 @@ class QuestionController extends Controller
         $data = $request->safe()->only([
             'institution_course_id', 'question_type', 'content',
             'year', 'semester', 'marks', 'difficulty_level', 'source', 'status',
+            'response_config',
         ]);
 
         $data['created_by'] = $request->user()->id;
 
         $question = Question::create($data);
-
-        if ($data['question_type'] === 'mcq') {
-            $this->syncOptions($question, $request->validated('options'));
-        }
 
         $this->syncTopicLinks($question, $request->validated('topic_ids'), $request->validated('primary_topic_id'));
 
@@ -120,7 +117,6 @@ class QuestionController extends Controller
         $question->load([
             'institutionCourse:id,institution_id,course_code',
             'institutionCourse.institution:id,name,abbreviation',
-            'options',
             'topicLinks.canonicalTopic:id,title',
         ]);
 
@@ -137,13 +133,7 @@ class QuestionController extends Controller
                 'difficulty_level' => $question->difficulty_level,
                 'source' => $question->source,
                 'status' => $question->status,
-                'options' => $question->options->map(fn ($opt) => [
-                    'id' => $opt->id,
-                    'label' => $opt->label,
-                    'content' => $opt->content,
-                    'is_correct' => $opt->is_correct,
-                    'sort_order' => $opt->sort_order,
-                ])->values(),
+                'response_config' => $question->response_config,
                 'topic_links' => $question->topicLinks->map(fn ($link) => [
                     'id' => $link->canonical_topic_id,
                     'title' => $link->canonicalTopic->title,
@@ -169,10 +159,8 @@ class QuestionController extends Controller
         $data = $request->safe()->only([
             'institution_course_id', 'question_type', 'content',
             'year', 'semester', 'marks', 'difficulty_level', 'source', 'status',
+            'response_config',
         ]);
-
-        $oldType = $question->question_type->value;
-        $newType = $data['question_type'];
 
         if ($data['status'] === QuestionStatus::Published->value && $question->published_at === null) {
             $data['published_at'] = now();
@@ -181,32 +169,9 @@ class QuestionController extends Controller
 
         $question->update($data);
 
-        if ($newType === 'mcq') {
-            $this->syncOptions($question, $request->validated('options'));
-        } elseif ($oldType === 'mcq' && $newType !== 'mcq') {
-            $question->options()->delete();
-        }
-
         $this->syncTopicLinks($question, $request->validated('topic_ids'), $request->validated('primary_topic_id'));
 
         return to_route('admin.questions.edit', $question)->with('success', 'Question updated.');
-    }
-
-    /** @param array<int, array<string, mixed>> $options */
-    private function syncOptions(Question $question, array $options): void
-    {
-        $question->options()->delete();
-
-        $labels = ['A', 'B', 'C', 'D', 'E'];
-
-        foreach ($options as $index => $option) {
-            $question->options()->create([
-                'label' => $labels[$index] ?? $labels[0],
-                'content' => $option['content'],
-                'is_correct' => (bool) $option['is_correct'],
-                'sort_order' => $index + 1,
-            ]);
-        }
     }
 
     /** @param array<int, string> $topicIds */

@@ -17,7 +17,7 @@ class PracticeAnswer extends Model
     protected $fillable = [
         'practice_session_id',
         'question_id',
-        'selected_option_id',
+        'selected_option_label',
         'text_answer',
         'is_correct',
         'time_spent_seconds',
@@ -42,10 +42,5 @@ class PracticeAnswer extends Model
     public function question(): BelongsTo
     {
         return $this->belongsTo(Question::class);
-    }
-
-    public function selectedOption(): BelongsTo
-    {
-        return $this->belongsTo(QuestionOption::class, 'selected_option_id');
     }
 }

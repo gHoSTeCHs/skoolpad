@@ -17,7 +17,7 @@ class PracticeAnswerFactory extends Factory
         return [
             'practice_session_id' => PracticeSession::factory(),
             'question_id' => Question::factory(),
-            'selected_option_id' => null,
+            'selected_option_label' => null,
             'text_answer' => null,
             'is_correct' => fake()->boolean(),
             'time_spent_seconds' => fake()->numberBetween(10, 300),
@@ -31,7 +31,7 @@ class PracticeAnswerFactory extends Factory
         return $this->state(fn (array $attributes) => [
             'was_skipped' => true,
             'is_correct' => null,
-            'selected_option_id' => null,
+            'selected_option_label' => null,
             'time_spent_seconds' => 0,
         ]);
     }

@@ -44,7 +44,6 @@ use App\Models\LevelSubject;
 use App\Models\PlatformSetting;
 use App\Models\Question;
 use App\Models\QuestionAnswer;
-use App\Models\QuestionOption;
 use App\Models\QuestionTopicLink;
 use App\Models\SchemeOfWorkItem;
 use App\Models\Stream;
@@ -888,6 +887,14 @@ class DatabaseSeeder extends Seeder
         ];
 
         foreach ($questions as $qData) {
+            $responseConfig = ! empty($qData['options'])
+                ? ['options' => array_map(fn ($opt) => [
+                    'label' => $opt['label'],
+                    'text' => $opt['content'],
+                    'is_correct' => $opt['is_correct'],
+                ], $qData['options'])]
+                : null;
+
             $question = Question::create([
                 'institution_course_id' => $qData['course']->id,
                 'question_type' => $qData['type'],
@@ -896,22 +903,13 @@ class DatabaseSeeder extends Seeder
                 'semester' => $qData['semester'],
                 'marks' => $qData['marks'],
                 'difficulty_level' => $qData['difficulty'],
+                'response_config' => $responseConfig,
                 'source' => QuestionSource::Manual,
                 'status' => $qData['status'],
                 'created_by' => $admin->id,
                 'reviewed_by' => $qData['status'] === QuestionStatus::Published ? $admin->id : null,
                 'published_at' => $qData['status'] === QuestionStatus::Published ? now() : null,
             ]);
-
-            foreach ($qData['options'] as $sortOrder => $option) {
-                QuestionOption::create([
-                    'question_id' => $question->id,
-                    'label' => $option['label'],
-                    'content' => $option['content'],
-                    'is_correct' => $option['is_correct'],
-                    'sort_order' => $sortOrder + 1,
-                ]);
-            }
 
             QuestionTopicLink::create([
                 'question_id' => $question->id,

@@ -19,7 +19,6 @@ test('all expected tables exist after migration', function () {
         'course_topic_mappings',
         'questions',
         'question_topic_links',
-        'question_options',
         'question_answers',
         'practice_sessions',
         'practice_answers',

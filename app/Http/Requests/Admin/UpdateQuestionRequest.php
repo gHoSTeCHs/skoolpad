@@ -30,9 +30,7 @@ class UpdateQuestionRequest extends FormRequest
             'difficulty_level' => ['nullable', 'string', Rule::in(QuestionDifficulty::values())],
             'source' => ['required', 'string', Rule::in(QuestionSource::values())],
             'status' => ['required', 'string', Rule::in(QuestionStatus::values())],
-            'options' => ['required_if:question_type,mcq', 'array', 'min:2', 'max:5'],
-            'options.*.content' => ['required_with:options', 'string'],
-            'options.*.is_correct' => ['required_with:options', 'boolean'],
+            'response_config' => ['nullable', 'array'],
             'topic_ids' => ['required', 'array', 'min:1'],
             'topic_ids.*' => ['required', 'string', 'distinct', 'exists:canonical_topics,id'],
             'primary_topic_id' => ['required', 'string', 'exists:canonical_topics,id'],
@@ -49,16 +47,6 @@ class UpdateQuestionRequest extends FormRequest
                     $user = $this->user();
                     if (! $user->role->hasPermission('publish_content')) {
                         $validator->errors()->add('status', 'Only users with publish permission can publish questions.');
-                    }
-                }
-
-                if ($this->input('question_type') === 'mcq' && is_array($this->input('options'))) {
-                    $correctCount = collect($this->input('options'))
-                        ->filter(fn ($opt) => ! empty($opt['is_correct']))
-                        ->count();
-
-                    if ($correctCount !== 1) {
-                        $validator->errors()->add('options', 'Exactly one option must be marked as correct.');
                     }
                 }
 

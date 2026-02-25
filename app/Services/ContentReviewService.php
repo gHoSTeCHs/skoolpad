@@ -68,10 +68,14 @@ class ContentReviewService
         }
 
         return DB::transaction(function () use ($submission, $questions, $reviewer) {
-            $labels = ['A', 'B', 'C', 'D', 'E'];
             $createdIds = [];
 
             foreach ($questions as $qData) {
+                $responseConfig = null;
+                if ($qData['question_type'] === 'mcq' && ! empty($qData['options'])) {
+                    $responseConfig = $this->buildMcqResponseConfig($qData['options']);
+                }
+
                 $question = Question::create([
                     'institution_course_id' => $qData['institution_course_id'],
                     'question_type' => $qData['question_type'],
@@ -79,21 +83,11 @@ class ContentReviewService
                     'year' => $qData['year'] ?? null,
                     'semester' => $qData['semester'] ?? null,
                     'difficulty_level' => $qData['difficulty_level'] ?? null,
+                    'response_config' => $responseConfig,
                     'source' => QuestionSource::Crowdsourced,
                     'status' => QuestionStatus::Draft,
                     'created_by' => $reviewer->id,
                 ]);
-
-                if ($qData['question_type'] === 'mcq' && ! empty($qData['options'])) {
-                    foreach ($qData['options'] as $index => $option) {
-                        $question->options()->create([
-                            'label' => $labels[$index] ?? $labels[0],
-                            'content' => $option['content'],
-                            'is_correct' => (bool) $option['is_correct'],
-                            'sort_order' => $index + 1,
-                        ]);
-                    }
-                }
 
                 if (! empty($qData['topic_id'])) {
                     $question->topicLinks()->create([
@@ -125,28 +119,22 @@ class ContentReviewService
             return;
         }
 
+        $responseConfig = null;
+        if ($content['question_type'] === 'mcq' && ! empty($content['options'])) {
+            $responseConfig = $this->buildMcqResponseConfig($content['options']);
+        }
+
         $question = Question::create([
             'institution_course_id' => $submission->institution_course_id,
             'question_type' => $content['question_type'],
             'content' => $content['content'],
             'year' => $submission->exam_year,
             'semester' => $submission->exam_semester?->value,
+            'response_config' => $responseConfig,
             'source' => QuestionSource::Crowdsourced,
             'status' => QuestionStatus::Draft,
             'created_by' => $submission->submitted_by,
         ]);
-
-        if ($content['question_type'] === 'mcq' && ! empty($content['options'])) {
-            $labels = ['A', 'B', 'C', 'D', 'E'];
-            foreach ($content['options'] as $index => $option) {
-                $question->options()->create([
-                    'label' => $labels[$index] ?? $labels[0],
-                    'content' => $option['content'],
-                    'is_correct' => (bool) ($option['is_correct'] ?? false),
-                    'sort_order' => $index + 1,
-                ]);
-            }
-        }
 
         if (! empty($content['topic_id'])) {
             $question->topicLinks()->create([
@@ -154,5 +142,22 @@ class ContentReviewService
                 'is_primary' => true,
             ]);
         }
+    }
+
+    /**
+     * @param  array<int, array{content: string, is_correct: bool}>  $options
+     * @return array{options: array<int, array{label: string, text: string, is_correct: bool}>}
+     */
+    private function buildMcqResponseConfig(array $options): array
+    {
+        $labels = ['A', 'B', 'C', 'D', 'E'];
+
+        return [
+            'options' => array_values(array_map(fn ($option, $index) => [
+                'label' => $labels[$index] ?? $labels[0],
+                'text' => $option['content'],
+                'is_correct' => (bool) ($option['is_correct'] ?? false),
+            ], $options, array_keys($options))),
+        ];
     }
 }

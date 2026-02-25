@@ -188,11 +188,12 @@ test('question depth level check constraint prevents values over 3', function ()
     expect(fn () => Question::factory()->create(['depth_level' => 4]))->toThrow(\Illuminate\Database\QueryException::class);
 });
 
-test('question response config stores options as json', function () {
-    $question = Question::factory()->withResponseConfig()->create();
+test('question response_config is correctly cast to array', function () {
+    $question = Question::factory()->create();
 
     expect($question->response_config)->toBeArray()
-        ->and($question->response_config['options'])->toHaveCount(4);
+        ->and($question->response_config['options'])->toHaveCount(4)
+        ->and($question->response_config['options'][0])->toHaveKeys(['label', 'text', 'is_correct']);
 });
 
 test('question group type has null marks', function () {

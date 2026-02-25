@@ -109,11 +109,6 @@ class Question extends Model
         return $this->belongsTo(User::class, 'reviewed_by');
     }
 
-    public function options(): HasMany
-    {
-        return $this->hasMany(QuestionOption::class);
-    }
-
     public function answers(): HasMany
     {
         return $this->hasMany(QuestionAnswer::class);
