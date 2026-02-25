@@ -22,6 +22,8 @@ use App\Http\Controllers\Admin\FacultyController;
 use App\Http\Controllers\Admin\GradingScaleController;
 use App\Http\Controllers\Admin\InstitutionController;
 use App\Http\Controllers\Admin\QuestionController;
+use App\Http\Controllers\Admin\QuestionPaperController;
+use App\Http\Controllers\Admin\QuestionSectionController;
 use App\Http\Controllers\Admin\ReviewQueueController;
 use App\Http\Controllers\Admin\SchemeOfWorkController;
 use App\Http\Controllers\Admin\SettingsController;
@@ -83,6 +85,18 @@ Route::middleware(['auth', 'verified', 'staff'])->prefix('admin')->name('admin.'
     Route::put('topics/{topic}', [CanonicalTopicController::class, 'update'])->name('topics.update');
     Route::get('topics/{topic}/preview', [CanonicalTopicController::class, 'preview'])->name('topics.preview');
     Route::post('topics/{topic}/toggle-publish', [CanonicalTopicController::class, 'togglePublish'])->name('topics.togglePublish');
+    Route::get('question-papers', [QuestionPaperController::class, 'index'])->name('question-papers.index');
+    Route::get('question-papers/create', [QuestionPaperController::class, 'create'])->name('question-papers.create');
+    Route::post('question-papers', [QuestionPaperController::class, 'store'])->name('question-papers.store');
+    Route::get('question-papers/{questionPaper}/build', [QuestionPaperController::class, 'build'])->name('question-papers.build');
+    Route::put('question-papers/{questionPaper}', [QuestionPaperController::class, 'update'])->name('question-papers.update');
+    Route::delete('question-papers/{questionPaper}', [QuestionPaperController::class, 'destroy'])->name('question-papers.destroy');
+
+    Route::post('question-papers/{questionPaper}/sections', [QuestionSectionController::class, 'store'])->name('question-papers.sections.store');
+    Route::put('question-papers/{questionPaper}/sections/{questionSection}', [QuestionSectionController::class, 'update'])->name('question-papers.sections.update');
+    Route::delete('question-papers/{questionPaper}/sections/{questionSection}', [QuestionSectionController::class, 'destroy'])->name('question-papers.sections.destroy');
+    Route::post('question-papers/{questionPaper}/sections/reorder', [QuestionSectionController::class, 'reorder'])->name('question-papers.sections.reorder');
+
     Route::get('questions', [QuestionController::class, 'index'])->name('questions.index');
     Route::get('questions/create', [QuestionController::class, 'create'])->name('questions.create');
     Route::post('questions', [QuestionController::class, 'store'])->name('questions.store');

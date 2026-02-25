@@ -12,13 +12,11 @@ return new class extends Migration
             $table->uuid('id')->primary();
             $table->foreignUuid('question_paper_id')->constrained()->cascadeOnDelete();
             $table->string('label');
-            $table->string('instruction');
-            $table->integer('marks');
+            $table->string('instruction')->nullable();
+            $table->integer('marks')->nullable();
             $table->integer('required_count')->nullable();
-            $table->integer('sort_order');
+            $table->integer('sort_order')->default(0);
             $table->timestamps();
-
-            $table->unique(['question_paper_id', 'sort_order']);
         });
     }
 

@@ -58,14 +58,12 @@ test('question section belongs to paper', function () {
         ->and($section->sort_order)->toBeInt();
 });
 
-test('question section unique sort order per paper', function () {
+test('question section allows duplicate sort order for reordering', function () {
     $paper = QuestionPaper::factory()->create();
     QuestionSection::factory()->create(['question_paper_id' => $paper->id, 'sort_order' => 1]);
+    $second = QuestionSection::factory()->create(['question_paper_id' => $paper->id, 'sort_order' => 1]);
 
-    expect(fn () => QuestionSection::factory()->create([
-        'question_paper_id' => $paper->id,
-        'sort_order' => 1,
-    ]))->toThrow(\Illuminate\Database\UniqueConstraintViolationException::class);
+    expect($second)->toBeInstanceOf(QuestionSection::class);
 });
 
 test('question section with required count', function () {
