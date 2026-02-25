@@ -23,6 +23,7 @@ use App\Http\Controllers\Admin\GradingScaleController;
 use App\Http\Controllers\Admin\InstitutionController;
 use App\Http\Controllers\Admin\QuestionController;
 use App\Http\Controllers\Admin\ReviewQueueController;
+use App\Http\Controllers\Admin\SchemeOfWorkController;
 use App\Http\Controllers\Admin\SettingsController;
 use App\Http\Controllers\Admin\StreamController;
 use App\Http\Controllers\Admin\SubscriptionPlanController;
@@ -107,6 +108,10 @@ Route::middleware(['auth', 'verified', 'staff'])->prefix('admin')->name('admin.'
     Route::put('blocks/{block}', [ContentBlockController::class, 'update'])->name('content-blocks.update');
     Route::delete('blocks/{block}', [ContentBlockController::class, 'destroy'])->name('content-blocks.destroy');
     Route::put('topics/{topic}/blocks/reorder', [ContentBlockController::class, 'reorder'])->name('content-blocks.reorder');
+
+    Route::get('scheme-of-work', [SchemeOfWorkController::class, 'index'])->name('scheme-of-work.index');
+    Route::post('scheme-of-work/load', [SchemeOfWorkController::class, 'load'])->name('scheme-of-work.load');
+    Route::put('scheme-of-work', [SchemeOfWorkController::class, 'update'])->name('scheme-of-work.update');
 
     Route::get('api/institutions/{institution}/structure', function (Institution $institution) {
         return response()->json([

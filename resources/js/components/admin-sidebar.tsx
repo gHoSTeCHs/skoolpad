@@ -2,6 +2,7 @@ import { Link } from '@inertiajs/react';
 import {
     BookOpen,
     Building2,
+    CalendarDays,
     ClipboardList,
     Globe,
     GraduationCap,
@@ -23,6 +24,7 @@ import ExamTypeController from '@/actions/App/Http/Controllers/Admin/ExamTypeCon
 import GradingScaleController from '@/actions/App/Http/Controllers/Admin/GradingScaleController';
 import InstitutionController from '@/actions/App/Http/Controllers/Admin/InstitutionController';
 import QuestionController from '@/actions/App/Http/Controllers/Admin/QuestionController';
+import SchemeOfWorkController from '@/actions/App/Http/Controllers/Admin/SchemeOfWorkController';
 import SettingsController from '@/actions/App/Http/Controllers/Admin/SettingsController';
 import UserController from '@/actions/App/Http/Controllers/Admin/UserController';
 import { NavMain } from '@/components/nav-main';
@@ -52,6 +54,7 @@ const navGroups: NavGroup[] = [
             { title: 'Canonical Topics', href: CanonicalTopicController.index.url(), icon: BookOpen },
             { title: 'Questions', href: QuestionController.index.url(), icon: MessageSquareMore },
             { title: 'Courses', href: CourseController.index.url(), icon: GraduationCap },
+            { title: 'Scheme of Work', href: SchemeOfWorkController.index.url(), icon: CalendarDays },
             { title: 'Review Queue', href: '/admin/review-queue', icon: ListChecks },
             { title: 'Bulk Import', href: BulkImportController.index.url(), icon: Upload },
         ],
