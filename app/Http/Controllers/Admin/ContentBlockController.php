@@ -12,6 +12,7 @@ use App\Models\CanonicalTopic;
 use App\Models\ContentBlock;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Inertia\Inertia;
 use Inertia\Response;
 
@@ -88,7 +89,14 @@ class ContentBlockController extends Controller
             }
         }
 
-        $this->recalculatePaths($topicId, $parentId);
+        DB::transaction(function () use ($topicId, $parentId) {
+            ContentBlock::where('canonical_topic_id', $topicId)
+                ->where('parent_block_id', $parentId)
+                ->get()
+                ->each(fn (ContentBlock $b) => $b->updateQuietly(['path' => "tmp_{$b->id}"]));
+
+            $this->recalculatePaths($topicId, $parentId);
+        });
 
         return back()->with('success', 'Block deleted.');
     }
@@ -173,6 +181,12 @@ class ContentBlockController extends Controller
 
     private function recalculateAllPaths(CanonicalTopic $topic): void
     {
-        $this->recalculatePaths($topic->id, null);
+        DB::transaction(function () use ($topic) {
+            ContentBlock::where('canonical_topic_id', $topic->id)
+                ->get()
+                ->each(fn (ContentBlock $block) => $block->updateQuietly(['path' => "tmp_{$block->id}"]));
+
+            $this->recalculatePaths($topic->id, null);
+        });
     }
 }

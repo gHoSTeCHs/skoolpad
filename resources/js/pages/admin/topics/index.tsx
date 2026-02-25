@@ -1,6 +1,7 @@
 import { Head, Link, router } from '@inertiajs/react';
-import { BookOpen, Eye, MoreHorizontal, Pencil } from 'lucide-react';
+import { BookOpen, Eye, MoreHorizontal, Pencil, TreePine } from 'lucide-react';
 import CanonicalTopicController from '@/actions/App/Http/Controllers/Admin/CanonicalTopicController';
+import ContentBlockController from '@/actions/App/Http/Controllers/Admin/ContentBlockController';
 import { type ColumnDef, DataTable } from '@/components/admin/data-table';
 import { PageHeader } from '@/components/admin/page-header';
 import { SearchInput } from '@/components/admin/search-input';
@@ -269,6 +270,16 @@ export default function AdminTopics({ topics, disciplines, filters }: Props) {
                                     >
                                         <Eye className="size-4" />
                                         Preview
+                                    </Link>
+                                </DropdownMenuItem>
+                                <DropdownMenuItem asChild>
+                                    <Link
+                                        href={ContentBlockController.index.url(
+                                            row.id,
+                                        )}
+                                    >
+                                        <TreePine className="size-4" />
+                                        Manage Blocks
                                     </Link>
                                 </DropdownMenuItem>
                                 <DropdownMenuItem
