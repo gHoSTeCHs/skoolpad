@@ -21,6 +21,7 @@ use App\Http\Controllers\Admin\ExamTypeController;
 use App\Http\Controllers\Admin\FacultyController;
 use App\Http\Controllers\Admin\GradingScaleController;
 use App\Http\Controllers\Admin\InstitutionController;
+use App\Http\Controllers\Admin\QuestionContextController;
 use App\Http\Controllers\Admin\QuestionController;
 use App\Http\Controllers\Admin\QuestionPaperController;
 use App\Http\Controllers\Admin\QuestionSectionController;
@@ -96,6 +97,12 @@ Route::middleware(['auth', 'verified', 'staff'])->prefix('admin')->name('admin.'
     Route::put('question-papers/{questionPaper}/sections/{questionSection}', [QuestionSectionController::class, 'update'])->name('question-papers.sections.update');
     Route::delete('question-papers/{questionPaper}/sections/{questionSection}', [QuestionSectionController::class, 'destroy'])->name('question-papers.sections.destroy');
     Route::post('question-papers/{questionPaper}/sections/reorder', [QuestionSectionController::class, 'reorder'])->name('question-papers.sections.reorder');
+
+    Route::post('question-papers/{questionPaper}/contexts', [QuestionContextController::class, 'store'])->name('question-papers.contexts.store');
+    Route::put('question-papers/{questionPaper}/contexts/{questionContext}', [QuestionContextController::class, 'update'])->name('question-papers.contexts.update');
+    Route::delete('question-papers/{questionPaper}/contexts/{questionContext}', [QuestionContextController::class, 'destroy'])->name('question-papers.contexts.destroy');
+    Route::post('questions/{question}/contexts/link', [QuestionContextController::class, 'link'])->name('questions.contexts.link');
+    Route::delete('questions/{question}/contexts/{questionContext}/unlink', [QuestionContextController::class, 'unlink'])->name('questions.contexts.unlink');
 
     Route::get('questions', [QuestionController::class, 'index'])->name('questions.index');
     Route::get('questions/create', [QuestionController::class, 'create'])->name('questions.create');
