@@ -5,6 +5,7 @@ namespace App\Models;
 use App\Enums\BlockDifficultyLevel;
 use App\Enums\BlockType;
 use App\Enums\BloomLevel;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
@@ -77,5 +78,10 @@ class ContentBlock extends Model
     public function questionBlockLinks(): HasMany
     {
         return $this->hasMany(QuestionBlockLink::class);
+    }
+
+    public function scopeSearch(Builder $query, string $term): Builder
+    {
+        return $query->where('title', 'ilike', "%{$term}%");
     }
 }

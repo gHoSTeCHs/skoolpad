@@ -213,3 +213,51 @@ export type LevelSubject = {
     curriculum_subject?: { id: string; name: string };
     stream?: { id: string; name: string };
 };
+
+export type ContentBlock = {
+    id: string;
+    canonical_topic_id: string;
+    parent_block_id: string | null;
+    title: string;
+    slug: string;
+    block_type: string;
+    path: string;
+    depth_level: number;
+    sort_order: number;
+    content: Record<string, unknown> | null;
+    estimated_read_time: number | null;
+    difficulty_level: string | null;
+    bloom_level: string | null;
+    is_container: boolean;
+    is_published: boolean;
+    created_at: string;
+    updated_at: string;
+    children?: ContentBlock[];
+    children_count?: number;
+};
+
+export type CourseBlockMapping = {
+    id: string;
+    institution_course_id: string | null;
+    curriculum_subject_level_id: string | null;
+    content_block_id: string;
+    teaching_depth: string;
+    is_core_block: boolean;
+    week_start: number | null;
+    week_end: number | null;
+    lecture_hours: number | null;
+    lab_hours: number | null;
+    content_block?: ContentBlock;
+};
+
+export type SchemeOfWorkItem = {
+    id: string;
+    curriculum_subject_level_id: string;
+    term: number;
+    week_number: number;
+    topic_label: string;
+    canonical_topic_id: string | null;
+    content_block_id: string | null;
+    canonical_topic?: { id: string; title: string };
+    content_block?: { id: string; title: string; path: string };
+};
