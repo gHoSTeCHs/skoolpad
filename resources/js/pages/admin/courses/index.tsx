@@ -1,6 +1,9 @@
 import { Head, Link } from '@inertiajs/react';
-import { GraduationCap, MoreHorizontal, Pencil } from 'lucide-react';
+import { Boxes, Building2, GitFork, GraduationCap, MoreHorizontal, Pencil } from 'lucide-react';
+import CourseBlockMappingController from '@/actions/App/Http/Controllers/Admin/CourseBlockMappingController';
 import CourseController from '@/actions/App/Http/Controllers/Admin/CourseController';
+import CourseDepartmentController from '@/actions/App/Http/Controllers/Admin/CourseDepartmentController';
+import CourseMappingController from '@/actions/App/Http/Controllers/Admin/CourseMappingController';
 import { type ColumnDef, DataTable } from '@/components/admin/data-table';
 import { PageHeader } from '@/components/admin/page-header';
 import { SearchInput } from '@/components/admin/search-input';
@@ -228,6 +231,24 @@ export default function AdminCourses({ courses, institutions, course_scopes, fil
                                     <Link href={CourseController.edit.url(row.id)}>
                                         <Pencil className="size-4" />
                                         Edit
+                                    </Link>
+                                </DropdownMenuItem>
+                                <DropdownMenuItem asChild>
+                                    <Link href={CourseMappingController.index.url(row.id)}>
+                                        <GitFork className="size-4" />
+                                        Topic Mappings
+                                    </Link>
+                                </DropdownMenuItem>
+                                <DropdownMenuItem asChild>
+                                    <Link href={CourseBlockMappingController.index.url(row.id)}>
+                                        <Boxes className="size-4" />
+                                        Block Mappings
+                                    </Link>
+                                </DropdownMenuItem>
+                                <DropdownMenuItem asChild>
+                                    <Link href={CourseDepartmentController.index.url(row.id)}>
+                                        <Building2 className="size-4" />
+                                        Department Offerings
                                     </Link>
                                 </DropdownMenuItem>
                             </DropdownMenuContent>

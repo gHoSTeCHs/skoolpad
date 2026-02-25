@@ -5,6 +5,7 @@ use App\Http\Controllers\Admin\AssessmentTypeController;
 use App\Http\Controllers\Admin\BulkImportController;
 use App\Http\Controllers\Admin\CanonicalTopicController;
 use App\Http\Controllers\Admin\ContentBlockController;
+use App\Http\Controllers\Admin\CourseBlockMappingController;
 use App\Http\Controllers\Admin\CourseController;
 use App\Http\Controllers\Admin\CourseDepartmentController;
 use App\Http\Controllers\Admin\CourseMappingController;
@@ -98,6 +99,8 @@ Route::middleware(['auth', 'verified', 'staff'])->prefix('admin')->name('admin.'
     Route::put('courses/{course}/departments', [CourseDepartmentController::class, 'update'])->name('courses.departments.update');
     Route::get('courses/{course}/mappings', [CourseMappingController::class, 'index'])->name('courses.mappings');
     Route::put('courses/{course}/mappings', [CourseMappingController::class, 'update'])->name('courses.mappings.update');
+    Route::get('courses/{course}/block-mappings', [CourseBlockMappingController::class, 'index'])->name('course-block-mappings.index');
+    Route::put('courses/{course}/block-mappings', [CourseBlockMappingController::class, 'update'])->name('course-block-mappings.update');
 
     Route::get('topics/{topic}/blocks', [ContentBlockController::class, 'index'])->name('content-blocks.index');
     Route::post('topics/{topic}/blocks', [ContentBlockController::class, 'store'])->name('content-blocks.store');
