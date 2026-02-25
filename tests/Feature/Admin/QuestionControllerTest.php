@@ -7,6 +7,8 @@ use App\Models\Discipline;
 use App\Models\Institution;
 use App\Models\InstitutionCourse;
 use App\Models\Question;
+use App\Models\QuestionPaper;
+use App\Models\QuestionSection;
 use App\Models\User;
 
 beforeEach(function () {
@@ -150,7 +152,7 @@ test('store validates required fields', function () {
         ->post(route('admin.questions.store'), [])
         ->assertSessionHasErrors([
             'institution_course_id', 'question_type', 'content',
-            'source', 'status', 'topic_ids', 'primary_topic_id',
+            'source', 'status',
         ]);
 });
 
@@ -269,4 +271,105 @@ test('non-staff users get 403', function () {
     $this->actingAs($user)
         ->get(route('admin.questions.index'))
         ->assertForbidden();
+});
+
+test('store creates paper-scoped question without institution_course_id', function () {
+    $paper = QuestionPaper::factory()->for($this->course)->create();
+    $section = QuestionSection::factory()->for($paper)->create();
+
+    $data = validQuestionData([
+        'institution_course_id' => null,
+        'question_paper_id' => $paper->id,
+        'question_section_id' => $section->id,
+        'topic_ids' => null,
+        'primary_topic_id' => null,
+    ]);
+
+    $this->actingAs($this->admin)
+        ->post(route('admin.questions.store'), $data)
+        ->assertRedirect()
+        ->assertSessionHas('success', 'Question created.');
+
+    $question = Question::first();
+    expect($question->question_paper_id)->toBe($paper->id)
+        ->and($question->question_section_id)->toBe($section->id)
+        ->and($question->institution_course_id)->toBeNull()
+        ->and($question->topicLinks)->toHaveCount(0);
+});
+
+test('store creates nested child question with depth_level', function () {
+    $parent = Question::factory()->for($this->course)->create([
+        'created_by' => $this->admin->id,
+        'depth_level' => 0,
+    ]);
+
+    $data = validQuestionData([
+        'parent_question_id' => $parent->id,
+        'question_type' => 'short_answer',
+        'response_config' => null,
+    ]);
+
+    $this->actingAs($this->admin)
+        ->post(route('admin.questions.store'), $data)
+        ->assertRedirect()
+        ->assertSessionHas('success', 'Question created.');
+
+    $child = Question::where('parent_question_id', $parent->id)->first();
+    expect($child)->not->toBeNull()
+        ->and($child->depth_level)->toBe(1);
+});
+
+test('store auto-increments sort_order within section', function () {
+    $paper = QuestionPaper::factory()->for($this->course)->create();
+    $section = QuestionSection::factory()->for($paper)->create();
+
+    $existing = Question::factory()->for($this->course)->create([
+        'question_section_id' => $section->id,
+        'sort_order' => 0,
+        'created_by' => $this->admin->id,
+    ]);
+
+    $data = validQuestionData([
+        'question_paper_id' => $paper->id,
+        'question_section_id' => $section->id,
+    ]);
+
+    $this->actingAs($this->admin)
+        ->post(route('admin.questions.store'), $data)
+        ->assertRedirect();
+
+    $newQuestion = Question::where('question_section_id', $section->id)
+        ->where('id', '!=', $existing->id)
+        ->first();
+    expect($newQuestion->sort_order)->toBe(1);
+});
+
+test('reorder updates question sort orders', function () {
+    $q1 = Question::factory()->for($this->course)->create(['sort_order' => 0, 'created_by' => $this->admin->id]);
+    $q2 = Question::factory()->for($this->course)->create(['sort_order' => 1, 'created_by' => $this->admin->id]);
+
+    $this->actingAs($this->admin)
+        ->postJson(route('admin.questions.reorder'), [
+            'questions' => [
+                ['id' => $q1->id, 'sort_order' => 1],
+                ['id' => $q2->id, 'sort_order' => 0],
+            ],
+        ])
+        ->assertOk()
+        ->assertJson(['message' => 'Questions reordered.']);
+
+    expect($q1->fresh()->sort_order)->toBe(1)
+        ->and($q2->fresh()->sort_order)->toBe(0);
+});
+
+test('store without institution_course_id or paper requires institution_course_id', function () {
+    $data = validQuestionData([
+        'institution_course_id' => null,
+        'question_paper_id' => null,
+        'exam_subject_id' => null,
+    ]);
+
+    $this->actingAs($this->admin)
+        ->post(route('admin.questions.store'), $data)
+        ->assertSessionHasErrors(['institution_course_id']);
 });

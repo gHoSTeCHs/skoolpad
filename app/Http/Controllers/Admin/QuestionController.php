@@ -12,6 +12,7 @@ use App\Http\Requests\Admin\StoreQuestionRequest;
 use App\Http\Requests\Admin\UpdateQuestionRequest;
 use App\Models\Institution;
 use App\Models\Question;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
@@ -98,16 +99,30 @@ class QuestionController extends Controller
     public function store(StoreQuestionRequest $request): RedirectResponse
     {
         $data = $request->safe()->only([
-            'institution_course_id', 'question_type', 'content',
-            'year', 'semester', 'marks', 'difficulty_level', 'source', 'status',
-            'response_config',
+            'institution_course_id', 'exam_subject_id', 'question_paper_id',
+            'question_section_id', 'parent_question_id', 'question_type',
+            'content', 'year', 'semester', 'marks', 'difficulty_level',
+            'bloom_level', 'source', 'status', 'response_config',
         ]);
 
         $data['created_by'] = $request->user()->id;
 
+        if (! empty($data['parent_question_id'])) {
+            $parent = Question::find($data['parent_question_id']);
+            $data['depth_level'] = $parent ? ($parent->depth_level ?? 0) + 1 : 0;
+        }
+
+        $data['sort_order'] = Question::where('question_section_id', $data['question_section_id'] ?? null)
+            ->where('parent_question_id', $data['parent_question_id'] ?? null)
+            ->count();
+
         $question = Question::create($data);
 
-        $this->syncTopicLinks($question, $request->validated('topic_ids'), $request->validated('primary_topic_id'));
+        $topicIds = $request->validated('topic_ids');
+        $primaryTopicId = $request->validated('primary_topic_id');
+        if (! empty($topicIds)) {
+            $this->syncTopicLinks($question, $topicIds, $primaryTopicId);
+        }
 
         return to_route('admin.questions.edit', $question)->with('success', 'Question created.');
     }
@@ -157,25 +172,45 @@ class QuestionController extends Controller
     public function update(UpdateQuestionRequest $request, Question $question): RedirectResponse
     {
         $data = $request->safe()->only([
-            'institution_course_id', 'question_type', 'content',
-            'year', 'semester', 'marks', 'difficulty_level', 'source', 'status',
-            'response_config',
+            'institution_course_id', 'exam_subject_id', 'question_paper_id',
+            'question_section_id', 'parent_question_id', 'question_type',
+            'content', 'year', 'semester', 'marks', 'difficulty_level',
+            'bloom_level', 'source', 'status', 'response_config',
         ]);
 
-        if ($data['status'] === QuestionStatus::Published->value && $question->published_at === null) {
+        if (isset($data['status']) && $data['status'] === QuestionStatus::Published->value && $question->published_at === null) {
             $data['published_at'] = now();
             $data['reviewed_by'] = $request->user()->id;
         }
 
         $question->update($data);
 
-        $this->syncTopicLinks($question, $request->validated('topic_ids'), $request->validated('primary_topic_id'));
+        $topicIds = $request->validated('topic_ids');
+        $primaryTopicId = $request->validated('primary_topic_id');
+        if (! empty($topicIds)) {
+            $this->syncTopicLinks($question, $topicIds, $primaryTopicId);
+        }
 
         return to_route('admin.questions.edit', $question)->with('success', 'Question updated.');
     }
 
+    public function reorder(Request $request): JsonResponse
+    {
+        $request->validate([
+            'questions' => ['required', 'array'],
+            'questions.*.id' => ['required', 'uuid', 'exists:questions,id'],
+            'questions.*.sort_order' => ['required', 'integer', 'min:0'],
+        ]);
+
+        foreach ($request->input('questions') as $item) {
+            Question::where('id', $item['id'])->update(['sort_order' => $item['sort_order']]);
+        }
+
+        return response()->json(['message' => 'Questions reordered.']);
+    }
+
     /** @param array<int, string> $topicIds */
-    private function syncTopicLinks(Question $question, array $topicIds, string $primaryTopicId): void
+    private function syncTopicLinks(Question $question, array $topicIds, ?string $primaryTopicId): void
     {
         $question->topicLinks()->delete();
 

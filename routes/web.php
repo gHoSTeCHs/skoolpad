@@ -109,6 +109,7 @@ Route::middleware(['auth', 'verified', 'staff'])->prefix('admin')->name('admin.'
     Route::post('questions', [QuestionController::class, 'store'])->name('questions.store');
     Route::get('questions/{question}/edit', [QuestionController::class, 'edit'])->name('questions.edit');
     Route::put('questions/{question}', [QuestionController::class, 'update'])->name('questions.update');
+    Route::post('questions/reorder', [QuestionController::class, 'reorder'])->name('questions.reorder');
     Route::get('questions/{question}/answers', [AnswerController::class, 'index'])->name('questions.answers');
     Route::post('questions/{question}/answers', [AnswerController::class, 'store'])->name('questions.answers.store');
     Route::put('questions/{question}/answers/{answer}', [AnswerController::class, 'update'])->name('questions.answers.update');
