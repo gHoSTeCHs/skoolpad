@@ -24,6 +24,7 @@ class UpdateQuestionPaperRequest extends FormRequest
             'total_marks' => ['nullable', 'integer', 'min:1'],
             'duration_minutes' => ['nullable', 'integer', 'min:1'],
             'instructions' => ['nullable', 'string'],
+            'is_published' => ['sometimes', 'boolean'],
         ];
     }
 }

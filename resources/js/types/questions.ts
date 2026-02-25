@@ -103,6 +103,13 @@ export interface QuestionPaper {
     is_published: boolean;
     sections: QuestionSection[];
     contexts: QuestionContextData[];
+    institution_course?: {
+        id: string;
+        course_code: string;
+        course_title: string;
+        institution?: { id: string; name: string; abbreviation: string };
+    };
+    assessment_type?: { id: string; name: string; slug?: string };
 }
 
 export interface QuestionSection {
@@ -141,6 +148,7 @@ export interface QuestionNode {
     bloom_level?: string;
     status: string;
     context_links?: { context_id: string; sort_order: number; label?: string }[];
+    question_context_links?: { question_context_id: string; sort_order: number; label?: string }[];
     children: QuestionNode[];
 }
 
