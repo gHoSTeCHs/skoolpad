@@ -1,27 +1,11 @@
 import { Head, Link, router, useForm } from '@inertiajs/react';
-import {
-    ArrowLeft,
-    BookMarked,
-    ChevronDown,
-    ChevronRight,
-    Code,
-    Dumbbell,
-    FileText,
-    FolderOpen,
-    GitCompare,
-    HelpCircle,
-    Image,
-    Lightbulb,
-    Loader2,
-    MoreHorizontal,
-    Plus,
-    TreePine,
-} from 'lucide-react';
+import { ArrowLeft, Loader2, MoreHorizontal, Plus, TreePine } from 'lucide-react';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import ContentBlockController from '@/actions/App/Http/Controllers/Admin/ContentBlockController';
 import CanonicalTopicController from '@/actions/App/Http/Controllers/Admin/CanonicalTopicController';
 import { TiptapEditor } from '@/components/shared/tiptap-editor';
-import { Badge } from '@/components/ui/badge';
+import { BlockTypeIcon, DifficultyBadge } from '@/components/skoolpad/block-tree';
+import SpBadge from '@/components/skoolpad/sp-badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import {
@@ -86,25 +70,6 @@ interface Props {
     bloomLevels: SelectOption[];
 }
 
-const BLOCK_TYPE_ICONS: Record<string, React.ElementType> = {
-    container: FolderOpen,
-    text: FileText,
-    code: Code,
-    diagram: Image,
-    example: Lightbulb,
-    exercise: Dumbbell,
-    quiz: HelpCircle,
-    reference: BookMarked,
-    comparison: GitCompare,
-};
-
-const DIFFICULTY_STYLES: Record<string, string> = {
-    beginner:
-        'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400 reader:bg-blue-900/30 reader:text-blue-400',
-    intermediate: 'bg-[var(--badge-reward-bg)] text-[var(--badge-reward-fg)]',
-    advanced: 'bg-[var(--badge-danger-bg)] text-[var(--badge-danger-fg)]',
-};
-
 const NONE_VALUE = '__none__';
 
 function findBlockById(blocks: BlockNode[], id: string): BlockNode | null {
@@ -126,6 +91,7 @@ interface TreeNodeProps {
     onTogglePublish: (id: string) => void;
     onDelete: (id: string) => void;
     defaultExpanded: boolean;
+    depth?: number;
 }
 
 function TreeNode({
@@ -136,9 +102,9 @@ function TreeNode({
     onTogglePublish,
     onDelete,
     defaultExpanded,
+    depth = 0,
 }: TreeNodeProps) {
     const [expanded, setExpanded] = useState(defaultExpanded);
-    const Icon = BLOCK_TYPE_ICONS[node.block_type] ?? FileText;
     const isSelected = selectedId === node.id;
     const hasChildren = node.children.length > 0;
 
@@ -146,68 +112,68 @@ function TreeNode({
         <div>
             <div
                 className={cn(
-                    'group flex items-center gap-2 rounded-lg border px-3 py-2 transition-colors cursor-pointer',
+                    'group flex cursor-pointer items-center gap-2 border-l-2 px-3 py-[6px] transition-all duration-150',
                     isSelected
                         ? 'border-primary bg-primary/5'
-                        : 'border-transparent hover:bg-muted/50',
+                        : 'border-transparent hover:bg-[var(--bg-raised)]',
                 )}
+                style={{ paddingLeft: `${depth * 20 + 12}px` }}
                 onClick={() => onSelect(node.id)}
             >
-                <button
-                    type="button"
-                    className={cn(
-                        'flex size-5 shrink-0 items-center justify-center rounded',
-                        hasChildren || node.is_container
-                            ? 'hover:bg-muted'
-                            : 'invisible',
-                    )}
-                    onClick={(e) => {
-                        e.stopPropagation();
-                        setExpanded(!expanded);
-                    }}
+                {hasChildren || node.is_container ? (
+                    <button
+                        type="button"
+                        className="shrink-0"
+                        onClick={(e) => {
+                            e.stopPropagation();
+                            setExpanded(!expanded);
+                        }}
+                    >
+                        <span
+                            className={cn(
+                                'inline-block text-[10px] text-muted-foreground transition-transform duration-150',
+                                expanded && 'rotate-90',
+                            )}
+                        >
+                            {'\u25B6'}
+                        </span>
+                    </button>
+                ) : (
+                    <span className="inline-block w-[10px]" />
+                )}
+
+                <BlockTypeIcon type={node.block_type} />
+
+                <span
+                    className="min-w-0 flex-1 truncate text-[13px] font-medium"
+                    style={{ fontFamily: 'var(--font-body)' }}
                 >
-                    {expanded ? (
-                        <ChevronDown className="size-3.5" />
-                    ) : (
-                        <ChevronRight className="size-3.5" />
+                    {node.path && (
+                        <span className="mr-1.5 text-muted-foreground">
+                            {node.path}
+                        </span>
                     )}
-                </button>
-
-                <Icon className="size-4 shrink-0 text-muted-foreground" />
-
-                <span className="mr-1 shrink-0 text-xs font-medium text-muted-foreground">
-                    {node.path}
-                </span>
-
-                <span className="min-w-0 flex-1 truncate text-sm font-medium">
                     {node.title}
                 </span>
 
                 {node.estimated_read_time && (
-                    <Badge variant="outline" className="shrink-0 text-[10px]">
-                        {node.estimated_read_time} min
-                    </Badge>
+                    <span
+                        className="shrink-0 text-[10px] text-muted-foreground"
+                        style={{ fontFamily: 'var(--font-body)' }}
+                    >
+                        {node.estimated_read_time}m
+                    </span>
                 )}
 
-                {node.difficulty_level && (
-                    <Badge
-                        variant="secondary"
-                        className={cn(
-                            'shrink-0 text-[10px]',
-                            DIFFICULTY_STYLES[node.difficulty_level] ?? '',
-                        )}
-                    >
-                        {node.difficulty_level}
-                    </Badge>
-                )}
+                <DifficultyBadge level={node.difficulty_level} />
 
                 {!node.is_published && (
-                    <Badge
-                        variant="secondary"
-                        className="shrink-0 bg-[var(--badge-neutral-bg)] text-[10px] text-[var(--badge-neutral-fg)]"
+                    <SpBadge
+                        variant="neutral"
+                        className="px-[6px] py-0 text-[9px]"
                     >
                         Draft
-                    </Badge>
+                    </SpBadge>
                 )}
 
                 <DropdownMenu>
@@ -244,7 +210,7 @@ function TreeNode({
             </div>
 
             {expanded && hasChildren && (
-                <div className="ml-6 mt-1 space-y-1 border-l pl-2">
+                <div>
                     {node.children.map((child) => (
                         <TreeNode
                             key={child.id}
@@ -255,6 +221,7 @@ function TreeNode({
                             onTogglePublish={onTogglePublish}
                             onDelete={onDelete}
                             defaultExpanded={false}
+                            depth={depth + 1}
                         />
                     ))}
                 </div>
@@ -541,15 +508,18 @@ function BlockDetailForm({
     return (
         <form onSubmit={handleSubmit} className="space-y-5">
             <div className="flex items-center justify-between">
-                <h3 className="font-display text-lg font-semibold">
-                    Edit Block
-                </h3>
-                <Badge
-                    variant="outline"
-                    className="text-xs text-muted-foreground"
-                >
+                <div className="flex items-center gap-2">
+                    <BlockTypeIcon type={block.block_type} />
+                    <h3
+                        className="font-display text-lg font-semibold"
+                        style={{ fontFamily: 'var(--font-display)' }}
+                    >
+                        Edit Block
+                    </h3>
+                </div>
+                <SpBadge variant="neutral" className="px-[6px] py-0 text-[10px]">
                     {block.path}
-                </Badge>
+                </SpBadge>
             </div>
 
             <FormField

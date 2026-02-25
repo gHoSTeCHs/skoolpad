@@ -4,6 +4,9 @@ namespace Database\Seeders;
 
 use App\Enums\AnswerDepthLevel;
 use App\Enums\BillingPeriod;
+use App\Enums\BlockDifficultyLevel;
+use App\Enums\BlockType;
+use App\Enums\BloomLevel;
 use App\Enums\ContentSubmissionStatus;
 use App\Enums\ContentSubmissionType;
 use App\Enums\CourseScope;
@@ -16,12 +19,15 @@ use App\Enums\QuestionStatus;
 use App\Enums\QuestionType;
 use App\Enums\ScaleType;
 use App\Enums\Semester;
+use App\Enums\TeachingDepth;
 use App\Enums\TopicDifficulty;
 use App\Enums\UserRole;
 use App\Models\AssessmentType;
 use App\Models\CanonicalTopic;
+use App\Models\ContentBlock;
 use App\Models\ContentSubmission;
 use App\Models\Country;
+use App\Models\CourseBlockMapping;
 use App\Models\CurriculumSubject;
 use App\Models\CurriculumTier;
 use App\Models\Department;
@@ -40,6 +46,7 @@ use App\Models\Question;
 use App\Models\QuestionAnswer;
 use App\Models\QuestionOption;
 use App\Models\QuestionTopicLink;
+use App\Models\SchemeOfWorkItem;
 use App\Models\Stream;
 use App\Models\StudentProfile;
 use App\Models\SubscriptionPlan;
@@ -583,6 +590,9 @@ class DatabaseSeeder extends Seeder
 
         $this->seedQuestions($admin, $mouau, $unn);
         $this->seedContentSubmissions($admin, $studentUser, $mouau);
+        $this->seedContentBlocks();
+        $this->seedCourseBlockMappings($mouau, $unn);
+        $this->seedSchemeOfWork($nerdc);
     }
 
     private function seedQuestions(User $admin, Institution $mouau, Institution $unn): void
@@ -1021,5 +1031,312 @@ class DatabaseSeeder extends Seeder
             'reviewer_notes' => 'This topic is already covered in the advanced data structures section.',
             'reviewed_at' => now()->subDay(),
         ]);
+    }
+
+    private function seedContentBlocks(): void
+    {
+        $tiptap = fn (string $text): array => [
+            'type' => 'doc',
+            'content' => [
+                ['type' => 'paragraph', 'content' => [['type' => 'text', 'text' => $text]]],
+            ],
+        ];
+
+        $algoTopic = CanonicalTopic::where('slug', 'introduction-to-algorithms')->first();
+        $dsTopic = CanonicalTopic::where('slug', 'data-structures-and-trees')->first();
+        $oopTopic = CanonicalTopic::where('slug', 'object-oriented-programming')->first();
+        $dbTopic = CanonicalTopic::where('slug', 'database-normalization')->first();
+
+        $createBlock = function (array $data) use ($tiptap): ContentBlock {
+            $isContainer = ($data['block_type'] ?? BlockType::Text) === BlockType::Container;
+
+            return ContentBlock::create([
+                'canonical_topic_id' => $data['topic_id'],
+                'parent_block_id' => $data['parent_id'] ?? null,
+                'title' => $data['title'],
+                'slug' => Str::slug($data['title']),
+                'block_type' => $data['block_type'] ?? BlockType::Text,
+                'path' => $data['path'],
+                'depth_level' => $data['depth'],
+                'sort_order' => $data['sort'],
+                'content' => $isContainer ? null : ($data['content'] ?? $tiptap($data['text'] ?? "Content for {$data['title']}.")),
+                'estimated_read_time' => $isContainer ? null : ($data['read_time'] ?? 5),
+                'difficulty_level' => $isContainer ? null : ($data['difficulty'] ?? BlockDifficultyLevel::Beginner),
+                'bloom_level' => $isContainer ? null : ($data['bloom'] ?? BloomLevel::Understand),
+                'is_container' => $isContainer,
+                'is_published' => $data['published'] ?? true,
+            ]);
+        };
+
+        $ch1 = $createBlock(['topic_id' => $algoTopic->id, 'title' => 'Introduction', 'block_type' => BlockType::Container, 'path' => '1', 'depth' => 0, 'sort' => 1]);
+        $createBlock(['topic_id' => $algoTopic->id, 'parent_id' => $ch1->id, 'title' => 'What Are Algorithms?', 'path' => '1.1', 'depth' => 1, 'sort' => 1, 'read_time' => 4, 'difficulty' => BlockDifficultyLevel::Beginner, 'bloom' => BloomLevel::Remember, 'text' => 'An algorithm is a step-by-step procedure for solving a problem or accomplishing a task. Algorithms are the foundation of all computer programs. They take input, process it through a series of well-defined steps, and produce output.']);
+        $createBlock(['topic_id' => $algoTopic->id, 'parent_id' => $ch1->id, 'title' => 'Why Study Algorithms?', 'path' => '1.2', 'depth' => 1, 'sort' => 2, 'read_time' => 3, 'difficulty' => BlockDifficultyLevel::Beginner, 'bloom' => BloomLevel::Understand, 'text' => 'Understanding algorithms helps you write efficient programs, solve complex problems systematically, and think computationally. Algorithm analysis lets you predict performance before implementation.']);
+
+        $ch2 = $createBlock(['topic_id' => $algoTopic->id, 'title' => 'Searching Algorithms', 'block_type' => BlockType::Container, 'path' => '2', 'depth' => 0, 'sort' => 2]);
+        $createBlock(['topic_id' => $algoTopic->id, 'parent_id' => $ch2->id, 'title' => 'Linear Search', 'path' => '2.1', 'depth' => 1, 'sort' => 1, 'read_time' => 5, 'difficulty' => BlockDifficultyLevel::Beginner, 'bloom' => BloomLevel::Apply, 'text' => 'Linear search examines each element sequentially from the beginning of a list until the target is found or the list is exhausted. Time complexity: O(n). Best for small or unsorted datasets.']);
+        $createBlock(['topic_id' => $algoTopic->id, 'parent_id' => $ch2->id, 'title' => 'Binary Search', 'path' => '2.2', 'depth' => 1, 'sort' => 2, 'read_time' => 8, 'difficulty' => BlockDifficultyLevel::Intermediate, 'bloom' => BloomLevel::Apply, 'text' => 'Binary search works by repeatedly dividing a sorted array in half. Compare the target with the middle element — if they are unequal, the half in which the target cannot lie is eliminated. Time complexity: O(log n).']);
+        $createBlock(['topic_id' => $algoTopic->id, 'parent_id' => $ch2->id, 'title' => 'Linear vs Binary Search', 'block_type' => BlockType::Comparison, 'path' => '2.3', 'depth' => 1, 'sort' => 3, 'read_time' => 4, 'difficulty' => BlockDifficultyLevel::Intermediate, 'bloom' => BloomLevel::Analyze, 'text' => 'Linear search is simpler and works on unsorted data (O(n)), while binary search is faster but requires sorted data (O(log n)). For 1 million elements, linear search may need 1M comparisons; binary search needs at most 20.']);
+
+        $ch3 = $createBlock(['topic_id' => $algoTopic->id, 'title' => 'Sorting Algorithms', 'block_type' => BlockType::Container, 'path' => '3', 'depth' => 0, 'sort' => 3]);
+        $createBlock(['topic_id' => $algoTopic->id, 'parent_id' => $ch3->id, 'title' => 'Bubble Sort', 'path' => '3.1', 'depth' => 1, 'sort' => 1, 'read_time' => 5, 'difficulty' => BlockDifficultyLevel::Beginner, 'bloom' => BloomLevel::Apply, 'text' => 'Bubble sort repeatedly steps through the list, compares adjacent elements, and swaps them if they are in the wrong order. Simple but inefficient — O(n²) in worst and average cases.']);
+        $createBlock(['topic_id' => $algoTopic->id, 'parent_id' => $ch3->id, 'title' => 'Merge Sort', 'block_type' => BlockType::Code, 'path' => '3.2', 'depth' => 1, 'sort' => 2, 'read_time' => 10, 'difficulty' => BlockDifficultyLevel::Intermediate, 'bloom' => BloomLevel::Apply, 'text' => 'Merge sort uses divide-and-conquer: split the array in half, recursively sort each half, then merge the sorted halves. Guaranteed O(n log n) time complexity. Requires O(n) extra space.']);
+        $createBlock(['topic_id' => $algoTopic->id, 'parent_id' => $ch3->id, 'title' => 'Quick Sort', 'block_type' => BlockType::Code, 'path' => '3.3', 'depth' => 1, 'sort' => 3, 'read_time' => 12, 'difficulty' => BlockDifficultyLevel::Advanced, 'bloom' => BloomLevel::Analyze, 'text' => 'Quick sort picks a pivot, partitions elements into those less than and greater than the pivot, then recursively sorts each partition. Average O(n log n), worst O(n²). In-place but not stable.']);
+        $createBlock(['topic_id' => $algoTopic->id, 'parent_id' => $ch3->id, 'title' => 'Sorting Practice', 'block_type' => BlockType::Exercise, 'path' => '3.4', 'depth' => 1, 'sort' => 4, 'read_time' => 15, 'difficulty' => BlockDifficultyLevel::Intermediate, 'bloom' => BloomLevel::Apply, 'text' => 'Trace through bubble sort and merge sort on the array [38, 27, 43, 3, 9, 82, 10]. Show each step. Then compare: which algorithm performed fewer comparisons?']);
+
+        $ch4 = $createBlock(['topic_id' => $algoTopic->id, 'title' => 'Complexity Analysis', 'block_type' => BlockType::Container, 'path' => '4', 'depth' => 0, 'sort' => 4]);
+        $createBlock(['topic_id' => $algoTopic->id, 'parent_id' => $ch4->id, 'title' => 'Big-O Notation', 'path' => '4.1', 'depth' => 1, 'sort' => 1, 'read_time' => 8, 'difficulty' => BlockDifficultyLevel::Intermediate, 'bloom' => BloomLevel::Understand, 'text' => 'Big-O notation describes the upper bound of an algorithm\'s growth rate. Common complexities: O(1) constant, O(log n) logarithmic, O(n) linear, O(n log n) linearithmic, O(n²) quadratic, O(2ⁿ) exponential.']);
+        $createBlock(['topic_id' => $algoTopic->id, 'parent_id' => $ch4->id, 'title' => 'Time vs Space Tradeoffs', 'block_type' => BlockType::Comparison, 'path' => '4.2', 'depth' => 1, 'sort' => 2, 'read_time' => 6, 'difficulty' => BlockDifficultyLevel::Advanced, 'bloom' => BloomLevel::Evaluate, 'text' => 'Often you can trade memory for speed. Hash tables use O(n) space for O(1) lookups. Merge sort uses O(n) extra space for guaranteed O(n log n) time. In-place algorithms save space but may be slower.']);
+        $createBlock(['topic_id' => $algoTopic->id, 'parent_id' => $ch4->id, 'title' => 'Complexity Quiz', 'block_type' => BlockType::Quiz, 'path' => '4.3', 'depth' => 1, 'sort' => 3, 'read_time' => 10, 'difficulty' => BlockDifficultyLevel::Intermediate, 'bloom' => BloomLevel::Evaluate, 'text' => 'Test your understanding: What is the time complexity of finding an element in a sorted array? What about inserting into a hash table? What is the space complexity of recursive fibonacci?']);
+
+        $ds1 = $createBlock(['topic_id' => $dsTopic->id, 'title' => 'Introduction to Data Structures', 'block_type' => BlockType::Container, 'path' => '1', 'depth' => 0, 'sort' => 1]);
+        $createBlock(['topic_id' => $dsTopic->id, 'parent_id' => $ds1->id, 'title' => 'What is a Data Structure?', 'path' => '1.1', 'depth' => 1, 'sort' => 1, 'read_time' => 4, 'difficulty' => BlockDifficultyLevel::Beginner, 'bloom' => BloomLevel::Remember, 'text' => 'A data structure is a way of organizing, managing, and storing data so that it can be accessed and modified efficiently. The choice of data structure affects the performance of algorithms.']);
+        $createBlock(['topic_id' => $dsTopic->id, 'parent_id' => $ds1->id, 'title' => 'Abstract Data Types', 'path' => '1.2', 'depth' => 1, 'sort' => 2, 'read_time' => 5, 'difficulty' => BlockDifficultyLevel::Beginner, 'bloom' => BloomLevel::Understand, 'text' => 'An ADT defines a data type by its behavior (operations) rather than its implementation. Examples: Stack (push, pop, peek), Queue (enqueue, dequeue), List (insert, delete, access).']);
+
+        $ds2 = $createBlock(['topic_id' => $dsTopic->id, 'title' => 'Linear Structures', 'block_type' => BlockType::Container, 'path' => '2', 'depth' => 0, 'sort' => 2]);
+        $createBlock(['topic_id' => $dsTopic->id, 'parent_id' => $ds2->id, 'title' => 'Arrays', 'path' => '2.1', 'depth' => 1, 'sort' => 1, 'read_time' => 6, 'difficulty' => BlockDifficultyLevel::Beginner, 'bloom' => BloomLevel::Apply, 'text' => 'Arrays store elements in contiguous memory locations, allowing O(1) random access by index. Fixed size in most languages. Insertion and deletion at arbitrary positions cost O(n).']);
+        $createBlock(['topic_id' => $dsTopic->id, 'parent_id' => $ds2->id, 'title' => 'Linked Lists', 'path' => '2.2', 'depth' => 1, 'sort' => 2, 'read_time' => 8, 'difficulty' => BlockDifficultyLevel::Intermediate, 'bloom' => BloomLevel::Apply, 'text' => 'A linked list is a sequence of nodes where each node contains data and a pointer to the next node. Supports efficient insertion/deletion at O(1) if you have the reference, but random access requires O(n) traversal.']);
+        $createBlock(['topic_id' => $dsTopic->id, 'parent_id' => $ds2->id, 'title' => 'Stacks and Queues', 'path' => '2.3', 'depth' => 1, 'sort' => 3, 'read_time' => 7, 'difficulty' => BlockDifficultyLevel::Beginner, 'bloom' => BloomLevel::Understand, 'text' => 'Stacks follow LIFO (Last In, First Out) — think of a stack of plates. Queues follow FIFO (First In, First Out) — think of a line at a bank. Both support O(1) insertion and removal from their respective ends.']);
+
+        $ds3 = $createBlock(['topic_id' => $dsTopic->id, 'title' => 'Trees', 'block_type' => BlockType::Container, 'path' => '3', 'depth' => 0, 'sort' => 3]);
+        $createBlock(['topic_id' => $dsTopic->id, 'parent_id' => $ds3->id, 'title' => 'Binary Trees', 'path' => '3.1', 'depth' => 1, 'sort' => 1, 'read_time' => 7, 'difficulty' => BlockDifficultyLevel::Intermediate, 'bloom' => BloomLevel::Understand, 'text' => 'A binary tree is a hierarchical data structure where each node has at most two children (left and right). Used in expression parsing, Huffman coding, and as the basis for more advanced tree structures.']);
+        $bst = $createBlock(['topic_id' => $dsTopic->id, 'parent_id' => $ds3->id, 'title' => 'Binary Search Trees', 'path' => '3.2', 'depth' => 1, 'sort' => 2, 'read_time' => 10, 'difficulty' => BlockDifficultyLevel::Intermediate, 'bloom' => BloomLevel::Apply, 'text' => 'A BST maintains the invariant: left child < parent < right child. This enables O(log n) search, insert, and delete on average. Degenerates to O(n) if the tree becomes unbalanced (e.g., sorted insertion).']);
+        $createBlock(['topic_id' => $dsTopic->id, 'parent_id' => $ds3->id, 'title' => 'AVL Trees', 'path' => '3.3', 'depth' => 1, 'sort' => 3, 'read_time' => 12, 'difficulty' => BlockDifficultyLevel::Advanced, 'bloom' => BloomLevel::Analyze, 'text' => 'AVL trees are self-balancing BSTs where the height difference between left and right subtrees is at most 1. Rotations (single and double) restore balance after insertions/deletions. Guarantees O(log n) for all operations.']);
+        $createBlock(['topic_id' => $dsTopic->id, 'parent_id' => $ds3->id, 'title' => 'Tree Traversal Algorithms', 'block_type' => BlockType::Code, 'path' => '3.4', 'depth' => 1, 'sort' => 4, 'read_time' => 8, 'difficulty' => BlockDifficultyLevel::Intermediate, 'bloom' => BloomLevel::Apply, 'text' => 'Three main traversal orders: In-order (Left, Root, Right) — gives sorted output for BSTs. Pre-order (Root, Left, Right) — useful for copying trees. Post-order (Left, Right, Root) — useful for deletion.']);
+
+        $oop1 = $createBlock(['topic_id' => $oopTopic->id, 'title' => 'OOP Fundamentals', 'block_type' => BlockType::Container, 'path' => '1', 'depth' => 0, 'sort' => 1]);
+        $createBlock(['topic_id' => $oopTopic->id, 'parent_id' => $oop1->id, 'title' => 'Classes and Objects', 'path' => '1.1', 'depth' => 1, 'sort' => 1, 'read_time' => 6, 'difficulty' => BlockDifficultyLevel::Beginner, 'bloom' => BloomLevel::Remember, 'text' => 'A class is a blueprint that defines properties (attributes) and behaviors (methods). An object is an instance of a class — a concrete entity created from the blueprint with specific attribute values.']);
+        $createBlock(['topic_id' => $oopTopic->id, 'parent_id' => $oop1->id, 'title' => 'Encapsulation', 'path' => '1.2', 'depth' => 1, 'sort' => 2, 'read_time' => 5, 'difficulty' => BlockDifficultyLevel::Beginner, 'bloom' => BloomLevel::Understand, 'text' => 'Encapsulation bundles data and methods that operate on it into a single unit (class), restricting direct access to internal state. Access modifiers (public, private, protected) control visibility.']);
+        $createBlock(['topic_id' => $oopTopic->id, 'parent_id' => $oop1->id, 'title' => 'Encapsulation Example', 'block_type' => BlockType::Example, 'path' => '1.3', 'depth' => 1, 'sort' => 3, 'read_time' => 4, 'difficulty' => BlockDifficultyLevel::Beginner, 'bloom' => BloomLevel::Apply, 'text' => 'A BankAccount class with a private balance field and public deposit()/withdraw() methods. External code cannot directly modify the balance — it must go through the methods which enforce validation rules.']);
+
+        $oop2 = $createBlock(['topic_id' => $oopTopic->id, 'title' => 'Inheritance and Polymorphism', 'block_type' => BlockType::Container, 'path' => '2', 'depth' => 0, 'sort' => 2]);
+        $createBlock(['topic_id' => $oopTopic->id, 'parent_id' => $oop2->id, 'title' => 'Single Inheritance', 'path' => '2.1', 'depth' => 1, 'sort' => 1, 'read_time' => 6, 'difficulty' => BlockDifficultyLevel::Intermediate, 'bloom' => BloomLevel::Understand, 'text' => 'Inheritance allows a child class to inherit properties and methods from a parent class. This promotes code reuse — define common behavior once in the parent, specialize in the child.']);
+        $createBlock(['topic_id' => $oopTopic->id, 'parent_id' => $oop2->id, 'title' => 'Polymorphism', 'path' => '2.2', 'depth' => 1, 'sort' => 2, 'read_time' => 8, 'difficulty' => BlockDifficultyLevel::Intermediate, 'bloom' => BloomLevel::Apply, 'text' => 'Polymorphism means "many forms." A parent class reference can point to child class objects. Method overriding lets each child provide its own implementation. This enables writing flexible, extensible code.']);
+        $createBlock(['topic_id' => $oopTopic->id, 'parent_id' => $oop2->id, 'title' => 'OOP vs Procedural', 'block_type' => BlockType::Comparison, 'path' => '2.3', 'depth' => 1, 'sort' => 3, 'read_time' => 5, 'difficulty' => BlockDifficultyLevel::Intermediate, 'bloom' => BloomLevel::Analyze, 'text' => 'Procedural programming organizes code into functions that operate on data. OOP organizes code into objects that bundle data and behavior. OOP excels at modeling real-world entities and managing complexity in large systems.']);
+
+        $oop3 = $createBlock(['topic_id' => $oopTopic->id, 'title' => 'Design Patterns', 'block_type' => BlockType::Container, 'path' => '3', 'depth' => 0, 'sort' => 3, 'published' => false]);
+        $createBlock(['topic_id' => $oopTopic->id, 'parent_id' => $oop3->id, 'title' => 'Factory Pattern', 'path' => '3.1', 'depth' => 1, 'sort' => 1, 'read_time' => 7, 'difficulty' => BlockDifficultyLevel::Advanced, 'bloom' => BloomLevel::Apply, 'text' => 'The Factory pattern delegates object creation to a factory method, decoupling the client from concrete classes. Useful when the exact class to instantiate depends on runtime conditions.', 'published' => false]);
+        $createBlock(['topic_id' => $oopTopic->id, 'parent_id' => $oop3->id, 'title' => 'Observer Pattern', 'path' => '3.2', 'depth' => 1, 'sort' => 2, 'read_time' => 8, 'difficulty' => BlockDifficultyLevel::Advanced, 'bloom' => BloomLevel::Analyze, 'text' => 'The Observer pattern defines a one-to-many dependency — when the subject changes state, all registered observers are notified automatically. Used in event systems, pub/sub, and reactive programming.', 'published' => false]);
+
+        $db1 = $createBlock(['topic_id' => $dbTopic->id, 'title' => 'Normalization Fundamentals', 'block_type' => BlockType::Container, 'path' => '1', 'depth' => 0, 'sort' => 1]);
+        $createBlock(['topic_id' => $dbTopic->id, 'parent_id' => $db1->id, 'title' => 'Why Normalize?', 'path' => '1.1', 'depth' => 1, 'sort' => 1, 'read_time' => 4, 'difficulty' => BlockDifficultyLevel::Beginner, 'bloom' => BloomLevel::Remember, 'text' => 'Normalization reduces data redundancy and improves data integrity. Without it, update anomalies, insertion anomalies, and deletion anomalies can corrupt your data.']);
+        $createBlock(['topic_id' => $dbTopic->id, 'parent_id' => $db1->id, 'title' => 'First Normal Form (1NF)', 'path' => '1.2', 'depth' => 1, 'sort' => 2, 'read_time' => 5, 'difficulty' => BlockDifficultyLevel::Beginner, 'bloom' => BloomLevel::Understand, 'text' => 'A table is in 1NF if all columns contain only atomic (indivisible) values and each row is uniquely identifiable. No repeating groups or arrays in cells.']);
+
+        $db2 = $createBlock(['topic_id' => $dbTopic->id, 'title' => 'Higher Normal Forms', 'block_type' => BlockType::Container, 'path' => '2', 'depth' => 0, 'sort' => 2]);
+        $createBlock(['topic_id' => $dbTopic->id, 'parent_id' => $db2->id, 'title' => 'Second Normal Form (2NF)', 'path' => '2.1', 'depth' => 1, 'sort' => 1, 'read_time' => 6, 'difficulty' => BlockDifficultyLevel::Intermediate, 'bloom' => BloomLevel::Understand, 'text' => 'A table is in 2NF if it is in 1NF and all non-key attributes are fully functionally dependent on the entire primary key (no partial dependencies). Relevant for composite primary keys.']);
+        $createBlock(['topic_id' => $dbTopic->id, 'parent_id' => $db2->id, 'title' => 'Third Normal Form (3NF)', 'path' => '2.2', 'depth' => 1, 'sort' => 2, 'read_time' => 7, 'difficulty' => BlockDifficultyLevel::Intermediate, 'bloom' => BloomLevel::Apply, 'text' => 'A table is in 3NF if it is in 2NF and no non-prime attribute is transitively dependent on the primary key. Example: Student → Department → HOD creates a transitive dependency that should be decomposed.']);
+        $createBlock(['topic_id' => $dbTopic->id, 'parent_id' => $db2->id, 'title' => 'Normalization Reference', 'block_type' => BlockType::Reference, 'path' => '2.3', 'depth' => 1, 'sort' => 3, 'read_time' => 3, 'difficulty' => BlockDifficultyLevel::Intermediate, 'bloom' => BloomLevel::Remember, 'text' => 'Quick reference: 1NF = atomic values. 2NF = no partial dependencies. 3NF = no transitive dependencies. BCNF = every determinant is a candidate key. 4NF = no multi-valued dependencies.']);
+    }
+
+    private function seedCourseBlockMappings(Institution $mouau, Institution $unn): void
+    {
+        $csc201 = InstitutionCourse::where('institution_id', $mouau->id)->where('course_code', 'CSC 201')->first();
+        $csc302 = InstitutionCourse::where('institution_id', $mouau->id)->where('course_code', 'CSC 302')->first();
+        $csc101 = InstitutionCourse::where('institution_id', $mouau->id)->where('course_code', 'CSC 101')->first();
+        $cos101 = InstitutionCourse::where('institution_id', $unn->id)->where('course_code', 'COS 101')->first();
+
+        $algoTopic = CanonicalTopic::where('slug', 'introduction-to-algorithms')->first();
+        $dsTopic = CanonicalTopic::where('slug', 'data-structures-and-trees')->first();
+        $oopTopic = CanonicalTopic::where('slug', 'object-oriented-programming')->first();
+        $dbTopic = CanonicalTopic::where('slug', 'database-normalization')->first();
+
+        $algoBlocks = ContentBlock::where('canonical_topic_id', $algoTopic->id)
+            ->where('is_container', false)
+            ->get();
+
+        $dsBlocks = ContentBlock::where('canonical_topic_id', $dsTopic->id)
+            ->where('is_container', false)
+            ->get();
+
+        $oopBlocks = ContentBlock::where('canonical_topic_id', $oopTopic->id)
+            ->where('is_container', false)
+            ->where('is_published', true)
+            ->get();
+
+        $dbBlocks = ContentBlock::where('canonical_topic_id', $dbTopic->id)
+            ->where('is_container', false)
+            ->get();
+
+        $depthMap = [
+            BlockDifficultyLevel::Beginner->value => TeachingDepth::Introductory,
+            BlockDifficultyLevel::Intermediate->value => TeachingDepth::Intermediate,
+            BlockDifficultyLevel::Advanced->value => TeachingDepth::Advanced,
+        ];
+
+        foreach ($algoBlocks as $i => $block) {
+            CourseBlockMapping::create([
+                'institution_course_id' => $csc201->id,
+                'content_block_id' => $block->id,
+                'teaching_depth' => $depthMap[$block->difficulty_level->value] ?? TeachingDepth::Introductory,
+                'is_core_block' => $block->difficulty_level !== BlockDifficultyLevel::Advanced,
+                'week_start' => intdiv($i, 2) + 1,
+                'week_end' => intdiv($i, 2) + 2,
+            ]);
+        }
+
+        foreach ($dsBlocks as $i => $block) {
+            CourseBlockMapping::create([
+                'institution_course_id' => $csc201->id,
+                'content_block_id' => $block->id,
+                'teaching_depth' => $depthMap[$block->difficulty_level->value] ?? TeachingDepth::Introductory,
+                'is_core_block' => true,
+                'week_start' => intdiv($i, 2) + 7,
+                'week_end' => intdiv($i, 2) + 8,
+            ]);
+        }
+
+        foreach ($oopBlocks as $i => $block) {
+            CourseBlockMapping::create([
+                'institution_course_id' => $csc101->id,
+                'content_block_id' => $block->id,
+                'teaching_depth' => $depthMap[$block->difficulty_level->value] ?? TeachingDepth::Introductory,
+                'is_core_block' => $block->difficulty_level === BlockDifficultyLevel::Beginner,
+                'week_start' => $i + 1,
+                'week_end' => $i + 2,
+                'lecture_hours' => 2,
+            ]);
+        }
+
+        foreach ($oopBlocks->take(4) as $i => $block) {
+            CourseBlockMapping::create([
+                'institution_course_id' => $cos101->id,
+                'content_block_id' => $block->id,
+                'teaching_depth' => TeachingDepth::SurfaceMention,
+                'is_core_block' => false,
+                'week_start' => $i + 8,
+                'week_end' => $i + 9,
+            ]);
+        }
+
+        foreach ($dbBlocks as $i => $block) {
+            CourseBlockMapping::create([
+                'institution_course_id' => $csc302->id,
+                'content_block_id' => $block->id,
+                'teaching_depth' => $depthMap[$block->difficulty_level->value] ?? TeachingDepth::Introductory,
+                'is_core_block' => true,
+                'week_start' => $i * 2 + 1,
+                'week_end' => $i * 2 + 2,
+                'lecture_hours' => 3,
+                'lab_hours' => 1,
+            ]);
+        }
+    }
+
+    private function seedSchemeOfWork(EducationSystem $nerdc): void
+    {
+        $mathSubject = CurriculumSubject::where('education_system_id', $nerdc->id)->where('slug', 'mathematics')->first();
+        $physicsSubject = CurriculumSubject::where('education_system_id', $nerdc->id)->where('slug', 'physics')->first();
+        $csSubject = CurriculumSubject::where('education_system_id', $nerdc->id)->where('slug', 'computer-studies')->first();
+
+        $ss1 = EducationLevel::where('name', 'SS 1')->first();
+        $jss1 = EducationLevel::where('name', 'JSS 1')->first();
+
+        $ss1Math = LevelSubject::where('education_level_id', $ss1->id)->where('curriculum_subject_id', $mathSubject->id)->first();
+        $ss1Physics = LevelSubject::where('education_level_id', $ss1->id)->where('curriculum_subject_id', $physicsSubject->id)->first();
+        $jss1CS = LevelSubject::where('education_level_id', $jss1->id)->where('curriculum_subject_id', $csSubject->id)->first();
+
+        $algoTopic = CanonicalTopic::where('slug', 'introduction-to-algorithms')->first();
+        $dsTopic = CanonicalTopic::where('slug', 'data-structures-and-trees')->first();
+
+        $ss1MathScheme = [
+            ['term' => 1, 'week_number' => 1, 'topic_label' => 'Number Bases: Binary and Denary'],
+            ['term' => 1, 'week_number' => 2, 'topic_label' => 'Number Bases: Octal and Hexadecimal'],
+            ['term' => 1, 'week_number' => 3, 'topic_label' => 'Modular Arithmetic'],
+            ['term' => 1, 'week_number' => 4, 'topic_label' => 'Indices and Standard Form'],
+            ['term' => 1, 'week_number' => 5, 'topic_label' => 'Logarithms: Laws and Applications'],
+            ['term' => 1, 'week_number' => 6, 'topic_label' => 'Sets: Types and Notation'],
+            ['term' => 1, 'week_number' => 7, 'topic_label' => 'Sets: Union, Intersection, and Complement'],
+            ['term' => 1, 'week_number' => 8, 'topic_label' => 'Venn Diagrams: Two and Three Sets'],
+            ['term' => 1, 'week_number' => 9, 'topic_label' => 'Simple Equations and Inequalities'],
+            ['term' => 1, 'week_number' => 10, 'topic_label' => 'Linear Equations in Two Variables'],
+            ['term' => 1, 'week_number' => 11, 'topic_label' => 'Revision and Term Exam'],
+            ['term' => 2, 'week_number' => 1, 'topic_label' => 'Quadratic Expressions: Factorization'],
+            ['term' => 2, 'week_number' => 2, 'topic_label' => 'Quadratic Equations: Solving Methods'],
+            ['term' => 2, 'week_number' => 3, 'topic_label' => 'Quadratic Equations: Word Problems'],
+            ['term' => 2, 'week_number' => 4, 'topic_label' => 'Logical Reasoning and Proof'],
+            ['term' => 2, 'week_number' => 5, 'topic_label' => 'Algebraic Fractions'],
+            ['term' => 2, 'week_number' => 6, 'topic_label' => 'Surds: Simplification'],
+            ['term' => 2, 'week_number' => 7, 'topic_label' => 'Surds: Rationalization'],
+            ['term' => 2, 'week_number' => 8, 'topic_label' => 'Matrices: Addition and Subtraction'],
+            ['term' => 2, 'week_number' => 9, 'topic_label' => 'Matrices: Multiplication'],
+            ['term' => 2, 'week_number' => 10, 'topic_label' => 'Revision and Term Exam'],
+            ['term' => 3, 'week_number' => 1, 'topic_label' => 'Trigonometry: Basic Ratios'],
+            ['term' => 3, 'week_number' => 2, 'topic_label' => 'Trigonometry: Angles of Elevation and Depression'],
+            ['term' => 3, 'week_number' => 3, 'topic_label' => 'Mensuration: Circles and Sectors'],
+            ['term' => 3, 'week_number' => 4, 'topic_label' => 'Mensuration: Solid Figures'],
+            ['term' => 3, 'week_number' => 5, 'topic_label' => 'Coordinate Geometry: Distance and Midpoint'],
+            ['term' => 3, 'week_number' => 6, 'topic_label' => 'Coordinate Geometry: Gradient and Equations of Lines'],
+            ['term' => 3, 'week_number' => 7, 'topic_label' => 'Statistics: Data Collection and Presentation'],
+            ['term' => 3, 'week_number' => 8, 'topic_label' => 'Statistics: Mean, Median, and Mode'],
+            ['term' => 3, 'week_number' => 9, 'topic_label' => 'Probability: Basic Concepts'],
+            ['term' => 3, 'week_number' => 10, 'topic_label' => 'Revision and Final Exam'],
+        ];
+
+        foreach ($ss1MathScheme as $item) {
+            SchemeOfWorkItem::create([
+                'curriculum_subject_level_id' => $ss1Math->id,
+                'term' => $item['term'],
+                'week_number' => $item['week_number'],
+                'topic_label' => $item['topic_label'],
+            ]);
+        }
+
+        $ss1PhysicsScheme = [
+            ['term' => 1, 'week_number' => 1, 'topic_label' => 'Introduction to Physics: Measurements'],
+            ['term' => 1, 'week_number' => 2, 'topic_label' => 'Fundamental and Derived Units'],
+            ['term' => 1, 'week_number' => 3, 'topic_label' => 'Scalar and Vector Quantities'],
+            ['term' => 1, 'week_number' => 4, 'topic_label' => 'Motion: Speed, Velocity, and Acceleration'],
+            ['term' => 1, 'week_number' => 5, 'topic_label' => 'Equations of Motion'],
+            ['term' => 1, 'week_number' => 6, 'topic_label' => 'Newton\'s Laws of Motion'],
+            ['term' => 1, 'week_number' => 7, 'topic_label' => 'Friction: Types and Applications'],
+            ['term' => 1, 'week_number' => 8, 'topic_label' => 'Work, Energy, and Power'],
+            ['term' => 1, 'week_number' => 9, 'topic_label' => 'Energy Conservation'],
+            ['term' => 1, 'week_number' => 10, 'topic_label' => 'Revision and Term Exam'],
+            ['term' => 2, 'week_number' => 1, 'topic_label' => 'Pressure in Solids and Fluids'],
+            ['term' => 2, 'week_number' => 2, 'topic_label' => 'Archimedes\' Principle and Flotation'],
+            ['term' => 2, 'week_number' => 3, 'topic_label' => 'Temperature and Thermometers'],
+            ['term' => 2, 'week_number' => 4, 'topic_label' => 'Heat Transfer: Conduction and Convection'],
+            ['term' => 2, 'week_number' => 5, 'topic_label' => 'Heat Transfer: Radiation'],
+            ['term' => 2, 'week_number' => 6, 'topic_label' => 'Change of State and Latent Heat'],
+            ['term' => 2, 'week_number' => 7, 'topic_label' => 'Gas Laws'],
+            ['term' => 2, 'week_number' => 8, 'topic_label' => 'Waves: Properties and Types'],
+            ['term' => 2, 'week_number' => 9, 'topic_label' => 'Sound Waves'],
+            ['term' => 2, 'week_number' => 10, 'topic_label' => 'Revision and Term Exam'],
+        ];
+
+        foreach ($ss1PhysicsScheme as $item) {
+            SchemeOfWorkItem::create([
+                'curriculum_subject_level_id' => $ss1Physics->id,
+                'term' => $item['term'],
+                'week_number' => $item['week_number'],
+                'topic_label' => $item['topic_label'],
+            ]);
+        }
+
+        $algoBlocks = ContentBlock::where('canonical_topic_id', $algoTopic->id)->where('is_container', false)->orderBy('path')->get();
+        $dsBlocks = ContentBlock::where('canonical_topic_id', $dsTopic->id)->where('is_container', false)->orderBy('path')->get();
+
+        $jss1CSScheme = [
+            ['term' => 1, 'week_number' => 1, 'topic_label' => 'Introduction to Computers', 'canonical_topic_id' => null, 'content_block_id' => null],
+            ['term' => 1, 'week_number' => 2, 'topic_label' => 'Computer Hardware Components', 'canonical_topic_id' => null, 'content_block_id' => null],
+            ['term' => 1, 'week_number' => 3, 'topic_label' => 'Computer Software Types', 'canonical_topic_id' => null, 'content_block_id' => null],
+            ['term' => 1, 'week_number' => 4, 'topic_label' => 'Introduction to Algorithms', 'canonical_topic_id' => $algoTopic->id, 'content_block_id' => $algoBlocks->first()?->id],
+            ['term' => 1, 'week_number' => 5, 'topic_label' => 'Searching: Linear and Binary', 'canonical_topic_id' => $algoTopic->id, 'content_block_id' => $algoBlocks->get(2)?->id],
+            ['term' => 1, 'week_number' => 6, 'topic_label' => 'Simple Sorting Algorithms', 'canonical_topic_id' => $algoTopic->id, 'content_block_id' => $algoBlocks->get(4)?->id],
+            ['term' => 1, 'week_number' => 7, 'topic_label' => 'Data Structures Overview', 'canonical_topic_id' => $dsTopic->id, 'content_block_id' => $dsBlocks->first()?->id],
+            ['term' => 1, 'week_number' => 8, 'topic_label' => 'Arrays and Lists', 'canonical_topic_id' => $dsTopic->id, 'content_block_id' => $dsBlocks->get(2)?->id],
+            ['term' => 1, 'week_number' => 9, 'topic_label' => 'Stacks and Queues', 'canonical_topic_id' => $dsTopic->id, 'content_block_id' => $dsBlocks->get(4)?->id],
+            ['term' => 1, 'week_number' => 10, 'topic_label' => 'Revision and Assessment'],
+        ];
+
+        foreach ($jss1CSScheme as $item) {
+            SchemeOfWorkItem::create([
+                'curriculum_subject_level_id' => $jss1CS->id,
+                'term' => $item['term'],
+                'week_number' => $item['week_number'],
+                'topic_label' => $item['topic_label'],
+                'canonical_topic_id' => $item['canonical_topic_id'] ?? null,
+                'content_block_id' => $item['content_block_id'] ?? null,
+            ]);
+        }
     }
 }

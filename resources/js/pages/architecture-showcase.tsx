@@ -1,5 +1,6 @@
 import { Head } from '@inertiajs/react';
 import { useState } from 'react';
+import { BlockTypeIcon, DifficultyBadge } from '@/components/skoolpad/block-tree';
 import SpBadge from '@/components/skoolpad/sp-badge';
 import { useAppearance } from '@/hooks/use-appearance';
 
@@ -1245,26 +1246,6 @@ function SectionTitle({ children }: { children: React.ReactNode }) {
     );
 }
 
-function BlockTypeIcon({ type }: { type: Block['blockType'] }) {
-    const icons: Record<string, string> = {
-        container: '\uD83D\uDCC1',
-        text: '\uD83D\uDCC4',
-        code: '\uD83D\uDCBB',
-        diagram: '\uD83D\uDCC8',
-        example: '\uD83D\uDCA1',
-        exercise: '\uD83C\uDFAF',
-        quiz: '\u2753',
-        reference: '\uD83D\uDD17',
-        comparison: '\u2696\uFE0F',
-    };
-    return <span className="text-[12px]">{icons[type] ?? '\uD83D\uDCC4'}</span>;
-}
-
-function DifficultyBadge({ level }: { level: string | null }) {
-    if (!level) return null;
-    const variant = level === 'beginner' ? 'primary' : level === 'intermediate' ? 'reward' : 'danger';
-    return <SpBadge variant={variant} className="text-[9px] px-[6px] py-0">{level}</SpBadge>;
-}
 
 const QUESTION_TYPE_META: Record<string, { label: string; variant: 'primary' | 'danger' | 'reward' | 'neutral' | 'solid' }> = {
     group: { label: 'group', variant: 'neutral' },
