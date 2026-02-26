@@ -150,6 +150,13 @@ export interface QuestionNode {
     context_links?: { context_id: string; sort_order: number; label?: string }[];
     question_context_links?: { question_context_id: string; sort_order: number; label?: string }[];
     children: QuestionNode[];
+    answers?: {
+        id: string;
+        depth_level: string;
+        content: Record<string, unknown> | null;
+        content_plain: string | null;
+        is_published: boolean;
+    }[];
 }
 
 /** @deprecated Use McqConfig.options instead */

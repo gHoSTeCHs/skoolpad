@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
@@ -35,6 +36,16 @@ class QuestionPaper extends Model
             'duration_minutes' => 'integer',
             'is_published' => 'boolean',
         ];
+    }
+
+    public function scopePublished(Builder $query): Builder
+    {
+        return $query->where('is_published', true);
+    }
+
+    public function scopeSearch(Builder $query, string $term): Builder
+    {
+        return $query->where('title', 'ilike', "%{$term}%");
     }
 
     public function institutionCourse(): BelongsTo

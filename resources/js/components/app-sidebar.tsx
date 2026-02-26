@@ -3,6 +3,7 @@ import {
     BarChart3,
     BookOpen,
     Calculator,
+    FileQuestion,
     GraduationCap,
     LayoutGrid,
     ListChecks,
@@ -24,6 +25,8 @@ import {
     SidebarMenuButton,
     SidebarMenuItem,
 } from '@/components/ui/sidebar';
+import { index as coursesIndex } from '@/actions/App/Http/Controllers/Student/CourseController';
+import { index as papersIndex } from '@/actions/App/Http/Controllers/Student/QuestionPaperController';
 import { dashboard } from '@/routes';
 import type { NavGroup } from '@/types';
 import AppLogo from './app-logo';
@@ -33,7 +36,8 @@ const navGroups: NavGroup[] = [
         label: 'Learn',
         items: [
             { title: 'Dashboard', href: dashboard(), icon: LayoutGrid },
-            { title: 'Courses', href: '/courses', icon: GraduationCap },
+            { title: 'Courses', href: coursesIndex.url(), icon: GraduationCap },
+            { title: 'Past Questions', href: papersIndex.url(), icon: FileQuestion },
             { title: 'Practice', href: '/practice', icon: Target },
             { title: 'Review Queue', href: '/review-queue', icon: ListChecks },
         ],

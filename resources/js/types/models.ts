@@ -94,6 +94,14 @@ export type PaginatedData<T> = {
     };
 };
 
+export type CursorPaginatedData<T> = {
+    data: T[];
+    next_cursor: string | null;
+    prev_cursor: string | null;
+    per_page: number;
+    has_more: boolean;
+};
+
 export type EducationSystem = {
     id: string;
     name: string;

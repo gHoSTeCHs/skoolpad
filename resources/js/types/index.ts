@@ -2,7 +2,11 @@ export type * from './auth';
 export type * from './enums';
 export type * from './models';
 export type * from './navigation';
+export type * from './onboarding';
 export type * from './questions';
+export type * from './student-courses';
+export type * from './student-questions';
+export type * from './student-topics';
 export type * from './ui';
 
 import type { Appearance } from '@/hooks/use-appearance';

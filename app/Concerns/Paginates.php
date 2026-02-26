@@ -2,6 +2,7 @@
 
 namespace App\Concerns;
 
+use Illuminate\Contracts\Pagination\CursorPaginator;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\Request;
 use Illuminate\Pagination\LengthAwarePaginator;
@@ -36,6 +37,18 @@ trait Paginates
                 'prev' => $paginator->previousPageUrl(),
                 'next' => $paginator->nextPageUrl(),
             ],
+        ];
+    }
+
+    /** @return array{data: array<int, mixed>, next_cursor: string|null, prev_cursor: string|null, per_page: int, has_more: bool} */
+    protected function cursorPaginated(CursorPaginator $paginator): array
+    {
+        return [
+            'data' => $paginator->items(),
+            'next_cursor' => $paginator->nextCursor()?->encode(),
+            'prev_cursor' => $paginator->previousCursor()?->encode(),
+            'per_page' => $paginator->perPage(),
+            'has_more' => $paginator->hasMorePages(),
         ];
     }
 }

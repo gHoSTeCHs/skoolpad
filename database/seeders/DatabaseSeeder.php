@@ -702,38 +702,6 @@ class DatabaseSeeder extends Seeder
                 ],
             ],
             [
-                'course' => $csc302,
-                'type' => QuestionType::Mcq,
-                'content' => 'Which normal form eliminates transitive dependencies?',
-                'year' => 2022, 'semester' => 'second', 'marks' => 2,
-                'difficulty' => QuestionDifficulty::Medium,
-                'status' => QuestionStatus::Published,
-                'topic' => $dbTopic,
-                'options' => [
-                    ['label' => 'A', 'content' => 'First Normal Form (1NF)', 'is_correct' => false],
-                    ['label' => 'B', 'content' => 'Second Normal Form (2NF)', 'is_correct' => false],
-                    ['label' => 'C', 'content' => 'Third Normal Form (3NF)', 'is_correct' => true],
-                    ['label' => 'D', 'content' => 'Boyce-Codd Normal Form (BCNF)', 'is_correct' => false],
-                ],
-                'answers' => [
-                    ['depth' => AnswerDepthLevel::Quick, 'text' => '3NF. Third Normal Form requires that no non-prime attribute is transitively dependent on the primary key.'],
-                    ['depth' => AnswerDepthLevel::Standard, 'text' => 'Third Normal Form (3NF) eliminates transitive dependencies. A relation is in 3NF if it is in 2NF and every non-prime attribute is non-transitively dependent on every candidate key. A transitive dependency occurs when A → B → C, where C depends on A indirectly through B. For example, if Student_ID → Department → HOD_Name, the HOD_Name transitively depends on Student_ID. To achieve 3NF, decompose into separate tables.'],
-                ],
-            ],
-            [
-                'course' => $csc302,
-                'type' => QuestionType::Theory,
-                'content' => 'Define the following terms as used in relational database design: (a) Primary Key (b) Foreign Key (c) Normalization',
-                'year' => 2023, 'semester' => 'second', 'marks' => 15,
-                'difficulty' => QuestionDifficulty::Easy,
-                'status' => QuestionStatus::Published,
-                'topic' => $dbTopic,
-                'options' => [],
-                'answers' => [
-                    ['depth' => AnswerDepthLevel::Quick, 'text' => '(a) Primary Key: a column or set of columns that uniquely identifies each row. (b) Foreign Key: a column that references the primary key of another table. (c) Normalization: the process of organizing data to reduce redundancy and improve integrity.'],
-                ],
-            ],
-            [
                 'course' => $csc301,
                 'type' => QuestionType::Mcq,
                 'content' => 'Which scheduling algorithm gives the minimum average waiting time for a given set of processes?',
@@ -1191,6 +1159,223 @@ class DatabaseSeeder extends Seeder
                 'published_at' => now(),
             ]);
         }
+
+        $tiptap = fn (string $text): array => [
+            'type' => 'doc',
+            'content' => [
+                ['type' => 'paragraph', 'content' => [['type' => 'text', 'text' => $text]]],
+            ],
+        ];
+
+        $csc302 = InstitutionCourse::where('institution_id', $mouau->id)->where('course_code', 'CSC 302')->first();
+        $dbTopic = CanonicalTopic::where('slug', 'database-normalization')->first();
+
+        $paper3 = QuestionPaper::create([
+            'institution_course_id' => $csc302->id,
+            'title' => 'CSC 302 Second Semester Examination 2022/2023',
+            'academic_session' => '2022/2023',
+            'semester' => 'Second Semester',
+            'year' => 2023,
+            'total_marks' => 60,
+            'duration_minutes' => 120,
+            'instructions' => 'Answer ALL questions in Section A. Answer any TWO questions from Section B.',
+            'is_published' => true,
+        ]);
+
+        $csc302SectionA = QuestionSection::create([
+            'question_paper_id' => $paper3->id,
+            'label' => 'Section A',
+            'instruction' => 'Answer ALL questions. Each question carries 2 marks.',
+            'marks' => 20,
+            'sort_order' => 0,
+        ]);
+
+        $csc302SectionB = QuestionSection::create([
+            'question_paper_id' => $paper3->id,
+            'label' => 'Section B',
+            'instruction' => 'Answer any TWO questions. Each question carries 20 marks.',
+            'marks' => 40,
+            'required_count' => 2,
+            'sort_order' => 1,
+        ]);
+
+        $q302_1 = Question::create([
+            'institution_course_id' => $csc302->id,
+            'question_paper_id' => $paper3->id,
+            'question_section_id' => $csc302SectionA->id,
+            'question_type' => QuestionType::Mcq,
+            'question_number' => '1',
+            'display_label' => 'Question 1',
+            'content' => 'Which normal form eliminates transitive dependencies?',
+            'marks' => 2,
+            'difficulty_level' => QuestionDifficulty::Medium,
+            'response_config' => ['options' => [
+                ['label' => 'A', 'text' => 'First Normal Form (1NF)', 'is_correct' => false],
+                ['label' => 'B', 'text' => 'Second Normal Form (2NF)', 'is_correct' => false],
+                ['label' => 'C', 'text' => 'Third Normal Form (3NF)', 'is_correct' => true],
+                ['label' => 'D', 'text' => 'Boyce-Codd Normal Form (BCNF)', 'is_correct' => false],
+            ]],
+            'sort_order' => 0,
+            'source' => QuestionSource::Manual,
+            'status' => QuestionStatus::Published,
+            'created_by' => $admin->id,
+            'reviewed_by' => $admin->id,
+            'published_at' => now(),
+        ]);
+
+        QuestionTopicLink::create([
+            'question_id' => $q302_1->id,
+            'canonical_topic_id' => $dbTopic->id,
+            'is_primary' => true,
+        ]);
+
+        QuestionAnswer::create([
+            'question_id' => $q302_1->id,
+            'depth_level' => AnswerDepthLevel::Quick,
+            'content' => $tiptap('3NF. Third Normal Form requires that no non-prime attribute is transitively dependent on the primary key.'),
+            'content_plain' => '3NF. Third Normal Form requires that no non-prime attribute is transitively dependent on the primary key.',
+            'is_published' => true,
+            'created_by' => $admin->id,
+        ]);
+
+        QuestionAnswer::create([
+            'question_id' => $q302_1->id,
+            'depth_level' => AnswerDepthLevel::Standard,
+            'content' => $tiptap('Third Normal Form (3NF) eliminates transitive dependencies. A relation is in 3NF if it is in 2NF and every non-prime attribute is non-transitively dependent on every candidate key. A transitive dependency occurs when A → B → C, where C depends on A indirectly through B. For example, if Student_ID → Department → HOD_Name, the HOD_Name transitively depends on Student_ID. To achieve 3NF, decompose into separate tables.'),
+            'content_plain' => 'Third Normal Form (3NF) eliminates transitive dependencies. A relation is in 3NF if it is in 2NF and every non-prime attribute is non-transitively dependent on every candidate key. A transitive dependency occurs when A → B → C, where C depends on A indirectly through B. For example, if Student_ID → Department → HOD_Name, the HOD_Name transitively depends on Student_ID. To achieve 3NF, decompose into separate tables.',
+            'is_published' => true,
+            'created_by' => $admin->id,
+        ]);
+
+        $q302_2 = Question::create([
+            'institution_course_id' => $csc302->id,
+            'question_paper_id' => $paper3->id,
+            'question_section_id' => $csc302SectionA->id,
+            'question_type' => QuestionType::Mcq,
+            'question_number' => '2',
+            'display_label' => 'Question 2',
+            'content' => 'Which of the following is NOT a type of database key?',
+            'marks' => 2,
+            'difficulty_level' => QuestionDifficulty::Easy,
+            'response_config' => ['options' => [
+                ['label' => 'A', 'text' => 'Primary Key', 'is_correct' => false],
+                ['label' => 'B', 'text' => 'Foreign Key', 'is_correct' => false],
+                ['label' => 'C', 'text' => 'Candidate Key', 'is_correct' => false],
+                ['label' => 'D', 'text' => 'Loop Key', 'is_correct' => true],
+            ]],
+            'sort_order' => 1,
+            'source' => QuestionSource::Manual,
+            'status' => QuestionStatus::Published,
+            'created_by' => $admin->id,
+            'reviewed_by' => $admin->id,
+            'published_at' => now(),
+        ]);
+
+        QuestionTopicLink::create([
+            'question_id' => $q302_2->id,
+            'canonical_topic_id' => $dbTopic->id,
+            'is_primary' => true,
+        ]);
+
+        QuestionAnswer::create([
+            'question_id' => $q302_2->id,
+            'depth_level' => AnswerDepthLevel::Quick,
+            'content' => $tiptap('Loop Key. There is no such thing as a "Loop Key" in relational database theory. The standard key types are Primary, Foreign, Candidate, Super, and Alternate keys.'),
+            'content_plain' => 'Loop Key. There is no such thing as a "Loop Key" in relational database theory. The standard key types are Primary, Foreign, Candidate, Super, and Alternate keys.',
+            'is_published' => true,
+            'created_by' => $admin->id,
+        ]);
+
+        $q302_3 = Question::create([
+            'institution_course_id' => $csc302->id,
+            'question_paper_id' => $paper3->id,
+            'question_section_id' => $csc302SectionA->id,
+            'question_type' => QuestionType::TrueFalse,
+            'question_number' => '3',
+            'display_label' => 'Question 3',
+            'content' => 'A foreign key in one table must reference the primary key of another table.',
+            'marks' => 2,
+            'difficulty_level' => QuestionDifficulty::Easy,
+            'response_config' => ['correct_answer' => true, 'requires_justification' => false],
+            'sort_order' => 2,
+            'source' => QuestionSource::Manual,
+            'status' => QuestionStatus::Published,
+            'created_by' => $admin->id,
+            'reviewed_by' => $admin->id,
+            'published_at' => now(),
+        ]);
+
+        QuestionTopicLink::create([
+            'question_id' => $q302_3->id,
+            'canonical_topic_id' => $dbTopic->id,
+            'is_primary' => true,
+        ]);
+
+        $q302_4 = Question::create([
+            'institution_course_id' => $csc302->id,
+            'question_paper_id' => $paper3->id,
+            'question_section_id' => $csc302SectionB->id,
+            'question_type' => QuestionType::Theory,
+            'question_number' => '4',
+            'display_label' => 'Question 4',
+            'content' => 'Define the following terms as used in relational database design: (a) Primary Key (b) Foreign Key (c) Normalization',
+            'marks' => 15,
+            'difficulty_level' => QuestionDifficulty::Easy,
+            'sort_order' => 0,
+            'source' => QuestionSource::Manual,
+            'status' => QuestionStatus::Published,
+            'created_by' => $admin->id,
+            'reviewed_by' => $admin->id,
+            'published_at' => now(),
+        ]);
+
+        QuestionTopicLink::create([
+            'question_id' => $q302_4->id,
+            'canonical_topic_id' => $dbTopic->id,
+            'is_primary' => true,
+        ]);
+
+        QuestionAnswer::create([
+            'question_id' => $q302_4->id,
+            'depth_level' => AnswerDepthLevel::Quick,
+            'content' => $tiptap('(a) Primary Key: a column or set of columns that uniquely identifies each row. (b) Foreign Key: a column that references the primary key of another table. (c) Normalization: the process of organizing data to reduce redundancy and improve integrity.'),
+            'content_plain' => '(a) Primary Key: a column or set of columns that uniquely identifies each row. (b) Foreign Key: a column that references the primary key of another table. (c) Normalization: the process of organizing data to reduce redundancy and improve integrity.',
+            'is_published' => true,
+            'created_by' => $admin->id,
+        ]);
+
+        $q302_5 = Question::create([
+            'institution_course_id' => $csc302->id,
+            'question_paper_id' => $paper3->id,
+            'question_section_id' => $csc302SectionB->id,
+            'question_type' => QuestionType::Theory,
+            'question_number' => '5',
+            'display_label' => 'Question 5',
+            'content' => 'Explain the process of normalization up to Third Normal Form (3NF). Use a practical example to illustrate each step.',
+            'marks' => 20,
+            'difficulty_level' => QuestionDifficulty::Hard,
+            'sort_order' => 1,
+            'source' => QuestionSource::Manual,
+            'status' => QuestionStatus::Published,
+            'created_by' => $admin->id,
+            'reviewed_by' => $admin->id,
+            'published_at' => now(),
+        ]);
+
+        QuestionTopicLink::create([
+            'question_id' => $q302_5->id,
+            'canonical_topic_id' => $dbTopic->id,
+            'is_primary' => true,
+        ]);
+
+        QuestionAnswer::create([
+            'question_id' => $q302_5->id,
+            'depth_level' => AnswerDepthLevel::Standard,
+            'content' => $tiptap("Normalization is the systematic process of decomposing tables to eliminate data redundancy and undesirable anomalies.\n\n1NF (First Normal Form): Eliminate repeating groups. Each column must contain atomic (indivisible) values. Example: A student table with multiple phone numbers in one cell violates 1NF. Fix: create a separate phone numbers table.\n\n2NF (Second Normal Form): Must be in 1NF and eliminate partial dependencies. Every non-key attribute must depend on the entire primary key. Example: In a table (StudentID, CourseID, StudentName, Grade), StudentName depends only on StudentID, not the full key. Fix: separate into Students and Enrollments tables.\n\n3NF (Third Normal Form): Must be in 2NF and eliminate transitive dependencies. No non-key attribute should depend on another non-key attribute. Example: In (StudentID, Department, HOD), HOD depends on Department, not directly on StudentID. Fix: create a separate Departments table."),
+            'content_plain' => 'Normalization is the systematic process of decomposing tables to eliminate data redundancy and undesirable anomalies. 1NF: Eliminate repeating groups, ensure atomic values. 2NF: Eliminate partial dependencies on composite keys. 3NF: Eliminate transitive dependencies between non-key attributes.',
+            'is_published' => true,
+            'created_by' => $admin->id,
+        ]);
     }
 
     private function seedContentSubmissions(User $admin, User $student, Institution $mouau): void

@@ -31,6 +31,12 @@ use App\Http\Controllers\Admin\SettingsController;
 use App\Http\Controllers\Admin\StreamController;
 use App\Http\Controllers\Admin\SubscriptionPlanController;
 use App\Http\Controllers\Admin\UserController;
+use App\Http\Controllers\Student\CourseController as StudentCourseController;
+use App\Http\Controllers\Student\DashboardController as StudentDashboardController;
+use App\Http\Controllers\Student\OnboardingController;
+use App\Http\Controllers\Student\QuestionController as StudentQuestionController;
+use App\Http\Controllers\Student\QuestionPaperController as StudentQuestionPaperController;
+use App\Http\Controllers\Student\TopicController as StudentTopicController;
 use App\Models\CanonicalTopic;
 use App\Models\Department;
 use App\Models\Institution;
@@ -55,16 +61,29 @@ Route::get('architecture-showcase', function () {
 })->name('architecture-showcase');
 
 Route::middleware(['auth', 'verified'])->group(function () {
-    Route::get('onboarding', fn () => Inertia::render('onboarding/index'))->name('onboarding.index');
+    Route::get('onboarding', [OnboardingController::class, 'show'])->name('onboarding.index');
+    Route::post('onboarding', [OnboardingController::class, 'store'])->name('onboarding.store');
+
+    Route::prefix('api/onboarding')->name('api.onboarding.')->group(function () {
+        Route::get('institutions/search', [OnboardingController::class, 'searchInstitutions'])->name('institutions.search');
+        Route::get('institutions/{institution}/faculties', [OnboardingController::class, 'faculties'])->name('faculties');
+        Route::get('faculties/{faculty}/departments', [OnboardingController::class, 'departments'])->name('departments');
+        Route::get('course-suggestions', [OnboardingController::class, 'courseSuggestions'])->name('course-suggestions');
+        Route::get('courses/search', [OnboardingController::class, 'searchCourses'])->name('courses.search');
+    });
 });
 
 Route::middleware(['auth', 'verified', 'onboarded'])->group(function () {
-    Route::get('dashboard', fn () => Inertia::render('dashboard'))->name('dashboard');
-    Route::get('courses', fn () => Inertia::render('courses/index'))->name('courses.index');
-    Route::get('courses/{course}', fn (string $course) => Inertia::render('courses/show', ['course' => $course]))->name('courses.show');
-    Route::get('topics/{topic}', fn (string $topic) => Inertia::render('topics/show', ['topic' => $topic]))->name('topics.show');
-    Route::get('questions', fn () => Inertia::render('questions/index'))->name('questions.index');
-    Route::get('questions/{question}', fn (string $question) => Inertia::render('questions/show', ['question' => $question]))->name('questions.show');
+    Route::get('dashboard', [StudentDashboardController::class, 'index'])->name('dashboard');
+    Route::get('courses', [StudentCourseController::class, 'index'])->name('courses.index');
+    Route::get('courses/{course}', [StudentCourseController::class, 'show'])->name('courses.show');
+    Route::get('topics/{topic}', [StudentTopicController::class, 'show'])->name('topics.show');
+    Route::post('topics/{topic}/complete', [StudentTopicController::class, 'toggleComplete'])->name('topics.complete');
+    Route::post('blocks/{block}/complete', [StudentTopicController::class, 'toggleBlockComplete'])->name('blocks.complete');
+    Route::get('questions', [StudentQuestionController::class, 'index'])->name('questions.index');
+    Route::get('questions/papers', [StudentQuestionPaperController::class, 'index'])->name('questions.papers.index');
+    Route::get('questions/papers/{questionPaper}', [StudentQuestionPaperController::class, 'show'])->name('questions.papers.show');
+    Route::get('questions/{question}', [StudentQuestionController::class, 'show'])->name('questions.show');
     Route::get('practice', fn () => Inertia::render('practice/index'))->name('practice.index');
     Route::get('notes', fn () => Inertia::render('notes/index'))->name('notes.index');
     Route::get('review-queue', fn () => Inertia::render('review-queue/index'))->name('review-queue.index');
