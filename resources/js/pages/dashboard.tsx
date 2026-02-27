@@ -1,10 +1,18 @@
 import { Head } from '@inertiajs/react';
+import { BookOpen, ShieldCheck } from 'lucide-react';
+import { useState } from 'react';
+import LevelProgressionController from '@/actions/App/Http/Controllers/Student/LevelProgressionController';
+import ParentInvitationController from '@/actions/App/Http/Controllers/Student/ParentInvitationController';
 import CourseCard from '@/components/skoolpad/course-card';
+import LevelProgressionModal from '@/components/skoolpad/level-progression-modal';
+import ParentInvitationBanner from '@/components/skoolpad/parent-invitation-banner';
 import StatCard from '@/components/skoolpad/stat-card';
 import StreakWidget from '@/components/skoolpad/streak-widget';
+import { Badge } from '@/components/ui/badge';
 import AppLayout from '@/layouts/app-layout';
 import { dashboard } from '@/routes';
 import type { BreadcrumbItem } from '@/types';
+import type { StudentType } from '@/types/enums';
 
 interface DashboardCourse {
     id: string;
@@ -12,6 +20,12 @@ interface DashboardCourse {
     course_title: string;
     topic_count: number;
     question_count: number;
+}
+
+interface DashboardSubject {
+    id: string;
+    name: string;
+    is_compulsory: boolean;
 }
 
 interface SuggestedTopic {
@@ -23,12 +37,19 @@ interface SuggestedTopic {
 interface Props {
     student: {
         name: string;
-        institution: string;
-        faculty: string;
-        department: string;
-        level: number;
+        student_type: StudentType;
+        institution?: string | null;
+        faculty?: string | null;
+        department?: string | null;
+        level?: string | number | null;
+        education_system?: string | null;
+        education_level?: string | null;
+        tier?: string | null;
+        stream?: string | null;
+        exam_goals?: string[];
     } | null;
     courses: DashboardCourse[];
+    subjects: DashboardSubject[];
     stats: {
         courses_count: number;
         practice_sessions: number;
@@ -36,6 +57,17 @@ interface Props {
         streak_days: number;
     };
     suggested_topics: SuggestedTopic[];
+    parent_invitation?: {
+        show: boolean;
+        style: 'prominent' | 'subtle';
+        is_early_level: boolean;
+    } | null;
+    level_progression?: {
+        show: boolean;
+        current_level: string;
+        next_level: string;
+        next_level_id: string;
+    } | null;
 }
 
 const breadcrumbs: BreadcrumbItem[] = [
@@ -54,31 +86,65 @@ const streakDays = [
     { label: 'S', state: 'upcoming' as const },
 ];
 
-export default function Dashboard({ student, courses, stats, suggested_topics }: Props) {
+function getSubtitle(student: Props['student']): string {
+    if (!student) return "Here's your learning progress";
+
+    if (student.student_type === 'tertiary') {
+        return `${student.department} · ${student.level} Level · ${student.institution}`;
+    }
+
+    const parts = [student.education_level, student.stream, student.education_system].filter(Boolean);
+    return parts.join(' · ') || "Here's your learning progress";
+}
+
+export default function Dashboard({ student, courses, subjects, stats, suggested_topics, parent_invitation, level_progression }: Props) {
     const firstName = student?.name.split(' ')[0] ?? 'Student';
+    const isTertiary = student?.student_type === 'tertiary';
+    const isSecondary = student?.student_type === 'secondary';
+    const [levelModalOpen, setLevelModalOpen] = useState(!!level_progression?.show);
 
     return (
         <AppLayout breadcrumbs={breadcrumbs}>
             <Head title="Dashboard" />
 
             <div className="flex flex-col gap-8 p-4 md:p-6">
+                {level_progression?.show && (
+                    <LevelProgressionModal
+                        open={levelModalOpen}
+                        onOpenChange={setLevelModalOpen}
+                        currentLevel={level_progression.current_level}
+                        nextLevel={level_progression.next_level}
+                        updateUrl={LevelProgressionController.update.url()}
+                        nextLevelId={level_progression.next_level_id}
+                    />
+                )}
+
+                {parent_invitation?.show && parent_invitation.style === 'prominent' && (
+                    <ParentInvitationBanner
+                        style="prominent"
+                        dismissUrl={ParentInvitationController.dismiss.url()}
+                    />
+                )}
+
                 <div>
                     <h1 className="font-display text-2xl font-bold tracking-tight">
                         Welcome back, {firstName}!
                     </h1>
                     <p className="mt-1 text-sm text-muted-foreground" style={{ fontFamily: 'var(--font-body)' }}>
-                        {student
-                            ? `${student.department} · ${student.level} Level · ${student.institution}`
-                            : "Here's your learning progress"}
+                        {getSubtitle(student)}
                     </p>
                 </div>
 
                 <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
                     <StatCard
-                        label="Courses"
-                        value={String(stats.courses_count)}
-                        change={stats.courses_count === 0 ? 'Enrol to start' : `${stats.courses_count} enrolled`}
-                        trend={stats.courses_count > 0 ? 'up' : 'neutral'}
+                        label={isTertiary ? 'Courses' : 'Subjects'}
+                        value={String(isTertiary ? stats.courses_count : subjects.length)}
+                        change={
+                            isTertiary
+                                ? stats.courses_count === 0 ? 'Enrol to start' : `${stats.courses_count} enrolled`
+                                : `${subjects.length} subject${subjects.length !== 1 ? 's' : ''}`
+                        }
+                        trend={isTertiary ? (stats.courses_count > 0 ? 'up' : 'neutral') : (subjects.length > 0 ? 'up' : 'neutral')}
                     />
                     <StatCard
                         label="Practice"
@@ -95,7 +161,7 @@ export default function Dashboard({ student, courses, stats, suggested_topics }:
                     <StreakWidget count={stats.streak_days} days={streakDays} />
                 </div>
 
-                {courses.length > 0 && (
+                {isTertiary && courses.length > 0 && (
                     <div>
                         <h2 className="font-display text-lg font-semibold tracking-tight">
                             Your Courses
@@ -112,6 +178,46 @@ export default function Dashboard({ student, courses, stats, suggested_topics }:
                                 />
                             ))}
                         </div>
+                    </div>
+                )}
+
+                {isSecondary && subjects.length > 0 && (
+                    <div>
+                        <h2 className="font-display text-lg font-semibold tracking-tight">
+                            My Subjects
+                        </h2>
+                        <div className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+                            {subjects.map((subject) => (
+                                <div
+                                    key={subject.id}
+                                    className="flex items-center justify-between rounded-lg border bg-card p-4 transition-colors hover:bg-accent/50"
+                                >
+                                    <span className="text-sm font-medium">{subject.name}</span>
+                                    {subject.is_compulsory && (
+                                        <Badge variant="secondary" className="text-[10px]">Compulsory</Badge>
+                                    )}
+                                </div>
+                            ))}
+                        </div>
+                    </div>
+                )}
+
+                {parent_invitation?.show && parent_invitation.is_early_level && (
+                    <div className="flex items-center gap-3 rounded-lg border border-primary/20 bg-primary/5 px-4 py-3">
+                        <ShieldCheck className="size-5 shrink-0 text-primary" />
+                        <p className="text-sm text-muted-foreground">
+                            Ask your parent or guardian to connect their account so they can see how you're doing.
+                        </p>
+                    </div>
+                )}
+
+                {isSecondary && (
+                    <div className="rounded-lg border-2 border-dashed border-border/60 bg-card/50 p-6 text-center">
+                        <BookOpen className="mx-auto size-8 text-muted-foreground/50" />
+                        <h3 className="font-display mt-3 text-base font-semibold">Guided Study</h3>
+                        <p className="mt-1 text-sm text-muted-foreground">
+                            Personalised study plans and lesson guides are coming soon.
+                        </p>
                     </div>
                 )}
 
@@ -133,13 +239,20 @@ export default function Dashboard({ student, courses, stats, suggested_topics }:
                     </div>
                 )}
 
-                {courses.length === 0 && (
+                {isTertiary && courses.length === 0 && (
                     <div className="rounded-lg border border-dashed bg-card/50 p-8 text-center">
                         <h3 className="font-display text-lg font-semibold">No courses yet</h3>
                         <p className="mt-1 text-sm text-muted-foreground">
                             Your enrolled courses will appear here once you complete onboarding.
                         </p>
                     </div>
+                )}
+
+                {parent_invitation?.show && parent_invitation.style === 'subtle' && (
+                    <ParentInvitationBanner
+                        style="subtle"
+                        dismissUrl={ParentInvitationController.dismiss.url()}
+                    />
                 )}
             </div>
         </AppLayout>
