@@ -30,7 +30,7 @@ class DepartmentFactory extends Factory
 
         return [
             'faculty_id' => Faculty::factory(),
-            'name' => $pick['name'],
+            'name' => $pick['name'].' '.fake()->unique()->numerify('####'),
             'abbreviation' => $pick['abbreviation'],
         ];
     }

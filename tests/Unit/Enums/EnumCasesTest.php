@@ -35,7 +35,7 @@ dataset('enums', [
     'AnswerDepthLevel' => [AnswerDepthLevel::class, 3],
     'ContentSubmissionType' => [ContentSubmissionType::class, 4],
     'ContentSubmissionStatus' => [ContentSubmissionStatus::class, 3],
-    'PracticeMode' => [PracticeMode::class, 3],
+    'PracticeMode' => [PracticeMode::class, 8],
     'SpacedRepetitionStatus' => [SpacedRepetitionStatus::class, 3],
     'ContributionBadge' => [ContributionBadge::class, 4],
     'BillingPeriod' => [BillingPeriod::class, 3],
