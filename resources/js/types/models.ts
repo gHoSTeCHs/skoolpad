@@ -20,10 +20,26 @@ export type Institution = {
     city: string | null;
     website: string | null;
     logo_path: string | null;
+    institution_type_id: string | null;
     is_active: boolean;
     created_at: string;
     updated_at: string;
     faculties_count?: number;
+    institution_type_model?: { id: string; name: string };
+    education_systems?: { id: string; name: string }[];
+    calendar_terms?: CalendarTermModel[];
+};
+
+export type CalendarTermModel = {
+    id: string;
+    institution_id: string;
+    academic_year: string;
+    name: string;
+    start_date: string;
+    end_date: string;
+    sort_order: number;
+    created_at: string;
+    updated_at: string;
 };
 
 export type Faculty = {
@@ -193,6 +209,17 @@ export type AssessmentTypeModel = {
     updated_at: string;
     tier?: { id: string; name: string };
     grading_scale?: { id: string; name: string };
+    assessment_subjects?: AssessmentSubjectModel[];
+};
+
+export type AssessmentSubjectModel = {
+    id: string;
+    assessment_type_id: string;
+    name: string;
+    slug: string;
+    is_compulsory: boolean;
+    created_at: string;
+    updated_at: string;
 };
 
 export type InstitutionTypeModel = {

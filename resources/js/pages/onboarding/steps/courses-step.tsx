@@ -43,7 +43,9 @@ export default function CoursesStep({
                     OnboardingController.courseSuggestions.url({
                         query: { institution_id: institutionId, department_id: departmentId, level },
                     }),
+                    { headers: { Accept: 'application/json' } },
                 );
+                if (!response.ok) return;
                 const data = await response.json();
                 setSuggestions(data);
                 onCoursesLoaded(data as SuggestedCourse[]);
@@ -66,7 +68,9 @@ export default function CoursesStep({
                 OnboardingController.searchCourses.url({
                     query: { institution_id: institutionId, q: term },
                 }),
+                { headers: { Accept: 'application/json' } },
             );
+            if (!response.ok) return;
             const data = await response.json();
             setSearchResults(data);
             onCoursesLoaded((prev) => {
