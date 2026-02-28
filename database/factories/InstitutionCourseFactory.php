@@ -19,8 +19,8 @@ class InstitutionCourseFactory extends Factory
     {
         $prefixes = ['CSC', 'ENG', 'MEE', 'PHY', 'MTH', 'CHM', 'ECO', 'ACC'];
         $prefix = fake()->randomElement($prefixes);
-        $level = fake()->randomElement([100, 200, 300, 400, 500]);
-        $courseNumber = ($level / 100) * 100 + fake()->numberBetween(1, 9);
+        $level = fake()->randomElement(['100L', '200L', '300L', '400L', '500L']);
+        $courseNumber = ((int) $level / 100) * 100 + fake()->unique()->numberBetween(1, 99);
 
         $titles = [
             'CSC' => ['Introduction to Computing', 'Data Structures', 'Operating Systems', 'Software Engineering'],

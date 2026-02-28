@@ -14,22 +14,26 @@ class FacultyFactory extends Factory
     public function definition(): array
     {
         $faculties = [
-            ['name' => 'College of Physical and Applied Sciences', 'abbreviation' => 'COLPAS'],
-            ['name' => 'College of Engineering', 'abbreviation' => 'COLENG'],
-            ['name' => 'Faculty of Science', 'abbreviation' => 'FSC'],
-            ['name' => 'Faculty of Arts', 'abbreviation' => 'FARTS'],
-            ['name' => 'Faculty of Social Sciences', 'abbreviation' => 'FSSC'],
-            ['name' => 'Faculty of Management Sciences', 'abbreviation' => 'FMS'],
-            ['name' => 'Faculty of Education', 'abbreviation' => 'FED'],
-            ['name' => 'Faculty of Law', 'abbreviation' => 'FLAW'],
+            'College of Physical and Applied Sciences',
+            'College of Engineering',
+            'Faculty of Science',
+            'Faculty of Arts',
+            'Faculty of Social Sciences',
+            'Faculty of Management Sciences',
+            'Faculty of Education',
+            'Faculty of Law',
+            'Faculty of Agriculture',
+            'Faculty of Environmental Sciences',
+            'Faculty of Medicine',
+            'Faculty of Pharmacy',
         ];
 
-        $pick = fake()->randomElement($faculties);
+        $name = fake()->unique()->randomElement($faculties);
 
         return [
             'institution_id' => Institution::factory(),
-            'name' => $pick['name'],
-            'abbreviation' => $pick['abbreviation'],
+            'name' => $name,
+            'abbreviation' => strtoupper(collect(explode(' ', $name))->map(fn ($w) => $w[0])->join('')),
         ];
     }
 }

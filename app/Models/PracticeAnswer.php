@@ -19,6 +19,7 @@ class PracticeAnswer extends Model
         'question_id',
         'selected_option_label',
         'text_answer',
+        'response_data',
         'is_correct',
         'time_spent_seconds',
         'was_skipped',
@@ -29,6 +30,7 @@ class PracticeAnswer extends Model
     protected function casts(): array
     {
         return [
+            'response_data' => 'array',
             'is_correct' => 'boolean',
             'was_skipped' => 'boolean',
         ];

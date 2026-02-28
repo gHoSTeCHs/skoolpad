@@ -23,7 +23,9 @@ use App\Enums\Semester;
 use App\Enums\TeachingDepth;
 use App\Enums\TopicDifficulty;
 use App\Enums\UserRole;
+use App\Models\AssessmentSubject;
 use App\Models\AssessmentType;
+use App\Models\CalendarTerm;
 use App\Models\CanonicalTopic;
 use App\Models\ContentBlock;
 use App\Models\ContentSubmission;
@@ -82,11 +84,19 @@ class DatabaseSeeder extends Seeder
             'system_type' => EducationSystemType::ExamBoard,
         ]);
 
+        $primary = CurriculumTier::create([
+            'education_system_id' => $nerdc->id,
+            'name' => 'Primary',
+            'slug' => 'primary',
+            'sort_order' => 1,
+            'is_tertiary' => false,
+        ]);
+
         $juniorSecondary = CurriculumTier::create([
             'education_system_id' => $nerdc->id,
             'name' => 'Junior Secondary School',
             'slug' => 'junior-secondary',
-            'sort_order' => 1,
+            'sort_order' => 2,
             'is_tertiary' => false,
         ]);
 
@@ -94,7 +104,7 @@ class DatabaseSeeder extends Seeder
             'education_system_id' => $nerdc->id,
             'name' => 'Senior Secondary School',
             'slug' => 'senior-secondary',
-            'sort_order' => 2,
+            'sort_order' => 3,
             'is_tertiary' => false,
         ]);
 
@@ -102,9 +112,13 @@ class DatabaseSeeder extends Seeder
             'education_system_id' => $nerdc->id,
             'name' => 'Tertiary',
             'slug' => 'tertiary',
-            'sort_order' => 3,
+            'sort_order' => 4,
             'is_tertiary' => true,
         ]);
+
+        foreach (range(1, 6) as $i) {
+            EducationLevel::create(['curriculum_tier_id' => $primary->id, 'name' => "Primary $i", 'display_name' => "Primary $i", 'sort_order' => $i, 'typical_age_min' => 5 + $i, 'typical_age_max' => 6 + $i]);
+        }
 
         $jss1 = EducationLevel::create(['curriculum_tier_id' => $juniorSecondary->id, 'name' => 'JSS 1', 'display_name' => 'JSS 1', 'sort_order' => 1, 'typical_age_min' => 10, 'typical_age_max' => 12]);
         $jss2 = EducationLevel::create(['curriculum_tier_id' => $juniorSecondary->id, 'name' => 'JSS 2', 'display_name' => 'JSS 2', 'sort_order' => 2, 'typical_age_min' => 11, 'typical_age_max' => 13]);
@@ -166,6 +180,30 @@ class DatabaseSeeder extends Seeder
             ],
         ]);
 
+        $polytechnicCgpa = GradingScale::create([
+            'name' => 'Nigerian Polytechnic CGPA (4-point)',
+            'scale_type' => ScaleType::Cgpa,
+            'scale_min' => 0,
+            'scale_max' => 4,
+            'pass_threshold' => 1,
+            'grade_boundaries' => [
+                ['label' => 'A', 'min' => 70, 'max' => 100, 'gp' => 4, 'is_pass' => true],
+                ['label' => 'AB', 'min' => 60, 'max' => 69, 'gp' => 3.5, 'is_pass' => true],
+                ['label' => 'B', 'min' => 50, 'max' => 59, 'gp' => 3, 'is_pass' => true],
+                ['label' => 'BC', 'min' => 45, 'max' => 49, 'gp' => 2.5, 'is_pass' => true],
+                ['label' => 'C', 'min' => 40, 'max' => 44, 'gp' => 2, 'is_pass' => true],
+                ['label' => 'CD', 'min' => 35, 'max' => 39, 'gp' => 1.5, 'is_pass' => true],
+                ['label' => 'D', 'min' => 30, 'max' => 34, 'gp' => 1, 'is_pass' => true],
+                ['label' => 'F', 'min' => 0, 'max' => 29, 'gp' => 0, 'is_pass' => false],
+            ],
+            'classification_labels' => [
+                ['label' => 'Distinction', 'min_cgpa' => 3.5],
+                ['label' => 'Upper Credit', 'min_cgpa' => 3.0],
+                ['label' => 'Lower Credit', 'min_cgpa' => 2.5],
+                ['label' => 'Pass', 'min_cgpa' => 1.0],
+            ],
+        ]);
+
         $disciplines = collect([
             'Computer Science',
             'Mass Communication',
@@ -175,6 +213,10 @@ class DatabaseSeeder extends Seeder
             'Physics',
             'Chemistry',
             'Biology',
+            'Economics',
+            'Political Science',
+            'Literature',
+            'Civic Education',
         ])->mapWithKeys(fn (string $name) => [
             Str::slug($name) => Discipline::create([
                 'name' => $name,
@@ -284,21 +326,34 @@ class DatabaseSeeder extends Seeder
         $chemistrySubject = CurriculumSubject::create(['education_system_id' => $nerdc->id, 'name' => 'Chemistry', 'slug' => 'chemistry', 'discipline_id' => $disciplines->get('chemistry')->id]);
         $biologySubject = CurriculumSubject::create(['education_system_id' => $nerdc->id, 'name' => 'Biology', 'slug' => 'biology', 'discipline_id' => $disciplines->get('biology')->id]);
         $csSubject = CurriculumSubject::create(['education_system_id' => $nerdc->id, 'name' => 'Computer Studies', 'slug' => 'computer-studies', 'discipline_id' => $disciplines->get('computer-science')->id]);
+        $furtherMathSubject = CurriculumSubject::create(['education_system_id' => $nerdc->id, 'name' => 'Further Mathematics', 'slug' => 'further-mathematics', 'discipline_id' => $disciplines->get('mathematics')->id]);
+        $economicsSubject = CurriculumSubject::create(['education_system_id' => $nerdc->id, 'name' => 'Economics', 'slug' => 'economics', 'discipline_id' => $disciplines->get('economics')->id]);
+        $governmentSubject = CurriculumSubject::create(['education_system_id' => $nerdc->id, 'name' => 'Government', 'slug' => 'government', 'discipline_id' => $disciplines->get('political-science')->id]);
+        $literatureSubject = CurriculumSubject::create(['education_system_id' => $nerdc->id, 'name' => 'Literature in English', 'slug' => 'literature-in-english', 'discipline_id' => $disciplines->get('literature')->id]);
+        $civicSubject = CurriculumSubject::create(['education_system_id' => $nerdc->id, 'name' => 'Civic Education', 'slug' => 'civic-education', 'discipline_id' => $disciplines->get('civic-education')->id]);
 
-        $coreJssSubjects = [$mathSubject, $englishSubject, $csSubject];
+        $coreJssSubjects = [$mathSubject, $englishSubject, $csSubject, $civicSubject];
         foreach ([$jss1, $jss2, $jss3] as $level) {
             foreach ($coreJssSubjects as $subject) {
                 LevelSubject::create(['education_level_id' => $level->id, 'curriculum_subject_id' => $subject->id, 'is_compulsory' => true]);
             }
         }
 
-        $coreSsSubjects = [$mathSubject, $englishSubject];
+        $coreSsSubjects = [$mathSubject, $englishSubject, $civicSubject];
         foreach ([$ss1, $ss2, $ss3] as $level) {
             foreach ($coreSsSubjects as $subject) {
                 LevelSubject::create(['education_level_id' => $level->id, 'curriculum_subject_id' => $subject->id, 'is_compulsory' => true]);
             }
-            foreach ([$physicsSubject, $chemistrySubject, $biologySubject] as $scienceSubject) {
+            foreach ([$physicsSubject, $chemistrySubject, $biologySubject, $furtherMathSubject] as $scienceSubject) {
                 LevelSubject::create(['education_level_id' => $level->id, 'curriculum_subject_id' => $scienceSubject->id, 'is_compulsory' => false, 'stream_id' => $scienceStream->id]);
+            }
+            foreach ([$governmentSubject, $literatureSubject, $economicsSubject] as $artsSubject) {
+                LevelSubject::create(['education_level_id' => $level->id, 'curriculum_subject_id' => $artsSubject->id, 'is_compulsory' => false, 'stream_id' => $artsStream->id]);
+            }
+            foreach ([$economicsSubject] as $commercialSubject) {
+                if (! LevelSubject::where('education_level_id', $level->id)->where('curriculum_subject_id', $commercialSubject->id)->exists()) {
+                    LevelSubject::create(['education_level_id' => $level->id, 'curriculum_subject_id' => $commercialSubject->id, 'is_compulsory' => false, 'stream_id' => $commercialStream->id]);
+                }
             }
         }
 
@@ -322,6 +377,44 @@ class DatabaseSeeder extends Seeder
             'grading_scale_id' => $waecGrading->id,
         ]);
 
+        AssessmentType::create([
+            'education_system_id' => $nerdc->id,
+            'name' => 'NECO SSCE',
+            'slug' => 'neco-ssce',
+            'tier_id' => $seniorSecondary->id,
+            'is_exit_exam' => true,
+            'is_entrance_exam' => false,
+            'grading_scale_id' => $waecGrading->id,
+        ]);
+
+        AssessmentType::create([
+            'education_system_id' => $nerdc->id,
+            'name' => 'JAMB UTME',
+            'slug' => 'jamb-utme',
+            'tier_id' => null,
+            'is_exit_exam' => false,
+            'is_entrance_exam' => true,
+            'grading_scale_id' => $waecGrading->id,
+        ]);
+
+        $wassce = AssessmentType::where('slug', 'wassce')->first();
+
+        $wascSubjects = [
+            ['name' => 'Mathematics', 'slug' => 'mathematics', 'is_compulsory' => true],
+            ['name' => 'English Language', 'slug' => 'english-language', 'is_compulsory' => true],
+            ['name' => 'Physics', 'slug' => 'physics', 'is_compulsory' => false],
+            ['name' => 'Chemistry', 'slug' => 'chemistry', 'is_compulsory' => false],
+            ['name' => 'Biology', 'slug' => 'biology', 'is_compulsory' => false],
+            ['name' => 'Economics', 'slug' => 'economics', 'is_compulsory' => false],
+            ['name' => 'Government', 'slug' => 'government', 'is_compulsory' => false],
+            ['name' => 'Literature in English', 'slug' => 'literature-in-english', 'is_compulsory' => false],
+            ['name' => 'Civic Education', 'slug' => 'civic-education', 'is_compulsory' => false],
+        ];
+
+        foreach ($wascSubjects as $subject) {
+            AssessmentSubject::create(array_merge($subject, ['assessment_type_id' => $wassce->id]));
+        }
+
         $universityType = InstitutionTypeModel::create([
             'country_id' => $nigeria->id,
             'name' => 'University',
@@ -338,7 +431,7 @@ class DatabaseSeeder extends Seeder
             'slug' => 'polytechnic',
             'level_progression' => ['ND I', 'ND II', 'HND I', 'HND II'],
             'credit_system' => 'Credit Units',
-            'grading_scale_id' => $universityCgpa->id,
+            'grading_scale_id' => $polytechnicCgpa->id,
             'qualification_names' => ['ND', 'HND'],
         ]);
 
@@ -348,12 +441,41 @@ class DatabaseSeeder extends Seeder
             'slug' => 'college-of-education',
             'level_progression' => ['NCE I', 'NCE II', 'NCE III'],
             'credit_system' => 'Credit Units',
-            'grading_scale_id' => $universityCgpa->id,
+            'grading_scale_id' => $polytechnicCgpa->id,
             'qualification_names' => ['NCE'],
+        ]);
+
+        InstitutionTypeModel::create([
+            'country_id' => $nigeria->id,
+            'name' => 'Monotechnic',
+            'slug' => 'monotechnic',
+            'level_progression' => ['ND I', 'ND II'],
+            'credit_system' => 'Credit Units',
+            'grading_scale_id' => $polytechnicCgpa->id,
+            'qualification_names' => ['ND'],
         ]);
 
         foreach (Institution::all() as $inst) {
             $inst->educationSystems()->attach($nerdc->id);
+        }
+
+        foreach (Institution::all() as $inst) {
+            CalendarTerm::create([
+                'institution_id' => $inst->id,
+                'academic_year' => '2025/2026',
+                'name' => 'First Semester',
+                'start_date' => '2025-09-15',
+                'end_date' => '2026-01-31',
+                'sort_order' => 1,
+            ]);
+            CalendarTerm::create([
+                'institution_id' => $inst->id,
+                'academic_year' => '2025/2026',
+                'name' => 'Second Semester',
+                'start_date' => '2026-02-10',
+                'end_date' => '2026-07-15',
+                'sort_order' => 2,
+            ]);
         }
 
         ExamType::create([
@@ -391,6 +513,19 @@ class DatabaseSeeder extends Seeder
             'key' => 'registration_open',
             'value' => true,
         ]);
+
+        PlatformSetting::create([
+            'key' => 'default_education_system_id',
+            'value' => $nerdc->id,
+        ]);
+
+        $universityTypeRecord = InstitutionTypeModel::where('slug', 'university')->first();
+        $polytechnicTypeRecord = InstitutionTypeModel::where('slug', 'polytechnic')->first();
+        $coeTypeRecord = InstitutionTypeModel::where('slug', 'college-of-education')->first();
+
+        Institution::where('institution_type', 'university')->update(['institution_type_id' => $universityTypeRecord?->id]);
+        Institution::where('institution_type', 'polytechnic')->update(['institution_type_id' => $polytechnicTypeRecord?->id]);
+        Institution::where('institution_type', 'college_of_education')->update(['institution_type_id' => $coeTypeRecord?->id]);
 
         SubscriptionPlan::create([
             'name' => 'free',
@@ -517,21 +652,21 @@ class DatabaseSeeder extends Seeder
         $mcmDisc = $disciplines->get('mass-communication');
 
         $courses = [
-            ['institution_id' => $mouau->id, 'owning_department_id' => $csDeptMouau->id, 'discipline_id' => $csDisc->id, 'course_code' => 'CSC 101', 'course_title' => 'Introduction to Computer Science', 'level' => 100, 'semester' => Semester::First, 'credit_units' => 3, 'course_scope' => CourseScope::Department],
-            ['institution_id' => $mouau->id, 'owning_department_id' => $csDeptMouau->id, 'discipline_id' => $csDisc->id, 'course_code' => 'CSC 102', 'course_title' => 'Introduction to Programming', 'level' => 100, 'semester' => Semester::Second, 'credit_units' => 3, 'course_scope' => CourseScope::Department],
-            ['institution_id' => $mouau->id, 'owning_department_id' => $csDeptMouau->id, 'discipline_id' => $csDisc->id, 'course_code' => 'CSC 201', 'course_title' => 'Data Structures and Algorithms', 'level' => 200, 'semester' => Semester::First, 'credit_units' => 4, 'course_scope' => CourseScope::Department],
-            ['institution_id' => $mouau->id, 'owning_department_id' => $csDeptMouau->id, 'discipline_id' => $csDisc->id, 'course_code' => 'CSC 301', 'course_title' => 'Operating Systems', 'level' => 300, 'semester' => Semester::First, 'credit_units' => 3, 'course_scope' => CourseScope::Department],
-            ['institution_id' => $mouau->id, 'owning_department_id' => $csDeptMouau->id, 'discipline_id' => $csDisc->id, 'course_code' => 'CSC 302', 'course_title' => 'Database Management Systems', 'level' => 300, 'semester' => Semester::Second, 'credit_units' => 3, 'course_scope' => CourseScope::Department],
-            ['institution_id' => $mouau->id, 'owning_department_id' => $csDeptMouau->id, 'discipline_id' => $csDisc->id, 'course_code' => 'CSC 401', 'course_title' => 'Software Engineering', 'level' => 400, 'semester' => Semester::First, 'credit_units' => 4, 'course_scope' => CourseScope::Department],
-            ['institution_id' => $mouau->id, 'owning_department_id' => $engDeptMouau->id, 'discipline_id' => $engDisc->id, 'course_code' => 'ENG 101', 'course_title' => 'Communication Skills I', 'level' => 100, 'semester' => Semester::First, 'credit_units' => 2, 'course_scope' => CourseScope::Faculty, 'is_elective' => false],
-            ['institution_id' => $mouau->id, 'owning_department_id' => $engDeptMouau->id, 'discipline_id' => $engDisc->id, 'course_code' => 'ENG 102', 'course_title' => 'Communication Skills II', 'level' => 100, 'semester' => Semester::Second, 'credit_units' => 2, 'course_scope' => CourseScope::InstitutionWide],
-            ['institution_id' => $mouau->id, 'owning_department_id' => $meeDeptMouau->id, 'discipline_id' => $meeDisc->id, 'course_code' => 'MEE 201', 'course_title' => 'Engineering Mechanics', 'level' => 200, 'semester' => Semester::First, 'credit_units' => 3, 'course_scope' => CourseScope::Faculty],
-            ['institution_id' => $mouau->id, 'owning_department_id' => $meeDeptMouau->id, 'discipline_id' => $meeDisc->id, 'course_code' => 'MEE 301', 'course_title' => 'Thermodynamics I', 'level' => 300, 'semester' => Semester::First, 'credit_units' => 3, 'course_scope' => CourseScope::Department],
-            ['institution_id' => $mouau->id, 'owning_department_id' => $mcmDeptMouau->id, 'discipline_id' => $mcmDisc->id, 'course_code' => 'MCM 101', 'course_title' => 'Introduction to Mass Communication', 'level' => 100, 'semester' => Semester::First, 'credit_units' => 3, 'course_scope' => CourseScope::Department],
-            ['institution_id' => $mouau->id, 'owning_department_id' => $mcmDeptMouau->id, 'discipline_id' => $mcmDisc->id, 'course_code' => 'MCM 201', 'course_title' => 'Media Ethics and Law', 'level' => 200, 'semester' => Semester::Second, 'credit_units' => 2, 'course_scope' => CourseScope::Department, 'is_elective' => true],
-            ['institution_id' => $unn->id, 'owning_department_id' => $csDeptUnn->id, 'discipline_id' => $csDisc->id, 'course_code' => 'COS 101', 'course_title' => 'Introduction to Computing', 'level' => 100, 'semester' => Semester::First, 'credit_units' => 3, 'course_scope' => CourseScope::Department],
-            ['institution_id' => $unn->id, 'owning_department_id' => $csDeptUnn->id, 'discipline_id' => $csDisc->id, 'course_code' => 'COS 201', 'course_title' => 'Computer Programming I', 'level' => 200, 'semester' => Semester::First, 'credit_units' => 4, 'course_scope' => CourseScope::Department],
-            ['institution_id' => $unn->id, 'owning_department_id' => $meeDeptUnn->id, 'discipline_id' => $meeDisc->id, 'course_code' => 'MEE 211', 'course_title' => 'Strength of Materials', 'level' => 200, 'semester' => Semester::Both, 'credit_units' => 3, 'course_scope' => CourseScope::Faculty],
+            ['institution_id' => $mouau->id, 'owning_department_id' => $csDeptMouau->id, 'discipline_id' => $csDisc->id, 'course_code' => 'CSC 101', 'course_title' => 'Introduction to Computer Science', 'level' => '100L', 'semester' => Semester::First, 'credit_units' => 3, 'course_scope' => CourseScope::Department],
+            ['institution_id' => $mouau->id, 'owning_department_id' => $csDeptMouau->id, 'discipline_id' => $csDisc->id, 'course_code' => 'CSC 102', 'course_title' => 'Introduction to Programming', 'level' => '100L', 'semester' => Semester::Second, 'credit_units' => 3, 'course_scope' => CourseScope::Department],
+            ['institution_id' => $mouau->id, 'owning_department_id' => $csDeptMouau->id, 'discipline_id' => $csDisc->id, 'course_code' => 'CSC 201', 'course_title' => 'Data Structures and Algorithms', 'level' => '200L', 'semester' => Semester::First, 'credit_units' => 4, 'course_scope' => CourseScope::Department],
+            ['institution_id' => $mouau->id, 'owning_department_id' => $csDeptMouau->id, 'discipline_id' => $csDisc->id, 'course_code' => 'CSC 301', 'course_title' => 'Operating Systems', 'level' => '300L', 'semester' => Semester::First, 'credit_units' => 3, 'course_scope' => CourseScope::Department],
+            ['institution_id' => $mouau->id, 'owning_department_id' => $csDeptMouau->id, 'discipline_id' => $csDisc->id, 'course_code' => 'CSC 302', 'course_title' => 'Database Management Systems', 'level' => '300L', 'semester' => Semester::Second, 'credit_units' => 3, 'course_scope' => CourseScope::Department],
+            ['institution_id' => $mouau->id, 'owning_department_id' => $csDeptMouau->id, 'discipline_id' => $csDisc->id, 'course_code' => 'CSC 401', 'course_title' => 'Software Engineering', 'level' => '400L', 'semester' => Semester::First, 'credit_units' => 4, 'course_scope' => CourseScope::Department],
+            ['institution_id' => $mouau->id, 'owning_department_id' => $engDeptMouau->id, 'discipline_id' => $engDisc->id, 'course_code' => 'ENG 101', 'course_title' => 'Communication Skills I', 'level' => '100L', 'semester' => Semester::First, 'credit_units' => 2, 'course_scope' => CourseScope::Faculty, 'is_elective' => false],
+            ['institution_id' => $mouau->id, 'owning_department_id' => $engDeptMouau->id, 'discipline_id' => $engDisc->id, 'course_code' => 'ENG 102', 'course_title' => 'Communication Skills II', 'level' => '100L', 'semester' => Semester::Second, 'credit_units' => 2, 'course_scope' => CourseScope::InstitutionWide],
+            ['institution_id' => $mouau->id, 'owning_department_id' => $meeDeptMouau->id, 'discipline_id' => $meeDisc->id, 'course_code' => 'MEE 201', 'course_title' => 'Engineering Mechanics', 'level' => '200L', 'semester' => Semester::First, 'credit_units' => 3, 'course_scope' => CourseScope::Faculty],
+            ['institution_id' => $mouau->id, 'owning_department_id' => $meeDeptMouau->id, 'discipline_id' => $meeDisc->id, 'course_code' => 'MEE 301', 'course_title' => 'Thermodynamics I', 'level' => '300L', 'semester' => Semester::First, 'credit_units' => 3, 'course_scope' => CourseScope::Department],
+            ['institution_id' => $mouau->id, 'owning_department_id' => $mcmDeptMouau->id, 'discipline_id' => $mcmDisc->id, 'course_code' => 'MCM 101', 'course_title' => 'Introduction to Mass Communication', 'level' => '100L', 'semester' => Semester::First, 'credit_units' => 3, 'course_scope' => CourseScope::Department],
+            ['institution_id' => $mouau->id, 'owning_department_id' => $mcmDeptMouau->id, 'discipline_id' => $mcmDisc->id, 'course_code' => 'MCM 201', 'course_title' => 'Media Ethics and Law', 'level' => '200L', 'semester' => Semester::Second, 'credit_units' => 2, 'course_scope' => CourseScope::Department, 'is_elective' => true],
+            ['institution_id' => $unn->id, 'owning_department_id' => $csDeptUnn->id, 'discipline_id' => $csDisc->id, 'course_code' => 'COS 101', 'course_title' => 'Introduction to Computing', 'level' => '100L', 'semester' => Semester::First, 'credit_units' => 3, 'course_scope' => CourseScope::Department],
+            ['institution_id' => $unn->id, 'owning_department_id' => $csDeptUnn->id, 'discipline_id' => $csDisc->id, 'course_code' => 'COS 201', 'course_title' => 'Computer Programming I', 'level' => '200L', 'semester' => Semester::First, 'credit_units' => 4, 'course_scope' => CourseScope::Department],
+            ['institution_id' => $unn->id, 'owning_department_id' => $meeDeptUnn->id, 'discipline_id' => $meeDisc->id, 'course_code' => 'MEE 211', 'course_title' => 'Strength of Materials', 'level' => '200L', 'semester' => Semester::Both, 'credit_units' => 3, 'course_scope' => CourseScope::Faculty],
         ];
 
         foreach ($courses as $courseData) {
@@ -580,7 +715,7 @@ class DatabaseSeeder extends Seeder
             'institution_id' => $mouau->id,
             'faculty_id' => $mouauColpasFaculty->id,
             'department_id' => $csDeptMouau->id,
-            'level' => 300,
+            'level' => '300L',
             'matric_number' => 'MOUAU/CSC/19/1234',
         ]);
 

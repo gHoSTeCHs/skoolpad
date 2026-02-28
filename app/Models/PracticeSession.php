@@ -18,6 +18,8 @@ class PracticeSession extends Model
         'user_id',
         'institution_course_id',
         'canonical_topic_id',
+        'assessment_type_id',
+        'question_paper_id',
         'mode',
         'question_count',
         'correct_count',
@@ -54,6 +56,16 @@ class PracticeSession extends Model
     public function canonicalTopic(): BelongsTo
     {
         return $this->belongsTo(CanonicalTopic::class);
+    }
+
+    public function assessmentType(): BelongsTo
+    {
+        return $this->belongsTo(AssessmentType::class);
+    }
+
+    public function questionPaper(): BelongsTo
+    {
+        return $this->belongsTo(QuestionPaper::class);
     }
 
     public function practiceAnswers(): HasMany

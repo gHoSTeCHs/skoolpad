@@ -5,6 +5,7 @@ use App\Enums\InstitutionType;
 use App\Enums\OwnershipType;
 use App\Enums\ScaleType;
 use App\Enums\UserRole;
+use App\Models\AssessmentSubject;
 use App\Models\AssessmentType;
 use App\Models\Country;
 use App\Models\CurriculumSubject;
@@ -37,8 +38,8 @@ test('nigeria exists in countries table', function () {
         ->and($nigeria->currency_code)->toBe('NGN');
 });
 
-test('8 disciplines exist', function () {
-    expect(Discipline::count())->toBe(8);
+test('12 disciplines exist', function () {
+    expect(Discipline::count())->toBe(12);
 
     expect(Discipline::where('slug', 'computer-science')->exists())->toBeTrue()
         ->and(Discipline::where('slug', 'mass-communication')->exists())->toBeTrue()
@@ -47,7 +48,11 @@ test('8 disciplines exist', function () {
         ->and(Discipline::where('slug', 'mathematics')->exists())->toBeTrue()
         ->and(Discipline::where('slug', 'physics')->exists())->toBeTrue()
         ->and(Discipline::where('slug', 'chemistry')->exists())->toBeTrue()
-        ->and(Discipline::where('slug', 'biology')->exists())->toBeTrue();
+        ->and(Discipline::where('slug', 'biology')->exists())->toBeTrue()
+        ->and(Discipline::where('slug', 'economics')->exists())->toBeTrue()
+        ->and(Discipline::where('slug', 'political-science')->exists())->toBeTrue()
+        ->and(Discipline::where('slug', 'literature')->exists())->toBeTrue()
+        ->and(Discipline::where('slug', 'civic-education')->exists())->toBeTrue();
 });
 
 test('5 institutions exist with correct types and ownership', function () {
@@ -84,8 +89,8 @@ test('3 exam types exist and all are inactive', function () {
         ->and($jamb->questions_per_subject)->toBe(60);
 });
 
-test('2 platform settings exist with correct values', function () {
-    expect(PlatformSetting::count())->toBe(2);
+test('3 platform settings exist with correct values', function () {
+    expect(PlatformSetting::count())->toBe(3);
 
     $monetization = PlatformSetting::where('key', 'monetization_enabled')->first();
     $registration = PlatformSetting::where('key', 'registration_open')->first();
@@ -94,6 +99,8 @@ test('2 platform settings exist with correct values', function () {
         ->and($monetization->value)->toBeFalsy()
         ->and($registration)->not->toBeNull()
         ->and($registration->value)->toBeTruthy();
+
+    $this->assertDatabaseHas('platform_settings', ['key' => 'default_education_system_id']);
 });
 
 test('3 subscription plans exist with correct prices', function () {
@@ -134,26 +141,30 @@ test('NERDC education system exists', function () {
         ->and($waec->country_id)->toBeNull();
 });
 
-test('3 curriculum tiers exist for NERDC', function () {
+test('4 curriculum tiers exist for NERDC', function () {
     $nerdc = EducationSystem::where('slug', 'nerdc')->first();
     $tiers = CurriculumTier::where('education_system_id', $nerdc->id)->orderBy('sort_order')->get();
 
-    expect($tiers)->toHaveCount(3)
-        ->and($tiers[0]->slug)->toBe('junior-secondary')
+    expect($tiers)->toHaveCount(4)
+        ->and($tiers[0]->slug)->toBe('primary')
         ->and($tiers[0]->is_tertiary)->toBeFalse()
-        ->and($tiers[1]->slug)->toBe('senior-secondary')
-        ->and($tiers[2]->slug)->toBe('tertiary')
-        ->and($tiers[2]->is_tertiary)->toBeTrue();
+        ->and($tiers[1]->slug)->toBe('junior-secondary')
+        ->and($tiers[1]->is_tertiary)->toBeFalse()
+        ->and($tiers[2]->slug)->toBe('senior-secondary')
+        ->and($tiers[3]->slug)->toBe('tertiary')
+        ->and($tiers[3]->is_tertiary)->toBeTrue();
 });
 
-test('11 education levels exist across tiers', function () {
-    expect(EducationLevel::count())->toBe(11);
+test('17 education levels exist across tiers', function () {
+    expect(EducationLevel::count())->toBe(17);
 
+    $primary = CurriculumTier::where('slug', 'primary')->first();
     $jss = CurriculumTier::where('slug', 'junior-secondary')->first();
     $ss = CurriculumTier::where('slug', 'senior-secondary')->first();
     $tertiary = CurriculumTier::where('slug', 'tertiary')->first();
 
-    expect(EducationLevel::where('curriculum_tier_id', $jss->id)->count())->toBe(3)
+    expect(EducationLevel::where('curriculum_tier_id', $primary->id)->count())->toBe(6)
+        ->and(EducationLevel::where('curriculum_tier_id', $jss->id)->count())->toBe(3)
         ->and(EducationLevel::where('curriculum_tier_id', $ss->id)->count())->toBe(3)
         ->and(EducationLevel::where('curriculum_tier_id', $tertiary->id)->count())->toBe(5);
 });
@@ -166,54 +177,85 @@ test('3 streams exist for senior secondary', function () {
         ->and(Stream::where('name', 'Commercial')->exists())->toBeTrue();
 });
 
-test('2 grading scales exist', function () {
-    expect(GradingScale::count())->toBe(2);
+test('3 grading scales exist', function () {
+    expect(GradingScale::count())->toBe(3);
 
     $waecScale = GradingScale::where('name', 'WAEC A1-F9')->first();
-    $cgpaScale = GradingScale::where('scale_type', ScaleType::Cgpa)->first();
+    $uniCgpa = GradingScale::where('name', 'like', '%University%')->first();
+    $polyCgpa = GradingScale::where('name', 'like', '%Polytechnic%')->first();
 
     expect($waecScale)->not->toBeNull()
         ->and($waecScale->scale_type)->toBe(ScaleType::Points)
-        ->and($cgpaScale)->not->toBeNull()
-        ->and($cgpaScale->classification_labels)->not->toBeNull();
+        ->and($uniCgpa)->not->toBeNull()
+        ->and((int) $uniCgpa->scale_max)->toBe(5)
+        ->and($uniCgpa->classification_labels)->not->toBeNull()
+        ->and($polyCgpa)->not->toBeNull()
+        ->and((int) $polyCgpa->scale_max)->toBe(4)
+        ->and($polyCgpa->classification_labels)->not->toBeNull();
 });
 
-test('6 curriculum subjects exist', function () {
-    expect(CurriculumSubject::count())->toBe(6);
+test('11 curriculum subjects exist', function () {
+    expect(CurriculumSubject::count())->toBe(11);
 });
 
-test('24 level subjects exist with correct compulsory flags', function () {
-    expect(LevelSubject::count())->toBe(24);
+test('42 level subjects exist with correct compulsory flags', function () {
+    expect(LevelSubject::count())->toBe(42);
 
     $compulsory = LevelSubject::where('is_compulsory', true)->count();
     $optional = LevelSubject::where('is_compulsory', false)->count();
 
-    expect($compulsory)->toBe(15)
-        ->and($optional)->toBe(9);
+    expect($compulsory)->toBe(21)
+        ->and($optional)->toBe(21);
 });
 
-test('2 assessment types exist', function () {
-    expect(AssessmentType::count())->toBe(2);
+test('4 assessment types exist', function () {
+    expect(AssessmentType::count())->toBe(4);
 
     $wassce = AssessmentType::where('slug', 'wassce')->first();
 
     expect($wassce)->not->toBeNull()
         ->and($wassce->is_exit_exam)->toBeTrue()
         ->and($wassce->is_entrance_exam)->toBeFalse();
+
+    $this->assertDatabaseHas('assessment_types', ['slug' => 'bece']);
+    $this->assertDatabaseHas('assessment_types', ['slug' => 'neco-ssce']);
+    $this->assertDatabaseHas('assessment_types', ['slug' => 'jamb-utme']);
 });
 
-test('3 institution types exist', function () {
-    expect(InstitutionTypeModel::count())->toBe(3);
+test('9 assessment subjects exist under WASSCE', function () {
+    $wassce = AssessmentType::where('slug', 'wassce')->first();
+    expect(AssessmentSubject::where('assessment_type_id', $wassce->id)->count())->toBe(9);
+});
+
+test('institutions have institution_type_id linked', function () {
+    expect(Institution::whereNotNull('institution_type_id')->count())->toBeGreaterThan(0);
+});
+
+test('4 institution types exist', function () {
+    expect(InstitutionTypeModel::count())->toBe(4);
 
     $university = InstitutionTypeModel::where('slug', 'university')->first();
+    $monotechnic = InstitutionTypeModel::where('slug', 'monotechnic')->first();
 
     expect($university)->not->toBeNull()
         ->and($university->level_progression)->toBeArray()
-        ->and($university->qualification_names)->toContain('B.Sc.');
+        ->and($university->qualification_names)->toContain('B.Sc.')
+        ->and($monotechnic)->not->toBeNull()
+        ->and($monotechnic->level_progression)->toBeArray();
 });
 
 test('all institutions are linked to NERDC education system', function () {
     $nerdc = EducationSystem::where('slug', 'nerdc')->first();
 
     expect($nerdc->institutions()->count())->toBe(5);
+});
+
+test('calendar terms exist for all institutions', function () {
+    $termCount = \App\Models\CalendarTerm::count();
+
+    expect($termCount)->toBe(10);
+
+    foreach (Institution::all() as $inst) {
+        expect($inst->calendarTerms()->count())->toBe(2);
+    }
 });

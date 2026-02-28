@@ -22,6 +22,7 @@ class Institution extends Model
         'name',
         'abbreviation',
         'institution_type',
+        'institution_type_id',
         'ownership_type',
         'state',
         'city',
@@ -53,6 +54,11 @@ class Institution extends Model
     public function institutionCourses(): HasMany
     {
         return $this->hasMany(InstitutionCourse::class);
+    }
+
+    public function institutionTypeModel(): BelongsTo
+    {
+        return $this->belongsTo(\App\Models\InstitutionType::class, 'institution_type_id');
     }
 
     public function educationSystems(): BelongsToMany

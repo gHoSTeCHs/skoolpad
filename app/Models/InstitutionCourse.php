@@ -38,7 +38,7 @@ class InstitutionCourse extends Model
             'semester' => Semester::class,
             'course_scope' => CourseScope::class,
             'is_elective' => 'boolean',
-            'level' => 'integer',
+            'level' => 'string',
             'credit_units' => 'integer',
         ];
     }

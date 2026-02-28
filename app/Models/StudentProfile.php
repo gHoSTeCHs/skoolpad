@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use App\Enums\AcademicStatus;
+use App\Enums\StudentType;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
@@ -16,6 +17,7 @@ class StudentProfile extends Model
 
     protected $fillable = [
         'user_id',
+        'student_type',
         'institution_id',
         'faculty_id',
         'department_id',
@@ -33,14 +35,17 @@ class StudentProfile extends Model
         'invite_code',
         'exam_goals',
         'study_preferences',
+        'parent_invite_dismissed_at',
     ];
 
     /** @return array<string, string> */
     protected function casts(): array
     {
         return [
+            'student_type' => StudentType::class,
             'academic_status' => AcademicStatus::class,
             'academic_status_changed_at' => 'datetime',
+            'parent_invite_dismissed_at' => 'datetime',
             'exam_goals' => 'array',
             'study_preferences' => 'array',
         ];
@@ -94,5 +99,50 @@ class StudentProfile extends Model
     public function parentChildLinks(): HasMany
     {
         return $this->hasMany(ParentChildLink::class);
+    }
+
+    public function isTertiary(): bool
+    {
+        return $this->student_type === StudentType::Tertiary;
+    }
+
+    public function isSecondary(): bool
+    {
+        return $this->student_type === StudentType::Secondary;
+    }
+
+    public function findNextLevel(): ?EducationLevel
+    {
+        $currentLevel = $this->educationLevel()->with('curriculumTier')->first();
+        if (! $currentLevel || ! $currentLevel->curriculumTier) {
+            return null;
+        }
+
+        $nextInTier = EducationLevel::query()
+            ->where('curriculum_tier_id', $currentLevel->curriculum_tier_id)
+            ->where('sort_order', '>', $currentLevel->sort_order)
+            ->orderBy('sort_order')
+            ->first();
+
+        if ($nextInTier) {
+            return $nextInTier;
+        }
+
+        $tier = $currentLevel->curriculumTier;
+        $nextTier = CurriculumTier::query()
+            ->where('education_system_id', $tier->education_system_id)
+            ->where('is_tertiary', false)
+            ->where('sort_order', '>', $tier->sort_order)
+            ->orderBy('sort_order')
+            ->first();
+
+        if (! $nextTier) {
+            return null;
+        }
+
+        return EducationLevel::query()
+            ->where('curriculum_tier_id', $nextTier->id)
+            ->orderBy('sort_order')
+            ->first();
     }
 }

@@ -56,4 +56,9 @@ class AssessmentType extends Model
     {
         return $this->hasMany(QuestionAssessmentLink::class);
     }
+
+    public function assessmentSubjects(): HasMany
+    {
+        return $this->hasMany(AssessmentSubject::class);
+    }
 }

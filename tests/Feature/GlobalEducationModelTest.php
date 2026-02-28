@@ -2,6 +2,7 @@
 
 use App\Enums\EducationSystemType;
 use App\Enums\ScaleType;
+use App\Models\AssessmentSubject;
 use App\Models\AssessmentType;
 use App\Models\CalendarTerm;
 use App\Models\Country;
@@ -224,4 +225,20 @@ test('level subject created_at is automatically set', function () {
     $levelSubject = LevelSubject::factory()->create();
 
     expect($levelSubject->created_at)->not->toBeNull();
+});
+
+test('assessment subject can be created with factory', function () {
+    $subject = AssessmentSubject::factory()->create();
+    expect($subject)->toBeInstanceOf(AssessmentSubject::class);
+});
+
+test('assessment subject belongs to assessment type', function () {
+    $subject = AssessmentSubject::factory()->create();
+    expect($subject->assessmentType)->toBeInstanceOf(AssessmentType::class);
+});
+
+test('assessment type has many assessment subjects', function () {
+    $type = AssessmentType::factory()->create();
+    AssessmentSubject::factory()->count(3)->create(['assessment_type_id' => $type->id]);
+    expect($type->assessmentSubjects)->toHaveCount(3);
 });
