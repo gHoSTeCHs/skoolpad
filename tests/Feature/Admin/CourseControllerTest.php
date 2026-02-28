@@ -66,7 +66,7 @@ test('store creates a course with valid data and owning_department_id', function
         'discipline_id' => $discipline->id,
         'course_code' => 'CSC 201',
         'course_title' => 'Data Structures',
-        'level' => 200,
+        'level' => '200L',
         'semester' => 'first',
         'credit_units' => 3,
         'is_elective' => false,
@@ -102,7 +102,7 @@ test('store enforces course_code uniqueness per institution', function () {
         'discipline_id' => $discipline->id,
         'course_code' => 'CSC 201',
         'course_title' => 'Duplicate Course',
-        'level' => 200,
+        'level' => '200L',
         'semester' => 'first',
         'credit_units' => 3,
         'course_scope' => 'department',
@@ -127,7 +127,7 @@ test('store allows same course_code at different institution', function () {
         'discipline_id' => $discipline->id,
         'course_code' => 'CSC 201',
         'course_title' => 'Data Structures',
-        'level' => 200,
+        'level' => '200L',
         'semester' => 'first',
         'credit_units' => 3,
         'course_scope' => 'department',
@@ -149,7 +149,7 @@ test('store rejects owning_department_id from a different institution', function
         'discipline_id' => $discipline->id,
         'course_code' => 'CSC 201',
         'course_title' => 'Data Structures',
-        'level' => 200,
+        'level' => '200L',
         'semester' => 'first',
         'credit_units' => 3,
         'course_scope' => 'department',
@@ -159,7 +159,14 @@ test('store rejects owning_department_id from a different institution', function
 test('institution structure api returns faculties and departments', function () {
     $institution = Institution::factory()->create();
     $faculty = Faculty::factory()->create(['institution_id' => $institution->id]);
-    Department::factory()->count(3)->create(['faculty_id' => $faculty->id]);
+    Department::factory()
+        ->count(3)
+        ->sequence(
+            ['name' => 'Computer Science', 'abbreviation' => 'CSC'],
+            ['name' => 'Mechanical Engineering', 'abbreviation' => 'MEE'],
+            ['name' => 'Electrical Engineering', 'abbreviation' => 'EEE'],
+        )
+        ->create(['faculty_id' => $faculty->id]);
 
     $this->getJson(route('admin.api.institution.structure', $institution))
         ->assertOk()
@@ -208,7 +215,7 @@ test('update modifies a course correctly', function () {
         'discipline_id' => $discipline->id,
         'course_code' => 'CSC 301',
         'course_title' => 'Updated Title',
-        'level' => 300,
+        'level' => '300L',
         'semester' => 'second',
         'credit_units' => 4,
         'is_elective' => true,

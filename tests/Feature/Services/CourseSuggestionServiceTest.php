@@ -21,14 +21,14 @@ test('includes department-scope courses owned by the department', function () {
     $course = InstitutionCourse::factory()->create([
         'institution_id' => $this->institution->id,
         'owning_department_id' => $this->department->id,
-        'level' => 200,
+        'level' => '200L',
         'course_scope' => CourseScope::Department,
     ]);
 
     $results = $this->service->getCoursesForStudent(
         $this->institution->id,
         $this->department->id,
-        200,
+        '200L',
     );
 
     expect($results)->toHaveCount(1)
@@ -41,7 +41,7 @@ test('includes faculty-scope courses with a department offering', function () {
     $course = InstitutionCourse::factory()->create([
         'institution_id' => $this->institution->id,
         'owning_department_id' => $otherDept->id,
-        'level' => 100,
+        'level' => '100L',
         'course_scope' => CourseScope::Faculty,
     ]);
 
@@ -53,7 +53,7 @@ test('includes faculty-scope courses with a department offering', function () {
     $results = $this->service->getCoursesForStudent(
         $this->institution->id,
         $this->department->id,
-        100,
+        '100L',
     );
 
     expect($results)->toHaveCount(1)
@@ -63,14 +63,14 @@ test('includes faculty-scope courses with a department offering', function () {
 test('includes institution-wide courses', function () {
     $course = InstitutionCourse::factory()->create([
         'institution_id' => $this->institution->id,
-        'level' => 300,
+        'level' => '300L',
         'course_scope' => CourseScope::InstitutionWide,
     ]);
 
     $results = $this->service->getCoursesForStudent(
         $this->institution->id,
         $this->department->id,
-        300,
+        '300L',
     );
 
     expect($results)->toHaveCount(1)
@@ -83,14 +83,14 @@ test('excludes courses from a different institution', function () {
     InstitutionCourse::factory()->create([
         'institution_id' => $otherInstitution->id,
         'owning_department_id' => $this->department->id,
-        'level' => 200,
+        'level' => '200L',
         'course_scope' => CourseScope::Department,
     ]);
 
     $results = $this->service->getCoursesForStudent(
         $this->institution->id,
         $this->department->id,
-        200,
+        '200L',
     );
 
     expect($results)->toBeEmpty();
@@ -100,14 +100,14 @@ test('excludes courses at a different level', function () {
     InstitutionCourse::factory()->create([
         'institution_id' => $this->institution->id,
         'owning_department_id' => $this->department->id,
-        'level' => 400,
+        'level' => '400L',
         'course_scope' => CourseScope::Department,
     ]);
 
     $results = $this->service->getCoursesForStudent(
         $this->institution->id,
         $this->department->id,
-        200,
+        '200L',
     );
 
     expect($results)->toBeEmpty();
@@ -119,14 +119,14 @@ test('excludes department-scope courses owned by a different department', functi
     InstitutionCourse::factory()->create([
         'institution_id' => $this->institution->id,
         'owning_department_id' => $otherDept->id,
-        'level' => 200,
+        'level' => '200L',
         'course_scope' => CourseScope::Department,
     ]);
 
     $results = $this->service->getCoursesForStudent(
         $this->institution->id,
         $this->department->id,
-        200,
+        '200L',
     );
 
     expect($results)->toBeEmpty();
@@ -138,14 +138,14 @@ test('excludes faculty-scope courses without a department offering', function ()
     InstitutionCourse::factory()->create([
         'institution_id' => $this->institution->id,
         'owning_department_id' => $otherDept->id,
-        'level' => 100,
+        'level' => '100L',
         'course_scope' => CourseScope::Faculty,
     ]);
 
     $results = $this->service->getCoursesForStudent(
         $this->institution->id,
         $this->department->id,
-        100,
+        '100L',
     );
 
     expect($results)->toBeEmpty();
@@ -155,7 +155,7 @@ test('filters by semester when provided', function () {
     InstitutionCourse::factory()->create([
         'institution_id' => $this->institution->id,
         'owning_department_id' => $this->department->id,
-        'level' => 200,
+        'level' => '200L',
         'semester' => Semester::First,
         'course_scope' => CourseScope::Department,
         'course_code' => 'SEM 201',
@@ -164,7 +164,7 @@ test('filters by semester when provided', function () {
     $secondSemCourse = InstitutionCourse::factory()->create([
         'institution_id' => $this->institution->id,
         'owning_department_id' => $this->department->id,
-        'level' => 200,
+        'level' => '200L',
         'semester' => Semester::Second,
         'course_scope' => CourseScope::Department,
         'course_code' => 'SEM 202',
@@ -173,7 +173,7 @@ test('filters by semester when provided', function () {
     $bothCourse = InstitutionCourse::factory()->create([
         'institution_id' => $this->institution->id,
         'owning_department_id' => $this->department->id,
-        'level' => 200,
+        'level' => '200L',
         'semester' => Semester::Both,
         'course_scope' => CourseScope::Department,
         'course_code' => 'SEM 203',
@@ -182,7 +182,7 @@ test('filters by semester when provided', function () {
     $results = $this->service->getCoursesForStudent(
         $this->institution->id,
         $this->department->id,
-        200,
+        '200L',
         'second',
     );
 

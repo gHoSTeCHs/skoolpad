@@ -19,7 +19,7 @@ beforeEach(function () {
         'institution_id' => $this->institution->id,
         'faculty_id' => $this->faculty->id,
         'department_id' => $this->department->id,
-        'level' => 200,
+        'level' => '200L',
     ]);
 
     $this->actingAs($this->student);

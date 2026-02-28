@@ -283,3 +283,32 @@ test('unboarded students cannot access questions', function () {
         ->get(route('questions.index'))
         ->assertRedirect(route('onboarding.index'));
 });
+
+test('browse_all shows questions from entire institution', function () {
+    $otherCourse = InstitutionCourse::factory()->create([
+        'institution_id' => $this->institution->id,
+        'owning_department_id' => $this->department->id,
+    ]);
+
+    Question::factory()->create([
+        'institution_course_id' => $this->course->id,
+        'status' => QuestionStatus::Published,
+    ]);
+    Question::factory()->create([
+        'institution_course_id' => $otherCourse->id,
+        'status' => QuestionStatus::Published,
+    ]);
+
+    $this->get(route('questions.index'))
+        ->assertOk()
+        ->assertInertia(fn ($page) => $page
+            ->has('questions.data', 1)
+        );
+
+    $this->get(route('questions.index', ['browse_all' => 'true']))
+        ->assertOk()
+        ->assertInertia(fn ($page) => $page
+            ->has('questions.data', 2)
+            ->where('appliedFilters.browse_all', 'true')
+        );
+});

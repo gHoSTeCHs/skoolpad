@@ -373,3 +373,43 @@ test('store without institution_course_id or paper requires institution_course_i
         ->post(route('admin.questions.store'), $data)
         ->assertSessionHasErrors(['institution_course_id']);
 });
+
+test('store creates question with block links', function () {
+    $block = \App\Models\ContentBlock::factory()->create(['canonical_topic_id' => $this->topic->id]);
+
+    $data = validQuestionData([
+        'block_links' => [
+            ['content_block_id' => $block->id, 'relevance' => 'primary'],
+        ],
+    ]);
+
+    $this->actingAs($this->admin)
+        ->post(route('admin.questions.store'), $data)
+        ->assertRedirect();
+
+    $question = Question::latest('id')->first();
+    expect($question->questionBlockLinks)->toHaveCount(1);
+    expect($question->questionBlockLinks->first()->content_block_id)->toBe($block->id);
+    expect($question->questionBlockLinks->first()->relevance->value)->toBe('primary');
+});
+
+test('update syncs block links', function () {
+    $question = Question::factory()->for($this->course)->create(['created_by' => $this->admin->id]);
+    $block1 = \App\Models\ContentBlock::factory()->create(['canonical_topic_id' => $this->topic->id]);
+    $block2 = \App\Models\ContentBlock::factory()->create(['canonical_topic_id' => $this->topic->id, 'path' => '2', 'sort_order' => 2]);
+
+    $question->questionBlockLinks()->create(['content_block_id' => $block1->id, 'relevance' => 'primary']);
+
+    $this->actingAs($this->admin)
+        ->put(route('admin.questions.update', $question), validQuestionData([
+            'block_links' => [
+                ['content_block_id' => $block2->id, 'relevance' => 'secondary'],
+            ],
+        ]))
+        ->assertRedirect();
+
+    $question->refresh();
+    expect($question->questionBlockLinks)->toHaveCount(1);
+    expect($question->questionBlockLinks->first()->content_block_id)->toBe($block2->id);
+    expect($question->questionBlockLinks->first()->relevance->value)->toBe('secondary');
+});
