@@ -1,9 +1,11 @@
-import { Head, router } from '@inertiajs/react';
-import { CheckCircle2, Circle } from 'lucide-react';
+import { useState } from 'react';
+import { Head, Link, router } from '@inertiajs/react';
+import { CheckCircle2, ChevronDown, Circle } from 'lucide-react';
 import { TiptapRenderer } from '@/components/shared/tiptap-renderer';
 import { DifficultyBadge } from '@/components/skoolpad/block-tree';
 import SpBadge from '@/components/skoolpad/sp-badge';
 import { Button } from '@/components/ui/button';
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import AppLayout from '@/layouts/app-layout';
 import { QuestionCardExpandable } from '@/pages/courses/partials/question-card-expandable';
 import { BlockReader } from '@/pages/topics/partials/block-reader';
@@ -11,6 +13,7 @@ import { NotesPanel } from '@/pages/topics/partials/notes-panel';
 import { PrerequisiteBanner } from '@/pages/topics/partials/prerequisite-banner';
 import { TopicNavigation } from '@/pages/topics/partials/topic-navigation';
 import { show as courseShow } from '@/actions/App/Http/Controllers/Student/CourseController';
+import { index as questionsIndex } from '@/actions/App/Http/Controllers/Student/QuestionController';
 import { toggleComplete } from '@/actions/App/Http/Controllers/Student/TopicController';
 import type { BreadcrumbItem } from '@/types';
 import type { TopicShowProps } from '@/types/student-topics';
@@ -29,6 +32,8 @@ export default function TopicShow({
     relatedQuestions,
     crossInstitutionCount,
 }: TopicShowProps) {
+    const [localCompleted, setLocalCompleted] = useState(isTopicCompleted);
+
     const breadcrumbs: BreadcrumbItem[] = [];
 
     if (courseContext) {
@@ -42,7 +47,13 @@ export default function TopicShow({
     }
 
     function handleToggleComplete() {
-        router.post(toggleComplete.url(topic.id), {}, { preserveState: true, preserveScroll: true });
+        const previous = localCompleted;
+        setLocalCompleted(!previous);
+        router.post(toggleComplete.url(topic.id), {}, {
+            preserveState: true,
+            preserveScroll: true,
+            onError: () => setLocalCompleted(previous),
+        });
     }
 
     return (
@@ -74,12 +85,12 @@ export default function TopicShow({
 
                     {!hasBlocks && (
                         <Button
-                            variant={isTopicCompleted ? 'default' : 'outline'}
+                            variant={localCompleted ? 'default' : 'outline'}
                             size="sm"
                             onClick={handleToggleComplete}
                             className="shrink-0 gap-1.5"
                         >
-                            {isTopicCompleted ? (
+                            {localCompleted ? (
                                 <><CheckCircle2 className="size-4" /> Completed</>
                             ) : (
                                 <><Circle className="size-4" /> Mark as completed</>
@@ -109,9 +120,23 @@ export default function TopicShow({
                             ))}
                         </div>
                         {crossInstitutionCount > relatedQuestions.length && (
-                            <p className="mt-3 text-[12px] text-muted-foreground" style={{ fontFamily: 'var(--font-body)' }}>
-                                {crossInstitutionCount} questions across all institutions cover this topic.
-                            </p>
+                            <Collapsible className="mt-3">
+                                <CollapsibleTrigger className="group flex items-center gap-1.5 text-[12px] font-medium text-primary hover:underline" style={{ fontFamily: 'var(--font-body)' }}>
+                                    <ChevronDown className="size-3.5 transition-transform group-data-[state=open]:rotate-180" />
+                                    {crossInstitutionCount} questions from other institutions cover this topic
+                                </CollapsibleTrigger>
+                                <CollapsibleContent>
+                                    <p className="mt-2 text-[12px] text-muted-foreground" style={{ fontFamily: 'var(--font-body)' }}>
+                                        Questions on this topic appear across multiple institutions. Browse all available questions in the{' '}
+                                        <Link
+                                            href={questionsIndex.url({ query: { topic_id: topic.id } })}
+                                            className="font-medium text-primary hover:underline"
+                                        >
+                                            Past Questions browser
+                                        </Link>.
+                                    </p>
+                                </CollapsibleContent>
+                            </Collapsible>
                         )}
                     </div>
                 )}

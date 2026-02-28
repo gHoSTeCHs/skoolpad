@@ -1,5 +1,6 @@
+import { useEffect, useState } from 'react';
 import { Link } from '@inertiajs/react';
-import { AlertTriangle, CheckCircle2, ShieldAlert, XCircle } from 'lucide-react';
+import { AlertTriangle, CheckCircle2, ShieldAlert, X, XCircle } from 'lucide-react';
 import { show as topicShow } from '@/actions/App/Http/Controllers/Student/TopicController';
 import type { PrerequisiteStatusResult } from '@/types/student-topics';
 
@@ -39,14 +40,31 @@ const statusIcons = {
 } as const;
 
 export function PrerequisiteBanner({ status, courseId }: PrerequisiteBannerProps) {
-    if (status.banner === 'none') return null;
+    const [isDismissed, setIsDismissed] = useState(false);
+
+    useEffect(() => {
+        if (status.banner !== 'success') return;
+
+        const timer = setTimeout(() => setIsDismissed(true), 3000);
+        return () => clearTimeout(timer);
+    }, [status.banner]);
+
+    if (status.banner === 'none' || isDismissed) return null;
 
     const config = bannerConfig[status.banner];
     const Icon = config.icon;
 
     return (
-        <div className={`rounded-lg border p-4 ${config.className}`} style={{ borderRadius: 'var(--card-radius)' }}>
-            <div className="flex items-start gap-3">
+        <div className={`relative rounded-lg border p-4 ${config.className}`} style={{ borderRadius: 'var(--card-radius)' }}>
+            <button
+                type="button"
+                onClick={() => setIsDismissed(true)}
+                className="absolute right-3 top-3 rounded-sm p-0.5 text-muted-foreground/60 transition-colors hover:text-muted-foreground"
+            >
+                <X className="size-4" />
+            </button>
+
+            <div className="flex items-start gap-3 pr-6">
                 <Icon className={`mt-0.5 size-5 shrink-0 ${config.iconClass}`} />
                 <div className="flex-1">
                     <div className="text-[14px] font-semibold" style={{ fontFamily: 'var(--font-display)' }}>
@@ -71,9 +89,16 @@ export function PrerequisiteBanner({ status, courseId }: PrerequisiteBannerProps
                                     >
                                         {prereq.title}
                                     </Link>
-                                    {prereq.is_hard && (
-                                        <span className="rounded bg-red-100 px-1.5 py-0.5 text-[10px] font-semibold text-red-700 dark:bg-red-900/30 dark:text-red-400">
-                                            Required
+                                    {prereq.is_hard ? (
+                                        <>
+                                            <span className="rounded bg-red-100 px-1.5 py-0.5 text-[10px] font-semibold text-red-700 dark:bg-red-900/30 dark:text-red-400">
+                                                Required
+                                            </span>
+                                            <span className="text-[10px] text-muted-foreground">Must know first</span>
+                                        </>
+                                    ) : (
+                                        <span className="rounded bg-muted px-1.5 py-0.5 text-[10px] font-medium text-muted-foreground">
+                                            Recommended
                                         </span>
                                     )}
                                     {prereq.accuracy !== null && (

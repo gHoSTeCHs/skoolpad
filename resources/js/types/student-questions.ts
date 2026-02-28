@@ -53,6 +53,7 @@ export interface BrowseAppliedFilters {
     difficulty?: string;
     type?: string;
     search?: string;
+    browse_all?: string;
 }
 
 export interface QuestionBrowserProps {

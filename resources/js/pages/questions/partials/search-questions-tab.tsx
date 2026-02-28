@@ -3,7 +3,9 @@ import { Search, X } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
 import EmptyState from '@/components/skoolpad/empty-state';
 import { Button } from '@/components/ui/button';
+import { Checkbox } from '@/components/ui/checkbox';
 import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
 import { Skeleton } from '@/components/ui/skeleton';
 import { QuestionCardExpandable } from '@/pages/courses/partials/question-card-expandable';
 import { ActiveFilters } from '@/pages/questions/partials/active-filters';
@@ -91,6 +93,10 @@ export function SearchQuestionsTab({ questions, filterOptions, appliedFilters, t
 
     const hasActiveFilters = Object.keys(appliedFilters).length > 0;
 
+    function handleBrowseAllChange(checked: boolean | 'indeterminate') {
+        navigateWithFilters({ browse_all: checked === true ? 'true' : undefined });
+    }
+
     return (
         <div className="flex flex-col gap-6">
             <div className="relative">
@@ -110,6 +116,17 @@ export function SearchQuestionsTab({ questions, filterOptions, appliedFilters, t
                         <X className="size-4" />
                     </button>
                 )}
+            </div>
+
+            <div className="flex items-center gap-2">
+                <Checkbox
+                    id="browse_all"
+                    checked={appliedFilters.browse_all === 'true'}
+                    onCheckedChange={handleBrowseAllChange}
+                />
+                <Label htmlFor="browse_all" className="cursor-pointer text-[13px]" style={{ fontFamily: 'var(--font-body)' }}>
+                    Browse all questions at my institution
+                </Label>
             </div>
 
             <FilterBar

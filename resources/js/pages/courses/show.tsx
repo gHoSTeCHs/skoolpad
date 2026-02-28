@@ -84,15 +84,29 @@ export default function CourseShow({ course, activeTab, topics, topicsProgress, 
                     </TabsContent>
 
                     <TabsContent value="progress">
-                        <div className="rounded-lg border border-dashed bg-card/50 p-8 text-center" style={{ borderRadius: 'var(--card-radius)' }}>
-                            <div className="mb-2 text-2xl">{'\uD83D\uDCC8'}</div>
-                            <h3 className="font-display text-lg font-semibold">Progress</h3>
-                            <p className="mt-1 text-sm text-muted-foreground" style={{ fontFamily: 'var(--font-body)' }}>
-                                {topicsProgress
-                                    ? `${topicsProgress.completed} of ${topicsProgress.total} topics completed`
-                                    : 'Detailed progress tracking coming soon'}
-                            </p>
+                        <div className="grid grid-cols-2 gap-4">
+                            <div className="rounded-lg border border-border bg-card p-4" style={{ borderRadius: 'var(--card-radius)' }}>
+                                <p className="text-[12px] font-medium text-muted-foreground" style={{ fontFamily: 'var(--font-body)' }}>Topics completed</p>
+                                <p className="mt-1 font-display text-2xl font-bold tracking-tight">
+                                    {topicsProgress ? `${topicsProgress.completed}/${topicsProgress.total}` : '\u2014'}
+                                </p>
+                            </div>
+                            <div className="rounded-lg border border-border bg-card p-4" style={{ borderRadius: 'var(--card-radius)' }}>
+                                <p className="text-[12px] font-medium text-muted-foreground" style={{ fontFamily: 'var(--font-body)' }}>Questions attempted</p>
+                                <p className="mt-1 font-display text-2xl font-bold tracking-tight">0</p>
+                            </div>
+                            <div className="rounded-lg border border-border bg-card p-4" style={{ borderRadius: 'var(--card-radius)' }}>
+                                <p className="text-[12px] font-medium text-muted-foreground" style={{ fontFamily: 'var(--font-body)' }}>Average accuracy</p>
+                                <p className="mt-1 font-display text-2xl font-bold tracking-tight">{'\u2014'}</p>
+                            </div>
+                            <div className="rounded-lg border border-border bg-card p-4" style={{ borderRadius: 'var(--card-radius)' }}>
+                                <p className="text-[12px] font-medium text-muted-foreground" style={{ fontFamily: 'var(--font-body)' }}>Study time</p>
+                                <p className="mt-1 font-display text-2xl font-bold tracking-tight">{'\u2014'}</p>
+                            </div>
                         </div>
+                        <p className="mt-4 text-center text-[12px] text-muted-foreground" style={{ fontFamily: 'var(--font-body)' }}>
+                            Detailed progress tracking coming in Phase 1.10
+                        </p>
                     </TabsContent>
                 </Tabs>
             </div>
