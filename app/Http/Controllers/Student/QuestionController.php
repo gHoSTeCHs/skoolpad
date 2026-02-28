@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Student;
 
 use App\Concerns\Paginates;
 use App\Http\Controllers\Controller;
+use App\Models\InstitutionCourse;
 use App\Models\Question;
 use App\Services\QuestionBrowseService;
 use Illuminate\Http\Request;
@@ -23,12 +24,14 @@ class QuestionController extends Controller
         $user = $request->user();
         $profile = $user->studentProfile;
 
-        $enrolledCourseIds = $profile->studentCourses()
-            ->where('is_archived', false)
-            ->pluck('institution_course_id');
+        $browseAll = $request->boolean('browse_all');
+
+        $courseIds = $browseAll
+            ? InstitutionCourse::where('institution_id', $profile->institution_id)->pluck('id')
+            : $profile->studentCourses()->where('is_archived', false)->pluck('institution_course_id');
 
         $filters = [
-            'course_ids' => $enrolledCourseIds->toArray(),
+            'course_ids' => $courseIds->toArray(),
             'institution_id' => $request->string('institution_id')->value() ?: null,
             'course_id' => $request->string('course_id')->value() ?: null,
             'year' => $request->string('year')->value() ?: null,
@@ -41,14 +44,14 @@ class QuestionController extends Controller
 
         $results = $this->browseService->search($filters, $user, self::DEFAULT_PER_PAGE);
         $filterOptions = $this->browseService->getFilterOptions(
-            $enrolledCourseIds,
+            $courseIds,
             $filters['institution_id'],
             $filters['course_id']
         );
 
         $totalCount = Question::query()
             ->published()
-            ->whereIn('institution_course_id', $enrolledCourseIds)
+            ->whereIn('institution_course_id', $courseIds)
             ->count();
 
         return Inertia::render('questions/index', [
@@ -64,6 +67,7 @@ class QuestionController extends Controller
                 'difficulty' => $filters['difficulty'],
                 'type' => $filters['type'],
                 'search' => $filters['search'],
+                'browse_all' => $browseAll ? 'true' : null,
             ]),
             'totalCount' => $totalCount,
         ]);
