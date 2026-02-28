@@ -126,6 +126,10 @@ class QuestionController extends Controller
             $this->syncTopicLinks($question, $topicIds, $primaryTopicId);
         }
 
+        if ($request->has('block_links')) {
+            $this->syncBlockLinks($question, $request->validated('block_links') ?? []);
+        }
+
         return to_route('admin.questions.edit', $question)->with('success', 'Question created.');
     }
 
@@ -135,6 +139,7 @@ class QuestionController extends Controller
             'institutionCourse:id,institution_id,course_code',
             'institutionCourse.institution:id,name,abbreviation',
             'topicLinks.canonicalTopic:id,title',
+            'questionBlockLinks.contentBlock:id,title,canonical_topic_id',
         ]);
 
         return Inertia::render('admin/questions/edit', [
@@ -156,6 +161,11 @@ class QuestionController extends Controller
                     'id' => $link->canonical_topic_id,
                     'title' => $link->canonicalTopic->title,
                     'is_primary' => $link->is_primary,
+                ])->values(),
+                'block_links' => $question->questionBlockLinks->map(fn ($link) => [
+                    'content_block_id' => $link->content_block_id,
+                    'title' => $link->contentBlock->title,
+                    'relevance' => $link->relevance,
                 ])->values(),
             ],
             'institutions' => Institution::query()->where('is_active', true)->orderBy('abbreviation')->get(['id', 'name', 'abbreviation']),
@@ -195,6 +205,10 @@ class QuestionController extends Controller
             $this->syncTopicLinks($question, $topicIds, $primaryTopicId);
         }
 
+        if ($request->has('block_links')) {
+            $this->syncBlockLinks($question, $request->validated('block_links') ?? []);
+        }
+
         return to_route('admin.questions.edit', $question)->with('success', 'Question updated.');
     }
 
@@ -222,6 +236,19 @@ class QuestionController extends Controller
             $question->topicLinks()->create([
                 'canonical_topic_id' => $topicId,
                 'is_primary' => $topicId === $primaryTopicId,
+            ]);
+        }
+    }
+
+    /** @param array<int, array{content_block_id: string, relevance: string}> $blockLinks */
+    private function syncBlockLinks(Question $question, array $blockLinks): void
+    {
+        $question->questionBlockLinks()->delete();
+
+        foreach ($blockLinks as $link) {
+            $question->questionBlockLinks()->create([
+                'content_block_id' => $link['content_block_id'],
+                'relevance' => $link['relevance'],
             ]);
         }
     }

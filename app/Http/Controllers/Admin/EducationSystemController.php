@@ -78,6 +78,7 @@ class EducationSystemController extends Controller
             'assessmentTypes' => fn ($q) => $q->orderBy('name'),
             'assessmentTypes.tier:id,name',
             'assessmentTypes.gradingScale:id,name',
+            'assessmentTypes.assessmentSubjects' => fn ($q) => $q->orderBy('name'),
         ]);
 
         return Inertia::render('admin/education-systems/show', [

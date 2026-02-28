@@ -22,6 +22,7 @@ class UpdateInstitutionRequest extends FormRequest
     {
         return [
             'institution_type' => ['required', Rule::enum(InstitutionType::class)],
+            'institution_type_id' => ['nullable', 'exists:institution_types,id'],
             'ownership_type' => ['required', Rule::enum(OwnershipType::class)],
             'country_id' => ['required', 'exists:countries,id'],
             'state' => ['nullable', 'string', 'max:100'],

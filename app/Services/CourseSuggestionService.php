@@ -14,7 +14,7 @@ class CourseSuggestionService
     public function getCoursesForStudent(
         string $institutionId,
         string $departmentId,
-        int $level,
+        string $level,
         ?string $semester = null,
     ): Collection {
         return InstitutionCourse::query()

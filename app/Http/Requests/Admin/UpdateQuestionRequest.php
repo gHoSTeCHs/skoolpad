@@ -7,6 +7,7 @@ use App\Enums\QuestionDifficulty;
 use App\Enums\QuestionSource;
 use App\Enums\QuestionStatus;
 use App\Enums\QuestionType;
+use App\Enums\Relevance;
 use App\Rules\ResponseConfigValidator;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
@@ -41,6 +42,9 @@ class UpdateQuestionRequest extends FormRequest
             'topic_ids' => ['nullable', 'array'],
             'topic_ids.*' => ['uuid', 'distinct', 'exists:canonical_topics,id'],
             'primary_topic_id' => ['nullable', 'uuid', 'exists:canonical_topics,id'],
+            'block_links' => ['nullable', 'array'],
+            'block_links.*.content_block_id' => ['required', 'uuid', 'exists:content_blocks,id'],
+            'block_links.*.relevance' => ['required', Rule::enum(Relevance::class)],
         ];
     }
 

@@ -29,7 +29,7 @@ class StoreInstitutionCourseRequest extends FormRequest
                     ->where('institution_id', $this->institution_id),
             ],
             'course_title' => ['required', 'string', 'max:255'],
-            'level' => ['required', 'integer', Rule::in([100, 200, 300, 400, 500])],
+            'level' => ['required', 'string', 'max:10'],
             'semester' => ['required', 'string', Rule::in(Semester::values())],
             'credit_units' => ['nullable', 'integer', 'min:1', 'max:12'],
             'is_elective' => ['nullable', 'boolean'],

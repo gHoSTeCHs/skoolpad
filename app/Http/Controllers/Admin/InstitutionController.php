@@ -9,7 +9,9 @@ use App\Http\Controllers\Controller;
 use App\Http\Requests\Admin\StoreInstitutionRequest;
 use App\Http\Requests\Admin\UpdateInstitutionRequest;
 use App\Models\Country;
+use App\Models\EducationSystem;
 use App\Models\Institution;
+use App\Models\InstitutionType as InstitutionTypeModel;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
@@ -58,6 +60,7 @@ class InstitutionController extends Controller
     {
         return Inertia::render('admin/institutions/create', [
             'institutionTypes' => InstitutionType::toSelectOptions(),
+            'institutionTypeModels' => InstitutionTypeModel::orderBy('name')->get(['id', 'name']),
             'ownershipTypes' => OwnershipType::toSelectOptions(),
             'countries' => Country::all(),
         ]);
@@ -77,11 +80,42 @@ class InstitutionController extends Controller
         return to_route('admin.institutions.index')->with('success', 'Institution created successfully.');
     }
 
+    public function show(Institution $institution): Response
+    {
+        $institution->load([
+            'country:id,name',
+            'institutionTypeModel:id,name',
+            'educationSystems:id,name',
+            'calendarTerms' => fn ($q) => $q->orderBy('academic_year', 'desc')->orderBy('sort_order'),
+        ]);
+
+        return Inertia::render('admin/institutions/show', [
+            'institution' => $institution,
+            'educationSystems' => EducationSystem::orderBy('name')->get(['id', 'name']),
+        ]);
+    }
+
+    public function attachEducationSystem(Request $request, Institution $institution): RedirectResponse
+    {
+        $request->validate(['education_system_id' => ['required', 'exists:education_systems,id']]);
+        $institution->educationSystems()->syncWithoutDetaching([$request->input('education_system_id')]);
+
+        return back()->with('success', 'Education system attached.');
+    }
+
+    public function detachEducationSystem(Institution $institution, EducationSystem $educationSystem): RedirectResponse
+    {
+        $institution->educationSystems()->detach($educationSystem->id);
+
+        return back()->with('success', 'Education system detached.');
+    }
+
     public function edit(Institution $institution): Response
     {
         return Inertia::render('admin/institutions/edit', [
             'institution' => $institution,
             'institutionTypes' => InstitutionType::toSelectOptions(),
+            'institutionTypeModels' => InstitutionTypeModel::orderBy('name')->get(['id', 'name']),
             'ownershipTypes' => OwnershipType::toSelectOptions(),
             'countries' => Country::all(),
         ]);
