@@ -7,6 +7,8 @@ use App\Http\Controllers\Student\OnboardingController;
 use App\Http\Controllers\Student\ParentInvitationController;
 use App\Http\Controllers\Student\QuestionController as StudentQuestionController;
 use App\Http\Controllers\Student\QuestionPaperController as StudentQuestionPaperController;
+use App\Http\Controllers\Student\StudyPlanController;
+use App\Http\Controllers\Student\StudyPreferenceController;
 use App\Http\Controllers\Student\TopicController as StudentTopicController;
 use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
@@ -52,6 +54,8 @@ Route::middleware(['auth', 'verified', 'onboarded'])->group(function () {
     Route::post('parent-invitation/send', [ParentInvitationController::class, 'send'])->name('parent-invitation.send');
     Route::get('api/level-progression/check', [LevelProgressionController::class, 'check'])->name('api.level-progression.check');
     Route::post('level-progression/update', [LevelProgressionController::class, 'update'])->name('level-progression.update');
+    Route::patch('study-preferences', StudyPreferenceController::class)->name('study-preferences.update');
+    Route::post('study-plan/dismiss', [StudyPlanController::class, 'dismiss'])->name('study-plan.dismiss');
     Route::get('courses', [StudentCourseController::class, 'index'])->name('courses.index');
     Route::get('courses/{course}', [StudentCourseController::class, 'show'])->name('courses.show');
     Route::get('topics/{topic}', [StudentTopicController::class, 'show'])->name('topics.show');

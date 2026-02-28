@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\CanonicalTopic;
 use App\Models\LevelSubject;
 use App\Models\StudentProfile;
+use App\Services\GuidedStudyService;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
 use Inertia\Response;
@@ -69,6 +70,7 @@ class DashboardController extends Controller
                 'streak_days' => 0,
             ],
             'suggested_topics' => $suggestedTopics,
+            'guided_study' => null,
             'parent_invitation' => $this->getParentInvitation($profile),
             'level_progression' => null,
         ]);
@@ -95,6 +97,12 @@ class DashboardController extends Controller
                 ->values();
         }
 
+        $isDismissedToday = ($profile?->study_preferences['plan_dismissed_date'] ?? null) === now()->toDateString();
+
+        $guidedStudy = ($profile && ! $isDismissedToday)
+            ? app(GuidedStudyService::class)->buildStudyPlan($user, $profile)
+            : null;
+
         return Inertia::render('dashboard', [
             'student' => $profile ? [
                 'name' => $user->name,
@@ -114,6 +122,8 @@ class DashboardController extends Controller
                 'streak_days' => 0,
             ],
             'suggested_topics' => [],
+            'guided_study' => $guidedStudy,
+            'study_plan_dismissed' => $profile ? $isDismissedToday : false,
             'parent_invitation' => $profile ? $this->getParentInvitation($profile) : null,
             'level_progression' => $profile ? $this->getLevelProgression($profile) : null,
         ]);

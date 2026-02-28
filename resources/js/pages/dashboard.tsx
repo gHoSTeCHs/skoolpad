@@ -3,7 +3,9 @@ import { BookOpen, ShieldCheck } from 'lucide-react';
 import { useState } from 'react';
 import LevelProgressionController from '@/actions/App/Http/Controllers/Student/LevelProgressionController';
 import ParentInvitationController from '@/actions/App/Http/Controllers/Student/ParentInvitationController';
+import { dismiss as studyPlanDismiss } from '@/actions/App/Http/Controllers/Student/StudyPlanController';
 import CourseCard from '@/components/skoolpad/course-card';
+import GuidedStudyCard from '@/components/skoolpad/guided-study-card';
 import LevelProgressionModal from '@/components/skoolpad/level-progression-modal';
 import ParentInvitationBanner from '@/components/skoolpad/parent-invitation-banner';
 import StatCard from '@/components/skoolpad/stat-card';
@@ -13,6 +15,7 @@ import AppLayout from '@/layouts/app-layout';
 import { dashboard } from '@/routes';
 import type { BreadcrumbItem } from '@/types';
 import type { StudentType } from '@/types/enums';
+import type { GuidedStudyPlan } from '@/types/guided-study';
 
 interface DashboardCourse {
     id: string;
@@ -62,6 +65,8 @@ interface Props {
         style: 'prominent' | 'subtle';
         is_early_level: boolean;
     } | null;
+    guided_study?: GuidedStudyPlan | null;
+    study_plan_dismissed?: boolean;
     level_progression?: {
         show: boolean;
         current_level: string;
@@ -97,7 +102,7 @@ function getSubtitle(student: Props['student']): string {
     return parts.join(' · ') || "Here's your learning progress";
 }
 
-export default function Dashboard({ student, courses, subjects, stats, suggested_topics, parent_invitation, level_progression }: Props) {
+export default function Dashboard({ student, courses, subjects, stats, suggested_topics, guided_study, study_plan_dismissed, parent_invitation, level_progression }: Props) {
     const firstName = student?.name.split(' ')[0] ?? 'Student';
     const isTertiary = student?.student_type === 'tertiary';
     const isSecondary = student?.student_type === 'secondary';
@@ -211,7 +216,11 @@ export default function Dashboard({ student, courses, subjects, stats, suggested
                     </div>
                 )}
 
-                {isSecondary && (
+                {isSecondary && guided_study && (
+                    <GuidedStudyCard plan={guided_study} dismissUrl={studyPlanDismiss.url()} />
+                )}
+
+                {isSecondary && !guided_study && !study_plan_dismissed && (
                     <div className="rounded-lg border-2 border-dashed border-border/60 bg-card/50 p-6 text-center">
                         <BookOpen className="mx-auto size-8 text-muted-foreground/50" />
                         <h3 className="font-display mt-3 text-base font-semibold">Guided Study</h3>

@@ -1,5 +1,6 @@
 <?php
 
+use App\Models\CanonicalTopic;
 use App\Models\CurriculumSubject;
 use App\Models\CurriculumTier;
 use App\Models\Department;
@@ -8,6 +9,7 @@ use App\Models\EducationSystem;
 use App\Models\Faculty;
 use App\Models\Institution;
 use App\Models\LevelSubject;
+use App\Models\SchemeOfWorkItem;
 use App\Models\StudentProfile;
 use App\Models\User;
 use Illuminate\Support\Carbon;
@@ -227,5 +229,107 @@ test('dashboard returns no parent invitation for tertiary student', function () 
         ->assertInertia(fn ($page) => $page
             ->component('dashboard')
             ->where('parent_invitation', null)
+        );
+});
+
+test('dashboard returns guided_study prop for secondary student', function () {
+    Carbon::setTestNow(Carbon::create(2026, 2, 1));
+
+    $system = EducationSystem::factory()->create();
+    $tier = CurriculumTier::factory()->for($system)->create(['is_tertiary' => false]);
+    $level = EducationLevel::factory()->for($tier, 'curriculumTier')->create();
+
+    StudentProfile::factory()->secondary()->create([
+        'user_id' => $this->student->id,
+        'education_system_id' => $system->id,
+        'education_level_id' => $level->id,
+    ]);
+
+    $this->get(route('dashboard'))
+        ->assertOk()
+        ->assertInertia(fn ($page) => $page
+            ->component('dashboard')
+            ->has('guided_study')
+            ->where('guided_study.daily_goal_minutes', 30)
+        );
+
+    Carbon::setTestNow();
+});
+
+test('dashboard guided_study is null for tertiary student', function () {
+    $institution = Institution::factory()->create();
+    $faculty = Faculty::factory()->for($institution)->create();
+    $department = Department::factory()->for($faculty)->create();
+
+    StudentProfile::factory()->create([
+        'user_id' => $this->student->id,
+        'institution_id' => $institution->id,
+        'faculty_id' => $faculty->id,
+        'department_id' => $department->id,
+    ]);
+
+    $this->get(route('dashboard'))
+        ->assertOk()
+        ->assertInertia(fn ($page) => $page
+            ->component('dashboard')
+            ->where('guided_study', null)
+        );
+});
+
+test('dashboard guided_study includes current term and week', function () {
+    Carbon::setTestNow(Carbon::create(2026, 10, 1));
+
+    $system = EducationSystem::factory()->create();
+    $tier = CurriculumTier::factory()->for($system)->create(['is_tertiary' => false]);
+    $level = EducationLevel::factory()->for($tier, 'curriculumTier')->create();
+    $subject = CurriculumSubject::factory()->create(['education_system_id' => $system->id]);
+    $levelSubject = LevelSubject::factory()->create([
+        'education_level_id' => $level->id,
+        'curriculum_subject_id' => $subject->id,
+    ]);
+
+    $topic = CanonicalTopic::factory()->create();
+    SchemeOfWorkItem::factory()->create([
+        'curriculum_subject_level_id' => $levelSubject->id,
+        'term' => 1,
+        'week_number' => 3,
+        'topic_label' => 'Algebra Basics',
+        'canonical_topic_id' => $topic->id,
+    ]);
+
+    StudentProfile::factory()->secondary()->create([
+        'user_id' => $this->student->id,
+        'education_system_id' => $system->id,
+        'education_level_id' => $level->id,
+    ]);
+
+    $this->get(route('dashboard'))
+        ->assertOk()
+        ->assertInertia(fn ($page) => $page
+            ->component('dashboard')
+            ->where('guided_study.current_term', 1)
+            ->where('guided_study.current_week', 3)
+            ->has('guided_study.items', 1)
+        );
+
+    Carbon::setTestNow();
+});
+
+test('dashboard passes study_plan_dismissed false when not dismissed', function () {
+    $system = EducationSystem::factory()->create();
+    $tier = CurriculumTier::factory()->for($system)->create(['is_tertiary' => false]);
+    $level = EducationLevel::factory()->for($tier, 'curriculumTier')->create();
+
+    StudentProfile::factory()->secondary()->create([
+        'user_id' => $this->student->id,
+        'education_system_id' => $system->id,
+        'education_level_id' => $level->id,
+    ]);
+
+    $this->get(route('dashboard'))
+        ->assertOk()
+        ->assertInertia(fn ($page) => $page
+            ->component('dashboard')
+            ->where('study_plan_dismissed', false)
         );
 });
