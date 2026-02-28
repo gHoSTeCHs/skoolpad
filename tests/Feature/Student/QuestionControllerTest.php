@@ -7,6 +7,7 @@ use App\Models\Faculty;
 use App\Models\Institution;
 use App\Models\InstitutionCourse;
 use App\Models\Question;
+use App\Models\QuestionContext;
 use App\Models\QuestionTopicLink;
 use App\Models\StudentCourse;
 use App\Models\StudentProfile;
@@ -282,6 +283,25 @@ test('unboarded students cannot access questions', function () {
     $this->actingAs($newStudent)
         ->get(route('questions.index'))
         ->assertRedirect(route('onboarding.index'));
+});
+
+test('question browser includes contexts with questions', function () {
+    $question = Question::factory()->create([
+        'institution_course_id' => $this->course->id,
+        'status' => QuestionStatus::Published,
+    ]);
+
+    $context = QuestionContext::factory()->reusable()->create();
+
+    $question->contexts()->attach($context->id, ['sort_order' => 1, 'label' => 'Read the passage']);
+
+    $this->get(route('questions.index'))
+        ->assertOk()
+        ->assertInertia(fn ($page) => $page
+            ->has('questions.data', 1)
+            ->where('questions.data.0.contexts.0.id', $context->id)
+            ->where('questions.data.0.contexts.0.context_type', $context->context_type->value)
+        );
 });
 
 test('browse_all shows questions from entire institution', function () {

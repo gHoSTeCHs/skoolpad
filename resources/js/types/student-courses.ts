@@ -1,5 +1,6 @@
 import type { PaginatedData } from '@/types/models';
 import type { AnswerDepthLevel, QuestionDifficulty, QuestionSemester, QuestionType } from '@/types/questions';
+import type { QuestionContextData } from '@/types/student-questions';
 
 export interface CourseWithProgress {
     id: string;
@@ -62,6 +63,7 @@ export interface CourseQuestion {
     marks: number | null;
     topic_links: CourseQuestionTopicLink[];
     answers: CourseQuestionAnswer[];
+    contexts: QuestionContextData[];
 }
 
 export interface CourseFilterOptions {

@@ -167,6 +167,7 @@ export function SearchQuestionsTab({ questions, filterOptions, appliedFilters, t
                                 marks: question.marks,
                                 topic_links: question.topic_links,
                                 answers: question.answers,
+                                contexts: question.contexts,
                             }}
                             showCourseBadge
                             courseCode={question.institution_course?.course_code}

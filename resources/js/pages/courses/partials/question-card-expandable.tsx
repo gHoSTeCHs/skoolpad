@@ -4,6 +4,7 @@ import { Check, ChevronDown, Dumbbell, ExternalLink, Info, X } from 'lucide-reac
 import SpBadge from '@/components/skoolpad/sp-badge';
 import { QuestionTypeBadge } from '@/components/skoolpad/questions';
 import { DifficultyBadge } from '@/components/skoolpad/block-tree';
+import ContextCard from '@/components/skoolpad/questions/context-card';
 import { TiptapRenderer } from '@/components/shared/tiptap-renderer';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -118,6 +119,28 @@ export function QuestionCardExpandable({
 
             {isExpanded && (
                 <div className="border-t border-border px-4 pb-4 pt-3">
+                    {question.contexts && question.contexts.length > 0 && (
+                        <div className="mb-4 flex flex-col gap-3">
+                            {question.contexts.map((ctx) => (
+                                <div key={ctx.id}>
+                                    {ctx.pivot.label && (
+                                        <p className="mb-1 text-[10px] font-medium uppercase tracking-wider text-muted-foreground">
+                                            {ctx.pivot.label}
+                                        </p>
+                                    )}
+                                    <ContextCard context={{
+                                        id: ctx.id,
+                                        contextType: ctx.context_type,
+                                        title: ctx.title ?? undefined,
+                                        content: ctx.content ?? undefined,
+                                        mediaUrl: ctx.media_url ?? undefined,
+                                        tableData: ctx.table_data ?? undefined,
+                                        wordBank: ctx.word_bank ?? undefined,
+                                    }} />
+                                </div>
+                            ))}
+                        </div>
+                    )}
                     <div
                         className="prose prose-sm max-w-none text-[13px]"
                         style={{ fontFamily: 'var(--font-body)' }}

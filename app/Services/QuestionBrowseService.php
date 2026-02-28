@@ -54,6 +54,7 @@ class QuestionBrowseService
             'institutionCourse.institution:id,name,abbreviation',
             'topicLinks.canonicalTopic:id,title',
             'answers' => fn ($q) => $q->where('is_published', true),
+            'contexts' => fn ($q) => $q->orderBy('sort_order'),
         ]);
 
         if (! empty($filters['search'])) {

@@ -1,6 +1,20 @@
 import type { CursorPaginatedData, PaginatedData } from '@/types/models';
 import type { AnswerDepthLevel, QuestionDifficulty, QuestionSemester, QuestionType } from '@/types/questions';
 
+export interface QuestionContextData {
+    id: string;
+    context_type: string;
+    title: string | null;
+    content: string | null;
+    media_url: string | null;
+    table_data: { headers: string[]; rows: string[][] } | null;
+    word_bank: string[] | null;
+    pivot: {
+        sort_order: number;
+        label: string | null;
+    };
+}
+
 export interface BrowseQuestion {
     id: string;
     content: string;
@@ -35,6 +49,7 @@ export interface BrowseQuestion {
         content_plain: string | null;
         is_published: boolean;
     }[];
+    contexts: QuestionContextData[];
 }
 
 export interface BrowseFilterOptions {
