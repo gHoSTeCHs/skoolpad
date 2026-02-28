@@ -9,6 +9,7 @@ interface EnumOption {
 
 interface Props {
     institutionTypes: EnumOption[];
+    institutionTypeModels: { id: string; name: string }[];
     ownershipTypes: EnumOption[];
     countries: Country[];
 }
@@ -18,7 +19,7 @@ const breadcrumbs = [
     { title: 'Create', href: '/admin/institutions/create' },
 ];
 
-export default function AdminInstitutionsCreate({ institutionTypes, ownershipTypes, countries }: Props) {
+export default function AdminInstitutionsCreate({ institutionTypes, institutionTypeModels, ownershipTypes, countries }: Props) {
     return (
         <FormPageLayout
             title="Create Institution"
@@ -27,6 +28,7 @@ export default function AdminInstitutionsCreate({ institutionTypes, ownershipTyp
         >
             <InstitutionForm
                 institutionTypes={institutionTypes}
+                institutionTypeModels={institutionTypeModels}
                 ownershipTypes={ownershipTypes}
                 countries={countries}
             />

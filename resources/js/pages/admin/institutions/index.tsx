@@ -171,7 +171,10 @@ export default function AdminInstitutions({ institutions, filters, institutionTy
                     renderActions={(row) => (
                         <RowActions
                             editUrl={InstitutionController.edit.url(row.id)}
-                            actions={[{ label: 'View Faculties', href: FacultyController.index.url(row.id) }]}
+                            actions={[
+                                { label: 'View Details', href: InstitutionController.show.url(row.id) },
+                                { label: 'View Faculties', href: FacultyController.index.url(row.id) },
+                            ]}
                         />
                     )}
                     emptyState={{

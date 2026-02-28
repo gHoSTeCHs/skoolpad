@@ -16,17 +16,19 @@ interface EnumOption {
 interface InstitutionFormProps {
     institution?: Institution;
     institutionTypes: EnumOption[];
+    institutionTypeModels?: { id: string; name: string }[];
     ownershipTypes: EnumOption[];
     countries: Country[];
 }
 
-export default function InstitutionForm({ institution, institutionTypes, ownershipTypes, countries }: InstitutionFormProps) {
+export default function InstitutionForm({ institution, institutionTypes, institutionTypeModels, ownershipTypes, countries }: InstitutionFormProps) {
     const isEditing = !!institution?.id;
 
     const form = useForm({
         name: institution?.name ?? '',
         abbreviation: institution?.abbreviation ?? '',
         institution_type: institution?.institution_type ?? '',
+        institution_type_id: institution?.institution_type_id ?? '',
         ownership_type: institution?.ownership_type ?? '',
         country_id: institution?.country_id ?? '',
         state: institution?.state ?? '',
@@ -39,10 +41,15 @@ export default function InstitutionForm({ institution, institutionTypes, ownersh
     function handleSubmit(e: React.FormEvent) {
         e.preventDefault();
 
+        const data = {
+            ...form.data,
+            institution_type_id: form.data.institution_type_id || null,
+        };
+
         if (isEditing) {
-            form.put(InstitutionController.update.url(institution!.id));
+            form.transform(() => data).put(InstitutionController.update.url(institution!.id));
         } else {
-            form.post(InstitutionController.store.url());
+            form.transform(() => data).post(InstitutionController.store.url());
         }
     }
 
@@ -110,6 +117,27 @@ export default function InstitutionForm({ institution, institutionTypes, ownersh
                             </Select>
                         </FormField>
                     </div>
+
+                    {institutionTypeModels && institutionTypeModels.length > 0 && (
+                        <FormField label="Institution Type (Detailed)" name="institution_type_id" error={form.errors.institution_type_id} description="Links to a detailed institution type with level progression and grading scale.">
+                            <Select
+                                value={form.data.institution_type_id ?? ''}
+                                onValueChange={(value) => form.setData('institution_type_id', value === 'none' ? '' : value)}
+                            >
+                                <SelectTrigger id="institution_type_id">
+                                    <SelectValue placeholder="Select detailed type..." />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    <SelectItem value="none">None</SelectItem>
+                                    {institutionTypeModels.map((type) => (
+                                        <SelectItem key={type.id} value={type.id}>
+                                            {type.name}
+                                        </SelectItem>
+                                    ))}
+                                </SelectContent>
+                            </Select>
+                        </FormField>
+                    )}
 
                     <FormField label="Country" name="country_id" error={form.errors.country_id} required>
                         <Select

@@ -3,13 +3,14 @@ import {
     BookOpen,
     Building2,
     CalendarDays,
-    ClipboardList,
     FileText,
     Globe,
     GraduationCap,
+    Landmark,
     LayoutGrid,
     ListChecks,
     MessageSquareMore,
+    Network,
     Ruler,
     Settings,
     Shapes,
@@ -19,11 +20,12 @@ import {
 import BulkImportController from '@/actions/App/Http/Controllers/Admin/BulkImportController';
 import CanonicalTopicController from '@/actions/App/Http/Controllers/Admin/CanonicalTopicController';
 import CourseController from '@/actions/App/Http/Controllers/Admin/CourseController';
+import CurriculumMappingController from '@/actions/App/Http/Controllers/Admin/CurriculumMappingController';
 import DisciplineController from '@/actions/App/Http/Controllers/Admin/DisciplineController';
 import EducationSystemController from '@/actions/App/Http/Controllers/Admin/EducationSystemController';
-import ExamTypeController from '@/actions/App/Http/Controllers/Admin/ExamTypeController';
 import GradingScaleController from '@/actions/App/Http/Controllers/Admin/GradingScaleController';
 import InstitutionController from '@/actions/App/Http/Controllers/Admin/InstitutionController';
+import InstitutionTypeController from '@/actions/App/Http/Controllers/Admin/InstitutionTypeController';
 import QuestionController from '@/actions/App/Http/Controllers/Admin/QuestionController';
 import QuestionPaperController from '@/actions/App/Http/Controllers/Admin/QuestionPaperController';
 import SchemeOfWorkController from '@/actions/App/Http/Controllers/Admin/SchemeOfWorkController';
@@ -57,6 +59,7 @@ const navGroups: NavGroup[] = [
             { title: 'Questions', href: QuestionController.index.url(), icon: MessageSquareMore },
             { title: 'Question Papers', href: QuestionPaperController.index.url(), icon: FileText },
             { title: 'Courses', href: CourseController.index.url(), icon: GraduationCap },
+            { title: 'Curriculum Mappings', href: CurriculumMappingController.index.url(), icon: Network },
             { title: 'Scheme of Work', href: SchemeOfWorkController.index.url(), icon: CalendarDays },
             { title: 'Review Queue', href: '/admin/review-queue', icon: ListChecks },
             { title: 'Bulk Import', href: BulkImportController.index.url(), icon: Upload },
@@ -67,7 +70,7 @@ const navGroups: NavGroup[] = [
         items: [
             { title: 'All Institutions', href: InstitutionController.index.url(), icon: Building2 },
             { title: 'Education Systems', href: EducationSystemController.index.url(), icon: Globe },
-            { title: 'Exam Types', href: ExamTypeController.index.url(), icon: ClipboardList },
+            { title: 'Institution Types', href: InstitutionTypeController.index.url(), icon: Landmark },
             { title: 'Grading Scales', href: GradingScaleController.index.url(), icon: Ruler },
         ],
     },
