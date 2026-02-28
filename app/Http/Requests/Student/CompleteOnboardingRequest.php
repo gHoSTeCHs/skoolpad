@@ -32,7 +32,7 @@ class CompleteOnboardingRequest extends FormRequest
             'level' => [Rule::requiredIf($isTertiary), 'nullable', 'string'],
             'matric_number' => ['nullable', 'string', 'max:50'],
             'admission_year' => ['nullable', 'integer', 'min:2000', 'max:'.((int) date('Y') + 1)],
-            'course_ids' => [Rule::requiredIf($isTertiary), 'nullable', 'array', 'min:1'],
+            'course_ids' => [Rule::requiredIf($isTertiary), 'nullable', 'array', Rule::when($isTertiary, ['min:1'])],
             'course_ids.*' => ['required', 'string', 'exists:institution_courses,id'],
 
             'education_system_id' => [Rule::requiredIf($isSecondary), 'nullable', 'string', 'exists:education_systems,id'],

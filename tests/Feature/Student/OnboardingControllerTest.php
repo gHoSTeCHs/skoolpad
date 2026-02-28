@@ -303,6 +303,25 @@ test('store skips tertiary validation for secondary', function () {
     ])->assertSessionDoesntHaveErrors(['institution_id', 'faculty_id', 'department_id', 'course_ids']);
 });
 
+test('store accepts secondary with empty course_ids array sent by frontend', function () {
+    $country = \App\Models\Country::factory()->create();
+    $system = \App\Models\EducationSystem::factory()->create(['country_id' => $country->id]);
+    $tier = \App\Models\CurriculumTier::factory()->for($system)->create(['is_tertiary' => false]);
+    $level = \App\Models\EducationLevel::factory()->for($tier, 'curriculumTier')->create();
+
+    $this->post(route('onboarding.store'), [
+        'student_type' => 'secondary',
+        'education_system_id' => $system->id,
+        'education_level_id' => $level->id,
+        'course_ids' => [],
+    ])->assertRedirect(route('dashboard'));
+
+    $this->assertDatabaseHas('student_profiles', [
+        'user_id' => $this->student->id,
+        'student_type' => 'secondary',
+    ]);
+});
+
 test('store generates unique invite code for both paths', function () {
     $course = InstitutionCourse::factory()->create([
         'institution_id' => $this->institution->id,

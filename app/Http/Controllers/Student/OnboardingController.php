@@ -95,7 +95,7 @@ class OnboardingController extends Controller
     /** @param array<string, mixed> $validated */
     private function storeSecondary(CompleteOnboardingRequest $request, array $validated): void
     {
-        StudentProfile::create([
+        $profile = StudentProfile::create([
             'user_id' => $request->user()->id,
             'student_type' => StudentType::Secondary,
             'education_system_id' => $validated['education_system_id'],
@@ -108,6 +108,7 @@ class OnboardingController extends Controller
             'academic_status' => AcademicStatus::Active,
             'invite_code' => $this->generateInviteCode(),
         ]);
+
     }
 
     private function generateInviteCode(): string
