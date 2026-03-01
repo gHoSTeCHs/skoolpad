@@ -225,6 +225,129 @@ test('store validates required fields', function () {
         ->assertSessionHasErrors(['title', 'slug', 'block_type']);
 });
 
+test('update syncs block prerequisites', function () {
+    $block = ContentBlock::factory()->for($this->topic)->create(['path' => '1', 'sort_order' => 1]);
+    $prereq = ContentBlock::factory()->for($this->topic)->create(['path' => '2', 'sort_order' => 2]);
+
+    $this->actingAs($this->admin)
+        ->put(route('admin.content-blocks.update', $block), [
+            'title' => $block->title,
+            'slug' => $block->slug,
+            'block_type' => $block->block_type->value,
+            'is_published' => $block->is_published,
+            'prerequisites' => [
+                ['id' => $prereq->id, 'is_hard_prerequisite' => true],
+            ],
+        ])
+        ->assertRedirect()
+        ->assertSessionHas('success');
+
+    $this->assertDatabaseHas('block_prerequisites', [
+        'block_id' => $block->id,
+        'prerequisite_block_id' => $prereq->id,
+        'is_hard_prerequisite' => true,
+    ]);
+});
+
+test('update removes prerequisites when empty array sent', function () {
+    $block = ContentBlock::factory()->for($this->topic)->create(['path' => '1', 'sort_order' => 1]);
+    $prereq = ContentBlock::factory()->for($this->topic)->create(['path' => '2', 'sort_order' => 2]);
+
+    $block->prerequisites()->attach($prereq->id, ['is_hard_prerequisite' => true]);
+
+    $this->actingAs($this->admin)
+        ->put(route('admin.content-blocks.update', $block), [
+            'title' => $block->title,
+            'slug' => $block->slug,
+            'block_type' => $block->block_type->value,
+            'is_published' => $block->is_published,
+            'prerequisites' => [],
+        ])
+        ->assertRedirect();
+
+    $this->assertDatabaseMissing('block_prerequisites', [
+        'block_id' => $block->id,
+        'prerequisite_block_id' => $prereq->id,
+    ]);
+});
+
+test('update rejects self-referencing prerequisite', function () {
+    $block = ContentBlock::factory()->for($this->topic)->create();
+
+    $this->actingAs($this->admin)
+        ->put(route('admin.content-blocks.update', $block), [
+            'title' => $block->title,
+            'slug' => $block->slug,
+            'block_type' => $block->block_type->value,
+            'is_published' => $block->is_published,
+            'prerequisites' => [
+                ['id' => $block->id, 'is_hard_prerequisite' => true],
+            ],
+        ])
+        ->assertSessionHasErrors('prerequisites.0.id');
+});
+
+test('update rejects cross-topic prerequisites', function () {
+    $block = ContentBlock::factory()->for($this->topic)->create();
+    $otherTopic = CanonicalTopic::factory()->for($this->discipline)->create();
+    $otherBlock = ContentBlock::factory()->for($otherTopic)->create();
+
+    $this->actingAs($this->admin)
+        ->put(route('admin.content-blocks.update', $block), [
+            'title' => $block->title,
+            'slug' => $block->slug,
+            'block_type' => $block->block_type->value,
+            'is_published' => $block->is_published,
+            'prerequisites' => [
+                ['id' => $otherBlock->id, 'is_hard_prerequisite' => true],
+            ],
+        ])
+        ->assertSessionHasErrors('prerequisites');
+});
+
+test('index includes prerequisite data in block tree', function () {
+    $block1 = ContentBlock::factory()->for($this->topic)->create(['path' => '1', 'sort_order' => 1]);
+    $block2 = ContentBlock::factory()->for($this->topic)->create(['path' => '2', 'sort_order' => 2]);
+
+    $block2->prerequisites()->attach($block1->id, ['is_hard_prerequisite' => true]);
+
+    $this->actingAs($this->admin)
+        ->get(route('admin.content-blocks.index', $this->topic))
+        ->assertOk()
+        ->assertInertia(fn ($page) => $page
+            ->has('blocks', 2)
+            ->where('blocks.1.prerequisites', fn ($prereqs) => count($prereqs) === 1 && $prereqs[0]['id'] === $block1->id)
+        );
+});
+
+test('index passes availableBlocks', function () {
+    ContentBlock::factory()->for($this->topic)->create(['path' => '1', 'sort_order' => 1]);
+    ContentBlock::factory()->for($this->topic)->create(['path' => '2', 'sort_order' => 2]);
+    ContentBlock::factory()->for($this->topic)->create(['path' => '3', 'sort_order' => 3]);
+
+    $this->actingAs($this->admin)
+        ->get(route('admin.content-blocks.index', $this->topic))
+        ->assertOk()
+        ->assertInertia(fn ($page) => $page
+            ->has('availableBlocks', 3)
+        );
+});
+
+test('deleting a block cascades prerequisite links', function () {
+    $block1 = ContentBlock::factory()->for($this->topic)->create(['path' => '1', 'sort_order' => 1]);
+    $block2 = ContentBlock::factory()->for($this->topic)->create(['path' => '2', 'sort_order' => 2]);
+
+    $block2->prerequisites()->attach($block1->id, ['is_hard_prerequisite' => true]);
+
+    $this->actingAs($this->admin)
+        ->delete(route('admin.content-blocks.destroy', $block1))
+        ->assertRedirect();
+
+    $this->assertDatabaseMissing('block_prerequisites', [
+        'prerequisite_block_id' => $block1->id,
+    ]);
+});
+
 test('unauthenticated user is redirected', function () {
     $this->get(route('admin.content-blocks.index', $this->topic))
         ->assertRedirect(route('login'));

@@ -22,9 +22,17 @@ class ContentBlockController extends Controller
     {
         $blocks = $topic->contentBlocks()
             ->whereNull('parent_block_id')
-            ->with(['children' => fn ($q) => $q->orderBy('sort_order')->with('children')])
+            ->with($this->blockTreeWith())
             ->orderBy('sort_order')
             ->get();
+
+        $availableBlocks = $topic->contentBlocks()
+            ->select('id', 'title')
+            ->orderBy('path')
+            ->get()
+            ->map(fn (ContentBlock $b) => ['id' => $b->id, 'title' => $b->title])
+            ->values()
+            ->all();
 
         return Inertia::render('admin/topics/blocks', [
             'topic' => [
@@ -36,6 +44,7 @@ class ContentBlockController extends Controller
             'blockTypes' => BlockType::toSelectOptions(),
             'difficultyLevels' => BlockDifficultyLevel::toSelectOptions(),
             'bloomLevels' => BloomLevel::toSelectOptions(),
+            'availableBlocks' => $availableBlocks,
         ]);
     }
 
@@ -70,7 +79,12 @@ class ContentBlockController extends Controller
 
     public function update(UpdateContentBlockRequest $request, ContentBlock $block): RedirectResponse
     {
-        $block->update($request->validated());
+        $data = $request->validated();
+        $prerequisites = $data['prerequisites'] ?? [];
+        unset($data['prerequisites']);
+
+        $block->update($data);
+        $block->syncPrerequisites($prerequisites);
 
         return back()->with('success', 'Block updated.');
     }
@@ -122,6 +136,19 @@ class ContentBlockController extends Controller
         return back()->with('success', 'Blocks reordered.');
     }
 
+    /** @return array<string, mixed> */
+    private function blockTreeWith(int $depth = 0): array
+    {
+        if ($depth >= 5) {
+            return ['prerequisites:content_blocks.id,content_blocks.title'];
+        }
+
+        return [
+            'prerequisites:content_blocks.id,content_blocks.title',
+            'children' => fn ($q) => $q->orderBy('sort_order')->with($this->blockTreeWith($depth + 1)),
+        ];
+    }
+
     /** @return array<int, array<string, mixed>> */
     private function buildTree($blocks): array
     {
@@ -142,6 +169,11 @@ class ContentBlockController extends Controller
                 'bloom_level' => $block->bloom_level?->value,
                 'is_container' => $block->is_container,
                 'is_published' => $block->is_published,
+                'prerequisites' => $block->prerequisites->map(fn ($prereq) => [
+                    'id' => $prereq->id,
+                    'title' => $prereq->title,
+                    'is_hard_prerequisite' => (bool) $prereq->pivot->is_hard_prerequisite,
+                ])->values()->all(),
                 'children' => $block->children->isNotEmpty() ? $this->buildTree($block->children->sortBy('sort_order')->values()) : [],
             ];
         })->values()->all();

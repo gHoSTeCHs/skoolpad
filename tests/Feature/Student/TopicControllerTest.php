@@ -1,6 +1,7 @@
 <?php
 
 use App\Enums\QuestionStatus;
+use App\Models\BlockCompletion;
 use App\Models\CanonicalTopic;
 use App\Models\ContentBlock;
 use App\Models\CourseTopicMapping;
@@ -272,6 +273,77 @@ test('block tree includes simplifiedContent per block', function () {
             ->where('hasBlocks', true)
             ->has('blockTree', 1)
             ->has('blockTree.0.simplifiedContent')
+        );
+});
+
+test('topic show includes lockedBlockIds', function () {
+    $prereqBlock = ContentBlock::factory()->published()->create([
+        'canonical_topic_id' => $this->topic->id,
+        'path' => '1',
+        'sort_order' => 1,
+    ]);
+    $dependentBlock = ContentBlock::factory()->published()->create([
+        'canonical_topic_id' => $this->topic->id,
+        'path' => '2',
+        'sort_order' => 2,
+    ]);
+
+    $dependentBlock->prerequisites()->attach($prereqBlock->id, ['is_hard_prerequisite' => true]);
+
+    $this->get(route('topics.show', $this->topic))
+        ->assertOk()
+        ->assertInertia(fn ($page) => $page
+            ->has('lockedBlockIds', 1)
+            ->where('lockedBlockIds.0', $dependentBlock->id)
+        );
+});
+
+test('block tree includes prerequisites per block', function () {
+    $prereqBlock = ContentBlock::factory()->published()->create([
+        'canonical_topic_id' => $this->topic->id,
+        'path' => '1',
+        'sort_order' => 1,
+    ]);
+    $dependentBlock = ContentBlock::factory()->published()->create([
+        'canonical_topic_id' => $this->topic->id,
+        'path' => '2',
+        'sort_order' => 2,
+    ]);
+
+    $dependentBlock->prerequisites()->attach($prereqBlock->id, ['is_hard_prerequisite' => true]);
+
+    $this->get(route('topics.show', $this->topic))
+        ->assertOk()
+        ->assertInertia(fn ($page) => $page
+            ->has('blockTree.1.prerequisites', 1)
+            ->where('blockTree.1.prerequisites.0.id', $prereqBlock->id)
+            ->where('blockTree.1.prerequisites.0.isHard', true)
+        );
+});
+
+test('lockedBlockIds is empty when all prerequisites completed', function () {
+    $prereqBlock = ContentBlock::factory()->published()->create([
+        'canonical_topic_id' => $this->topic->id,
+        'path' => '1',
+        'sort_order' => 1,
+    ]);
+    $dependentBlock = ContentBlock::factory()->published()->create([
+        'canonical_topic_id' => $this->topic->id,
+        'path' => '2',
+        'sort_order' => 2,
+    ]);
+
+    $dependentBlock->prerequisites()->attach($prereqBlock->id, ['is_hard_prerequisite' => true]);
+
+    BlockCompletion::factory()->create([
+        'user_id' => $this->student->id,
+        'content_block_id' => $prereqBlock->id,
+    ]);
+
+    $this->get(route('topics.show', $this->topic))
+        ->assertOk()
+        ->assertInertia(fn ($page) => $page
+            ->has('lockedBlockIds', 0)
         );
 });
 

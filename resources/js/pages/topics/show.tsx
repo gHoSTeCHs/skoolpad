@@ -24,6 +24,7 @@ export default function TopicShow({
     hasBlocks,
     blockTree,
     completedBlockIds,
+    lockedBlockIds,
     isTopicCompleted,
     prerequisiteStatus,
     courseContext,
@@ -112,7 +113,7 @@ export default function TopicShow({
                 </div>
 
                 {hasBlocks && blockTree ? (
-                    <BlockReader blocks={blockTree} completedBlockIds={completedBlockIds} />
+                    <BlockReader blocks={blockTree} completedBlockIds={completedBlockIds} lockedBlockIds={lockedBlockIds} />
                 ) : (
                     topic.content && (
                         <div

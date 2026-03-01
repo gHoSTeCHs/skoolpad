@@ -1,6 +1,8 @@
 <?php
 
+use App\Models\BlockCompletion;
 use App\Models\CanonicalTopic;
+use App\Models\ContentBlock;
 use App\Models\PracticeAnswer;
 use App\Models\PracticeSession;
 use App\Models\Question;
@@ -145,4 +147,68 @@ test('distinguishes hard and soft prerequisites', function () {
 
     expect($hardResult['is_hard'])->toBeTrue()
         ->and($softResult['is_hard'])->toBeFalse();
+});
+
+test('getLockedBlockIds returns empty when no block prerequisites', function () {
+    ContentBlock::factory()->for($this->topic)->create(['path' => '1', 'sort_order' => 1]);
+
+    $result = $this->service->getLockedBlockIds($this->user, $this->topic);
+
+    expect($result)->toBeEmpty();
+});
+
+test('getLockedBlockIds locks block with incomplete hard prerequisite', function () {
+    $prereqBlock = ContentBlock::factory()->for($this->topic)->create(['path' => '1', 'sort_order' => 1]);
+    $dependentBlock = ContentBlock::factory()->for($this->topic)->create(['path' => '2', 'sort_order' => 2]);
+
+    $dependentBlock->prerequisites()->attach($prereqBlock->id, ['is_hard_prerequisite' => true]);
+
+    $result = $this->service->getLockedBlockIds($this->user, $this->topic);
+
+    expect($result)->toContain($dependentBlock->id);
+});
+
+test('getLockedBlockIds unlocks block when hard prerequisite completed', function () {
+    $prereqBlock = ContentBlock::factory()->for($this->topic)->create(['path' => '1', 'sort_order' => 1]);
+    $dependentBlock = ContentBlock::factory()->for($this->topic)->create(['path' => '2', 'sort_order' => 2]);
+
+    $dependentBlock->prerequisites()->attach($prereqBlock->id, ['is_hard_prerequisite' => true]);
+
+    BlockCompletion::factory()->create([
+        'user_id' => $this->user->id,
+        'content_block_id' => $prereqBlock->id,
+    ]);
+
+    $result = $this->service->getLockedBlockIds($this->user, $this->topic);
+
+    expect($result)->not->toContain($dependentBlock->id);
+});
+
+test('getLockedBlockIds ignores soft prerequisites for locking', function () {
+    $prereqBlock = ContentBlock::factory()->for($this->topic)->create(['path' => '1', 'sort_order' => 1]);
+    $dependentBlock = ContentBlock::factory()->for($this->topic)->create(['path' => '2', 'sort_order' => 2]);
+
+    $dependentBlock->prerequisites()->attach($prereqBlock->id, ['is_hard_prerequisite' => false]);
+
+    $result = $this->service->getLockedBlockIds($this->user, $this->topic);
+
+    expect($result)->not->toContain($dependentBlock->id);
+});
+
+test('getLockedBlockIds handles multiple hard prerequisites', function () {
+    $prereq1 = ContentBlock::factory()->for($this->topic)->create(['path' => '1', 'sort_order' => 1]);
+    $prereq2 = ContentBlock::factory()->for($this->topic)->create(['path' => '2', 'sort_order' => 2]);
+    $dependentBlock = ContentBlock::factory()->for($this->topic)->create(['path' => '3', 'sort_order' => 3]);
+
+    $dependentBlock->prerequisites()->attach($prereq1->id, ['is_hard_prerequisite' => true]);
+    $dependentBlock->prerequisites()->attach($prereq2->id, ['is_hard_prerequisite' => true]);
+
+    BlockCompletion::factory()->create([
+        'user_id' => $this->user->id,
+        'content_block_id' => $prereq1->id,
+    ]);
+
+    $result = $this->service->getLockedBlockIds($this->user, $this->topic);
+
+    expect($result)->toContain($dependentBlock->id);
 });

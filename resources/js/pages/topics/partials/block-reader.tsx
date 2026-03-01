@@ -1,5 +1,5 @@
 import { router } from '@inertiajs/react';
-import { CheckCircle2, Circle, Sparkles } from 'lucide-react';
+import { CheckCircle2, Circle, Lock, Sparkles } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { TreeNode, type TreeBlock } from '@/components/skoolpad/block-tree/tree-node';
 import { TiptapRenderer } from '@/components/shared/tiptap-renderer';
@@ -11,9 +11,10 @@ import type { TiptapJSON } from '@/types/tiptap';
 interface BlockReaderProps {
     blocks: TopicBlock[];
     completedBlockIds: string[];
+    lockedBlockIds: string[];
 }
 
-function toTreeBlock(block: TopicBlock, completedIds: string[]): TreeBlock {
+function toTreeBlock(block: TopicBlock, completedIds: string[], lockedIds: string[]): TreeBlock {
     return {
         id: block.id,
         title: block.title,
@@ -23,7 +24,8 @@ function toTreeBlock(block: TopicBlock, completedIds: string[]): TreeBlock {
         estimatedReadTime: block.estimatedReadTime,
         difficultyLevel: block.difficultyLevel,
         isCompleted: completedIds.includes(block.id),
-        children: block.children.map((c) => toTreeBlock(c, completedIds)),
+        isLocked: lockedIds.includes(block.id),
+        children: block.children.map((c) => toTreeBlock(c, completedIds, lockedIds)),
     };
 }
 
@@ -36,15 +38,16 @@ function findBlock(blocks: TopicBlock[], id: string): TopicBlock | null {
     return null;
 }
 
-export function BlockReader({ blocks, completedBlockIds }: BlockReaderProps) {
+export function BlockReader({ blocks, completedBlockIds, lockedBlockIds }: BlockReaderProps) {
     const [selectedId, setSelectedId] = useState<string | null>(blocks[0]?.id ?? null);
     const [expanded, setExpanded] = useState<Record<string, boolean>>({});
     const [simpleMode, setSimpleMode] = useState(false);
 
     useEffect(() => { setSimpleMode(false); }, [selectedId]);
 
-    const treeBlocks = blocks.map((b) => toTreeBlock(b, completedBlockIds));
+    const treeBlocks = blocks.map((b) => toTreeBlock(b, completedBlockIds, lockedBlockIds));
     const selectedBlock = selectedId ? findBlock(blocks, selectedId) : null;
+    const isSelectedLocked = selectedId ? lockedBlockIds.includes(selectedId) : false;
 
     function handleToggle(id: string) {
         setExpanded((prev) => ({ ...prev, [id]: !prev[id] }));
@@ -87,34 +90,67 @@ export function BlockReader({ blocks, completedBlockIds }: BlockReaderProps) {
                                 )}
                                 {selectedBlock.title}
                             </h3>
-                            <div className="flex items-center gap-2">
-                                {selectedBlock.simplifiedContent && (
+                            {!isSelectedLocked && (
+                                <div className="flex items-center gap-2">
+                                    {selectedBlock.simplifiedContent && (
+                                        <Button
+                                            variant={simpleMode ? 'default' : 'outline'}
+                                            size="sm"
+                                            onClick={() => setSimpleMode(!simpleMode)}
+                                            className="gap-1.5"
+                                        >
+                                            <Sparkles className="size-3.5" />
+                                            {simpleMode ? 'Simple Mode' : 'ELI12'}
+                                        </Button>
+                                    )}
                                     <Button
-                                        variant={simpleMode ? 'default' : 'outline'}
+                                        variant={isCompleted ? 'default' : 'outline'}
                                         size="sm"
-                                        onClick={() => setSimpleMode(!simpleMode)}
+                                        onClick={() => handleToggleComplete(selectedBlock.id)}
                                         className="gap-1.5"
                                     >
-                                        <Sparkles className="size-3.5" />
-                                        {simpleMode ? 'Simple Mode' : 'ELI12'}
+                                        {isCompleted ? (
+                                            <><CheckCircle2 className="size-4" /> Completed</>
+                                        ) : (
+                                            <><Circle className="size-4" /> Mark complete</>
+                                        )}
                                     </Button>
-                                )}
-                                <Button
-                                    variant={isCompleted ? 'default' : 'outline'}
-                                    size="sm"
-                                    onClick={() => handleToggleComplete(selectedBlock.id)}
-                                    className="gap-1.5"
-                                >
-                                    {isCompleted ? (
-                                        <><CheckCircle2 className="size-4" /> Completed</>
-                                    ) : (
-                                        <><Circle className="size-4" /> Mark complete</>
-                                    )}
-                                </Button>
-                            </div>
+                                </div>
+                            )}
                         </div>
 
-                        {selectedBlock.content ? (
+                        {isSelectedLocked ? (
+                            <div className="rounded-lg border border-amber-300 bg-amber-50 p-5 dark:border-amber-700 dark:bg-amber-950/30">
+                                <div className="mb-3 flex items-center gap-2">
+                                    <Lock className="size-5 text-amber-600 dark:text-amber-400" />
+                                    <h4 className="font-semibold text-amber-800 dark:text-amber-300" style={{ fontFamily: 'var(--font-display)' }}>
+                                        This block is locked
+                                    </h4>
+                                </div>
+                                <p className="mb-4 text-sm text-amber-700 dark:text-amber-400" style={{ fontFamily: 'var(--font-body)' }}>
+                                    Complete the following prerequisite blocks to unlock this content:
+                                </p>
+                                <ul className="space-y-2">
+                                    {selectedBlock.prerequisites
+                                        .filter((p) => p.isHard)
+                                        .map((prereq) => {
+                                            const prereqCompleted = completedBlockIds.includes(prereq.id);
+                                            return (
+                                                <li key={prereq.id} className="flex items-center gap-2 text-sm" style={{ fontFamily: 'var(--font-body)' }}>
+                                                    {prereqCompleted ? (
+                                                        <CheckCircle2 className="size-4 shrink-0 text-green-500" />
+                                                    ) : (
+                                                        <Circle className="size-4 shrink-0 text-amber-500" />
+                                                    )}
+                                                    <span className={prereqCompleted ? 'text-muted-foreground line-through' : 'font-medium'}>
+                                                        {prereq.title}
+                                                    </span>
+                                                </li>
+                                            );
+                                        })}
+                                </ul>
+                            </div>
+                        ) : selectedBlock.content ? (
                             <div className={simpleMode ? 'rounded-lg border border-primary/30 bg-primary/5 p-4' : undefined}>
                                 {simpleMode && (
                                     <div className="mb-3 flex items-center gap-2">

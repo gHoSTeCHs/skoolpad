@@ -3,6 +3,7 @@ import { ArrowLeft, Loader2, MoreHorizontal, Plus, TreePine } from 'lucide-react
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import ContentBlockController from '@/actions/App/Http/Controllers/Admin/ContentBlockController';
 import CanonicalTopicController from '@/actions/App/Http/Controllers/Admin/CanonicalTopicController';
+import { PrerequisiteManager } from '@/components/admin/topics/prerequisite-manager';
 import { TiptapEditor } from '@/components/shared/tiptap-editor';
 import { BlockTypeIcon, DifficultyBadge } from '@/components/skoolpad/block-tree';
 import SpBadge from '@/components/skoolpad/sp-badge';
@@ -37,6 +38,7 @@ import { useSlug } from '@/hooks/use-slug';
 import AdminLayout from '@/layouts/admin-layout';
 import { cn } from '@/lib/utils';
 import type { TiptapJSON } from '@/types/tiptap';
+import type { TopicPrerequisite } from '@/types/topics';
 
 interface BlockNode {
     id: string;
@@ -54,6 +56,7 @@ interface BlockNode {
     bloom_level: string | null;
     is_container: boolean;
     is_published: boolean;
+    prerequisites: Array<{ id: string; title: string; is_hard_prerequisite: boolean }>;
     children: BlockNode[];
 }
 
@@ -68,6 +71,7 @@ interface Props {
     blockTypes: SelectOption[];
     difficultyLevels: SelectOption[];
     bloomLevels: SelectOption[];
+    availableBlocks: Array<{ id: string; title: string }>;
 }
 
 const NONE_VALUE = '__none__';
@@ -438,7 +442,17 @@ interface BlockDetailFormProps {
     blockTypes: SelectOption[];
     difficultyLevels: SelectOption[];
     bloomLevels: SelectOption[];
+    availableBlocks: Array<{ id: string; title: string }>;
     onDelete: (id: string) => void;
+}
+
+function getDescendantIds(block: BlockNode): string[] {
+    const ids: string[] = [];
+    for (const child of block.children) {
+        ids.push(child.id);
+        ids.push(...getDescendantIds(child));
+    }
+    return ids;
 }
 
 function BlockDetailForm({
@@ -447,6 +461,7 @@ function BlockDetailForm({
     blockTypes,
     difficultyLevels,
     bloomLevels,
+    availableBlocks,
     onDelete,
 }: BlockDetailFormProps) {
     const { generateSlug, slugManuallyEdited, resetSlugTracking } = useSlug();
@@ -460,6 +475,7 @@ function BlockDetailForm({
         is_published: block.is_published,
         content: block.content as TiptapJSON | null,
         content_plain: '',
+        prerequisites: block.prerequisites as TopicPrerequisite[],
     });
 
     const prevBlockIdRef = useRef(block.id);
@@ -477,10 +493,16 @@ function BlockDetailForm({
                 is_published: block.is_published,
                 content: block.content as TiptapJSON | null,
                 content_plain: '',
+                prerequisites: block.prerequisites as TopicPrerequisite[],
             });
             resetSlugTracking();
         }
     }, [block.id]);
+
+    const filteredAvailableBlocks = useMemo(() => {
+        const excludeIds = new Set([block.id, ...getDescendantIds(block)]);
+        return availableBlocks.filter((b) => !excludeIds.has(b.id));
+    }, [availableBlocks, block]);
 
     function handleTitleChange(value: string) {
         form.setData('title', value);
@@ -691,6 +713,13 @@ function BlockDetailForm({
                 </FormField>
             )}
 
+            <PrerequisiteManager
+                topicId={block.id}
+                disciplineTopics={filteredAvailableBlocks}
+                currentPrerequisites={form.data.prerequisites}
+                onChange={(prerequisites) => form.setData('prerequisites', prerequisites)}
+            />
+
             <div className="flex items-center justify-between pt-2">
                 <Button
                     type="button"
@@ -717,6 +746,7 @@ export default function AdminTopicBlocks({
     blockTypes,
     difficultyLevels,
     bloomLevels,
+    availableBlocks,
 }: Props) {
     const [selectedBlockId, setSelectedBlockId] = useState<string | null>(null);
     const [createDialogOpen, setCreateDialogOpen] = useState(false);
@@ -872,6 +902,7 @@ export default function AdminTopicBlocks({
                                     blockTypes={blockTypes}
                                     difficultyLevels={difficultyLevels}
                                     bloomLevels={bloomLevels}
+                                    availableBlocks={availableBlocks}
                                     onDelete={handleDeleteRequest}
                                 />
                             ) : (

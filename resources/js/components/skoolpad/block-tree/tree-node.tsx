@@ -1,3 +1,4 @@
+import { Lock } from 'lucide-react';
 import BlockTypeIcon from './block-type-icon';
 import DifficultyBadge from './difficulty-badge';
 
@@ -10,6 +11,7 @@ export interface TreeBlock {
     estimatedReadTime: number | null;
     difficultyLevel: string | null;
     isCompleted?: boolean;
+    isLocked?: boolean;
     children: TreeBlock[];
 }
 
@@ -39,6 +41,7 @@ export function TreeNode({ block, expanded, selectedId, onToggle, onSelect, dept
                     + (isSelected
                         ? ' border-primary bg-primary/5'
                         : ' border-transparent hover:bg-[var(--bg-raised)]')
+                    + (block.isLocked ? ' opacity-50' : '')
                 }
                 style={{ paddingLeft: `${depth * 20 + 12}px` }}
             >
@@ -60,9 +63,11 @@ export function TreeNode({ block, expanded, selectedId, onToggle, onSelect, dept
                     {block.title}
                 </span>
 
-                {block.isCompleted && (
+                {block.isLocked ? (
+                    <Lock className="size-3.5 shrink-0 text-amber-500" />
+                ) : block.isCompleted ? (
                     <span className="shrink-0 text-[12px] text-green-500">{'\u2713'}</span>
-                )}
+                ) : null}
 
                 {block.estimatedReadTime && (
                     <span className="shrink-0 text-[10px] text-muted-foreground" style={{ fontFamily: 'var(--font-body)' }}>

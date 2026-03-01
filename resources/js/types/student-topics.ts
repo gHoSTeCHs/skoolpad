@@ -14,6 +14,12 @@ export interface PrerequisiteStatusResult {
     prerequisites: PrerequisiteItem[];
 }
 
+export interface BlockPrerequisiteItem {
+    id: string;
+    title: string;
+    isHard: boolean;
+}
+
 export interface TopicBlock {
     id: string;
     title: string;
@@ -25,6 +31,7 @@ export interface TopicBlock {
     content: TiptapJSON | null;
     simplifiedContent: TiptapJSON | null;
     isContainer: boolean;
+    prerequisites: BlockPrerequisiteItem[];
     children: TopicBlock[];
 }
 
@@ -56,6 +63,7 @@ export interface TopicShowProps {
     hasBlocks: boolean;
     blockTree: TopicBlock[] | null;
     completedBlockIds: string[];
+    lockedBlockIds: string[];
     isTopicCompleted: boolean;
     prerequisiteStatus: PrerequisiteStatusResult;
     courseContext: CourseContext | null;

@@ -74,6 +74,7 @@ class TopicController extends Controller
         $hasBlocks = $topic->contentBlocks()->exists();
         $blockTree = null;
         $completedBlockIds = [];
+        $lockedBlockIds = [];
 
         if ($hasBlocks) {
             $blockTree = $this->buildBlockTree($topic);
@@ -82,6 +83,7 @@ class TopicController extends Controller
                 ->whereIn('content_block_id', $blockIds)
                 ->pluck('content_block_id')
                 ->toArray();
+            $lockedBlockIds = $this->prerequisiteService->getLockedBlockIds($user, $topic);
         }
 
         $prerequisiteStatus = $this->prerequisiteService->getPrerequisiteStatus($user, $topic);
@@ -121,6 +123,7 @@ class TopicController extends Controller
             'hasBlocks' => $hasBlocks,
             'blockTree' => $blockTree,
             'completedBlockIds' => $completedBlockIds,
+            'lockedBlockIds' => $lockedBlockIds,
             'isTopicCompleted' => $isTopicCompleted,
             'prerequisiteStatus' => $prerequisiteStatus,
             'courseContext' => $courseContext,
@@ -178,6 +181,7 @@ class TopicController extends Controller
     {
         $blocks = $topic->contentBlocks()
             ->where('is_published', true)
+            ->with('prerequisites:content_blocks.id,content_blocks.title')
             ->orderBy('sort_order')
             ->get();
 
@@ -205,6 +209,11 @@ class TopicController extends Controller
             'content' => $block->content,
             'simplifiedContent' => $block->simplified_content,
             'isContainer' => $block->is_container,
+            'prerequisites' => $block->prerequisites->map(fn ($prereq) => [
+                'id' => $prereq->id,
+                'title' => $prereq->title,
+                'isHard' => (bool) $prereq->pivot->is_hard_prerequisite,
+            ])->values()->all(),
             'children' => $this->nestBlocks($blocksByParent, $block->id),
         ])->values()->all();
     }
