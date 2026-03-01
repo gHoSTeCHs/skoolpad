@@ -23,6 +23,7 @@ export interface TopicBlock {
     estimatedReadTime: number | null;
     difficultyLevel: string | null;
     content: TiptapJSON | null;
+    simplifiedContent: TiptapJSON | null;
     isContainer: boolean;
     children: TopicBlock[];
 }
@@ -32,6 +33,7 @@ export interface TopicData {
     title: string;
     slug: string;
     content: TiptapJSON | null;
+    simplified_content: TiptapJSON | null;
     summary: string | null;
     difficulty_level: string | null;
     estimated_read_minutes: number | null;

@@ -24,6 +24,7 @@ class CanonicalTopic extends Model
         'slug',
         'content',
         'content_plain',
+        'simplified_content',
         'summary',
         'difficulty_level',
         'estimated_read_minutes',
@@ -38,6 +39,7 @@ class CanonicalTopic extends Model
     {
         return [
             'content' => 'array',
+            'simplified_content' => 'array',
             'difficulty_level' => TopicDifficulty::class,
             'is_published' => 'boolean',
             'published_at' => 'datetime',

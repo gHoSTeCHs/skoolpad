@@ -29,6 +29,7 @@ interface TopicData {
     difficulty_level: TopicDifficulty;
     content: TiptapJSON | null;
     content_plain: string | null;
+    simplified_content: TiptapJSON | null;
     summary: string | null;
     estimated_read_minutes: number | null;
     is_published: boolean;
@@ -59,6 +60,7 @@ export default function AdminTopicsEdit({ topic, disciplines, difficulty_levels,
         summary: topic.summary ?? '',
         content: topic.content as TiptapJSON | null,
         content_plain: topic.content_plain ?? '',
+        simplified_content: topic.simplified_content as TiptapJSON | null,
         estimated_read_minutes: (topic.estimated_read_minutes ?? '') as number | '',
         is_published: topic.is_published,
         prerequisites: topic.prerequisites as TopicPrerequisite[],
@@ -139,6 +141,20 @@ export default function AdminTopicsEdit({ topic, disciplines, difficulty_levels,
                                             placeholder="Write the topic content here..."
                                         />
                                         <InputError message={form.errors.content} />
+                                    </div>
+
+                                    <div className="space-y-2">
+                                        <Label>Simplified Content (ELI12)</Label>
+                                        <p className="text-xs text-muted-foreground" style={{ fontFamily: 'var(--font-body)' }}>
+                                            Optional simplified version for students. Leave blank to hide the ELI12 button.
+                                        </p>
+                                        <TiptapEditor
+                                            value={form.data.simplified_content}
+                                            onChange={(json, _plain) => form.setData('simplified_content', json)}
+                                            onImageUpload={handleImageUpload}
+                                            placeholder="Write a simpler explanation here..."
+                                        />
+                                        <InputError message={form.errors.simplified_content} />
                                     </div>
                                 </CardContent>
                             </Card>

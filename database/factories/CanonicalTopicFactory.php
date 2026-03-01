@@ -47,6 +47,7 @@ class CanonicalTopicFactory extends Factory
                 ],
             ],
             'content_plain' => fake()->paragraph(),
+            'simplified_content' => null,
             'summary' => fake()->sentence(),
             'difficulty_level' => fake()->randomElement(TopicDifficulty::cases()),
             'estimated_read_minutes' => fake()->numberBetween(5, 30),
@@ -54,6 +55,23 @@ class CanonicalTopicFactory extends Factory
             'is_published' => true,
             'published_at' => now(),
         ];
+    }
+
+    public function withSimplifiedContent(): static
+    {
+        return $this->state(fn (array $attributes) => [
+            'simplified_content' => [
+                'type' => 'doc',
+                'content' => [
+                    [
+                        'type' => 'paragraph',
+                        'content' => [
+                            ['type' => 'text', 'text' => fake()->sentence()],
+                        ],
+                    ],
+                ],
+            ],
+        ]);
     }
 
     public function unpublished(): static

@@ -31,12 +31,30 @@ class ContentBlockFactory extends Factory
                     ['type' => 'paragraph', 'content' => [['type' => 'text', 'text' => fake()->paragraph()]]],
                 ],
             ],
+            'simplified_content' => null,
             'estimated_read_time' => fake()->numberBetween(3, 15),
             'difficulty_level' => fake()->randomElement(BlockDifficultyLevel::cases()),
             'bloom_level' => fake()->randomElement(BloomLevel::cases()),
             'is_container' => false,
             'is_published' => false,
         ];
+    }
+
+    public function withSimplifiedContent(): static
+    {
+        return $this->state(fn (array $attributes) => [
+            'simplified_content' => [
+                'type' => 'doc',
+                'content' => [
+                    [
+                        'type' => 'paragraph',
+                        'content' => [
+                            ['type' => 'text', 'text' => fake()->sentence()],
+                        ],
+                    ],
+                ],
+            ],
+        ]);
     }
 
     public function container(): static

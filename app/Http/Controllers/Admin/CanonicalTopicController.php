@@ -98,6 +98,7 @@ class CanonicalTopicController extends Controller
                 'difficulty_level' => $topic->difficulty_level,
                 'content' => $topic->content,
                 'content_plain' => $topic->content_plain,
+                'simplified_content' => $topic->simplified_content,
                 'summary' => $topic->summary,
                 'estimated_read_minutes' => $topic->estimated_read_minutes,
                 'is_published' => $topic->is_published,
@@ -139,6 +140,7 @@ class CanonicalTopicController extends Controller
             'topic' => [
                 'title' => $topic->title,
                 'content' => $topic->content,
+                'simplified_content' => $topic->simplified_content,
                 'summary' => $topic->summary,
                 'difficulty_level' => $topic->difficulty_level,
                 'difficulty_level_label' => $topic->difficulty_level->label(),

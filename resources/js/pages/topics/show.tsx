@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Head, Link, router } from '@inertiajs/react';
-import { CheckCircle2, ChevronDown, Circle } from 'lucide-react';
+import { CheckCircle2, ChevronDown, Circle, Sparkles } from 'lucide-react';
 import { TiptapRenderer } from '@/components/shared/tiptap-renderer';
 import { DifficultyBadge } from '@/components/skoolpad/block-tree';
 import SpBadge from '@/components/skoolpad/sp-badge';
@@ -33,6 +33,7 @@ export default function TopicShow({
     crossInstitutionCount,
 }: TopicShowProps) {
     const [localCompleted, setLocalCompleted] = useState(isTopicCompleted);
+    const [simpleMode, setSimpleMode] = useState(false);
 
     const breadcrumbs: BreadcrumbItem[] = [];
 
@@ -80,6 +81,17 @@ export default function TopicShow({
                             {topic.discipline && (
                                 <SpBadge variant="primary">{topic.discipline.name}</SpBadge>
                             )}
+                            {topic.simplified_content && (
+                                <Button
+                                    variant={simpleMode ? 'default' : 'outline'}
+                                    size="sm"
+                                    onClick={() => setSimpleMode(!simpleMode)}
+                                    className="gap-1.5"
+                                >
+                                    <Sparkles className="size-3.5" />
+                                    {simpleMode ? 'Simple Mode' : 'ELI12'}
+                                </Button>
+                            )}
                         </div>
                     </div>
 
@@ -103,8 +115,24 @@ export default function TopicShow({
                     <BlockReader blocks={blockTree} completedBlockIds={completedBlockIds} />
                 ) : (
                     topic.content && (
-                        <div className="rounded-lg border border-border bg-card p-6" style={{ borderRadius: 'var(--card-radius)' }}>
-                            <TiptapRenderer content={topic.content as TiptapJSON} />
+                        <div
+                            className={`rounded-lg border p-6 ${simpleMode ? 'border-primary/30 bg-primary/5' : 'border-border bg-card'}`}
+                            style={{ borderRadius: 'var(--card-radius)' }}
+                        >
+                            {simpleMode && (
+                                <div className="mb-3 flex items-center gap-2">
+                                    <Sparkles className="size-4 text-primary" />
+                                    <span
+                                        className="text-[11px] font-semibold uppercase tracking-wider text-primary"
+                                        style={{ fontFamily: 'var(--font-body)' }}
+                                    >
+                                        Simple Mode
+                                    </span>
+                                </div>
+                            )}
+                            <TiptapRenderer content={
+                                (simpleMode && topic.simplified_content ? topic.simplified_content : topic.content) as TiptapJSON
+                            } />
                         </div>
                     )
                 )}

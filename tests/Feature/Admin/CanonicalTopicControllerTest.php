@@ -338,6 +338,37 @@ test('togglePublish sets published_at only on first publish', function () {
     expect($topic->published_at->toDateTimeString())->toBe($publishedAt->toDateTimeString());
 });
 
+test('update saves simplified_content', function () {
+    $topic = CanonicalTopic::factory()->for($this->discipline)->create();
+    $simplifiedContent = [
+        'type' => 'doc',
+        'content' => [
+            ['type' => 'paragraph', 'content' => [['type' => 'text', 'text' => 'Simple explanation']]],
+        ],
+    ];
+
+    $this->actingAs($this->admin)
+        ->put(route('admin.topics.update', $topic), validTopicData([
+            'simplified_content' => $simplifiedContent,
+        ], $this->discipline->id))
+        ->assertRedirect()
+        ->assertSessionHas('success');
+
+    $topic->refresh();
+    expect($topic->simplified_content)->toEqual($simplifiedContent);
+});
+
+test('edit returns simplified_content in topic data', function () {
+    $topic = CanonicalTopic::factory()->for($this->discipline)->withSimplifiedContent()->create();
+
+    $this->actingAs($this->admin)
+        ->get(route('admin.topics.edit', $topic))
+        ->assertOk()
+        ->assertInertia(fn ($page) => $page
+            ->has('topic.simplified_content')
+        );
+});
+
 test('guests cannot access topic routes', function () {
     $this->get(route('admin.topics.index'))->assertRedirect(route('login'));
     $this->get(route('admin.topics.create'))->assertRedirect(route('login'));

@@ -109,6 +109,7 @@ class TopicController extends Controller
                 'title' => $topic->title,
                 'slug' => $topic->slug,
                 'content' => $topic->content,
+                'simplified_content' => $topic->simplified_content,
                 'summary' => $topic->summary,
                 'difficulty_level' => $topic->difficulty_level?->value,
                 'estimated_read_minutes' => $topic->estimated_read_minutes,
@@ -202,6 +203,7 @@ class TopicController extends Controller
             'estimatedReadTime' => $block->estimated_read_time,
             'difficultyLevel' => $block->difficulty_level?->value,
             'content' => $block->content,
+            'simplifiedContent' => $block->simplified_content,
             'isContainer' => $block->is_container,
             'children' => $this->nestBlocks($blocksByParent, $block->id),
         ])->values()->all();

@@ -234,6 +234,47 @@ test('toggle block complete creates and deletes block completion', function () {
     ]);
 });
 
+test('topic show includes simplified_content when present', function () {
+    $this->topic->update([
+        'simplified_content' => [
+            'type' => 'doc',
+            'content' => [
+                ['type' => 'paragraph', 'content' => [['type' => 'text', 'text' => 'Simple version']]],
+            ],
+        ],
+    ]);
+
+    $this->get(route('topics.show', $this->topic))
+        ->assertOk()
+        ->assertInertia(fn ($page) => $page
+            ->has('topic.simplified_content')
+            ->where('topic.simplified_content.type', 'doc')
+        );
+});
+
+test('topic show has null simplified_content when absent', function () {
+    $this->get(route('topics.show', $this->topic))
+        ->assertOk()
+        ->assertInertia(fn ($page) => $page
+            ->where('topic.simplified_content', null)
+        );
+});
+
+test('block tree includes simplifiedContent per block', function () {
+    ContentBlock::factory()->published()->withSimplifiedContent()->create([
+        'canonical_topic_id' => $this->topic->id,
+        'sort_order' => 1,
+    ]);
+
+    $this->get(route('topics.show', $this->topic))
+        ->assertOk()
+        ->assertInertia(fn ($page) => $page
+            ->where('hasBlocks', true)
+            ->has('blockTree', 1)
+            ->has('blockTree.0.simplifiedContent')
+        );
+});
+
 test('guests cannot access topics', function () {
     auth()->logout();
 

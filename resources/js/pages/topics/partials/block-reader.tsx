@@ -1,6 +1,6 @@
 import { router } from '@inertiajs/react';
-import { CheckCircle2, Circle } from 'lucide-react';
-import { useState } from 'react';
+import { CheckCircle2, Circle, Sparkles } from 'lucide-react';
+import { useEffect, useState } from 'react';
 import { TreeNode, type TreeBlock } from '@/components/skoolpad/block-tree/tree-node';
 import { TiptapRenderer } from '@/components/shared/tiptap-renderer';
 import { Button } from '@/components/ui/button';
@@ -39,6 +39,9 @@ function findBlock(blocks: TopicBlock[], id: string): TopicBlock | null {
 export function BlockReader({ blocks, completedBlockIds }: BlockReaderProps) {
     const [selectedId, setSelectedId] = useState<string | null>(blocks[0]?.id ?? null);
     const [expanded, setExpanded] = useState<Record<string, boolean>>({});
+    const [simpleMode, setSimpleMode] = useState(false);
+
+    useEffect(() => { setSimpleMode(false); }, [selectedId]);
 
     const treeBlocks = blocks.map((b) => toTreeBlock(b, completedBlockIds));
     const selectedBlock = selectedId ? findBlock(blocks, selectedId) : null;
@@ -84,22 +87,52 @@ export function BlockReader({ blocks, completedBlockIds }: BlockReaderProps) {
                                 )}
                                 {selectedBlock.title}
                             </h3>
-                            <Button
-                                variant={isCompleted ? 'default' : 'outline'}
-                                size="sm"
-                                onClick={() => handleToggleComplete(selectedBlock.id)}
-                                className="gap-1.5"
-                            >
-                                {isCompleted ? (
-                                    <><CheckCircle2 className="size-4" /> Completed</>
-                                ) : (
-                                    <><Circle className="size-4" /> Mark complete</>
+                            <div className="flex items-center gap-2">
+                                {selectedBlock.simplifiedContent && (
+                                    <Button
+                                        variant={simpleMode ? 'default' : 'outline'}
+                                        size="sm"
+                                        onClick={() => setSimpleMode(!simpleMode)}
+                                        className="gap-1.5"
+                                    >
+                                        <Sparkles className="size-3.5" />
+                                        {simpleMode ? 'Simple Mode' : 'ELI12'}
+                                    </Button>
                                 )}
-                            </Button>
+                                <Button
+                                    variant={isCompleted ? 'default' : 'outline'}
+                                    size="sm"
+                                    onClick={() => handleToggleComplete(selectedBlock.id)}
+                                    className="gap-1.5"
+                                >
+                                    {isCompleted ? (
+                                        <><CheckCircle2 className="size-4" /> Completed</>
+                                    ) : (
+                                        <><Circle className="size-4" /> Mark complete</>
+                                    )}
+                                </Button>
+                            </div>
                         </div>
 
                         {selectedBlock.content ? (
-                            <TiptapRenderer content={selectedBlock.content as TiptapJSON} />
+                            <div className={simpleMode ? 'rounded-lg border border-primary/30 bg-primary/5 p-4' : undefined}>
+                                {simpleMode && (
+                                    <div className="mb-3 flex items-center gap-2">
+                                        <Sparkles className="size-4 text-primary" />
+                                        <span
+                                            className="text-[11px] font-semibold uppercase tracking-wider text-primary"
+                                            style={{ fontFamily: 'var(--font-body)' }}
+                                        >
+                                            Simple Mode
+                                        </span>
+                                    </div>
+                                )}
+                                <TiptapRenderer content={
+                                    (simpleMode && selectedBlock.simplifiedContent
+                                        ? selectedBlock.simplifiedContent
+                                        : selectedBlock.content) as TiptapJSON
+                                } />
+                            </div>
                         ) : (
                             <p className="text-sm text-muted-foreground" style={{ fontFamily: 'var(--font-body)' }}>
                                 This is a container block. Select a child block to read its content.

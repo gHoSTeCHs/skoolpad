@@ -38,6 +38,7 @@ export default function AdminTopicsCreate({ disciplines, difficulty_levels }: Pr
         summary: '',
         content: null as TiptapJSON | null,
         content_plain: '',
+        simplified_content: null as TiptapJSON | null,
         estimated_read_minutes: '' as number | '',
         is_published: false,
         prerequisites: [] as TopicPrerequisite[],
@@ -130,6 +131,20 @@ export default function AdminTopicsCreate({ disciplines, difficulty_levels }: Pr
                                             placeholder="Write the topic content here..."
                                         />
                                         <InputError message={form.errors.content} />
+                                    </div>
+
+                                    <div className="space-y-2">
+                                        <Label>Simplified Content (ELI12)</Label>
+                                        <p className="text-xs text-muted-foreground" style={{ fontFamily: 'var(--font-body)' }}>
+                                            Optional simplified version for students. Leave blank to hide the ELI12 button.
+                                        </p>
+                                        <TiptapEditor
+                                            value={form.data.simplified_content}
+                                            onChange={(json, _plain) => form.setData('simplified_content', json)}
+                                            onImageUpload={handleImageUpload}
+                                            placeholder="Write a simpler explanation here..."
+                                        />
+                                        <InputError message={form.errors.simplified_content} />
                                     </div>
                                 </CardContent>
                             </Card>

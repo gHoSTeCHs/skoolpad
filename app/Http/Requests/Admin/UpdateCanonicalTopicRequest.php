@@ -31,6 +31,7 @@ class UpdateCanonicalTopicRequest extends FormRequest
             'difficulty_level' => ['required', 'string', Rule::in(TopicDifficulty::values())],
             'content' => ['required', 'array'],
             'content_plain' => ['nullable', 'string'],
+            'simplified_content' => ['nullable', 'array'],
             'summary' => ['nullable', 'string', 'max:1000'],
             'estimated_read_minutes' => ['nullable', 'integer', 'min:1', 'max:999'],
             'is_published' => ['nullable', 'boolean'],
