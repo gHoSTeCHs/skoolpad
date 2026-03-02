@@ -164,6 +164,7 @@ class ContentBlockController extends Controller
                 'depth_level' => $block->depth_level,
                 'sort_order' => $block->sort_order,
                 'content' => $block->content,
+                'simplified_content' => $block->simplified_content,
                 'estimated_read_time' => $block->estimated_read_time,
                 'difficulty_level' => $block->difficulty_level?->value,
                 'bloom_level' => $block->bloom_level?->value,

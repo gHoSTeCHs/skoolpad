@@ -28,11 +28,15 @@ export interface CourseTopicItem {
     estimated_read_minutes: number | null;
     is_completed: boolean;
     question_count: number;
+    total_blocks: number;
+    completed_blocks: number;
 }
 
 export interface TopicsProgress {
     completed: number;
     total: number;
+    total_blocks: number;
+    completed_blocks: number;
 }
 
 export interface CourseQuestionAnswer {

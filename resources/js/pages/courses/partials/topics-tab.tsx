@@ -13,9 +13,10 @@ interface TopicsTabProps {
 }
 
 export function TopicsTab({ topics, progress, courseId }: TopicsTabProps) {
-    const progressPercent = progress.total > 0
-        ? Math.round((progress.completed / progress.total) * 100)
-        : 0;
+    const hasBlocks = progress.total_blocks > 0;
+    const progressPercent = hasBlocks
+        ? (progress.total_blocks > 0 ? Math.round((progress.completed_blocks / progress.total_blocks) * 100) : 0)
+        : (progress.total > 0 ? Math.round((progress.completed / progress.total) * 100) : 0);
 
     if (topics.length === 0) {
         return (
@@ -33,7 +34,10 @@ export function TopicsTab({ topics, progress, courseId }: TopicsTabProps) {
                 <div className="flex-1">
                     <div className="flex items-baseline justify-between">
                         <span className="text-[13px] font-medium" style={{ fontFamily: 'var(--font-body)' }}>
-                            {progress.completed} of {progress.total} topics completed
+                            {hasBlocks
+                                ? `${progress.completed_blocks} of ${progress.total_blocks} blocks completed`
+                                : `${progress.completed} of ${progress.total} topics completed`
+                            }
                         </span>
                         <span className="text-[12px] text-muted-foreground">{progressPercent}%</span>
                     </div>
@@ -62,8 +66,18 @@ export function TopicsTab({ topics, progress, courseId }: TopicsTabProps) {
                                 >
                                     {topic.title}
                                 </span>
-                                {topic.is_completed && (
-                                    <CheckCircle2 className="size-4 shrink-0 text-green-500" />
+                                {topic.total_blocks > 0 ? (
+                                    topic.completed_blocks >= topic.total_blocks ? (
+                                        <CheckCircle2 className="size-4 shrink-0 text-green-500" />
+                                    ) : topic.completed_blocks > 0 ? (
+                                        <span className="shrink-0 text-[11px] text-muted-foreground" style={{ fontFamily: 'var(--font-body)' }}>
+                                            {topic.completed_blocks}/{topic.total_blocks}
+                                        </span>
+                                    ) : null
+                                ) : (
+                                    topic.is_completed && (
+                                        <CheckCircle2 className="size-4 shrink-0 text-green-500" />
+                                    )
                                 )}
                             </div>
                             <div className="mt-1 flex flex-wrap items-center gap-2">

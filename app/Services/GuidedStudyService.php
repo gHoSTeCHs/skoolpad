@@ -24,7 +24,7 @@ class GuidedStudyService
     private const WEAK_TOPIC_MINUTES = 5;
 
     /**
-     * @return array{daily_goal_minutes: int, total_estimated_minutes: int, current_term: int, current_week: int, items: array<int, array{type: string, priority_tier: int, subject_name: string, level_subject_id: string, topic_label: string, canonical_topic_id: ?string, content_block_id: ?string, estimated_minutes: int, is_completed: bool}>}
+     * @return array{daily_goal_minutes: int, total_estimated_minutes: int, completed_minutes: int, current_term: int, current_week: int, items: array<int, array{type: string, priority_tier: int, subject_name: string, level_subject_id: string, topic_label: string, canonical_topic_id: ?string, content_block_id: ?string, estimated_minutes: int, is_completed: bool}>}
      */
     public function buildStudyPlan(User $user, StudentProfile $profile): array
     {
@@ -36,6 +36,7 @@ class GuidedStudyService
             return [
                 'daily_goal_minutes' => $dailyGoal,
                 'total_estimated_minutes' => 0,
+                'completed_minutes' => 0,
                 'current_term' => $termWeek['term'],
                 'current_week' => $termWeek['week'],
                 'items' => [],
@@ -44,11 +45,12 @@ class GuidedStudyService
 
         $items = collect();
         $minutesBudget = $dailyGoal;
+        $completedMinutes = 0;
 
         $minutesBudget = $this->addSpacedRepetitionItems($items, $minutesBudget);
 
         $minutesBudget = $this->addSchemeOfWorkItems(
-            $items, $minutesBudget, $user, $levelSubjectIds, $termWeek
+            $items, $minutesBudget, $user, $levelSubjectIds, $termWeek, $completedMinutes
         );
 
         $minutesBudget = $this->addWeakTopics($items, $minutesBudget);
@@ -60,6 +62,7 @@ class GuidedStudyService
         return [
             'daily_goal_minutes' => $dailyGoal,
             'total_estimated_minutes' => $totalMinutes,
+            'completed_minutes' => $completedMinutes,
             'current_term' => $termWeek['term'],
             'current_week' => $termWeek['week'],
             'items' => $items->values()->all(),
@@ -162,6 +165,7 @@ class GuidedStudyService
         User $user,
         array $levelSubjectIds,
         array $termWeek,
+        int &$completedMinutes,
     ): int {
         if ($minutesBudget <= 0) {
             return 0;
@@ -193,15 +197,19 @@ class GuidedStudyService
                 break;
             }
 
+            $estimatedMinutes = $item->contentBlock?->estimated_read_time ?? self::DEFAULT_READ_TIME;
+
             if ($item->canonical_topic_id && in_array($item->canonical_topic_id, $completedTopicIds)) {
+                $completedMinutes += $estimatedMinutes;
+
                 continue;
             }
 
             if ($item->content_block_id && in_array($item->content_block_id, $completedBlockIds)) {
+                $completedMinutes += $estimatedMinutes;
+
                 continue;
             }
-
-            $estimatedMinutes = $item->contentBlock?->estimated_read_time ?? self::DEFAULT_READ_TIME;
 
             $items->push([
                 'type' => 'study',

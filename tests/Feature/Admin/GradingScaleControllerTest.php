@@ -60,9 +60,9 @@ test('store creates a grading scale', function () {
             'scale_min' => 0,
             'scale_max' => 100,
             'pass_threshold' => 40,
-            'grade_boundaries' => json_encode([
-                ['label' => 'A', 'min' => 70, 'max' => 100],
-            ]),
+            'grade_boundaries' => [
+                ['grade' => 'A', 'min' => 70, 'max' => 100, 'points' => 5],
+            ],
         ])
         ->assertRedirect(route('admin.grading-scales.index'));
 
@@ -75,6 +75,34 @@ test('store validates required fields', function () {
         ->assertSessionHasErrors(['name', 'scale_type', 'scale_min', 'scale_max', 'pass_threshold', 'grade_boundaries']);
 });
 
+test('store validates grade_boundaries must have at least one row', function () {
+    $this->actingAs($this->admin)
+        ->post(route('admin.grading-scales.store'), [
+            'name' => 'Test Scale',
+            'scale_type' => 'percentage',
+            'scale_min' => 0,
+            'scale_max' => 100,
+            'pass_threshold' => 40,
+            'grade_boundaries' => [],
+        ])
+        ->assertSessionHasErrors(['grade_boundaries']);
+});
+
+test('store validates nested grade boundary fields', function () {
+    $this->actingAs($this->admin)
+        ->post(route('admin.grading-scales.store'), [
+            'name' => 'Test Scale',
+            'scale_type' => 'percentage',
+            'scale_min' => 0,
+            'scale_max' => 100,
+            'pass_threshold' => 40,
+            'grade_boundaries' => [
+                ['grade' => '', 'min' => 'not-a-number', 'max' => 10, 'points' => 5],
+            ],
+        ])
+        ->assertSessionHasErrors(['grade_boundaries.0.grade', 'grade_boundaries.0.min']);
+});
+
 test('store validates unique name', function () {
     GradingScale::factory()->create(['name' => 'Existing Scale']);
 
@@ -85,7 +113,9 @@ test('store validates unique name', function () {
             'scale_min' => 0,
             'scale_max' => 100,
             'pass_threshold' => 40,
-            'grade_boundaries' => json_encode([]),
+            'grade_boundaries' => [
+                ['grade' => 'A', 'min' => 70, 'max' => 100, 'points' => 5],
+            ],
         ])
         ->assertSessionHasErrors(['name']);
 });
@@ -113,7 +143,9 @@ test('update modifies a grading scale', function () {
             'scale_min' => $scale->scale_min,
             'scale_max' => $scale->scale_max,
             'pass_threshold' => $scale->pass_threshold,
-            'grade_boundaries' => json_encode($scale->grade_boundaries),
+            'grade_boundaries' => [
+                ['grade' => 'A', 'min' => 70, 'max' => 100, 'points' => 5],
+            ],
         ])
         ->assertRedirect(route('admin.grading-scales.index'));
 
@@ -130,7 +162,9 @@ test('update allows keeping the same name', function () {
             'scale_min' => $scale->scale_min,
             'scale_max' => $scale->scale_max,
             'pass_threshold' => $scale->pass_threshold,
-            'grade_boundaries' => json_encode($scale->grade_boundaries),
+            'grade_boundaries' => [
+                ['grade' => 'A', 'min' => 70, 'max' => 100, 'points' => 5],
+            ],
         ])
         ->assertRedirect(route('admin.grading-scales.index'));
 });

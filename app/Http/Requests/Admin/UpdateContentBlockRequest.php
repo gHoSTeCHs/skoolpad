@@ -26,6 +26,7 @@ class UpdateContentBlockRequest extends FormRequest
             'block_type' => ['required', new Enum(BlockType::class)],
             'is_container' => ['boolean'],
             'content' => ['nullable', 'array'],
+            'simplified_content' => ['nullable', 'array'],
             'estimated_read_time' => ['nullable', 'integer', 'min:1', 'max:999'],
             'difficulty_level' => ['nullable', new Enum(BlockDifficultyLevel::class)],
             'bloom_level' => ['nullable', new Enum(BloomLevel::class)],

@@ -1,8 +1,9 @@
-import { Head } from '@inertiajs/react';
+import { Head, Link } from '@inertiajs/react';
 import { BookOpen, ShieldCheck } from 'lucide-react';
 import { useState } from 'react';
 import LevelProgressionController from '@/actions/App/Http/Controllers/Student/LevelProgressionController';
 import ParentInvitationController from '@/actions/App/Http/Controllers/Student/ParentInvitationController';
+import { show as subjectShow } from '@/actions/App/Http/Controllers/Student/SubjectController';
 import { dismiss as studyPlanDismiss } from '@/actions/App/Http/Controllers/Student/StudyPlanController';
 import CourseCard from '@/components/skoolpad/course-card';
 import GuidedStudyCard from '@/components/skoolpad/guided-study-card';
@@ -193,15 +194,17 @@ export default function Dashboard({ student, courses, subjects, stats, suggested
                         </h2>
                         <div className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
                             {subjects.map((subject) => (
-                                <div
+                                <Link
                                     key={subject.id}
+                                    href={subjectShow.url(subject.id)}
                                     className="flex items-center justify-between rounded-lg border bg-card p-4 transition-colors hover:bg-accent/50"
+                                    prefetch
                                 >
                                     <span className="text-sm font-medium">{subject.name}</span>
                                     {subject.is_compulsory && (
                                         <Badge variant="secondary" className="text-[10px]">Compulsory</Badge>
                                     )}
-                                </div>
+                                </Link>
                             ))}
                         </div>
                     </div>

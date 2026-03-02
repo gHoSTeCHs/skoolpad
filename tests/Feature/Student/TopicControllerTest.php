@@ -235,6 +235,41 @@ test('toggle block complete creates and deletes block completion', function () {
     ]);
 });
 
+test('toggleBlockComplete stores reading_time_seconds when completing', function () {
+    $block = ContentBlock::factory()->published()->create([
+        'canonical_topic_id' => $this->topic->id,
+    ]);
+
+    $this->post(route('blocks.complete', $block), ['reading_time_seconds' => 120])
+        ->assertRedirect();
+
+    $this->assertDatabaseHas('block_completions', [
+        'user_id' => $this->student->id,
+        'content_block_id' => $block->id,
+        'reading_time_seconds' => 120,
+    ]);
+});
+
+test('toggleBlockComplete does not require reading_time_seconds', function () {
+    $block = ContentBlock::factory()->published()->create([
+        'canonical_topic_id' => $this->topic->id,
+    ]);
+
+    $this->post(route('blocks.complete', $block))
+        ->assertRedirect();
+
+    $this->assertDatabaseHas('block_completions', [
+        'user_id' => $this->student->id,
+        'content_block_id' => $block->id,
+    ]);
+
+    $completion = \App\Models\BlockCompletion::where('user_id', $this->student->id)
+        ->where('content_block_id', $block->id)
+        ->first();
+
+    expect($completion->reading_time_seconds)->toBeNull();
+});
+
 test('topic show includes simplified_content when present', function () {
     $this->topic->update([
         'simplified_content' => [

@@ -1,7 +1,9 @@
 <?php
 
 use App\Enums\QuestionStatus;
+use App\Models\BlockCompletion;
 use App\Models\CanonicalTopic;
+use App\Models\ContentBlock;
 use App\Models\CourseTopicMapping;
 use App\Models\Department;
 use App\Models\Faculty;
@@ -247,4 +249,127 @@ test('unboarded students cannot access courses', function () {
     $this->actingAs($newStudent)
         ->get(route('courses.index'))
         ->assertRedirect(route('onboarding.index'));
+});
+
+test('show topics tab includes block counts per topic', function () {
+    $topic = CanonicalTopic::factory()->create(['is_published' => true]);
+    CourseTopicMapping::factory()->create([
+        'institution_course_id' => $this->course->id,
+        'canonical_topic_id' => $topic->id,
+        'sequence_order' => 1,
+    ]);
+
+    $block1 = ContentBlock::factory()->published()->create([
+        'canonical_topic_id' => $topic->id,
+        'is_container' => false,
+        'path' => '1',
+        'sort_order' => 1,
+    ]);
+    ContentBlock::factory()->published()->create([
+        'canonical_topic_id' => $topic->id,
+        'is_container' => false,
+        'path' => '2',
+        'sort_order' => 2,
+    ]);
+    ContentBlock::factory()->published()->container()->create([
+        'canonical_topic_id' => $topic->id,
+        'path' => '3',
+        'sort_order' => 3,
+    ]);
+    ContentBlock::factory()->create([
+        'canonical_topic_id' => $topic->id,
+        'is_container' => false,
+        'is_published' => false,
+        'path' => '4',
+        'sort_order' => 4,
+    ]);
+
+    BlockCompletion::factory()->create([
+        'user_id' => $this->student->id,
+        'content_block_id' => $block1->id,
+    ]);
+
+    $this->get(route('courses.show', $this->course))
+        ->assertOk()
+        ->assertInertia(fn ($page) => $page
+            ->where('topics.0.total_blocks', 2)
+            ->where('topics.0.completed_blocks', 1)
+        );
+});
+
+test('show topics tab block progress sums across all topics', function () {
+    $topic1 = CanonicalTopic::factory()->create(['is_published' => true]);
+    $topic2 = CanonicalTopic::factory()->create(['is_published' => true]);
+
+    CourseTopicMapping::factory()->create([
+        'institution_course_id' => $this->course->id,
+        'canonical_topic_id' => $topic1->id,
+        'sequence_order' => 1,
+    ]);
+    CourseTopicMapping::factory()->create([
+        'institution_course_id' => $this->course->id,
+        'canonical_topic_id' => $topic2->id,
+        'sequence_order' => 2,
+    ]);
+
+    $block = ContentBlock::factory()->published()->create([
+        'canonical_topic_id' => $topic1->id,
+        'is_container' => false,
+        'path' => '1',
+        'sort_order' => 1,
+    ]);
+    ContentBlock::factory()->published()->create([
+        'canonical_topic_id' => $topic1->id,
+        'is_container' => false,
+        'path' => '2',
+        'sort_order' => 2,
+    ]);
+    ContentBlock::factory()->published()->create([
+        'canonical_topic_id' => $topic1->id,
+        'is_container' => false,
+        'path' => '3',
+        'sort_order' => 3,
+    ]);
+    ContentBlock::factory()->published()->create([
+        'canonical_topic_id' => $topic2->id,
+        'is_container' => false,
+        'path' => '1',
+        'sort_order' => 1,
+    ]);
+    ContentBlock::factory()->published()->create([
+        'canonical_topic_id' => $topic2->id,
+        'is_container' => false,
+        'path' => '2',
+        'sort_order' => 2,
+    ]);
+
+    BlockCompletion::factory()->create([
+        'user_id' => $this->student->id,
+        'content_block_id' => $block->id,
+    ]);
+
+    $this->get(route('courses.show', $this->course))
+        ->assertOk()
+        ->assertInertia(fn ($page) => $page
+            ->where('topicsProgress.total_blocks', 5)
+            ->where('topicsProgress.completed_blocks', 1)
+        );
+});
+
+test('show topics tab returns zero block counts when no blocks exist', function () {
+    $topic = CanonicalTopic::factory()->create(['is_published' => true]);
+    CourseTopicMapping::factory()->create([
+        'institution_course_id' => $this->course->id,
+        'canonical_topic_id' => $topic->id,
+        'sequence_order' => 1,
+    ]);
+
+    $this->get(route('courses.show', $this->course))
+        ->assertOk()
+        ->assertInertia(fn ($page) => $page
+            ->where('topics.0.total_blocks', 0)
+            ->where('topics.0.completed_blocks', 0)
+            ->where('topicsProgress.total_blocks', 0)
+            ->where('topicsProgress.completed_blocks', 0)
+        );
 });

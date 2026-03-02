@@ -157,6 +157,10 @@ class TopicController extends Controller
 
     public function toggleBlockComplete(ContentBlock $block, Request $request): RedirectResponse
     {
+        $request->validate([
+            'reading_time_seconds' => ['nullable', 'integer', 'min:0'],
+        ]);
+
         $user = $request->user();
 
         $existing = BlockCompletion::where('user_id', $user->id)
@@ -170,6 +174,7 @@ class TopicController extends Controller
                 'user_id' => $user->id,
                 'content_block_id' => $block->id,
                 'completed_at' => now(),
+                'reading_time_seconds' => $request->integer('reading_time_seconds') ?: null,
             ]);
         }
 

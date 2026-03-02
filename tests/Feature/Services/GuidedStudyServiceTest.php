@@ -229,6 +229,70 @@ test('weak topics tier returns empty stub', function () {
     Carbon::setTestNow();
 });
 
+test('completed_minutes is zero when no scheme items are completed', function () {
+    Carbon::setTestNow(Carbon::create(2026, 2, 1));
+
+    $topic = CanonicalTopic::factory()->create();
+    SchemeOfWorkItem::factory()->create([
+        'curriculum_subject_level_id' => $this->levelSubject->id,
+        'term' => 2,
+        'week_number' => 4,
+        'canonical_topic_id' => $topic->id,
+    ]);
+
+    $result = $this->service->buildStudyPlan($this->user, $this->profile);
+
+    expect($result['completed_minutes'])->toBe(0);
+
+    Carbon::setTestNow();
+});
+
+test('returns completed_minutes summed from skipped completed scheme items', function () {
+    Carbon::setTestNow(Carbon::create(2026, 2, 1));
+
+    $topic1 = CanonicalTopic::factory()->create();
+    $block = ContentBlock::factory()->published()->create(['estimated_read_time' => 8]);
+
+    $subject2 = CurriculumSubject::factory()->create(['education_system_id' => $this->system->id]);
+    $levelSubject2 = LevelSubject::factory()->create([
+        'education_level_id' => $this->level->id,
+        'curriculum_subject_id' => $subject2->id,
+    ]);
+
+    SchemeOfWorkItem::factory()->create([
+        'curriculum_subject_level_id' => $this->levelSubject->id,
+        'term' => 2,
+        'week_number' => 4,
+        'canonical_topic_id' => $topic1->id,
+        'content_block_id' => null,
+    ]);
+
+    SchemeOfWorkItem::factory()->create([
+        'curriculum_subject_level_id' => $levelSubject2->id,
+        'term' => 2,
+        'week_number' => 4,
+        'canonical_topic_id' => null,
+        'content_block_id' => $block->id,
+    ]);
+
+    TopicCompletion::factory()->create([
+        'user_id' => $this->user->id,
+        'canonical_topic_id' => $topic1->id,
+    ]);
+
+    BlockCompletion::factory()->create([
+        'user_id' => $this->user->id,
+        'content_block_id' => $block->id,
+    ]);
+
+    $result = $this->service->buildStudyPlan($this->user, $this->profile);
+
+    expect($result['completed_minutes'])->toBe(10 + 8)
+        ->and($result['items'])->toBeEmpty();
+
+    Carbon::setTestNow();
+});
+
 test('caps total items to daily goal budget', function () {
     Carbon::setTestNow(Carbon::create(2026, 2, 1));
 
