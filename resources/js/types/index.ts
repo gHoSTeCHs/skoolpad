@@ -7,6 +7,7 @@ export type * from './questions';
 export type * from './student-courses';
 export type * from './student-questions';
 export type * from './student-topics';
+export type * from './practice';
 export type * from './ui';
 
 import type { Appearance } from '@/hooks/use-appearance';

@@ -20,6 +20,7 @@ class PracticeSession extends Model
         'canonical_topic_id',
         'assessment_type_id',
         'question_paper_id',
+        'question_ids',
         'mode',
         'question_count',
         'correct_count',
@@ -36,6 +37,7 @@ class PracticeSession extends Model
     protected function casts(): array
     {
         return [
+            'question_ids' => 'array',
             'mode' => PracticeMode::class,
             'is_resumable' => 'boolean',
             'last_activity_at' => 'datetime',

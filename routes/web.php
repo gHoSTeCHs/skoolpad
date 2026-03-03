@@ -5,6 +5,7 @@ use App\Http\Controllers\Student\DashboardController as StudentDashboardControll
 use App\Http\Controllers\Student\LevelProgressionController;
 use App\Http\Controllers\Student\OnboardingController;
 use App\Http\Controllers\Student\ParentInvitationController;
+use App\Http\Controllers\Student\PracticeController;
 use App\Http\Controllers\Student\QuestionController as StudentQuestionController;
 use App\Http\Controllers\Student\QuestionPaperController as StudentQuestionPaperController;
 use App\Http\Controllers\Student\StudyPlanController;
@@ -69,7 +70,14 @@ Route::middleware(['auth', 'verified', 'onboarded'])->group(function () {
     Route::get('questions/papers', [StudentQuestionPaperController::class, 'index'])->name('questions.papers.index');
     Route::get('questions/papers/{questionPaper}', [StudentQuestionPaperController::class, 'show'])->name('questions.papers.show');
     Route::get('questions/{question}', [StudentQuestionController::class, 'show'])->name('questions.show');
-    Route::get('practice', fn () => Inertia::render('practice/index'))->name('practice.index');
+    Route::get('practice', fn () => redirect()->route('practice.configure'))->name('practice.index');
+    Route::get('practice/configure', [PracticeController::class, 'configure'])->name('practice.configure');
+    Route::post('practice/start', [PracticeController::class, 'start'])->name('practice.start');
+    Route::get('api/practice/available-count', [PracticeController::class, 'availableCount'])->name('api.practice.available-count');
+    Route::get('practice/{session}', [PracticeController::class, 'show'])->name('practice.show');
+    Route::post('practice/{session}/answer', [PracticeController::class, 'answer'])->name('practice.answer');
+    Route::post('practice/{session}/complete', [PracticeController::class, 'complete'])->name('practice.complete');
+    Route::get('practice/{session}/results', [PracticeController::class, 'results'])->name('practice.results');
     Route::get('notes', fn () => Inertia::render('notes/index'))->name('notes.index');
     Route::get('review-queue', fn () => Inertia::render('review-queue/index'))->name('review-queue.index');
     Route::get('knowledge-graph', fn () => Inertia::render('knowledge-graph/index'))->name('knowledge-graph.index');
