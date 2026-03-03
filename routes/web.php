@@ -60,6 +60,8 @@ Route::middleware(['auth', 'verified', 'onboarded'])->group(function () {
     Route::get('courses', [StudentCourseController::class, 'index'])->name('courses.index');
     Route::get('courses/{course}', [StudentCourseController::class, 'show'])->name('courses.show');
     Route::get('subjects/{levelSubject}', [StudentSubjectController::class, 'show'])->name('subjects.show');
+    Route::get('topics/browse', [StudentTopicController::class, 'browse'])->name('topics.browse');
+    Route::get('topics/{topic}/read', [StudentTopicController::class, 'read'])->name('topics.read');
     Route::get('topics/{topic}', [StudentTopicController::class, 'show'])->name('topics.show');
     Route::post('topics/{topic}/complete', [StudentTopicController::class, 'toggleComplete'])->name('topics.complete');
     Route::post('blocks/{block}/complete', [StudentTopicController::class, 'toggleBlockComplete'])->name('blocks.complete');

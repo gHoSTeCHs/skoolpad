@@ -2,11 +2,11 @@ import { router } from '@inertiajs/react';
 import { CheckCircle2, ChevronLeft, ChevronRight, Circle, Lock, Sparkles } from 'lucide-react';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { TreeNode, type TreeBlock } from '@/components/skoolpad/block-tree/tree-node';
-import { TiptapRenderer } from '@/components/shared/tiptap-renderer';
+import { ContentRenderer } from '@/components/shared/content-renderer';
 import { Button } from '@/components/ui/button';
 import { toggleBlockComplete } from '@/actions/App/Http/Controllers/Student/TopicController';
 import type { TopicBlock } from '@/types/student-topics';
-import type { TiptapJSON } from '@/types/tiptap';
+import type { RenderableContent } from '@/types/tiptap';
 
 interface BlockReaderProps {
     blocks: TopicBlock[];
@@ -228,10 +228,10 @@ export function BlockReader({ blocks, completedBlockIds, lockedBlockIds }: Block
                                         </span>
                                     </div>
                                 )}
-                                <TiptapRenderer content={
+                                <ContentRenderer content={
                                     (simpleMode && selectedBlock.simplifiedContent
                                         ? selectedBlock.simplifiedContent
-                                        : selectedBlock.content) as TiptapJSON
+                                        : selectedBlock.content) as RenderableContent
                                 } />
                             </div>
                         ) : (

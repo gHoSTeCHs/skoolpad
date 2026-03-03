@@ -229,6 +229,67 @@ test('show past questions tab paginates', function () {
         );
 });
 
+test('show past questions tab returns hierarchical questions with children nested', function () {
+    $parent = Question::factory()->create([
+        'institution_course_id' => $this->course->id,
+        'status' => QuestionStatus::Published,
+        'year' => 2023,
+    ]);
+
+    $child1 = Question::factory()->create([
+        'institution_course_id' => $this->course->id,
+        'parent_question_id' => $parent->id,
+        'status' => QuestionStatus::Published,
+        'sort_order' => 1,
+    ]);
+
+    $child2 = Question::factory()->create([
+        'institution_course_id' => $this->course->id,
+        'parent_question_id' => $parent->id,
+        'status' => QuestionStatus::Published,
+        'sort_order' => 2,
+    ]);
+
+    QuestionAnswer::factory()->create([
+        'question_id' => $child1->id,
+        'is_published' => true,
+    ]);
+
+    $this->get(route('courses.show', [$this->course, 'tab' => 'past_questions']))
+        ->assertOk()
+        ->assertInertia(fn ($page) => $page
+            ->has('questions.data', 1)
+            ->where('questions.data.0.id', $parent->id)
+            ->has('questions.data.0.children', 2)
+            ->where('questions.data.0.children.0.id', $child1->id)
+            ->where('questions.data.0.children.1.id', $child2->id)
+        );
+});
+
+test('show past questions tab excludes child questions from top-level results', function () {
+    $parent = Question::factory()->create([
+        'institution_course_id' => $this->course->id,
+        'status' => QuestionStatus::Published,
+    ]);
+
+    Question::factory()->create([
+        'institution_course_id' => $this->course->id,
+        'parent_question_id' => $parent->id,
+        'status' => QuestionStatus::Published,
+    ]);
+
+    $standalone = Question::factory()->create([
+        'institution_course_id' => $this->course->id,
+        'status' => QuestionStatus::Published,
+    ]);
+
+    $this->get(route('courses.show', [$this->course, 'tab' => 'past_questions']))
+        ->assertOk()
+        ->assertInertia(fn ($page) => $page
+            ->has('questions.data', 2)
+        );
+});
+
 test('show returns 403 for non-enrolled course', function () {
     $otherCourse = InstitutionCourse::factory()->create();
 

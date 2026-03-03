@@ -3,13 +3,13 @@ import { ArrowLeft } from 'lucide-react';
 import SpBadge from '@/components/skoolpad/sp-badge';
 import { QuestionTypeBadge } from '@/components/skoolpad/questions';
 import { DifficultyBadge } from '@/components/skoolpad/block-tree';
-import { TiptapRenderer } from '@/components/shared/tiptap-renderer';
+import { ContentRenderer } from '@/components/shared/content-renderer';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import AppLayout from '@/layouts/app-layout';
 import { index as questionsIndex } from '@/actions/App/Http/Controllers/Student/QuestionController';
 import type { BreadcrumbItem } from '@/types';
 import type { BrowseQuestion } from '@/types/student-questions';
-import type { TiptapJSON } from '@/types/tiptap';
+import type { RenderableContent } from '@/types/tiptap';
 
 interface QuestionShowProps {
     question: BrowseQuestion;
@@ -70,11 +70,7 @@ export default function QuestionShow({ question }: QuestionShowProps) {
                     className="rounded-lg border border-border bg-card p-5"
                     style={{ borderRadius: 'var(--card-radius)' }}
                 >
-                    <div
-                        className="prose prose-sm max-w-none text-[14px]"
-                        style={{ fontFamily: 'var(--font-body)' }}
-                        dangerouslySetInnerHTML={{ __html: question.content }}
-                    />
+                    <ContentRenderer content={question.content} className="text-[14px]" />
                 </div>
 
                 {(primaryTopic || otherTopics.length > 0) && (
@@ -120,7 +116,7 @@ export default function QuestionShow({ question }: QuestionShowProps) {
                                         className="mt-3 rounded-lg border border-border bg-[var(--bg-raised)] p-5"
                                         style={{ borderRadius: 'var(--card-radius)' }}
                                     >
-                                        <TiptapRenderer content={answer.content as TiptapJSON} />
+                                        <ContentRenderer content={answer.content as RenderableContent} />
                                     </div>
                                 </TabsContent>
                             ))}

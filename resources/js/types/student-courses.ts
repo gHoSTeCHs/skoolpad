@@ -68,6 +68,7 @@ export interface CourseQuestion {
     topic_links: CourseQuestionTopicLink[];
     answers: CourseQuestionAnswer[];
     contexts: QuestionContextData[];
+    children: CourseQuestion[];
 }
 
 export interface CourseFilterOptions {

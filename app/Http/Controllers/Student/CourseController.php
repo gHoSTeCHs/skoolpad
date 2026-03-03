@@ -176,9 +176,16 @@ class CourseController extends Controller
     {
         $query = $course->questions()
             ->published()
+            ->whereNull('parent_question_id')
             ->with([
                 'topicLinks.canonicalTopic:id,title',
                 'answers' => fn ($q) => $q->where('is_published', true),
+                'children' => fn ($q) => $q->published()->orderBy('sort_order'),
+                'children.answers' => fn ($q) => $q->where('is_published', true),
+                'children.children' => fn ($q) => $q->published()->orderBy('sort_order'),
+                'children.children.answers' => fn ($q) => $q->where('is_published', true),
+                'children.children.children' => fn ($q) => $q->published()->orderBy('sort_order'),
+                'children.children.children.answers' => fn ($q) => $q->where('is_published', true),
             ]);
 
         if ($request->filled('year')) {

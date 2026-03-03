@@ -131,6 +131,31 @@ test('related questions shown for course context', function () {
         );
 });
 
+test('related questions exclude child questions from top-level', function () {
+    $parent = Question::factory()->create([
+        'institution_course_id' => $this->course->id,
+        'status' => QuestionStatus::Published,
+    ]);
+    $child = Question::factory()->create([
+        'institution_course_id' => $this->course->id,
+        'parent_question_id' => $parent->id,
+        'status' => QuestionStatus::Published,
+        'sort_order' => 1,
+    ]);
+
+    QuestionTopicLink::factory()->create(['question_id' => $parent->id, 'canonical_topic_id' => $this->topic->id]);
+    QuestionTopicLink::factory()->create(['question_id' => $child->id, 'canonical_topic_id' => $this->topic->id]);
+
+    $this->get(route('topics.show', [$this->topic, 'course' => $this->course->id]))
+        ->assertOk()
+        ->assertInertia(fn ($page) => $page
+            ->has('relatedQuestions', 1)
+            ->where('relatedQuestions.0.id', $parent->id)
+            ->has('relatedQuestions.0.children', 1)
+            ->where('relatedQuestions.0.children.0.id', $child->id)
+        );
+});
+
 test('cross institution question count is correct', function () {
     $otherCourse = InstitutionCourse::factory()->create();
 

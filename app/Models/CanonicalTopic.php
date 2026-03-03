@@ -103,6 +103,11 @@ class CanonicalTopic extends Model
         return $this->hasMany(QuestionTopicLink::class);
     }
 
+    public function completions(): HasMany
+    {
+        return $this->hasMany(TopicCompletion::class);
+    }
+
     public function contentBlocks(): HasMany
     {
         return $this->hasMany(ContentBlock::class);

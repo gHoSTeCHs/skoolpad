@@ -2,12 +2,16 @@
 
 namespace App\Http\Controllers\Student;
 
+use App\Concerns\Paginates;
+use App\Enums\TopicDifficulty;
 use App\Http\Controllers\Controller;
 use App\Models\BlockCompletion;
 use App\Models\CanonicalTopic;
 use App\Models\ContentBlock;
 use App\Models\CourseTopicMapping;
+use App\Models\Discipline;
 use App\Models\InstitutionCourse;
+use App\Models\QuestionTopicLink;
 use App\Models\TopicCompletion;
 use App\Services\PrerequisiteGapService;
 use Illuminate\Http\RedirectResponse;
@@ -17,9 +21,162 @@ use Inertia\Response;
 
 class TopicController extends Controller
 {
+    use Paginates;
+
     public function __construct(
         private PrerequisiteGapService $prerequisiteService
     ) {}
+
+    public function browse(Request $request): Response
+    {
+        $user = $request->user();
+        $profile = $user->studentProfile;
+
+        $browseAll = $request->boolean('browse_all');
+
+        $enrolledCourseIds = $profile
+            ->studentCourses()
+            ->where('is_archived', false)
+            ->pluck('institution_course_id');
+
+        $courseIds = $browseAll
+            ? InstitutionCourse::where('institution_id', $profile->institution_id)->pluck('id')
+            : $enrolledCourseIds;
+
+        $topicIdsQuery = CourseTopicMapping::whereIn('institution_course_id', $courseIds)
+            ->pluck('canonical_topic_id')
+            ->unique();
+
+        $query = CanonicalTopic::query()
+            ->published()
+            ->whereIn('id', $topicIdsQuery)
+            ->with('discipline:id,name');
+
+        if ($request->filled('search')) {
+            $query->search($request->string('search'));
+        }
+
+        if ($request->filled('difficulty')) {
+            $query->where('difficulty_level', $request->string('difficulty')->value());
+        }
+
+        if (! $browseAll && $request->filled('course_id')) {
+            $courseTopicIds = CourseTopicMapping::where('institution_course_id', $request->string('course_id')->value())
+                ->pluck('canonical_topic_id');
+            $query->whereIn('id', $courseTopicIds);
+        }
+
+        if ($browseAll && $request->filled('discipline_id')) {
+            $query->where('discipline_id', $request->string('discipline_id')->value());
+        }
+
+        $allTopicIds = (clone $query)->pluck('id');
+
+        $completedTopicIds = TopicCompletion::where('user_id', $user->id)
+            ->whereIn('canonical_topic_id', $allTopicIds)
+            ->pluck('canonical_topic_id');
+
+        if ($request->filled('completion')) {
+            $completion = $request->string('completion')->value();
+            if ($completion === 'completed') {
+                $query->whereIn('id', $completedTopicIds);
+            } elseif ($completion === 'not_started') {
+                $query->whereNotIn('id', $completedTopicIds);
+            }
+        }
+
+        $query->orderBy('title');
+        $paginator = $query->paginate(self::DEFAULT_PER_PAGE);
+
+        $paginatedTopicIds = collect($paginator->items())->pluck('id');
+
+        $blockCounts = ContentBlock::query()
+            ->whereIn('canonical_topic_id', $paginatedTopicIds)
+            ->where('is_published', true)
+            ->where('is_container', false)
+            ->selectRaw('canonical_topic_id, count(*) as total')
+            ->groupBy('canonical_topic_id')
+            ->pluck('total', 'canonical_topic_id');
+
+        $completedBlockCounts = BlockCompletion::query()
+            ->where('user_id', $user->id)
+            ->join('content_blocks', 'block_completions.content_block_id', '=', 'content_blocks.id')
+            ->whereIn('content_blocks.canonical_topic_id', $paginatedTopicIds)
+            ->where('content_blocks.is_published', true)
+            ->where('content_blocks.is_container', false)
+            ->selectRaw('content_blocks.canonical_topic_id, count(*) as completed')
+            ->groupBy('content_blocks.canonical_topic_id')
+            ->pluck('completed', 'content_blocks.canonical_topic_id');
+
+        $questionCounts = QuestionTopicLink::query()
+            ->whereIn('canonical_topic_id', $paginatedTopicIds)
+            ->whereHas('question', fn ($q) => $q->published())
+            ->selectRaw('canonical_topic_id, count(*) as count')
+            ->groupBy('canonical_topic_id')
+            ->pluck('count', 'canonical_topic_id');
+
+        $coursesByTopic = CourseTopicMapping::query()
+            ->whereIn('canonical_topic_id', $paginatedTopicIds)
+            ->whereIn('institution_course_id', $courseIds)
+            ->with('course:id,course_code,course_title')
+            ->get()
+            ->groupBy('canonical_topic_id')
+            ->map(fn ($mappings) => $mappings->map(fn ($m) => [
+                'id' => $m->course->id,
+                'course_code' => $m->course->course_code,
+                'course_title' => $m->course->course_title,
+            ])->unique('id')->values());
+
+        $completedTopicIdsArray = $completedTopicIds->toArray();
+
+        $paginator->getCollection()->transform(fn (CanonicalTopic $topic) => [
+            'id' => $topic->id,
+            'title' => $topic->title,
+            'slug' => $topic->slug,
+            'difficulty_level' => $topic->difficulty_level?->value,
+            'estimated_read_minutes' => $topic->estimated_read_minutes,
+            'discipline' => $topic->discipline ? [
+                'id' => $topic->discipline->id,
+                'name' => $topic->discipline->name,
+            ] : null,
+            'is_completed' => in_array($topic->id, $completedTopicIdsArray),
+            'total_blocks' => $blockCounts[$topic->id] ?? 0,
+            'completed_blocks' => $completedBlockCounts[$topic->id] ?? 0,
+            'question_count' => $questionCounts[$topic->id] ?? 0,
+            'courses' => $coursesByTopic[$topic->id] ?? [],
+        ]);
+
+        $enrolledCourses = InstitutionCourse::whereIn('id', $enrolledCourseIds)
+            ->select('id', 'course_code', 'course_title')
+            ->orderBy('course_code')
+            ->get();
+
+        $disciplines = Discipline::query()
+            ->whereHas('canonicalTopics', fn ($q) => $q->published()
+                ->whereIn('id', $topicIdsQuery))
+            ->select('id', 'name')
+            ->orderBy('name')
+            ->get();
+
+        return Inertia::render('topics/browse', [
+            'topics' => $this->paginated($paginator),
+            'filterOptions' => [
+                'courses' => $enrolledCourses,
+                'disciplines' => $disciplines,
+                'difficulties' => TopicDifficulty::values(),
+            ],
+            'appliedFilters' => [
+                'browse_all' => $browseAll ? 'true' : null,
+                'course_id' => $request->string('course_id')->value() ?: null,
+                'discipline_id' => $request->string('discipline_id')->value() ?: null,
+                'difficulty' => $request->string('difficulty')->value() ?: null,
+                'completion' => $request->string('completion')->value() ?: null,
+                'search' => $request->string('search')->value() ?: null,
+            ],
+            'totalCount' => $allTopicIds->count(),
+            'completedCount' => $completedTopicIds->count(),
+        ]);
+    }
 
     public function show(CanonicalTopic $topic, Request $request): Response
     {
@@ -90,9 +247,19 @@ class TopicController extends Controller
 
         $relatedQuestions = \App\Models\Question::query()
             ->published()
+            ->whereNull('parent_question_id')
             ->whereHas('topicLinks', fn ($q) => $q->where('canonical_topic_id', $topic->id))
             ->when($courseId, fn ($q) => $q->where('institution_course_id', $courseId))
-            ->with(['topicLinks.canonicalTopic:id,title', 'answers' => fn ($q) => $q->where('is_published', true)])
+            ->with([
+                'topicLinks.canonicalTopic:id,title',
+                'answers' => fn ($q) => $q->where('is_published', true),
+                'children' => fn ($q) => $q->published()->orderBy('sort_order'),
+                'children.answers' => fn ($q) => $q->where('is_published', true),
+                'children.children' => fn ($q) => $q->published()->orderBy('sort_order'),
+                'children.children.answers' => fn ($q) => $q->where('is_published', true),
+                'children.children.children' => fn ($q) => $q->published()->orderBy('sort_order'),
+                'children.children.children.answers' => fn ($q) => $q->where('is_published', true),
+            ])
             ->limit(10)
             ->get();
 
@@ -131,6 +298,65 @@ class TopicController extends Controller
             'nextTopic' => $nextTopic,
             'relatedQuestions' => $relatedQuestions,
             'crossInstitutionCount' => $crossInstitutionCount,
+        ]);
+    }
+
+    public function read(CanonicalTopic $topic, Request $request): Response
+    {
+        $user = $request->user();
+        $courseId = $request->string('course')->value() ?: null;
+
+        $topic->load('discipline:id,name');
+
+        $courseContext = null;
+
+        if ($courseId) {
+            $course = InstitutionCourse::find($courseId);
+            if ($course) {
+                $courseContext = [
+                    'id' => $course->id,
+                    'course_code' => $course->course_code,
+                    'course_title' => $course->course_title,
+                ];
+            }
+        }
+
+        $blockTree = null;
+        $completedBlockIds = [];
+        $totalReadTime = 0;
+
+        if ($topic->contentBlocks()->exists()) {
+            $blockTree = $this->buildBlockTree($topic);
+            $blockIds = $topic->contentBlocks()->pluck('id');
+            $completedBlockIds = BlockCompletion::where('user_id', $user->id)
+                ->whereIn('content_block_id', $blockIds)
+                ->pluck('content_block_id')
+                ->toArray();
+
+            $totalReadTime = $topic->contentBlocks()
+                ->where('is_published', true)
+                ->sum('estimated_read_time');
+        }
+
+        return Inertia::render('topics/read', [
+            'topic' => [
+                'id' => $topic->id,
+                'title' => $topic->title,
+                'slug' => $topic->slug,
+                'content' => $topic->content,
+                'simplified_content' => $topic->simplified_content,
+                'summary' => $topic->summary,
+                'difficulty_level' => $topic->difficulty_level?->value,
+                'estimated_read_minutes' => $topic->estimated_read_minutes,
+                'discipline' => $topic->discipline ? [
+                    'id' => $topic->discipline->id,
+                    'name' => $topic->discipline->name,
+                ] : null,
+            ],
+            'blockTree' => $blockTree,
+            'completedBlockIds' => $completedBlockIds,
+            'courseContext' => $courseContext,
+            'totalReadTime' => $totalReadTime,
         ]);
     }
 

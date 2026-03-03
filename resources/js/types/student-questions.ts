@@ -50,6 +50,7 @@ export interface BrowseQuestion {
         is_published: boolean;
     }[];
     contexts: QuestionContextData[];
+    children: BrowseQuestion[];
 }
 
 export interface BrowseFilterOptions {
