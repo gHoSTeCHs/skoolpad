@@ -47,6 +47,16 @@ export interface CourseQuestionAnswer {
     is_published: boolean;
 }
 
+export interface CourseQuestionBlockLink {
+    content_block_id: string;
+    relevance: 'primary' | 'secondary' | 'prerequisite';
+    content_block: {
+        id: string;
+        title: string;
+        canonical_topic_id: string;
+    };
+}
+
 export interface CourseQuestionTopicLink {
     id: string;
     canonical_topic_id: string;
@@ -66,6 +76,7 @@ export interface CourseQuestion {
     difficulty_level: QuestionDifficulty | null;
     marks: number | null;
     topic_links: CourseQuestionTopicLink[];
+    question_block_links: CourseQuestionBlockLink[];
     answers: CourseQuestionAnswer[];
     contexts: QuestionContextData[];
     children: CourseQuestion[];

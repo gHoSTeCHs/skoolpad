@@ -186,6 +186,10 @@ class CourseController extends Controller
                 'children.children.answers' => fn ($q) => $q->where('is_published', true),
                 'children.children.children' => fn ($q) => $q->published()->orderBy('sort_order'),
                 'children.children.children.answers' => fn ($q) => $q->where('is_published', true),
+                'questionBlockLinks.contentBlock:id,title,canonical_topic_id',
+                'children.questionBlockLinks.contentBlock:id,title,canonical_topic_id',
+                'children.children.questionBlockLinks.contentBlock:id,title,canonical_topic_id',
+                'children.children.children.questionBlockLinks.contentBlock:id,title,canonical_topic_id',
             ]);
 
         if ($request->filled('year')) {

@@ -11,6 +11,7 @@ use App\Models\Institution;
 use App\Models\InstitutionCourse;
 use App\Models\Question;
 use App\Models\QuestionAnswer;
+use App\Models\QuestionBlockLink;
 use App\Models\QuestionTopicLink;
 use App\Models\StudentCourse;
 use App\Models\StudentProfile;
@@ -192,6 +193,31 @@ test('show past questions tab returns published questions with filters', functio
             ->where('activeTab', 'past_questions')
             ->has('questions.data', 1)
             ->has('filterOptions')
+        );
+});
+
+test('show past questions tab includes question_block_links for each question', function () {
+    $topic = CanonicalTopic::factory()->create(['is_published' => true]);
+    $block = ContentBlock::factory()->create([
+        'canonical_topic_id' => $topic->id,
+        'is_published' => true,
+    ]);
+    $question = Question::factory()->create([
+        'institution_course_id' => $this->course->id,
+        'status' => QuestionStatus::Published,
+    ]);
+    QuestionBlockLink::create([
+        'question_id' => $question->id,
+        'content_block_id' => $block->id,
+        'relevance' => 'primary',
+    ]);
+
+    $this->get(route('courses.show', [$this->course, 'tab' => 'past_questions']))
+        ->assertOk()
+        ->assertInertia(fn ($page) => $page
+            ->has('questions.data.0.question_block_links', 1)
+            ->where('questions.data.0.question_block_links.0.content_block_id', $block->id)
+            ->where('questions.data.0.question_block_links.0.relevance', 'primary')
         );
 });
 

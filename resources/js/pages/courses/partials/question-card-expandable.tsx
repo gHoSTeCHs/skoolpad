@@ -10,7 +10,7 @@ import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { cn } from '@/lib/utils';
-import { show as topicShow } from '@/actions/App/Http/Controllers/Student/TopicController';
+import { read as topicRead, show as topicShow } from '@/actions/App/Http/Controllers/Student/TopicController';
 import type { CourseQuestion, CourseQuestionAnswer } from '@/types/student-courses';
 import type { AnswerDepthLevel } from '@/types/questions';
 import type { RenderableContent } from '@/types/tiptap';
@@ -111,6 +111,7 @@ export function QuestionCardExpandable({
     const publishedAnswers = question.answers.filter((a) => a.is_published);
     const publishedDepths = new Set(publishedAnswers.map((a) => a.depth_level));
     const primaryTopic = question.topic_links?.find((tl) => tl.is_primary)?.canonical_topic;
+    const primaryBlock = question.question_block_links?.find((bl) => bl.relevance === 'primary');
 
     const contentPreview = question.content
         ? question.content.replace(/<[^>]*>/g, '').slice(0, 150)
@@ -252,6 +253,17 @@ export function QuestionCardExpandable({
                                 style={{ fontFamily: 'var(--font-body)' }}
                             >
                                 View topic: {primaryTopic.title}
+                                <ExternalLink className="size-3" />
+                            </Link>
+                        )}
+
+                        {primaryBlock && (
+                            <Link
+                                href={`${topicRead.url(primaryBlock.content_block.canonical_topic_id)}#block-${primaryBlock.content_block_id}`}
+                                className="flex items-center gap-1 text-[12px] font-medium text-primary hover:underline"
+                                style={{ fontFamily: 'var(--font-body)' }}
+                            >
+                                Study block: {primaryBlock.content_block.title}
                                 <ExternalLink className="size-3" />
                             </Link>
                         )}

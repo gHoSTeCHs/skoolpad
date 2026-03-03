@@ -1,5 +1,5 @@
 import { Head, Link } from '@inertiajs/react';
-import { ArrowLeft } from 'lucide-react';
+import { ArrowLeft, ExternalLink } from 'lucide-react';
 import SpBadge from '@/components/skoolpad/sp-badge';
 import { QuestionTypeBadge } from '@/components/skoolpad/questions';
 import { DifficultyBadge } from '@/components/skoolpad/block-tree';
@@ -7,6 +7,7 @@ import { ContentRenderer } from '@/components/shared/content-renderer';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import AppLayout from '@/layouts/app-layout';
 import { index as questionsIndex } from '@/actions/App/Http/Controllers/Student/QuestionController';
+import { read as topicRead } from '@/actions/App/Http/Controllers/Student/TopicController';
 import type { BreadcrumbItem } from '@/types';
 import type { BrowseQuestion } from '@/types/student-questions';
 import type { RenderableContent } from '@/types/tiptap';
@@ -24,6 +25,7 @@ export default function QuestionShow({ question }: QuestionShowProps) {
     const publishedAnswers = question.answers.filter((a) => a.is_published);
     const primaryTopic = question.topic_links?.find((tl) => tl.is_primary)?.canonical_topic;
     const otherTopics = question.topic_links?.filter((tl) => !tl.is_primary) ?? [];
+    const primaryBlock = question.question_block_links?.find((bl) => bl.relevance === 'primary');
 
     return (
         <AppLayout breadcrumbs={breadcrumbs}>
@@ -89,6 +91,25 @@ export default function QuestionShow({ question }: QuestionShowProps) {
                                 <SpBadge key={tl.id} variant="default">{tl.canonical_topic.title}</SpBadge>
                             ))}
                         </div>
+                    </div>
+                )}
+
+                {primaryBlock && (
+                    <div>
+                        <h3
+                            className="mb-2 text-[12px] font-medium uppercase tracking-wider text-muted-foreground"
+                            style={{ fontFamily: 'var(--font-body)' }}
+                        >
+                            Relevant Block
+                        </h3>
+                        <Link
+                            href={`${topicRead.url(primaryBlock.content_block.canonical_topic_id)}#block-${primaryBlock.content_block_id}`}
+                            className="inline-flex items-center gap-1.5 text-[13px] font-medium text-primary hover:underline"
+                            style={{ fontFamily: 'var(--font-body)' }}
+                        >
+                            {primaryBlock.content_block.title}
+                            <ExternalLink className="size-3" />
+                        </Link>
                     </div>
                 )}
 

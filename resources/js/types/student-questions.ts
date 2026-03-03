@@ -15,6 +15,16 @@ export interface QuestionContextData {
     };
 }
 
+export interface BrowseQuestionBlockLink {
+    content_block_id: string;
+    relevance: 'primary' | 'secondary' | 'prerequisite';
+    content_block: {
+        id: string;
+        title: string;
+        canonical_topic_id: string;
+    };
+}
+
 export interface BrowseQuestion {
     id: string;
     content: string;
@@ -49,6 +59,7 @@ export interface BrowseQuestion {
         content_plain: string | null;
         is_published: boolean;
     }[];
+    question_block_links: BrowseQuestionBlockLink[];
     contexts: QuestionContextData[];
     children: BrowseQuestion[];
 }
