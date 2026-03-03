@@ -91,6 +91,7 @@ class QuestionController extends Controller
             'institutionCourse.institution:id,name,abbreviation',
             'topicLinks.canonicalTopic:id,title',
             'answers' => fn ($q) => $q->where('is_published', true),
+            'questionBlockLinks.contentBlock:id,title,canonical_topic_id',
         ]);
 
         return Inertia::render('questions/show', [

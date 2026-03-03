@@ -189,7 +189,7 @@ export type GradingScale = {
     scale_min: number | null;
     scale_max: number | null;
     pass_threshold: number | null;
-    grade_boundaries: Record<string, unknown>[] | null;
+    grade_boundaries: { grade: string; min: number; max: number; points: number }[] | null;
     classification_labels: Record<string, unknown> | null;
     created_at: string;
     updated_at: string;

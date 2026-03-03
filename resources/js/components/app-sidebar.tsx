@@ -27,6 +27,7 @@ import {
 } from '@/components/ui/sidebar';
 import { index as coursesIndex } from '@/actions/App/Http/Controllers/Student/CourseController';
 import { index as papersIndex } from '@/actions/App/Http/Controllers/Student/QuestionPaperController';
+import { browse as topicsBrowse } from '@/actions/App/Http/Controllers/Student/TopicController';
 import { dashboard } from '@/routes';
 import type { NavGroup } from '@/types';
 import AppLogo from './app-logo';
@@ -45,7 +46,7 @@ const navGroups: NavGroup[] = [
     {
         label: 'Study',
         items: [
-            { title: 'Topics', href: '/topics/browse', icon: BookOpen },
+            { title: 'Topics', href: topicsBrowse.url(), icon: BookOpen },
             { title: 'Notes', href: '/notes', icon: StickyNote },
             { title: 'Knowledge Graph', href: '/knowledge-graph', icon: Network },
             { title: 'Search', href: '/search', icon: Search },

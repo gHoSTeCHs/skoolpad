@@ -1,11 +1,11 @@
 import { useState } from 'react';
 import { ChevronDown, ChevronRight } from 'lucide-react';
 import { QuestionRenderer } from '@/components/skoolpad/questions';
-import { TiptapRenderer } from '@/components/shared/tiptap-renderer';
+import { ContentRenderer } from '@/components/shared/content-renderer';
 import { nodeToShowcase } from '@/lib/question-node-to-showcase';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import type { QuestionNode } from '@/types/questions';
-import type { TiptapJSON } from '@/types/tiptap';
+import type { RenderableContent } from '@/types/tiptap';
 
 interface PaperQuestionNodeProps {
     node: QuestionNode;
@@ -28,7 +28,7 @@ function AnswerSection({ answers }: { answers: NonNullable<QuestionNode['answers
                 <div className="mb-2 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
                     Answer ({depthLabels[answer.depth_level] ?? answer.depth_level})
                 </div>
-                <TiptapRenderer content={answer.content as TiptapJSON | null} className="prose-sm" />
+                <ContentRenderer content={answer.content as RenderableContent} className="prose-sm" />
             </div>
         );
     }
@@ -45,7 +45,7 @@ function AnswerSection({ answers }: { answers: NonNullable<QuestionNode['answers
                 </TabsList>
                 {publishedAnswers.map((a) => (
                     <TabsContent key={a.id} value={a.depth_level}>
-                        <TiptapRenderer content={a.content as TiptapJSON | null} className="prose-sm" />
+                        <ContentRenderer content={a.content as RenderableContent} className="prose-sm" />
                     </TabsContent>
                 ))}
             </Tabs>

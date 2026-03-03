@@ -1,7 +1,9 @@
 <?php
 
 use App\Enums\QuestionStatus;
+use App\Models\BlockCompletion;
 use App\Models\CanonicalTopic;
+use App\Models\ContentBlock;
 use App\Models\CourseTopicMapping;
 use App\Models\Department;
 use App\Models\Faculty;
@@ -9,6 +11,7 @@ use App\Models\Institution;
 use App\Models\InstitutionCourse;
 use App\Models\Question;
 use App\Models\QuestionAnswer;
+use App\Models\QuestionBlockLink;
 use App\Models\QuestionTopicLink;
 use App\Models\StudentCourse;
 use App\Models\StudentProfile;
@@ -193,6 +196,31 @@ test('show past questions tab returns published questions with filters', functio
         );
 });
 
+test('show past questions tab includes question_block_links for each question', function () {
+    $topic = CanonicalTopic::factory()->create(['is_published' => true]);
+    $block = ContentBlock::factory()->create([
+        'canonical_topic_id' => $topic->id,
+        'is_published' => true,
+    ]);
+    $question = Question::factory()->create([
+        'institution_course_id' => $this->course->id,
+        'status' => QuestionStatus::Published,
+    ]);
+    QuestionBlockLink::create([
+        'question_id' => $question->id,
+        'content_block_id' => $block->id,
+        'relevance' => 'primary',
+    ]);
+
+    $this->get(route('courses.show', [$this->course, 'tab' => 'past_questions']))
+        ->assertOk()
+        ->assertInertia(fn ($page) => $page
+            ->has('questions.data.0.question_block_links', 1)
+            ->where('questions.data.0.question_block_links.0.content_block_id', $block->id)
+            ->where('questions.data.0.question_block_links.0.relevance', 'primary')
+        );
+});
+
 test('show past questions tab filters by year', function () {
     Question::factory()->create([
         'institution_course_id' => $this->course->id,
@@ -227,6 +255,67 @@ test('show past questions tab paginates', function () {
         );
 });
 
+test('show past questions tab returns hierarchical questions with children nested', function () {
+    $parent = Question::factory()->create([
+        'institution_course_id' => $this->course->id,
+        'status' => QuestionStatus::Published,
+        'year' => 2023,
+    ]);
+
+    $child1 = Question::factory()->create([
+        'institution_course_id' => $this->course->id,
+        'parent_question_id' => $parent->id,
+        'status' => QuestionStatus::Published,
+        'sort_order' => 1,
+    ]);
+
+    $child2 = Question::factory()->create([
+        'institution_course_id' => $this->course->id,
+        'parent_question_id' => $parent->id,
+        'status' => QuestionStatus::Published,
+        'sort_order' => 2,
+    ]);
+
+    QuestionAnswer::factory()->create([
+        'question_id' => $child1->id,
+        'is_published' => true,
+    ]);
+
+    $this->get(route('courses.show', [$this->course, 'tab' => 'past_questions']))
+        ->assertOk()
+        ->assertInertia(fn ($page) => $page
+            ->has('questions.data', 1)
+            ->where('questions.data.0.id', $parent->id)
+            ->has('questions.data.0.children', 2)
+            ->where('questions.data.0.children.0.id', $child1->id)
+            ->where('questions.data.0.children.1.id', $child2->id)
+        );
+});
+
+test('show past questions tab excludes child questions from top-level results', function () {
+    $parent = Question::factory()->create([
+        'institution_course_id' => $this->course->id,
+        'status' => QuestionStatus::Published,
+    ]);
+
+    Question::factory()->create([
+        'institution_course_id' => $this->course->id,
+        'parent_question_id' => $parent->id,
+        'status' => QuestionStatus::Published,
+    ]);
+
+    $standalone = Question::factory()->create([
+        'institution_course_id' => $this->course->id,
+        'status' => QuestionStatus::Published,
+    ]);
+
+    $this->get(route('courses.show', [$this->course, 'tab' => 'past_questions']))
+        ->assertOk()
+        ->assertInertia(fn ($page) => $page
+            ->has('questions.data', 2)
+        );
+});
+
 test('show returns 403 for non-enrolled course', function () {
     $otherCourse = InstitutionCourse::factory()->create();
 
@@ -247,4 +336,127 @@ test('unboarded students cannot access courses', function () {
     $this->actingAs($newStudent)
         ->get(route('courses.index'))
         ->assertRedirect(route('onboarding.index'));
+});
+
+test('show topics tab includes block counts per topic', function () {
+    $topic = CanonicalTopic::factory()->create(['is_published' => true]);
+    CourseTopicMapping::factory()->create([
+        'institution_course_id' => $this->course->id,
+        'canonical_topic_id' => $topic->id,
+        'sequence_order' => 1,
+    ]);
+
+    $block1 = ContentBlock::factory()->published()->create([
+        'canonical_topic_id' => $topic->id,
+        'is_container' => false,
+        'path' => '1',
+        'sort_order' => 1,
+    ]);
+    ContentBlock::factory()->published()->create([
+        'canonical_topic_id' => $topic->id,
+        'is_container' => false,
+        'path' => '2',
+        'sort_order' => 2,
+    ]);
+    ContentBlock::factory()->published()->container()->create([
+        'canonical_topic_id' => $topic->id,
+        'path' => '3',
+        'sort_order' => 3,
+    ]);
+    ContentBlock::factory()->create([
+        'canonical_topic_id' => $topic->id,
+        'is_container' => false,
+        'is_published' => false,
+        'path' => '4',
+        'sort_order' => 4,
+    ]);
+
+    BlockCompletion::factory()->create([
+        'user_id' => $this->student->id,
+        'content_block_id' => $block1->id,
+    ]);
+
+    $this->get(route('courses.show', $this->course))
+        ->assertOk()
+        ->assertInertia(fn ($page) => $page
+            ->where('topics.0.total_blocks', 2)
+            ->where('topics.0.completed_blocks', 1)
+        );
+});
+
+test('show topics tab block progress sums across all topics', function () {
+    $topic1 = CanonicalTopic::factory()->create(['is_published' => true]);
+    $topic2 = CanonicalTopic::factory()->create(['is_published' => true]);
+
+    CourseTopicMapping::factory()->create([
+        'institution_course_id' => $this->course->id,
+        'canonical_topic_id' => $topic1->id,
+        'sequence_order' => 1,
+    ]);
+    CourseTopicMapping::factory()->create([
+        'institution_course_id' => $this->course->id,
+        'canonical_topic_id' => $topic2->id,
+        'sequence_order' => 2,
+    ]);
+
+    $block = ContentBlock::factory()->published()->create([
+        'canonical_topic_id' => $topic1->id,
+        'is_container' => false,
+        'path' => '1',
+        'sort_order' => 1,
+    ]);
+    ContentBlock::factory()->published()->create([
+        'canonical_topic_id' => $topic1->id,
+        'is_container' => false,
+        'path' => '2',
+        'sort_order' => 2,
+    ]);
+    ContentBlock::factory()->published()->create([
+        'canonical_topic_id' => $topic1->id,
+        'is_container' => false,
+        'path' => '3',
+        'sort_order' => 3,
+    ]);
+    ContentBlock::factory()->published()->create([
+        'canonical_topic_id' => $topic2->id,
+        'is_container' => false,
+        'path' => '1',
+        'sort_order' => 1,
+    ]);
+    ContentBlock::factory()->published()->create([
+        'canonical_topic_id' => $topic2->id,
+        'is_container' => false,
+        'path' => '2',
+        'sort_order' => 2,
+    ]);
+
+    BlockCompletion::factory()->create([
+        'user_id' => $this->student->id,
+        'content_block_id' => $block->id,
+    ]);
+
+    $this->get(route('courses.show', $this->course))
+        ->assertOk()
+        ->assertInertia(fn ($page) => $page
+            ->where('topicsProgress.total_blocks', 5)
+            ->where('topicsProgress.completed_blocks', 1)
+        );
+});
+
+test('show topics tab returns zero block counts when no blocks exist', function () {
+    $topic = CanonicalTopic::factory()->create(['is_published' => true]);
+    CourseTopicMapping::factory()->create([
+        'institution_course_id' => $this->course->id,
+        'canonical_topic_id' => $topic->id,
+        'sequence_order' => 1,
+    ]);
+
+    $this->get(route('courses.show', $this->course))
+        ->assertOk()
+        ->assertInertia(fn ($page) => $page
+            ->where('topics.0.total_blocks', 0)
+            ->where('topics.0.completed_blocks', 0)
+            ->where('topicsProgress.total_blocks', 0)
+            ->where('topicsProgress.completed_blocks', 0)
+        );
 });

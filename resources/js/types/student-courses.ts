@@ -28,11 +28,15 @@ export interface CourseTopicItem {
     estimated_read_minutes: number | null;
     is_completed: boolean;
     question_count: number;
+    total_blocks: number;
+    completed_blocks: number;
 }
 
 export interface TopicsProgress {
     completed: number;
     total: number;
+    total_blocks: number;
+    completed_blocks: number;
 }
 
 export interface CourseQuestionAnswer {
@@ -41,6 +45,16 @@ export interface CourseQuestionAnswer {
     content: Record<string, unknown> | null;
     content_plain: string | null;
     is_published: boolean;
+}
+
+export interface CourseQuestionBlockLink {
+    content_block_id: string;
+    relevance: 'primary' | 'secondary' | 'prerequisite';
+    content_block: {
+        id: string;
+        title: string;
+        canonical_topic_id: string;
+    };
 }
 
 export interface CourseQuestionTopicLink {
@@ -62,8 +76,10 @@ export interface CourseQuestion {
     difficulty_level: QuestionDifficulty | null;
     marks: number | null;
     topic_links: CourseQuestionTopicLink[];
+    question_block_links: CourseQuestionBlockLink[];
     answers: CourseQuestionAnswer[];
     contexts: QuestionContextData[];
+    children: CourseQuestion[];
 }
 
 export interface CourseFilterOptions {

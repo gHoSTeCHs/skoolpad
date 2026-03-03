@@ -24,7 +24,11 @@ class StoreGradingScaleRequest extends FormRequest
             'scale_min' => ['required', 'numeric'],
             'scale_max' => ['required', 'numeric', 'gte:scale_min'],
             'pass_threshold' => ['required', 'numeric'],
-            'grade_boundaries' => ['required', 'json'],
+            'grade_boundaries' => ['required', 'array', 'min:1'],
+            'grade_boundaries.*.grade' => ['required', 'string', 'max:20'],
+            'grade_boundaries.*.min' => ['required', 'numeric'],
+            'grade_boundaries.*.max' => ['required', 'numeric', 'gte:grade_boundaries.*.min'],
+            'grade_boundaries.*.points' => ['required', 'numeric'],
             'classification_labels' => ['nullable', 'json'],
         ];
     }

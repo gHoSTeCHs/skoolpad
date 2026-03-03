@@ -58,7 +58,7 @@ export function TiptapRenderer({ content, className }: TiptapRendererProps) {
 
     return (
         <div
-            className={cn('tiptap-editor', className)}
+            className={cn('tiptap-editor content-renderer', className)}
             dangerouslySetInnerHTML={{ __html: html }}
         />
     );

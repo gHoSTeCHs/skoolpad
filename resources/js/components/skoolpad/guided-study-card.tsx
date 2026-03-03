@@ -66,9 +66,7 @@ export default function GuidedStudyCard({ plan, dismissUrl }: GuidedStudyCardPro
         ? plan.items
         : plan.items.filter((i) => i.subject_name === selectedSubject);
 
-    const completedMinutes = plan.items
-        .filter((item) => item.is_completed)
-        .reduce((sum, item) => sum + item.estimated_minutes, 0);
+    const completedMinutes = plan.completed_minutes;
 
     const progressPercent = plan.daily_goal_minutes > 0
         ? Math.min(Math.round((completedMinutes / plan.daily_goal_minutes) * 100), 100)

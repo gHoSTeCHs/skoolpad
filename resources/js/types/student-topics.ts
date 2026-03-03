@@ -1,5 +1,43 @@
 import type { CourseQuestion } from '@/types/student-courses';
+import type { PaginatedData } from '@/types/models';
 import type { TiptapJSON } from '@/types/tiptap';
+
+export interface BrowseTopic {
+    id: string;
+    title: string;
+    slug: string;
+    difficulty_level: string | null;
+    estimated_read_minutes: number | null;
+    discipline: { id: string; name: string } | null;
+    is_completed: boolean;
+    total_blocks: number;
+    completed_blocks: number;
+    question_count: number;
+    courses: { id: string; course_code: string; course_title: string }[];
+}
+
+export interface TopicBrowseFilterOptions {
+    courses: { id: string; course_code: string; course_title: string }[];
+    disciplines: { id: string; name: string }[];
+    difficulties: string[];
+}
+
+export interface TopicBrowseAppliedFilters {
+    browse_all?: string | null;
+    course_id?: string | null;
+    discipline_id?: string | null;
+    difficulty?: string | null;
+    completion?: string | null;
+    search?: string | null;
+}
+
+export interface TopicBrowseProps {
+    topics: PaginatedData<BrowseTopic>;
+    filterOptions: TopicBrowseFilterOptions;
+    appliedFilters: TopicBrowseAppliedFilters;
+    totalCount: number;
+    completedCount: number;
+}
 
 export interface PrerequisiteItem {
     id: string;
@@ -56,6 +94,14 @@ export interface CourseContext {
 export interface TopicNavItem {
     id: string;
     title: string;
+}
+
+export interface TopicReadProps {
+    topic: TopicData;
+    blockTree: TopicBlock[] | null;
+    completedBlockIds: string[];
+    courseContext: CourseContext | null;
+    totalReadTime: number;
 }
 
 export interface TopicShowProps {

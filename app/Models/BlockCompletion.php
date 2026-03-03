@@ -18,6 +18,7 @@ class BlockCompletion extends Model
         'user_id',
         'content_block_id',
         'completed_at',
+        'reading_time_seconds',
     ];
 
     /** @return array<string, string> */

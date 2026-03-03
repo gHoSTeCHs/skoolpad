@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { Head, Link, router } from '@inertiajs/react';
-import { CheckCircle2, ChevronDown, Circle, Sparkles } from 'lucide-react';
-import { TiptapRenderer } from '@/components/shared/tiptap-renderer';
+import { BookOpen, CheckCircle2, ChevronDown, Circle, Sparkles } from 'lucide-react';
+import { ContentRenderer } from '@/components/shared/content-renderer';
 import { DifficultyBadge } from '@/components/skoolpad/block-tree';
 import SpBadge from '@/components/skoolpad/sp-badge';
 import { Button } from '@/components/ui/button';
@@ -14,10 +14,10 @@ import { PrerequisiteBanner } from '@/pages/topics/partials/prerequisite-banner'
 import { TopicNavigation } from '@/pages/topics/partials/topic-navigation';
 import { show as courseShow } from '@/actions/App/Http/Controllers/Student/CourseController';
 import { index as questionsIndex } from '@/actions/App/Http/Controllers/Student/QuestionController';
-import { toggleComplete } from '@/actions/App/Http/Controllers/Student/TopicController';
+import { read as topicRead, toggleComplete } from '@/actions/App/Http/Controllers/Student/TopicController';
 import type { BreadcrumbItem } from '@/types';
 import type { TopicShowProps } from '@/types/student-topics';
-import type { TiptapJSON } from '@/types/tiptap';
+import type { RenderableContent } from '@/types/tiptap';
 
 export default function TopicShow({
     topic,
@@ -93,6 +93,14 @@ export default function TopicShow({
                                     {simpleMode ? 'Simple Mode' : 'ELI12'}
                                 </Button>
                             )}
+                            <Link
+                                href={topicRead.url(topic.id, courseContext ? { query: { course: courseContext.id } } : undefined)}
+                                className="inline-flex items-center gap-1.5 rounded-md border border-border px-3 py-1.5 text-[12px] font-medium text-muted-foreground transition-colors hover:bg-accent hover:text-accent-foreground"
+                                style={{ fontFamily: 'var(--font-body)' }}
+                            >
+                                <BookOpen className="size-3.5" />
+                                Read as document
+                            </Link>
                         </div>
                     </div>
 
@@ -131,8 +139,8 @@ export default function TopicShow({
                                     </span>
                                 </div>
                             )}
-                            <TiptapRenderer content={
-                                (simpleMode && topic.simplified_content ? topic.simplified_content : topic.content) as TiptapJSON
+                            <ContentRenderer content={
+                                (simpleMode && topic.simplified_content ? topic.simplified_content : topic.content) as RenderableContent
                             } />
                         </div>
                     )

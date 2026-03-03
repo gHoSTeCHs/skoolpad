@@ -1,12 +1,12 @@
 import { router } from '@inertiajs/react';
-import { CheckCircle2, Circle, Lock, Sparkles } from 'lucide-react';
-import { useEffect, useState } from 'react';
+import { CheckCircle2, ChevronLeft, ChevronRight, Circle, Lock, Sparkles } from 'lucide-react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { TreeNode, type TreeBlock } from '@/components/skoolpad/block-tree/tree-node';
-import { TiptapRenderer } from '@/components/shared/tiptap-renderer';
+import { ContentRenderer } from '@/components/shared/content-renderer';
 import { Button } from '@/components/ui/button';
 import { toggleBlockComplete } from '@/actions/App/Http/Controllers/Student/TopicController';
 import type { TopicBlock } from '@/types/student-topics';
-import type { TiptapJSON } from '@/types/tiptap';
+import type { RenderableContent } from '@/types/tiptap';
 
 interface BlockReaderProps {
     blocks: TopicBlock[];
@@ -38,12 +38,55 @@ function findBlock(blocks: TopicBlock[], id: string): TopicBlock | null {
     return null;
 }
 
+function flattenLeaves(blocks: TopicBlock[]): TopicBlock[] {
+    const leaves: TopicBlock[] = [];
+    for (const block of blocks) {
+        if (!block.children.length || block.blockType !== 'container') {
+            leaves.push(block);
+        }
+        if (block.children.length) {
+            leaves.push(...flattenLeaves(block.children));
+        }
+    }
+    return leaves;
+}
+
+function getAncestorIds(blocks: TopicBlock[], targetId: string, path: string[] = []): string[] | null {
+    for (const block of blocks) {
+        if (block.id === targetId) return path;
+        if (block.children.length) {
+            const found = getAncestorIds(block.children, targetId, [...path, block.id]);
+            if (found) return found;
+        }
+    }
+    return null;
+}
+
 export function BlockReader({ blocks, completedBlockIds, lockedBlockIds }: BlockReaderProps) {
     const [selectedId, setSelectedId] = useState<string | null>(blocks[0]?.id ?? null);
     const [expanded, setExpanded] = useState<Record<string, boolean>>({});
     const [simpleMode, setSimpleMode] = useState(false);
+    const blockStartTime = useRef<number>(Date.now());
 
     useEffect(() => { setSimpleMode(false); }, [selectedId]);
+    useEffect(() => { blockStartTime.current = Date.now(); }, [selectedId]);
+
+    const leafBlocks = useMemo(() => flattenLeaves(blocks), [blocks]);
+    const currentIndex = leafBlocks.findIndex((b) => b.id === selectedId);
+
+    const prevNavigable = useMemo(() => {
+        for (let i = currentIndex - 1; i >= 0; i--) {
+            if (!lockedBlockIds.includes(leafBlocks[i].id)) return leafBlocks[i];
+        }
+        return null;
+    }, [leafBlocks, currentIndex, lockedBlockIds]);
+
+    const nextNavigable = useMemo(() => {
+        for (let i = currentIndex + 1; i < leafBlocks.length; i++) {
+            if (!lockedBlockIds.includes(leafBlocks[i].id)) return leafBlocks[i];
+        }
+        return null;
+    }, [leafBlocks, currentIndex, lockedBlockIds]);
 
     const treeBlocks = blocks.map((b) => toTreeBlock(b, completedBlockIds, lockedBlockIds));
     const selectedBlock = selectedId ? findBlock(blocks, selectedId) : null;
@@ -59,8 +102,23 @@ export function BlockReader({ blocks, completedBlockIds, lockedBlockIds }: Block
         }
     }
 
+    function navigateToBlock(target: TopicBlock) {
+        setSelectedId(target.id);
+        const ancestors = getAncestorIds(blocks, target.id) ?? [];
+        if (ancestors.length) {
+            setExpanded((prev) => ({
+                ...prev,
+                ...Object.fromEntries(ancestors.map((id) => [id, true])),
+            }));
+        }
+    }
+
     function handleToggleComplete(blockId: string) {
-        router.post(toggleBlockComplete.url(blockId), {}, { preserveState: true, preserveScroll: true });
+        const isCurrentlyCompleted = completedBlockIds.includes(blockId);
+        const data = isCurrentlyCompleted
+            ? {}
+            : { reading_time_seconds: Math.round((Date.now() - blockStartTime.current) / 1000) };
+        router.post(toggleBlockComplete.url(blockId), data, { preserveState: true, preserveScroll: true });
     }
 
     const isCompleted = selectedId ? completedBlockIds.includes(selectedId) : false;
@@ -84,12 +142,19 @@ export function BlockReader({ blocks, completedBlockIds, lockedBlockIds }: Block
                 {selectedBlock ? (
                     <div>
                         <div className="mb-4 flex items-center justify-between">
-                            <h3 className="text-lg font-semibold" style={{ fontFamily: 'var(--font-display)' }}>
-                                {selectedBlock.path && (
-                                    <span className="mr-2 text-muted-foreground">{selectedBlock.path}</span>
+                            <div className="flex items-center gap-3">
+                                <h3 className="text-lg font-semibold" style={{ fontFamily: 'var(--font-display)' }}>
+                                    {selectedBlock.path && (
+                                        <span className="mr-2 text-muted-foreground">{selectedBlock.path}</span>
+                                    )}
+                                    {selectedBlock.title}
+                                </h3>
+                                {currentIndex >= 0 && (
+                                    <span className="shrink-0 text-[12px] text-muted-foreground">
+                                        Block {currentIndex + 1} of {leafBlocks.length}
+                                    </span>
                                 )}
-                                {selectedBlock.title}
-                            </h3>
+                            </div>
                             {!isSelectedLocked && (
                                 <div className="flex items-center gap-2">
                                     {selectedBlock.simplifiedContent && (
@@ -163,16 +228,40 @@ export function BlockReader({ blocks, completedBlockIds, lockedBlockIds }: Block
                                         </span>
                                     </div>
                                 )}
-                                <TiptapRenderer content={
+                                <ContentRenderer content={
                                     (simpleMode && selectedBlock.simplifiedContent
                                         ? selectedBlock.simplifiedContent
-                                        : selectedBlock.content) as TiptapJSON
+                                        : selectedBlock.content) as RenderableContent
                                 } />
                             </div>
                         ) : (
                             <p className="text-sm text-muted-foreground" style={{ fontFamily: 'var(--font-body)' }}>
                                 This is a container block. Select a child block to read its content.
                             </p>
+                        )}
+
+                        {(prevNavigable || nextNavigable) && (
+                            <div className="mt-6 flex items-center justify-between gap-4 border-t border-border pt-4">
+                                {prevNavigable ? (
+                                    <Button variant="outline" size="sm" className="gap-2" onClick={() => navigateToBlock(prevNavigable)}>
+                                        <ChevronLeft className="size-4" />
+                                        <div className="text-left">
+                                            <div className="text-[10px] uppercase text-muted-foreground">Previous</div>
+                                            <div className="max-w-[180px] truncate text-[13px]">{prevNavigable.title}</div>
+                                        </div>
+                                    </Button>
+                                ) : <div />}
+
+                                {nextNavigable ? (
+                                    <Button variant="outline" size="sm" className="gap-2" onClick={() => navigateToBlock(nextNavigable)}>
+                                        <div className="text-right">
+                                            <div className="text-[10px] uppercase text-muted-foreground">Next</div>
+                                            <div className="max-w-[180px] truncate text-[13px]">{nextNavigable.title}</div>
+                                        </div>
+                                        <ChevronRight className="size-4" />
+                                    </Button>
+                                ) : <div />}
+                            </div>
                         )}
                     </div>
                 ) : (

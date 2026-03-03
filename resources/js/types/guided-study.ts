@@ -15,6 +15,7 @@ export interface StudyPlanItem {
 export interface GuidedStudyPlan {
     daily_goal_minutes: number;
     total_estimated_minutes: number;
+    completed_minutes: number;
     current_term: number;
     current_week: number;
     items: StudyPlanItem[];

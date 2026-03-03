@@ -5,6 +5,8 @@ namespace App\Http\Controllers\Student;
 use App\Concerns\Paginates;
 use App\Enums\QuestionStatus;
 use App\Http\Controllers\Controller;
+use App\Models\BlockCompletion;
+use App\Models\ContentBlock;
 use App\Models\InstitutionCourse;
 use App\Models\TopicCompletion;
 use Illuminate\Http\Request;
@@ -124,6 +126,24 @@ class CourseController extends Controller
             ->groupBy('canonical_topic_id')
             ->pluck('count', 'canonical_topic_id');
 
+        $blockCounts = ContentBlock::query()
+            ->whereIn('canonical_topic_id', $topicIds)
+            ->where('is_published', true)
+            ->where('is_container', false)
+            ->selectRaw('canonical_topic_id, count(*) as total')
+            ->groupBy('canonical_topic_id')
+            ->pluck('total', 'canonical_topic_id');
+
+        $completedBlockCounts = BlockCompletion::query()
+            ->where('user_id', $user->id)
+            ->join('content_blocks', 'block_completions.content_block_id', '=', 'content_blocks.id')
+            ->whereIn('content_blocks.canonical_topic_id', $topicIds)
+            ->where('content_blocks.is_published', true)
+            ->where('content_blocks.is_container', false)
+            ->selectRaw('content_blocks.canonical_topic_id, count(*) as completed')
+            ->groupBy('content_blocks.canonical_topic_id')
+            ->pluck('completed', 'content_blocks.canonical_topic_id');
+
         $topics = $mappings->map(fn ($mapping) => [
             'id' => $mapping->canonical_topic_id,
             'sequence_order' => $mapping->sequence_order,
@@ -134,6 +154,8 @@ class CourseController extends Controller
             'estimated_read_minutes' => $mapping->topic->estimated_read_minutes,
             'is_completed' => in_array($mapping->canonical_topic_id, $completedTopicIds),
             'question_count' => $questionCountsByTopic[$mapping->canonical_topic_id] ?? 0,
+            'total_blocks' => $blockCounts[$mapping->canonical_topic_id] ?? 0,
+            'completed_blocks' => $completedBlockCounts[$mapping->canonical_topic_id] ?? 0,
         ]);
 
         $completedCount = count(array_intersect($topicIds->toArray(), $completedTopicIds));
@@ -143,6 +165,8 @@ class CourseController extends Controller
             'topicsProgress' => [
                 'completed' => $completedCount,
                 'total' => $mappings->count(),
+                'total_blocks' => $blockCounts->sum(),
+                'completed_blocks' => $completedBlockCounts->sum(),
             ],
         ];
     }
@@ -152,9 +176,20 @@ class CourseController extends Controller
     {
         $query = $course->questions()
             ->published()
+            ->whereNull('parent_question_id')
             ->with([
                 'topicLinks.canonicalTopic:id,title',
                 'answers' => fn ($q) => $q->where('is_published', true),
+                'children' => fn ($q) => $q->published()->orderBy('sort_order'),
+                'children.answers' => fn ($q) => $q->where('is_published', true),
+                'children.children' => fn ($q) => $q->published()->orderBy('sort_order'),
+                'children.children.answers' => fn ($q) => $q->where('is_published', true),
+                'children.children.children' => fn ($q) => $q->published()->orderBy('sort_order'),
+                'children.children.children.answers' => fn ($q) => $q->where('is_published', true),
+                'questionBlockLinks.contentBlock:id,title,canonical_topic_id',
+                'children.questionBlockLinks.contentBlock:id,title,canonical_topic_id',
+                'children.children.questionBlockLinks.contentBlock:id,title,canonical_topic_id',
+                'children.children.children.questionBlockLinks.contentBlock:id,title,canonical_topic_id',
             ]);
 
         if ($request->filled('year')) {

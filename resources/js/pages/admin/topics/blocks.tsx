@@ -51,6 +51,7 @@ interface BlockNode {
     depth_level: number;
     sort_order: number;
     content: Record<string, unknown> | null;
+    simplified_content: Record<string, unknown> | null;
     estimated_read_time: number | null;
     difficulty_level: string | null;
     bloom_level: string | null;
@@ -474,6 +475,7 @@ function BlockDetailForm({
         estimated_read_time: (block.estimated_read_time ?? '') as number | '',
         is_published: block.is_published,
         content: block.content as TiptapJSON | null,
+        simplified_content: block.simplified_content as TiptapJSON | null,
         content_plain: '',
         prerequisites: block.prerequisites as TopicPrerequisite[],
     });
@@ -492,6 +494,7 @@ function BlockDetailForm({
                 estimated_read_time: block.estimated_read_time ?? '',
                 is_published: block.is_published,
                 content: block.content as TiptapJSON | null,
+                simplified_content: block.simplified_content as TiptapJSON | null,
                 content_plain: '',
                 prerequisites: block.prerequisites as TopicPrerequisite[],
             });
@@ -709,6 +712,22 @@ function BlockDetailForm({
                         }}
                         onImageUpload={handleImageUpload}
                         placeholder="Write the block content here..."
+                    />
+                </FormField>
+            )}
+
+            {!block.is_container && (
+                <FormField
+                    label="Simplified Content (ELI12)"
+                    name="edit-simplified_content"
+                    description="Plain-language version shown when students tap the ELI12 button"
+                    error={form.errors.simplified_content as string | undefined}
+                >
+                    <TiptapEditor
+                        value={form.data.simplified_content}
+                        onChange={(json) => form.setData('simplified_content', json)}
+                        onImageUpload={handleImageUpload}
+                        placeholder="Write a simplified explanation here..."
                     />
                 </FormField>
             )}

@@ -7,7 +7,7 @@ import SpBadge from '@/components/skoolpad/sp-badge';
 import StatCard from '@/components/skoolpad/stat-card';
 import StreakWidget from '@/components/skoolpad/streak-widget';
 import { TiptapEditor } from '@/components/shared/tiptap-editor';
-import { TiptapRenderer } from '@/components/shared/tiptap-renderer';
+import { ContentRenderer } from '@/components/shared/content-renderer';
 import { Skeleton, SkeletonText } from '@/components/ui/skeleton';
 import { useAppearance } from '@/hooks/use-appearance';
 import type { TiptapJSON } from '@/types/tiptap';
@@ -496,7 +496,7 @@ export default function DesignShowcase() {
                                         Read-only Renderer
                                     </p>
                                     <div className="rounded-lg border border-border bg-card p-6">
-                                        <TiptapRenderer content={editorContent} />
+                                        <ContentRenderer content={editorContent} />
                                     </div>
                                 </div>
                             )}

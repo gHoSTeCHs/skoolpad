@@ -1,17 +1,17 @@
 import { Head, Link } from '@inertiajs/react';
 import { ArrowLeft, Clock, Info } from 'lucide-react';
 import CanonicalTopicController from '@/actions/App/Http/Controllers/Admin/CanonicalTopicController';
-import { TiptapRenderer } from '@/components/shared/tiptap-renderer';
+import { ContentRenderer } from '@/components/shared/content-renderer';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Badge } from '@/components/ui/badge';
 import AdminLayout from '@/layouts/admin-layout';
-import type { TiptapJSON } from '@/types/tiptap';
+import type { RenderableContent } from '@/types/tiptap';
 import type { TopicDifficulty } from '@/types/topics';
 
 interface Props {
     topic: {
         title: string;
-        content: TiptapJSON | null;
+        content: RenderableContent;
         summary: string | null;
         difficulty_level: TopicDifficulty;
         difficulty_level_label: string;
@@ -80,7 +80,7 @@ export default function AdminTopicsPreview({ topic }: Props) {
 
                     <hr className="my-6 border-border" />
 
-                    <TiptapRenderer content={topic.content} />
+                    <ContentRenderer content={topic.content} />
                 </article>
             </div>
         </AdminLayout>

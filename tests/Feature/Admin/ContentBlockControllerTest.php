@@ -348,6 +348,30 @@ test('deleting a block cascades prerequisite links', function () {
     ]);
 });
 
+test('update accepts simplified_content and persists it', function () {
+    $block = ContentBlock::factory()->for($this->topic)->create();
+    $simplifiedContent = [
+        'type' => 'doc',
+        'content' => [
+            ['type' => 'paragraph', 'content' => [['type' => 'text', 'text' => 'Easy explanation']]],
+        ],
+    ];
+
+    $this->actingAs($this->admin)
+        ->put(route('admin.content-blocks.update', $block), [
+            'title' => $block->title,
+            'slug' => $block->slug,
+            'block_type' => $block->block_type->value,
+            'is_published' => $block->is_published,
+            'simplified_content' => $simplifiedContent,
+        ])
+        ->assertRedirect()
+        ->assertSessionHas('success', 'Block updated.');
+
+    $block->refresh();
+    expect($block->simplified_content)->toEqual($simplifiedContent);
+});
+
 test('unauthenticated user is redirected', function () {
     $this->get(route('admin.content-blocks.index', $this->topic))
         ->assertRedirect(route('login'));

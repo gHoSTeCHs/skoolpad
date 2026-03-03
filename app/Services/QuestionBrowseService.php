@@ -15,7 +15,7 @@ class QuestionBrowseService
      */
     public function search(array $filters, User $user, int $perPage = 15): CursorPaginator
     {
-        $query = Question::query()->published();
+        $query = Question::query()->published()->whereNull('parent_question_id');
 
         if (! empty($filters['course_ids'])) {
             $query->whereIn('institution_course_id', $filters['course_ids']);
@@ -55,6 +55,16 @@ class QuestionBrowseService
             'topicLinks.canonicalTopic:id,title',
             'answers' => fn ($q) => $q->where('is_published', true),
             'contexts' => fn ($q) => $q->orderBy('sort_order'),
+            'children' => fn ($q) => $q->published()->orderBy('sort_order'),
+            'children.answers' => fn ($q) => $q->where('is_published', true),
+            'children.children' => fn ($q) => $q->published()->orderBy('sort_order'),
+            'children.children.answers' => fn ($q) => $q->where('is_published', true),
+            'children.children.children' => fn ($q) => $q->published()->orderBy('sort_order'),
+            'children.children.children.answers' => fn ($q) => $q->where('is_published', true),
+            'questionBlockLinks.contentBlock:id,title,canonical_topic_id',
+            'children.questionBlockLinks.contentBlock:id,title,canonical_topic_id',
+            'children.children.questionBlockLinks.contentBlock:id,title,canonical_topic_id',
+            'children.children.children.questionBlockLinks.contentBlock:id,title,canonical_topic_id',
         ]);
 
         if (! empty($filters['search'])) {
