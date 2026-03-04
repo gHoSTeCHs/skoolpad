@@ -2,8 +2,10 @@ import type {
     AssertionReasonConfig,
     CalculationConfig,
     ClozeConfig,
+    DiagramLabelConfig,
     FillBlankConfig,
     MatchingConfig,
+    MatrixMatchingConfig,
     McqConfig,
     MultiSelectMcqConfig,
     NumericEntryConfig,
@@ -16,9 +18,11 @@ import type {
 import { AssertionReasonInput } from './assertion-reason-input';
 import { CalculationInput } from './calculation-input';
 import { ClozeInput } from './cloze-input';
+import { DiagramLabelInput } from './diagram-label-input';
 import { EssayInput } from './essay-input';
 import { FillBlankInput } from './fill-blank-input';
 import { MatchingInput } from './matching-input';
+import { MatrixMatchingInput } from './matrix-matching-input';
 import { McqInput } from './mcq-input';
 import { MultiSelectInput } from './multi-select-input';
 import { NumericEntryInput } from './numeric-entry-input';
@@ -221,6 +225,41 @@ export function QuestionAnswerInput({ questionType, responseConfig, onSubmit, fe
                     feedback={feedback ? { isCorrect: feedback.isCorrect, correctAnswer: null } : null}
                     readOnly={readOnly}
                     existingAnswer={existingAnswer as { answer: string; unit?: string; working?: string } | null}
+                />
+            );
+
+        case 'diagram_label':
+            if (!responseConfig) return null;
+            return (
+                <DiagramLabelInput
+                    responseConfig={responseConfig as DiagramLabelConfig}
+                    onSubmit={onSubmit as (data: { labels: Record<string, string> }) => void}
+                    feedback={feedback ? { isCorrect: feedback.isCorrect, correctAnswer: { labels: (feedback.correctAnswer as { labels?: { label: string; answer: string }[] })?.labels } } : null}
+                    readOnly={readOnly}
+                    existingAnswer={existingAnswer as { labels: Record<string, string> } | null}
+                />
+            );
+
+        case 'matrix_matching':
+            if (!responseConfig) return null;
+            return (
+                <MatrixMatchingInput
+                    responseConfig={responseConfig as MatrixMatchingConfig}
+                    onSubmit={onSubmit as (data: { matches: Record<string, number[]> }) => void}
+                    feedback={
+                        feedback
+                            ? {
+                                  isCorrect: feedback.isCorrect,
+                                  correctAnswer: {
+                                      mapping: (feedback.correctAnswer as { mapping?: Record<number, number[]> })?.mapping,
+                                      left: (feedback.correctAnswer as { left?: string[] })?.left,
+                                      right: (feedback.correctAnswer as { right?: string[] })?.right,
+                                  },
+                              }
+                            : null
+                    }
+                    readOnly={readOnly}
+                    existingAnswer={existingAnswer as { matches: Record<string, number[]> } | null}
                 />
             );
 
