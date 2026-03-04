@@ -1,9 +1,21 @@
-import type { AssertionReasonConfig, McqConfig, MultiSelectMcqConfig, NumericEntryConfig, QuestionType, ResponseConfig, TrueFalseConfig } from '@/types/questions';
+import type {
+    AssertionReasonConfig,
+    MatchingConfig,
+    McqConfig,
+    MultiSelectMcqConfig,
+    NumericEntryConfig,
+    OrderingConfig,
+    QuestionType,
+    ResponseConfig,
+    TrueFalseConfig,
+} from '@/types/questions';
 
 import { AssertionReasonInput } from './assertion-reason-input';
+import { MatchingInput } from './matching-input';
 import { McqInput } from './mcq-input';
 import { MultiSelectInput } from './multi-select-input';
 import { NumericEntryInput } from './numeric-entry-input';
+import { OrderingInput } from './ordering-input';
 import { TrueFalseInput } from './true-false-input';
 
 interface QuestionAnswerInputProps {
@@ -74,6 +86,49 @@ export function QuestionAnswerInput({ questionType, responseConfig, onSubmit, fe
                     feedback={feedback ? { isCorrect: feedback.isCorrect, correctAnswer: { correct_label: (feedback.correctAnswer as { correct_label?: string })?.correct_label } } : null}
                     readOnly={readOnly}
                     existingAnswer={existingAnswer as { selected: string } | null}
+                />
+            );
+
+        case 'ordering':
+            if (!responseConfig) return null;
+            return (
+                <OrderingInput
+                    responseConfig={responseConfig as OrderingConfig}
+                    onSubmit={onSubmit as (data: { order: number[] }) => void}
+                    feedback={
+                        feedback
+                            ? {
+                                  isCorrect: feedback.isCorrect,
+                                  correctAnswer: {
+                                      correct_order: (feedback.correctAnswer as { correct_order?: number[] })?.correct_order,
+                                      items: (feedback.correctAnswer as { items?: string[] })?.items,
+                                  },
+                              }
+                            : null
+                    }
+                    readOnly={readOnly}
+                    existingAnswer={existingAnswer as { order: number[] } | null}
+                />
+            );
+
+        case 'matching':
+            if (!responseConfig) return null;
+            return (
+                <MatchingInput
+                    responseConfig={responseConfig as MatchingConfig}
+                    onSubmit={onSubmit as (data: { pairs: Record<string, number> }) => void}
+                    feedback={
+                        feedback
+                            ? {
+                                  isCorrect: feedback.isCorrect,
+                                  correctAnswer: {
+                                      pairs: (feedback.correctAnswer as { pairs?: { left: string; right: string }[] })?.pairs,
+                                  },
+                              }
+                            : null
+                    }
+                    readOnly={readOnly}
+                    existingAnswer={existingAnswer as { pairs: Record<string, number> } | null}
                 />
             );
 
