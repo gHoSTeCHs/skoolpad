@@ -1,5 +1,7 @@
 import type {
     AssertionReasonConfig,
+    ClozeConfig,
+    FillBlankConfig,
     MatchingConfig,
     McqConfig,
     MultiSelectMcqConfig,
@@ -11,6 +13,8 @@ import type {
 } from '@/types/questions';
 
 import { AssertionReasonInput } from './assertion-reason-input';
+import { ClozeInput } from './cloze-input';
+import { FillBlankInput } from './fill-blank-input';
 import { MatchingInput } from './matching-input';
 import { McqInput } from './mcq-input';
 import { MultiSelectInput } from './multi-select-input';
@@ -129,6 +133,48 @@ export function QuestionAnswerInput({ questionType, responseConfig, onSubmit, fe
                     }
                     readOnly={readOnly}
                     existingAnswer={existingAnswer as { pairs: Record<string, number> } | null}
+                />
+            );
+
+        case 'fill_blank':
+            if (!responseConfig) return null;
+            return (
+                <FillBlankInput
+                    responseConfig={responseConfig as FillBlankConfig}
+                    onSubmit={onSubmit as (data: { blanks: Record<string, string> }) => void}
+                    feedback={
+                        feedback
+                            ? {
+                                  isCorrect: feedback.isCorrect,
+                                  correctAnswer: {
+                                      blanks: (feedback.correctAnswer as { blanks?: { position: number; correct_answers: string[] }[] })?.blanks,
+                                  },
+                              }
+                            : null
+                    }
+                    readOnly={readOnly}
+                    existingAnswer={existingAnswer as { blanks: Record<string, string> } | null}
+                />
+            );
+
+        case 'cloze':
+            if (!responseConfig) return null;
+            return (
+                <ClozeInput
+                    responseConfig={responseConfig as ClozeConfig}
+                    onSubmit={onSubmit as (data: { gaps: Record<string, number> }) => void}
+                    feedback={
+                        feedback
+                            ? {
+                                  isCorrect: feedback.isCorrect,
+                                  correctAnswer: {
+                                      gaps: (feedback.correctAnswer as { gaps?: { position: number; options: string[]; correct: number }[] })?.gaps,
+                                  },
+                              }
+                            : null
+                    }
+                    readOnly={readOnly}
+                    existingAnswer={existingAnswer as { gaps: Record<string, number> } | null}
                 />
             );
 
