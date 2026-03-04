@@ -248,6 +248,35 @@ it('grades fill_blank as incorrect when blanks are wrong', function () {
     expect($this->service->gradeAnswer($question, ['blanks' => ['0' => 'London', '1' => 'Germany']]))->toBeFalse();
 });
 
+it('grades fill_blank with 80% threshold correctly', function () {
+    $question = Question::factory()->create([
+        'institution_course_id' => $this->course->id,
+        'question_type' => QuestionType::FillBlank,
+        'is_published' => true,
+        'response_config' => [
+            'blanks' => [
+                ['position' => 0, 'correct_answers' => ['alpha']],
+                ['position' => 1, 'correct_answers' => ['beta']],
+                ['position' => 2, 'correct_answers' => ['gamma']],
+                ['position' => 3, 'correct_answers' => ['delta']],
+                ['position' => 4, 'correct_answers' => ['epsilon']],
+            ],
+        ],
+    ]);
+
+    // 4/5 = 80% — exactly at threshold, should pass
+    $result = $this->service->gradeAnswer($question, [
+        'blanks' => ['0' => 'alpha', '1' => 'beta', '2' => 'gamma', '3' => 'delta', '4' => 'wrong'],
+    ]);
+    expect($result)->toBeTrue();
+
+    // 3/5 = 60% — below threshold, should fail
+    $result = $this->service->gradeAnswer($question, [
+        'blanks' => ['0' => 'alpha', '1' => 'beta', '2' => 'gamma', '3' => 'wrong', '4' => 'wrong'],
+    ]);
+    expect($result)->toBeFalse();
+});
+
 // ── diagram_label ─────────────────────────────────────────────────────────────
 
 it('grades diagram_label as correct when all labels match case-insensitively', function () {
