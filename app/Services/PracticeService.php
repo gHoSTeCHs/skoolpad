@@ -2,6 +2,7 @@
 
 namespace App\Services;
 
+use App\Enums\PracticeMode;
 use App\Enums\QuestionType;
 use App\Models\PracticeAnswer;
 use App\Models\PracticeSession;
@@ -11,6 +12,8 @@ use Illuminate\Support\Collection;
 
 class PracticeService
 {
+    public function __construct(private SpacedRepetitionService $spacedRepService) {}
+
     public function createSession(User $user, array $config): PracticeSession
     {
         $questions = $this->selectQuestions($config);
@@ -32,6 +35,10 @@ class PracticeService
 
     public function selectQuestions(array $config): Collection
     {
+        if (! empty($config['question_id'])) {
+            return Question::where('id', $config['question_id'])->get();
+        }
+
         $query = Question::query()
             ->published()
             ->whereNotNull('institution_course_id')
@@ -132,6 +139,10 @@ class PracticeService
             $question->increment('correct_count');
         }
 
+        if ($session->mode === PracticeMode::Review) {
+            $this->spacedRepService->processReviewAnswer($session->user, $question, (bool) $isCorrect);
+        }
+
         $session->update(['last_activity_at' => now()]);
 
         return $answer;
@@ -139,7 +150,7 @@ class PracticeService
 
     public function completeSession(PracticeSession $session): PracticeSession
     {
-        $answers = $session->practiceAnswers;
+        $answers = $session->practiceAnswers()->with('question')->get();
         $gradableAnswers = $answers->whereNotNull('is_correct');
         $correctCount = $gradableAnswers->where('is_correct', true)->count();
         $totalGradable = $gradableAnswers->count();
@@ -154,6 +165,12 @@ class PracticeService
             'completed_at' => now(),
             'is_resumable' => false,
         ]);
+
+        foreach ($answers as $answer) {
+            if ($answer->is_correct !== null) {
+                $this->spacedRepService->scheduleReview($session->user, $answer->question, (bool) $answer->is_correct);
+            }
+        }
 
         return $session->fresh();
     }

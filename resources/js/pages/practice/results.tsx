@@ -2,6 +2,9 @@ import { Head, Link } from '@inertiajs/react';
 import { useState } from 'react';
 
 import PracticeController from '@/actions/App/Http/Controllers/Student/PracticeController';
+import CourseController from '@/actions/App/Http/Controllers/Student/CourseController';
+import ReviewQueueController from '@/actions/App/Http/Controllers/Student/ReviewQueueController';
+import { dashboard } from '@/routes';
 import { ContentRenderer } from '@/components/shared/content-renderer';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
@@ -64,7 +67,8 @@ function formatMcqAnswer(data: Record<string, unknown> | null): string | null {
     return label ?? null;
 }
 
-export default function PracticeResults({ session, perQuestion, perTopic }: PracticeResultsPageProps) {
+export default function PracticeResults({ session, perQuestion, perTopic, reviewMetrics }: PracticeResultsPageProps) {
+    const isReviewMode = session.mode === 'review';
     const [expandedId, setExpandedId] = useState<string | null>(null);
     const [filter, setFilter] = useState<'all' | 'correct' | 'incorrect' | 'skipped'>('all');
 
@@ -100,11 +104,19 @@ export default function PracticeResults({ session, perQuestion, perTopic }: Prac
                 <main className="mx-auto max-w-4xl space-y-6 px-4 py-6">
                     <ScoreSummary session={session} />
 
-                    <div className="grid grid-cols-3 gap-3">
-                        <StatCard label="Correct" value={correctCount} color="text-emerald-600 dark:text-emerald-400 reader:text-emerald-400" />
-                        <StatCard label="Incorrect" value={incorrectCount} color="text-destructive" />
-                        <StatCard label="Skipped" value={skippedCount} color="text-yellow-600 dark:text-yellow-400 reader:text-yellow-400" />
-                    </div>
+                    {isReviewMode && reviewMetrics ? (
+                        <div className="grid grid-cols-3 gap-3">
+                            <StatCard label="Progressed" value={reviewMetrics.progressed} color="text-emerald-600 dark:text-emerald-400 reader:text-emerald-400" />
+                            <StatCard label="Reset" value={reviewMetrics.reset} color="text-destructive" />
+                            <StatCard label="Graduated" value={reviewMetrics.graduated} color="text-blue-600 dark:text-blue-400 reader:text-blue-400" />
+                        </div>
+                    ) : (
+                        <div className="grid grid-cols-3 gap-3">
+                            <StatCard label="Correct" value={correctCount} color="text-emerald-600 dark:text-emerald-400 reader:text-emerald-400" />
+                            <StatCard label="Incorrect" value={incorrectCount} color="text-destructive" />
+                            <StatCard label="Skipped" value={skippedCount} color="text-yellow-600 dark:text-yellow-400 reader:text-yellow-400" />
+                        </div>
+                    )}
 
                     {perTopic.length > 0 && (
                         <section className="rounded-xl border bg-card p-5">
@@ -246,9 +258,32 @@ export default function PracticeResults({ session, perQuestion, perTopic }: Prac
                     </section>
 
                     <div className="flex items-center justify-center gap-3 pb-8 pt-2">
-                        <Button variant="outline" asChild>
-                            <Link href={PracticeController.configure.url()}>Practice Again</Link>
-                        </Button>
+                        {isReviewMode ? (
+                            <>
+                                <Button variant="outline" asChild>
+                                    <Link href={ReviewQueueController.index.url()}>Back to Review Queue</Link>
+                                </Button>
+                                <Button variant="outline" asChild>
+                                    <Link href={dashboard().url}>Continue Studying</Link>
+                                </Button>
+                            </>
+                        ) : (
+                            <>
+                                {session.institution_course && (
+                                    <Button variant="outline" asChild>
+                                        <Link href={CourseController.show.url(session.institution_course.id)}>
+                                            Back to Course
+                                        </Link>
+                                    </Button>
+                                )}
+                                <Button variant="outline" asChild>
+                                    <Link href={ReviewQueueController.index.url()}>View Review Queue</Link>
+                                </Button>
+                                <Button variant="outline" asChild>
+                                    <Link href={PracticeController.configure.url()}>Practice Again</Link>
+                                </Button>
+                            </>
+                        )}
                     </div>
                 </main>
             </div>

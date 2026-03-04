@@ -14,15 +14,15 @@ export function TopicBreakdown({ topics }: TopicBreakdownProps) {
         <div className="space-y-3">
             {sorted.map((topic) => {
                 const pct = topic.accuracy;
-                const barColor = pct >= 70
+                const barColor = pct >= 80
                     ? 'bg-emerald-500'
-                    : pct >= 50
+                    : pct >= 60
                       ? 'bg-yellow-500'
                       : 'bg-destructive';
 
-                const textColor = pct >= 70
+                const textColor = pct >= 80
                     ? 'text-emerald-600 dark:text-emerald-400 reader:text-emerald-400'
-                    : pct >= 50
+                    : pct >= 60
                       ? 'text-yellow-600 dark:text-yellow-400 reader:text-yellow-400'
                       : 'text-destructive';
 

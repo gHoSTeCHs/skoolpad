@@ -1,7 +1,7 @@
 import type { CursorPaginatedData, PaginatedData } from '@/types/models';
 import type { AnswerDepthLevel, QuestionDifficulty, QuestionSemester, QuestionType } from '@/types/questions';
 
-export interface QuestionContextData {
+export interface StudentContextData {
     id: string;
     context_type: string;
     title: string | null;
@@ -60,7 +60,7 @@ export interface BrowseQuestion {
         is_published: boolean;
     }[];
     question_block_links: BrowseQuestionBlockLink[];
-    contexts: QuestionContextData[];
+    contexts: StudentContextData[];
     children: BrowseQuestion[];
 }
 

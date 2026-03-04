@@ -1,4 +1,5 @@
 import type { QuestionContextData, QuestionType, ResponseConfig } from '@/types/questions';
+import type { ReviewMetrics } from '@/types/student-review-queue';
 
 export type PracticeMode = 'timed' | 'untimed' | 'review' | 'speed_drill'
     | 'weak_topic' | 'year_walk' | 'random_mix' | 'full_mock';
@@ -114,4 +115,5 @@ export interface PracticeResultsPageProps {
         total: number;
         accuracy: number;
     }[];
+    reviewMetrics?: ReviewMetrics;
 }

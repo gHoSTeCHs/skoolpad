@@ -63,7 +63,7 @@ export function QuestionDisplay({ question, onSubmit, onSkip, feedback, readOnly
                         Quick Explanation
                     </p>
                     <div className="text-sm" style={{ fontFamily: 'var(--font-content)' }}>
-                        <ContentRenderer content={feedback.quick_answer_content as string} />
+                        <ContentRenderer content={feedback.quick_answer_content as unknown as string} />
                     </div>
                 </div>
             )}

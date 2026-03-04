@@ -8,6 +8,7 @@ use App\Http\Controllers\Student\ParentInvitationController;
 use App\Http\Controllers\Student\PracticeController;
 use App\Http\Controllers\Student\QuestionController as StudentQuestionController;
 use App\Http\Controllers\Student\QuestionPaperController as StudentQuestionPaperController;
+use App\Http\Controllers\Student\ReviewQueueController;
 use App\Http\Controllers\Student\StudyPlanController;
 use App\Http\Controllers\Student\StudyPreferenceController;
 use App\Http\Controllers\Student\SubjectController as StudentSubjectController;
@@ -79,7 +80,9 @@ Route::middleware(['auth', 'verified', 'onboarded'])->group(function () {
     Route::post('practice/{session}/complete', [PracticeController::class, 'complete'])->name('practice.complete');
     Route::get('practice/{session}/results', [PracticeController::class, 'results'])->name('practice.results');
     Route::get('notes', fn () => Inertia::render('notes/index'))->name('notes.index');
-    Route::get('review-queue', fn () => Inertia::render('review-queue/index'))->name('review-queue.index');
+    Route::get('review-queue', [ReviewQueueController::class, 'index'])->name('review-queue.index');
+    Route::post('review-queue/start', [ReviewQueueController::class, 'start'])->name('review-queue.start');
+    Route::get('api/review-queue/calendar', [ReviewQueueController::class, 'calendar'])->name('api.review-queue.calendar');
     Route::get('knowledge-graph', fn () => Inertia::render('knowledge-graph/index'))->name('knowledge-graph.index');
     Route::get('search', fn () => Inertia::render('search/index'))->name('search.index');
     Route::get('cgpa-simulator', fn () => Inertia::render('cgpa-simulator/index'))->name('cgpa-simulator.index');

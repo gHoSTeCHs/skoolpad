@@ -3,10 +3,13 @@
 namespace App\Http\Controllers\Student;
 
 use App\Http\Controllers\Controller;
+use App\Models\BlockCompletion;
 use App\Models\CanonicalTopic;
 use App\Models\LevelSubject;
+use App\Models\PracticeSession;
 use App\Models\StudentProfile;
 use App\Services\GuidedStudyService;
+use App\Services\SpacedRepetitionService;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
 use Inertia\Response;
@@ -52,6 +55,11 @@ class DashboardController extends Controller
                 ->get(['id', 'title', 'slug'])
             : collect();
 
+        $practiceCount = PracticeSession::where('user_id', $user->id)->whereNotNull('completed_at')->count();
+        $studyHours = round((float) PracticeSession::where('user_id', $user->id)->whereNotNull('completed_at')->sum('total_time_seconds') / 3600, 1);
+        $reviewQueueCount = app(SpacedRepetitionService::class)->getDueCount($user);
+        $continueStudying = $this->getContinueStudying($user);
+
         return Inertia::render('dashboard', [
             'student' => [
                 'name' => $user->name,
@@ -65,14 +73,16 @@ class DashboardController extends Controller
             'subjects' => [],
             'stats' => [
                 'courses_count' => $courses->count(),
-                'practice_sessions' => 0,
-                'study_hours' => 0,
+                'practice_sessions' => $practiceCount,
+                'study_hours' => $studyHours,
                 'streak_days' => 0,
             ],
             'suggested_topics' => $suggestedTopics,
             'guided_study' => null,
             'parent_invitation' => $this->getParentInvitation($profile),
             'level_progression' => null,
+            'review_queue_count' => $reviewQueueCount,
+            'continue_studying' => $continueStudying,
         ]);
     }
 
@@ -103,6 +113,11 @@ class DashboardController extends Controller
             ? app(GuidedStudyService::class)->buildStudyPlan($user, $profile)
             : null;
 
+        $practiceCount = PracticeSession::where('user_id', $user->id)->whereNotNull('completed_at')->count();
+        $studyHours = round((float) PracticeSession::where('user_id', $user->id)->whereNotNull('completed_at')->sum('total_time_seconds') / 3600, 1);
+        $reviewQueueCount = app(SpacedRepetitionService::class)->getDueCount($user);
+        $continueStudying = $this->getContinueStudying($user);
+
         return Inertia::render('dashboard', [
             'student' => $profile ? [
                 'name' => $user->name,
@@ -117,8 +132,8 @@ class DashboardController extends Controller
             'subjects' => $subjects,
             'stats' => [
                 'courses_count' => 0,
-                'practice_sessions' => 0,
-                'study_hours' => 0,
+                'practice_sessions' => $practiceCount,
+                'study_hours' => $studyHours,
                 'streak_days' => 0,
             ],
             'suggested_topics' => [],
@@ -126,7 +141,54 @@ class DashboardController extends Controller
             'study_plan_dismissed' => $profile ? $isDismissedToday : false,
             'parent_invitation' => $profile ? $this->getParentInvitation($profile) : null,
             'level_progression' => $profile ? $this->getLevelProgression($profile) : null,
+            'review_queue_count' => $reviewQueueCount,
+            'continue_studying' => $continueStudying,
         ]);
+    }
+
+    /** @return array{type: string, label: string, url: string}|null */
+    private function getContinueStudying(mixed $user): ?array
+    {
+        $lastSession = PracticeSession::where('user_id', $user->id)
+            ->where('is_resumable', true)
+            ->whereNull('completed_at')
+            ->latest('last_activity_at')
+            ->with('institutionCourse:id,course_code')
+            ->first();
+
+        $lastBlock = BlockCompletion::where('user_id', $user->id)
+            ->latest('completed_at')
+            ->with('contentBlock.canonicalTopic:id,title,slug')
+            ->first();
+
+        $sessionTime = $lastSession?->last_activity_at;
+        $blockTime = $lastBlock?->completed_at;
+
+        if (! $sessionTime && ! $blockTime) {
+            return null;
+        }
+
+        if ($sessionTime && (! $blockTime || $sessionTime->gt($blockTime))) {
+            $answered = $lastSession->practiceAnswers()->count();
+            $courseCode = $lastSession->institutionCourse?->course_code ?? 'Unknown';
+
+            return [
+                'type' => 'practice',
+                'label' => "{$answered}/{$lastSession->question_count} questions in {$courseCode}",
+                'url' => "/practice/{$lastSession->id}",
+            ];
+        }
+
+        $topic = $lastBlock->contentBlock?->canonicalTopic;
+        if (! $topic) {
+            return null;
+        }
+
+        return [
+            'type' => 'topic',
+            'label' => $topic->title,
+            'url' => "/topics/{$topic->slug}",
+        ];
     }
 
     /**

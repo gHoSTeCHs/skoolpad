@@ -8,8 +8,10 @@ use App\Models\PracticeAnswer;
 use App\Models\PracticeSession;
 use App\Models\Question;
 use App\Models\QuestionTopicLink;
+use App\Models\SpacedRepetitionItem;
 use App\Models\StudentCourse;
 use App\Models\StudentProfile;
+use App\Services\PracticeService;
 
 beforeEach(function () {
     $this->profile = StudentProfile::factory()->create();
@@ -422,4 +424,91 @@ it('handles already completed session on complete gracefully', function () {
     $response = $this->post(route('practice.complete', $session));
 
     $response->assertRedirect(route('practice.results', $session));
+});
+
+it('starts single-question session via question_id without course fields', function () {
+    $question = $this->questions->first();
+
+    $response = $this->post(route('practice.start'), [
+        'question_id' => $question->id,
+        'mode' => PracticeMode::Untimed->value,
+    ]);
+
+    $session = PracticeSession::first();
+    $response->assertRedirect(route('practice.show', $session));
+    expect($session->question_ids)->toHaveCount(1);
+    expect($session->question_ids[0])->toBe($question->id);
+    expect($session->institution_course_id)->toBe($this->course->id);
+});
+
+it('selectQuestions returns exact question when question_id provided', function () {
+    $service = app(PracticeService::class);
+    $question = $this->questions->first();
+
+    $result = $service->selectQuestions(['question_id' => $question->id]);
+
+    expect($result)->toHaveCount(1);
+    expect($result->first()->id)->toBe($question->id);
+});
+
+it('completeSession schedules spaced repetition for answered questions', function () {
+    $session = PracticeSession::factory()->create([
+        'user_id' => $this->user->id,
+        'institution_course_id' => $this->course->id,
+        'question_ids' => [$this->questions[0]->id, $this->questions[1]->id, $this->questions[2]->id],
+        'question_count' => 3,
+    ]);
+
+    PracticeAnswer::factory()->create([
+        'practice_session_id' => $session->id,
+        'question_id' => $this->questions[0]->id,
+        'is_correct' => true,
+        'time_spent_seconds' => 10,
+    ]);
+    PracticeAnswer::factory()->create([
+        'practice_session_id' => $session->id,
+        'question_id' => $this->questions[1]->id,
+        'is_correct' => false,
+        'time_spent_seconds' => 10,
+    ]);
+    PracticeAnswer::factory()->skipped()->create([
+        'practice_session_id' => $session->id,
+        'question_id' => $this->questions[2]->id,
+        'time_spent_seconds' => 0,
+    ]);
+
+    $this->post(route('practice.complete', $session));
+
+    expect(SpacedRepetitionItem::where('user_id', $this->user->id)->count())->toBe(2);
+    expect(SpacedRepetitionItem::where('user_id', $this->user->id)->where('question_id', $this->questions[0]->id)->first()->interval_days)->toBe(1);
+    expect(SpacedRepetitionItem::where('user_id', $this->user->id)->where('question_id', $this->questions[1]->id)->first()->repetition_count)->toBe(0);
+});
+
+it('available count respects topic filter combination', function () {
+    $otherTopic = CanonicalTopic::factory()->create();
+    CourseTopicMapping::factory()->create([
+        'institution_course_id' => $this->course->id,
+        'canonical_topic_id' => $otherTopic->id,
+        'sequence_order' => 2,
+    ]);
+
+    $topicAQuestion = Question::factory()->create(['institution_course_id' => $this->course->id, 'is_published' => true]);
+    $topicBQuestion = Question::factory()->create(['institution_course_id' => $this->course->id, 'is_published' => true]);
+
+    QuestionTopicLink::factory()->create(['question_id' => $topicAQuestion->id, 'canonical_topic_id' => $this->topic->id]);
+    QuestionTopicLink::factory()->create(['question_id' => $topicBQuestion->id, 'canonical_topic_id' => $otherTopic->id]);
+
+    $singleTopicResponse = $this->getJson(route('api.practice.available-count', [
+        'institution_course_id' => $this->course->id,
+        'topic_ids' => [$this->topic->id],
+    ]));
+    $singleTopicResponse->assertOk();
+    $singleTopicResponse->assertJson(['count' => 6]);
+
+    $bothTopicsResponse = $this->getJson(route('api.practice.available-count', [
+        'institution_course_id' => $this->course->id,
+        'topic_ids' => [$this->topic->id, $otherTopic->id],
+    ]));
+    $bothTopicsResponse->assertOk();
+    $bothTopicsResponse->assertJson(['count' => 7]);
 });

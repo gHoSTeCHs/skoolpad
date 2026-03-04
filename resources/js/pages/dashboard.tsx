@@ -1,8 +1,9 @@
 import { Head, Link } from '@inertiajs/react';
-import { BookOpen, ShieldCheck } from 'lucide-react';
+import { ArrowRight, BookOpen, PlayCircle, RotateCcw, ShieldCheck } from 'lucide-react';
 import { useState } from 'react';
 import LevelProgressionController from '@/actions/App/Http/Controllers/Student/LevelProgressionController';
 import ParentInvitationController from '@/actions/App/Http/Controllers/Student/ParentInvitationController';
+import ReviewQueueController from '@/actions/App/Http/Controllers/Student/ReviewQueueController';
 import { show as subjectShow } from '@/actions/App/Http/Controllers/Student/SubjectController';
 import { dismiss as studyPlanDismiss } from '@/actions/App/Http/Controllers/Student/StudyPlanController';
 import CourseCard from '@/components/skoolpad/course-card';
@@ -12,7 +13,9 @@ import ParentInvitationBanner from '@/components/skoolpad/parent-invitation-bann
 import StatCard from '@/components/skoolpad/stat-card';
 import StreakWidget from '@/components/skoolpad/streak-widget';
 import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
 import AppLayout from '@/layouts/app-layout';
+import { cn } from '@/lib/utils';
 import { dashboard } from '@/routes';
 import type { BreadcrumbItem } from '@/types';
 import type { StudentType } from '@/types/enums';
@@ -74,6 +77,12 @@ interface Props {
         next_level: string;
         next_level_id: string;
     } | null;
+    review_queue_count?: number;
+    continue_studying?: {
+        type: 'practice' | 'topic';
+        label: string;
+        url: string;
+    } | null;
 }
 
 const breadcrumbs: BreadcrumbItem[] = [
@@ -103,7 +112,7 @@ function getSubtitle(student: Props['student']): string {
     return parts.join(' · ') || "Here's your learning progress";
 }
 
-export default function Dashboard({ student, courses, subjects, stats, suggested_topics, guided_study, study_plan_dismissed, parent_invitation, level_progression }: Props) {
+export default function Dashboard({ student, courses, subjects, stats, suggested_topics, guided_study, study_plan_dismissed, parent_invitation, level_progression, review_queue_count, continue_studying }: Props) {
     const firstName = student?.name.split(' ')[0] ?? 'Student';
     const isTertiary = student?.student_type === 'tertiary';
     const isSecondary = student?.student_type === 'secondary';
@@ -155,17 +164,80 @@ export default function Dashboard({ student, courses, subjects, stats, suggested
                     <StatCard
                         label="Practice"
                         value={String(stats.practice_sessions)}
-                        change="Coming soon"
-                        trend="neutral"
+                        change={stats.practice_sessions === 0 ? 'Start practising' : `${stats.practice_sessions} session${stats.practice_sessions !== 1 ? 's' : ''}`}
+                        trend={stats.practice_sessions > 0 ? 'up' : 'neutral'}
                     />
                     <StatCard
                         label="Hours"
                         value={String(stats.study_hours)}
-                        change="Coming soon"
-                        trend="neutral"
+                        change={stats.study_hours === 0 ? 'Start studying' : `${stats.study_hours}h total`}
+                        trend={stats.study_hours > 0 ? 'up' : 'neutral'}
                     />
                     <StreakWidget count={stats.streak_days} days={streakDays} />
                 </div>
+
+                {(review_queue_count !== undefined || continue_studying) && (
+                    <div className="grid gap-4 sm:grid-cols-2">
+                        {review_queue_count !== undefined && (
+                            <Link
+                                href={ReviewQueueController.index.url()}
+                                className={cn(
+                                    'flex items-center gap-4 rounded-xl border p-4 transition-colors hover:bg-accent/50',
+                                    review_queue_count === 0
+                                        ? 'border-emerald-200 bg-emerald-50/30 dark:border-emerald-800/30 dark:bg-emerald-950/10 reader:border-emerald-800/30 reader:bg-emerald-950/10'
+                                        : review_queue_count <= 10
+                                          ? 'border-amber-200 bg-amber-50/30 dark:border-amber-800/30 dark:bg-amber-950/10 reader:border-amber-800/30 reader:bg-amber-950/10'
+                                          : 'border-red-200 bg-red-50/30 dark:border-red-800/30 dark:bg-red-950/10 reader:border-red-800/30 reader:bg-red-950/10',
+                                )}
+                            >
+                                <div className={cn(
+                                    'flex size-10 shrink-0 items-center justify-center rounded-lg',
+                                    review_queue_count === 0
+                                        ? 'bg-emerald-100 dark:bg-emerald-900/40 reader:bg-emerald-900/40'
+                                        : review_queue_count <= 10
+                                          ? 'bg-amber-100 dark:bg-amber-900/40 reader:bg-amber-900/40'
+                                          : 'bg-red-100 dark:bg-red-900/40 reader:bg-red-900/40',
+                                )}>
+                                    <RotateCcw className={cn(
+                                        'size-5',
+                                        review_queue_count === 0
+                                            ? 'text-emerald-600 dark:text-emerald-400 reader:text-emerald-400'
+                                            : review_queue_count <= 10
+                                              ? 'text-amber-600 dark:text-amber-400 reader:text-amber-400'
+                                              : 'text-red-600 dark:text-red-400 reader:text-red-400',
+                                    )} />
+                                </div>
+                                <div className="min-w-0 flex-1">
+                                    <p className="text-sm font-semibold">Review Queue</p>
+                                    <p className="text-xs text-muted-foreground" style={{ fontFamily: 'var(--font-body)' }}>
+                                        {review_queue_count === 0 ? 'All caught up!' : `${review_queue_count} item${review_queue_count !== 1 ? 's' : ''} due for review`}
+                                    </p>
+                                </div>
+                                <ArrowRight className="size-4 shrink-0 text-muted-foreground" />
+                            </Link>
+                        )}
+
+                        {continue_studying && (
+                            <Link
+                                href={continue_studying.url}
+                                className="flex items-center gap-4 rounded-xl border bg-card p-4 transition-colors hover:bg-accent/50"
+                            >
+                                <div className="flex size-10 shrink-0 items-center justify-center rounded-lg bg-primary/10">
+                                    <PlayCircle className="size-5 text-primary" />
+                                </div>
+                                <div className="min-w-0 flex-1">
+                                    <p className="text-sm font-semibold">
+                                        {continue_studying.type === 'practice' ? 'Continue Practice' : 'Continue Reading'}
+                                    </p>
+                                    <p className="truncate text-xs text-muted-foreground" style={{ fontFamily: 'var(--font-body)' }}>
+                                        {continue_studying.label}
+                                    </p>
+                                </div>
+                                <ArrowRight className="size-4 shrink-0 text-muted-foreground" />
+                            </Link>
+                        )}
+                    </div>
+                )}
 
                 {isTertiary && courses.length > 0 && (
                     <div>

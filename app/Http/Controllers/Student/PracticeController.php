@@ -7,10 +7,12 @@ use App\Enums\AnswerDepthLevel;
 use App\Enums\PracticeMode;
 use App\Enums\QuestionDifficulty;
 use App\Enums\QuestionType;
+use App\Enums\SpacedRepetitionStatus;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Student\StartPracticeRequest;
 use App\Models\PracticeSession;
 use App\Models\Question;
+use App\Models\SpacedRepetitionItem;
 use App\Services\PracticeService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
@@ -80,24 +82,39 @@ class PracticeController extends Controller
             ->where('is_archived', false)
             ->pluck('institution_course_id');
 
-        if (! $enrolledCourseIds->contains($validated['institution_course_id'])) {
-            abort(403, 'You are not enrolled in this course.');
-        }
-
-        $config = [
-            'institution_course_id' => $validated['institution_course_id'],
-            'topic_ids' => $validated['topic_ids'],
-            'question_types' => $validated['question_types'] ?? [],
-            'difficulty' => $validated['difficulty'] ?? 'all',
-            'question_count' => $validated['question_count'],
-            'mode' => $validated['mode'],
-            'time_limit_seconds' => $validated['time_limit_seconds'] ?? null,
-            'exclude_user_id' => $user->id,
-        ];
-
         if (! empty($validated['question_id'])) {
-            $config['question_id'] = $validated['question_id'];
-            $config['question_count'] = 1;
+            $question = Question::findOrFail($validated['question_id']);
+
+            if (! $enrolledCourseIds->contains($question->institution_course_id)) {
+                abort(403, 'You are not enrolled in this course.');
+            }
+
+            $config = [
+                'institution_course_id' => $question->institution_course_id,
+                'question_id' => $validated['question_id'],
+                'question_count' => 1,
+                'mode' => $validated['mode'] ?? PracticeMode::Untimed->value,
+                'topic_ids' => [],
+                'question_types' => [],
+                'difficulty' => 'all',
+                'time_limit_seconds' => null,
+                'exclude_user_id' => $user->id,
+            ];
+        } else {
+            if (! $enrolledCourseIds->contains($validated['institution_course_id'])) {
+                abort(403, 'You are not enrolled in this course.');
+            }
+
+            $config = [
+                'institution_course_id' => $validated['institution_course_id'],
+                'topic_ids' => $validated['topic_ids'],
+                'question_types' => $validated['question_types'] ?? [],
+                'difficulty' => $validated['difficulty'] ?? 'all',
+                'question_count' => $validated['question_count'],
+                'mode' => $validated['mode'],
+                'time_limit_seconds' => $validated['time_limit_seconds'] ?? null,
+                'exclude_user_id' => $user->id,
+            ];
         }
 
         $session = $this->practiceService->createSession($user, $config);
@@ -322,6 +339,21 @@ class PracticeController extends Controller
             ])
             ->values();
 
+        $reviewMetrics = null;
+        if ($session->mode === PracticeMode::Review) {
+            $questionIds = $session->question_ids ?? [];
+            $items = SpacedRepetitionItem::query()
+                ->where('user_id', $user->id)
+                ->whereIn('question_id', $questionIds)
+                ->get();
+
+            $reviewMetrics = [
+                'progressed' => $items->filter(fn ($i) => $i->interval_days > 1 && $i->status === SpacedRepetitionStatus::Active)->count(),
+                'reset' => $items->filter(fn ($i) => $i->interval_days <= 1 && $i->status === SpacedRepetitionStatus::Active)->count(),
+                'graduated' => $items->filter(fn ($i) => $i->status === SpacedRepetitionStatus::Graduated)->count(),
+            ];
+        }
+
         return Inertia::render('practice/results', [
             'session' => [
                 'id' => $session->id,
@@ -340,6 +372,7 @@ class PracticeController extends Controller
             ],
             'perQuestion' => $perQuestion,
             'perTopic' => $perTopic,
+            'reviewMetrics' => $reviewMetrics,
         ]);
     }
 

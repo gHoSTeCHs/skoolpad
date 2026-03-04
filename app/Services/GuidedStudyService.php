@@ -12,6 +12,7 @@ use App\Models\TopicCompletion;
 use App\Models\User;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Collection;
+use Illuminate\Support\Facades\DB;
 
 class GuidedStudyService
 {
@@ -47,13 +48,13 @@ class GuidedStudyService
         $minutesBudget = $dailyGoal;
         $completedMinutes = 0;
 
-        $minutesBudget = $this->addSpacedRepetitionItems($items, $minutesBudget);
+        $minutesBudget = $this->addSpacedRepetitionItems($items, $minutesBudget, $user);
 
         $minutesBudget = $this->addSchemeOfWorkItems(
             $items, $minutesBudget, $user, $levelSubjectIds, $termWeek, $completedMinutes
         );
 
-        $minutesBudget = $this->addWeakTopics($items, $minutesBudget);
+        $minutesBudget = $this->addWeakTopics($items, $minutesBudget, $user);
 
         $this->addNextUnreadBlocks($items, $minutesBudget, $user, $levelSubjectIds);
 
@@ -145,11 +146,34 @@ class GuidedStudyService
             ->get();
     }
 
-    /**
-     * Tier 1 — Spaced repetition due today (STUB for Phase 1.9)
-     */
-    private function addSpacedRepetitionItems(Collection $items, int $minutesBudget): int
+    private function addSpacedRepetitionItems(Collection $items, int $minutesBudget, User $user): int
     {
+        if ($minutesBudget <= 0) {
+            return 0;
+        }
+
+        $dueItems = app(SpacedRepetitionService::class)->getDueItems($user);
+
+        foreach ($dueItems as $item) {
+            if ($minutesBudget <= 0) {
+                break;
+            }
+
+            $items->push([
+                'type' => 'review',
+                'priority_tier' => 1,
+                'subject_name' => $item->question?->institutionCourse?->course_code ?? 'Review',
+                'level_subject_id' => '',
+                'topic_label' => 'Spaced repetition review',
+                'canonical_topic_id' => null,
+                'content_block_id' => null,
+                'estimated_minutes' => self::SPACED_REP_MINUTES,
+                'is_completed' => false,
+            ]);
+
+            $minutesBudget -= self::SPACED_REP_MINUTES;
+        }
+
         return $minutesBudget;
     }
 
@@ -229,11 +253,51 @@ class GuidedStudyService
         return $minutesBudget;
     }
 
-    /**
-     * Tier 3 — Weak topics requiring extra practice (STUB for Phase 1.9)
-     */
-    private function addWeakTopics(Collection $items, int $minutesBudget): int
+    private function addWeakTopics(Collection $items, int $minutesBudget, User $user): int
     {
+        if ($minutesBudget <= 0) {
+            return 0;
+        }
+
+        $weakTopics = DB::table('practice_answers')
+            ->join('practice_sessions', 'practice_answers.practice_session_id', '=', 'practice_sessions.id')
+            ->join('question_topic_links', 'practice_answers.question_id', '=', 'question_topic_links.question_id')
+            ->join('canonical_topics', 'question_topic_links.canonical_topic_id', '=', 'canonical_topics.id')
+            ->where('practice_sessions.user_id', $user->id)
+            ->whereNotNull('practice_answers.is_correct')
+            ->groupBy('canonical_topics.id', 'canonical_topics.title')
+            ->havingRaw('COUNT(*) >= 5')
+            ->havingRaw('AVG(CASE WHEN practice_answers.is_correct THEN 1.0 ELSE 0.0 END) < 0.6')
+            ->select([
+                'canonical_topics.id as topic_id',
+                'canonical_topics.title as topic_title',
+                DB::raw('COUNT(*) as attempts'),
+                DB::raw('AVG(CASE WHEN practice_answers.is_correct THEN 1.0 ELSE 0.0 END) as accuracy'),
+            ])
+            ->orderBy('accuracy')
+            ->limit(5)
+            ->get();
+
+        foreach ($weakTopics as $topic) {
+            if ($minutesBudget <= 0) {
+                break;
+            }
+
+            $items->push([
+                'type' => 'practice',
+                'priority_tier' => 3,
+                'subject_name' => 'Weak Topic',
+                'level_subject_id' => '',
+                'topic_label' => $topic->topic_title,
+                'canonical_topic_id' => $topic->topic_id,
+                'content_block_id' => null,
+                'estimated_minutes' => self::WEAK_TOPIC_MINUTES,
+                'is_completed' => false,
+            ]);
+
+            $minutesBudget -= self::WEAK_TOPIC_MINUTES;
+        }
+
         return $minutesBudget;
     }
 

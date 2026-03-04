@@ -1,6 +1,6 @@
 import type { PaginatedData } from '@/types/models';
 import type { AnswerDepthLevel, QuestionDifficulty, QuestionSemester, QuestionType } from '@/types/questions';
-import type { QuestionContextData } from '@/types/student-questions';
+import type { StudentContextData } from '@/types/student-questions';
 
 export interface CourseWithProgress {
     id: string;
@@ -78,7 +78,7 @@ export interface CourseQuestion {
     topic_links: CourseQuestionTopicLink[];
     question_block_links: CourseQuestionBlockLink[];
     answers: CourseQuestionAnswer[];
-    contexts: QuestionContextData[];
+    contexts: StudentContextData[];
     children: CourseQuestion[];
 }
 

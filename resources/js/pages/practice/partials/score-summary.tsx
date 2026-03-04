@@ -25,8 +25,8 @@ function formatDuration(seconds: number): string {
 
 export function ScoreSummary({ session }: ScoreSummaryProps) {
     const score = session.score_percentage ?? 0;
-    const scoreColor = score >= 70 ? 'text-emerald-600 dark:text-emerald-400 reader:text-emerald-400'
-        : score >= 50 ? 'text-yellow-600 dark:text-yellow-400 reader:text-yellow-400'
+    const scoreColor = score >= 80 ? 'text-emerald-600 dark:text-emerald-400 reader:text-emerald-400'
+        : score >= 60 ? 'text-yellow-600 dark:text-yellow-400 reader:text-yellow-400'
         : 'text-destructive';
 
     return (
