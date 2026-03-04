@@ -1,6 +1,10 @@
-import type { McqConfig, QuestionType, ResponseConfig } from '@/types/questions';
+import type { AssertionReasonConfig, McqConfig, MultiSelectMcqConfig, NumericEntryConfig, QuestionType, ResponseConfig, TrueFalseConfig } from '@/types/questions';
 
+import { AssertionReasonInput } from './assertion-reason-input';
 import { McqInput } from './mcq-input';
+import { MultiSelectInput } from './multi-select-input';
+import { NumericEntryInput } from './numeric-entry-input';
+import { TrueFalseInput } from './true-false-input';
 
 interface QuestionAnswerInputProps {
     questionType: QuestionType;
@@ -23,6 +27,54 @@ export function QuestionAnswerInput({ questionType, responseConfig, onSubmit, fe
                 } : null}
                 readOnly={readOnly}
                 existingAnswer={existingAnswer as { selected_label: string } | null}
+            />
+        );
+    }
+
+    if (questionType === 'multi_select_mcq' && responseConfig) {
+        return (
+            <MultiSelectInput
+                responseConfig={responseConfig as MultiSelectMcqConfig}
+                onSubmit={onSubmit}
+                feedback={feedback}
+                readOnly={readOnly}
+                existingAnswer={existingAnswer}
+            />
+        );
+    }
+
+    if (questionType === 'true_false' && responseConfig) {
+        return (
+            <TrueFalseInput
+                responseConfig={responseConfig as TrueFalseConfig}
+                onSubmit={onSubmit}
+                feedback={feedback}
+                readOnly={readOnly}
+                existingAnswer={existingAnswer}
+            />
+        );
+    }
+
+    if (questionType === 'numeric_entry' && responseConfig) {
+        return (
+            <NumericEntryInput
+                responseConfig={responseConfig as NumericEntryConfig}
+                onSubmit={onSubmit}
+                feedback={feedback}
+                readOnly={readOnly}
+                existingAnswer={existingAnswer}
+            />
+        );
+    }
+
+    if (questionType === 'assertion_reason' && responseConfig) {
+        return (
+            <AssertionReasonInput
+                responseConfig={responseConfig as AssertionReasonConfig}
+                onSubmit={onSubmit}
+                feedback={feedback}
+                readOnly={readOnly}
+                existingAnswer={existingAnswer}
             />
         );
     }
