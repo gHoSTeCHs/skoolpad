@@ -1,5 +1,6 @@
 import type {
     AssertionReasonConfig,
+    CalculationConfig,
     ClozeConfig,
     FillBlankConfig,
     MatchingConfig,
@@ -13,13 +14,17 @@ import type {
 } from '@/types/questions';
 
 import { AssertionReasonInput } from './assertion-reason-input';
+import { CalculationInput } from './calculation-input';
 import { ClozeInput } from './cloze-input';
+import { EssayInput } from './essay-input';
 import { FillBlankInput } from './fill-blank-input';
 import { MatchingInput } from './matching-input';
 import { McqInput } from './mcq-input';
 import { MultiSelectInput } from './multi-select-input';
 import { NumericEntryInput } from './numeric-entry-input';
 import { OrderingInput } from './ordering-input';
+import { ShortAnswerInput } from './short-answer-input';
+import { TheoryInput } from './theory-input';
 import { TrueFalseInput } from './true-false-input';
 
 interface QuestionAnswerInputProps {
@@ -175,6 +180,47 @@ export function QuestionAnswerInput({ questionType, responseConfig, onSubmit, fe
                     }
                     readOnly={readOnly}
                     existingAnswer={existingAnswer as { gaps: Record<string, number> } | null}
+                />
+            );
+
+        case 'short_answer':
+            return (
+                <ShortAnswerInput
+                    onSubmit={onSubmit as (data: { answer: string }) => void}
+                    feedback={feedback ? { isCorrect: feedback.isCorrect, correctAnswer: null } : null}
+                    readOnly={readOnly}
+                    existingAnswer={existingAnswer as { answer: string } | null}
+                />
+            );
+
+        case 'theory':
+            return (
+                <TheoryInput
+                    onSubmit={onSubmit as (data: { answer: string }) => void}
+                    feedback={feedback ? { isCorrect: feedback.isCorrect, correctAnswer: null } : null}
+                    readOnly={readOnly}
+                    existingAnswer={existingAnswer as { answer: string } | null}
+                />
+            );
+
+        case 'essay':
+            return (
+                <EssayInput
+                    onSubmit={onSubmit as (data: { answer: string }) => void}
+                    feedback={feedback ? { isCorrect: feedback.isCorrect, correctAnswer: null } : null}
+                    readOnly={readOnly}
+                    existingAnswer={existingAnswer as { answer: string } | null}
+                />
+            );
+
+        case 'calculation':
+            return (
+                <CalculationInput
+                    responseConfig={responseConfig as CalculationConfig | null}
+                    onSubmit={onSubmit as (data: { answer: string; unit?: string; working?: string }) => void}
+                    feedback={feedback ? { isCorrect: feedback.isCorrect, correctAnswer: null } : null}
+                    readOnly={readOnly}
+                    existingAnswer={existingAnswer as { answer: string; unit?: string; working?: string } | null}
                 />
             );
 
