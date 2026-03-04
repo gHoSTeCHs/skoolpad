@@ -5,16 +5,15 @@ import type { AssertionReasonConfig } from '@/types/questions';
 
 interface AssertionReasonInputProps {
     responseConfig: AssertionReasonConfig;
-    onSubmit: (data: Record<string, unknown>) => void;
-    feedback?: { isCorrect: boolean | null; correctAnswer: Record<string, unknown> | null } | null;
+    onSubmit: (data: { selected: string }) => void;
+    feedback?: { isCorrect: boolean | null; correctAnswer: { correct_label?: string } | null } | null;
     readOnly?: boolean;
-    existingAnswer?: Record<string, unknown> | null;
+    existingAnswer?: { selected: string } | null;
 }
 
 export function AssertionReasonInput({ responseConfig, onSubmit, feedback, readOnly, existingAnswer }: AssertionReasonInputProps) {
     const options = responseConfig?.options ?? [];
-    const existingSelected = (existingAnswer?.selected as string | undefined) ?? null;
-    const [selectedLabel, setSelectedLabel] = useState<string | null>(existingSelected);
+    const [selectedLabel, setSelectedLabel] = useState<string | null>(existingAnswer?.selected ?? null);
     const isSubmitted = !!feedback || !!readOnly;
 
     function handleSelect(label: string) {
@@ -28,7 +27,7 @@ export function AssertionReasonInput({ responseConfig, onSubmit, feedback, readO
     }
 
     function getEffectiveSelected(): string | null {
-        if (existingAnswer?.selected !== undefined) return existingAnswer.selected as string;
+        if (existingAnswer?.selected !== undefined) return existingAnswer.selected;
         return selectedLabel;
     }
 
@@ -41,7 +40,7 @@ export function AssertionReasonInput({ responseConfig, onSubmit, feedback, readO
 
         const effectiveSelected = getEffectiveSelected();
         const studentSelected = effectiveSelected === option.label;
-        const correctLabel = (feedback?.correctAnswer as { correct_label?: string } | null)?.correct_label;
+        const correctLabel = feedback?.correctAnswer?.correct_label;
         const isCorrectOption = correctLabel ? option.label === correctLabel : option.is_correct;
 
         if (isCorrectOption) {
@@ -60,7 +59,7 @@ export function AssertionReasonInput({ responseConfig, onSubmit, feedback, readO
 
         const effectiveSelected = getEffectiveSelected();
         const studentSelected = effectiveSelected === option.label;
-        const correctLabel = (feedback?.correctAnswer as { correct_label?: string } | null)?.correct_label;
+        const correctLabel = feedback?.correctAnswer?.correct_label;
         const isCorrectOption = correctLabel ? option.label === correctLabel : option.is_correct;
 
         if (isCorrectOption) return 'bg-emerald-500 text-white';

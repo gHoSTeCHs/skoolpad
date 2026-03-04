@@ -16,74 +16,74 @@ interface QuestionAnswerInputProps {
 }
 
 export function QuestionAnswerInput({ questionType, responseConfig, onSubmit, feedback, readOnly, existingAnswer }: QuestionAnswerInputProps) {
-    if (questionType === 'mcq' && responseConfig) {
-        return (
-            <McqInput
-                responseConfig={responseConfig as McqConfig}
-                onSubmit={onSubmit}
-                feedback={feedback ? {
-                    isCorrect: !!feedback.isCorrect,
-                    correctLabel: (feedback.correctAnswer as { correct_label?: string })?.correct_label ?? '',
-                } : null}
-                readOnly={readOnly}
-                existingAnswer={existingAnswer as { selected_label: string } | null}
-            />
-        );
-    }
+    switch (questionType) {
+        case 'mcq':
+            if (!responseConfig) return null;
+            return (
+                <McqInput
+                    responseConfig={responseConfig as McqConfig}
+                    onSubmit={onSubmit as (data: { selected_label: string }) => void}
+                    feedback={feedback ? { isCorrect: !!feedback.isCorrect, correctLabel: (feedback.correctAnswer as { correct_label?: string })?.correct_label ?? '' } : null}
+                    readOnly={readOnly}
+                    existingAnswer={existingAnswer as { selected_label: string } | null}
+                />
+            );
 
-    if (questionType === 'multi_select_mcq' && responseConfig) {
-        return (
-            <MultiSelectInput
-                responseConfig={responseConfig as MultiSelectMcqConfig}
-                onSubmit={onSubmit}
-                feedback={feedback}
-                readOnly={readOnly}
-                existingAnswer={existingAnswer}
-            />
-        );
-    }
+        case 'multi_select_mcq':
+            if (!responseConfig) return null;
+            return (
+                <MultiSelectInput
+                    responseConfig={responseConfig as MultiSelectMcqConfig}
+                    onSubmit={onSubmit as (data: { selected_labels: string[] }) => void}
+                    feedback={feedback ? { isCorrect: feedback.isCorrect, correctAnswer: { correct_labels: (feedback.correctAnswer as { correct_labels?: string[] })?.correct_labels } } : null}
+                    readOnly={readOnly}
+                    existingAnswer={existingAnswer as { selected_labels: string[] } | null}
+                />
+            );
 
-    if (questionType === 'true_false' && responseConfig) {
-        return (
-            <TrueFalseInput
-                responseConfig={responseConfig as TrueFalseConfig}
-                onSubmit={onSubmit}
-                feedback={feedback}
-                readOnly={readOnly}
-                existingAnswer={existingAnswer}
-            />
-        );
-    }
+        case 'true_false':
+            if (!responseConfig) return null;
+            return (
+                <TrueFalseInput
+                    responseConfig={responseConfig as TrueFalseConfig}
+                    onSubmit={onSubmit as (data: { answer: boolean; justification?: string }) => void}
+                    feedback={feedback ? { isCorrect: feedback.isCorrect, correctAnswer: { correct_answer: (feedback.correctAnswer as { correct_answer?: boolean })?.correct_answer } } : null}
+                    readOnly={readOnly}
+                    existingAnswer={existingAnswer as { answer: boolean; justification?: string } | null}
+                />
+            );
 
-    if (questionType === 'numeric_entry' && responseConfig) {
-        return (
-            <NumericEntryInput
-                responseConfig={responseConfig as NumericEntryConfig}
-                onSubmit={onSubmit}
-                feedback={feedback}
-                readOnly={readOnly}
-                existingAnswer={existingAnswer}
-            />
-        );
-    }
+        case 'numeric_entry':
+            if (!responseConfig) return null;
+            return (
+                <NumericEntryInput
+                    responseConfig={responseConfig as NumericEntryConfig}
+                    onSubmit={onSubmit as (data: { value: number; unit?: string }) => void}
+                    feedback={feedback ? { isCorrect: feedback.isCorrect, correctAnswer: { answer: (feedback.correctAnswer as { answer?: number })?.answer, tolerance: (feedback.correctAnswer as { tolerance?: number })?.tolerance, unit: (feedback.correctAnswer as { unit?: string | null })?.unit } } : null}
+                    readOnly={readOnly}
+                    existingAnswer={existingAnswer as { value: number; unit?: string } | null}
+                />
+            );
 
-    if (questionType === 'assertion_reason' && responseConfig) {
-        return (
-            <AssertionReasonInput
-                responseConfig={responseConfig as AssertionReasonConfig}
-                onSubmit={onSubmit}
-                feedback={feedback}
-                readOnly={readOnly}
-                existingAnswer={existingAnswer}
-            />
-        );
-    }
+        case 'assertion_reason':
+            if (!responseConfig) return null;
+            return (
+                <AssertionReasonInput
+                    responseConfig={responseConfig as AssertionReasonConfig}
+                    onSubmit={onSubmit as (data: { selected: string }) => void}
+                    feedback={feedback ? { isCorrect: feedback.isCorrect, correctAnswer: { correct_label: (feedback.correctAnswer as { correct_label?: string })?.correct_label } } : null}
+                    readOnly={readOnly}
+                    existingAnswer={existingAnswer as { selected: string } | null}
+                />
+            );
 
-    return (
-        <div className="rounded-lg border border-dashed border-border p-6 text-center">
-            <p className="text-sm text-muted-foreground" style={{ fontFamily: 'var(--font-body)' }}>
-                This question type ({questionType}) is not yet supported for practice.
-            </p>
-        </div>
-    );
+        default:
+            return (
+                <div className="rounded-lg border border-dashed border-border p-6 text-center">
+                    <p className="text-sm text-muted-foreground" style={{ fontFamily: 'var(--font-body)' }}>
+                        This question type ({questionType}) is not yet supported for practice.
+                    </p>
+                </div>
+            );
+    }
 }

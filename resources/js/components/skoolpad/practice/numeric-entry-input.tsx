@@ -5,27 +5,26 @@ import type { NumericEntryConfig } from '@/types/questions';
 
 interface NumericEntryInputProps {
     responseConfig: NumericEntryConfig;
-    onSubmit: (data: Record<string, unknown>) => void;
-    feedback?: { isCorrect: boolean | null; correctAnswer: Record<string, unknown> | null } | null;
+    onSubmit: (data: { value: number; unit?: string }) => void;
+    feedback?: { isCorrect: boolean | null; correctAnswer: { answer?: number; tolerance?: number; unit?: string | null } | null } | null;
     readOnly?: boolean;
-    existingAnswer?: Record<string, unknown> | null;
+    existingAnswer?: { value: number; unit?: string } | null;
 }
 
 export function NumericEntryInput({ responseConfig, onSubmit, feedback, readOnly, existingAnswer }: NumericEntryInputProps) {
     const unit = responseConfig?.unit ?? null;
-    const existingValue = existingAnswer?.value as number | undefined;
-    const [value, setValue] = useState<string>(existingValue !== undefined ? String(existingValue) : '');
+    const [value, setValue] = useState<string>(existingAnswer?.value !== undefined ? String(existingAnswer.value) : '');
     const isSubmitted = !!feedback || !!readOnly;
 
     function handleSubmit() {
         if (value.trim() === '' || isSubmitted) return;
-        const data: Record<string, unknown> = { value: Number(value) };
+        const data: { value: number; unit?: string } = { value: Number(value) };
         if (unit) data.unit = unit;
         onSubmit(data);
     }
 
-    const correctAnswer = feedback?.correctAnswer as { answer?: number; tolerance?: number; unit?: string | null } | null;
-    const hasCorrectAnswer = correctAnswer !== null && correctAnswer !== undefined && correctAnswer.answer !== undefined;
+    const correctAnswer = feedback?.correctAnswer ?? null;
+    const hasCorrectAnswer = correctAnswer !== null && correctAnswer.answer !== undefined;
 
     function getInputStyle() {
         if (!feedback) return 'border-border focus:border-primary focus:ring-primary/20';

@@ -5,17 +5,19 @@ import type { MultiSelectMcqConfig } from '@/types/questions';
 
 interface MultiSelectInputProps {
     responseConfig: MultiSelectMcqConfig;
-    onSubmit: (data: Record<string, unknown>) => void;
-    feedback?: { isCorrect: boolean | null; correctAnswer: Record<string, unknown> | null } | null;
+    onSubmit: (data: { selected_labels: string[] }) => void;
+    feedback?: { isCorrect: boolean | null; correctAnswer: { correct_labels?: string[] } | null } | null;
     readOnly?: boolean;
-    existingAnswer?: Record<string, unknown> | null;
+    existingAnswer?: { selected_labels: string[] } | null;
 }
 
 export function MultiSelectInput({ responseConfig, onSubmit, feedback, readOnly, existingAnswer }: MultiSelectInputProps) {
     const options = responseConfig?.options ?? [];
-    const existingSelected = (existingAnswer?.selected_labels as string[] | undefined) ?? [];
+    const existingSelected = existingAnswer?.selected_labels ?? [];
     const [selectedLabels, setSelectedLabels] = useState<string[]>(existingSelected);
     const isSubmitted = !!feedback || !!readOnly;
+
+    const correctLabels = feedback?.correctAnswer?.correct_labels ?? [];
 
     function handleToggle(label: string) {
         if (isSubmitted) return;
@@ -30,7 +32,7 @@ export function MultiSelectInput({ responseConfig, onSubmit, feedback, readOnly,
     }
 
     function getEffectiveSelected(): string[] {
-        if (existingAnswer?.selected_labels) return existingAnswer.selected_labels as string[];
+        if (existingAnswer?.selected_labels) return existingAnswer.selected_labels;
         return selectedLabels;
     }
 
@@ -43,11 +45,8 @@ export function MultiSelectInput({ responseConfig, onSubmit, feedback, readOnly,
 
         const effectiveSelected = getEffectiveSelected();
         const studentSelected = effectiveSelected.includes(option.label);
-        const isCorrectOption = option.is_correct;
-
-        const correctLabels = (feedback?.correctAnswer as { correct_labels?: string[] } | null)?.correct_labels ?? [];
         const isCorrectByBackend = correctLabels.includes(option.label);
-        const resolvedCorrect = feedback ? isCorrectByBackend : isCorrectOption;
+        const resolvedCorrect = feedback ? isCorrectByBackend : option.is_correct;
 
         if (resolvedCorrect && studentSelected) {
             return 'border-emerald-500 bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 reader:text-emerald-400';
@@ -68,7 +67,6 @@ export function MultiSelectInput({ responseConfig, onSubmit, feedback, readOnly,
 
         const effectiveSelected = getEffectiveSelected();
         const studentSelected = effectiveSelected.includes(option.label);
-        const correctLabels = (feedback?.correctAnswer as { correct_labels?: string[] } | null)?.correct_labels ?? [];
         const isCorrectByBackend = correctLabels.includes(option.label);
         const resolvedCorrect = feedback ? isCorrectByBackend : option.is_correct;
 
@@ -84,7 +82,6 @@ export function MultiSelectInput({ responseConfig, onSubmit, feedback, readOnly,
 
         const effectiveSelected = getEffectiveSelected();
         const studentSelected = effectiveSelected.includes(option.label);
-        const correctLabels = (feedback?.correctAnswer as { correct_labels?: string[] } | null)?.correct_labels ?? [];
         const isCorrectByBackend = correctLabels.includes(option.label);
         const resolvedCorrect = feedback ? isCorrectByBackend : option.is_correct;
 
@@ -99,7 +96,7 @@ export function MultiSelectInput({ responseConfig, onSubmit, feedback, readOnly,
     return (
         <div className="space-y-3">
             <p className="text-xs text-muted-foreground" style={{ fontFamily: 'var(--font-body)' }}>
-                Select all correct answers
+                Select all that apply
             </p>
             <div className="space-y-2">
                 {options.map((option) => (

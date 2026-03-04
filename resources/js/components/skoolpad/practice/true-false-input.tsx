@@ -1,3 +1,4 @@
+import { Check, X } from 'lucide-react';
 import { useState } from 'react';
 
 import { cn } from '@/lib/utils';
@@ -5,17 +6,16 @@ import type { TrueFalseConfig } from '@/types/questions';
 
 interface TrueFalseInputProps {
     responseConfig: TrueFalseConfig;
-    onSubmit: (data: Record<string, unknown>) => void;
-    feedback?: { isCorrect: boolean | null; correctAnswer: Record<string, unknown> | null } | null;
+    onSubmit: (data: { answer: boolean; justification?: string }) => void;
+    feedback?: { isCorrect: boolean | null; correctAnswer: { correct_answer?: boolean } | null } | null;
     readOnly?: boolean;
-    existingAnswer?: Record<string, unknown> | null;
+    existingAnswer?: { answer: boolean; justification?: string } | null;
 }
 
 export function TrueFalseInput({ responseConfig, onSubmit, feedback, readOnly, existingAnswer }: TrueFalseInputProps) {
     const requiresJustification = responseConfig?.requires_justification ?? false;
-    const existingAnswerBool = existingAnswer?.answer as boolean | undefined;
-    const [selected, setSelected] = useState<boolean | null>(existingAnswerBool ?? null);
-    const [justification, setJustification] = useState<string>((existingAnswer?.justification as string | undefined) ?? '');
+    const [selected, setSelected] = useState<boolean | null>(existingAnswer?.answer ?? null);
+    const [justification, setJustification] = useState<string>(existingAnswer?.justification ?? '');
     const isSubmitted = !!feedback || !!readOnly;
 
     function handleSelect(value: boolean) {
@@ -25,7 +25,7 @@ export function TrueFalseInput({ responseConfig, onSubmit, feedback, readOnly, e
 
     function handleSubmit() {
         if (selected === null || isSubmitted) return;
-        const data: Record<string, unknown> = { answer: selected };
+        const data: { answer: boolean; justification?: string } = { answer: selected };
         if (requiresJustification && justification.trim()) {
             data.justification = justification.trim();
         }
@@ -34,7 +34,7 @@ export function TrueFalseInput({ responseConfig, onSubmit, feedback, readOnly, e
 
     function getEffectiveSelected(): boolean | null {
         if (existingAnswer !== undefined && existingAnswer !== null && 'answer' in existingAnswer) {
-            return existingAnswer.answer as boolean;
+            return existingAnswer.answer;
         }
         return selected;
     }
@@ -49,7 +49,7 @@ export function TrueFalseInput({ responseConfig, onSubmit, feedback, readOnly, e
                 : 'border-border hover:border-primary/40 hover:bg-accent/50';
         }
 
-        const correctAnswer = (feedback?.correctAnswer as { correct_answer?: boolean } | null)?.correct_answer;
+        const correctAnswer = feedback?.correctAnswer?.correct_answer;
         const isCorrectOption = correctAnswer === value;
 
         if (isChosen && isCorrectOption) {
@@ -72,7 +72,7 @@ export function TrueFalseInput({ responseConfig, onSubmit, feedback, readOnly, e
             return isChosen ? 'text-primary' : 'text-muted-foreground';
         }
 
-        const correctAnswer = (feedback?.correctAnswer as { correct_answer?: boolean } | null)?.correct_answer;
+        const correctAnswer = feedback?.correctAnswer?.correct_answer;
         const isCorrectOption = correctAnswer === value;
 
         if (isChosen && isCorrectOption) return 'text-emerald-600 dark:text-emerald-400';
@@ -99,8 +99,8 @@ export function TrueFalseInput({ responseConfig, onSubmit, feedback, readOnly, e
                             !isSubmitted && 'cursor-pointer',
                         )}
                     >
-                        <span className={cn('text-2xl', getIconStyle(value))}>
-                            {value ? '✓' : '✗'}
+                        <span className={cn('flex items-center justify-center', getIconStyle(value))}>
+                            {value ? <Check className="h-6 w-6" /> : <X className="h-6 w-6" />}
                         </span>
                         <span className="text-sm font-semibold tracking-wide" style={{ fontFamily: 'var(--font-body)' }}>
                             {value ? 'True' : 'False'}
@@ -112,7 +112,7 @@ export function TrueFalseInput({ responseConfig, onSubmit, feedback, readOnly, e
             {requiresJustification && effectiveSelected !== null && (
                 <div className="space-y-1.5">
                     <label className="text-xs font-medium text-muted-foreground" style={{ fontFamily: 'var(--font-body)' }}>
-                        Justification (optional)
+                        Justification
                     </label>
                     <textarea
                         value={justification}
