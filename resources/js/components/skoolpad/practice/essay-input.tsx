@@ -4,10 +4,10 @@ import { cn } from '@/lib/utils';
 
 interface EssayInputProps {
     responseConfig?: null;
-    onSubmit: (data: { answer: string }) => void;
+    onSubmit: (data: { text: string }) => void;
     feedback?: { isCorrect: boolean | null; correctAnswer: null } | null;
     readOnly?: boolean;
-    existingAnswer?: { answer: string } | null;
+    existingAnswer?: { text: string } | null;
 }
 
 function countWords(text: string): number {
@@ -17,17 +17,17 @@ function countWords(text: string): number {
 }
 
 export function EssayInput({ onSubmit, feedback, readOnly, existingAnswer }: EssayInputProps) {
-    const [answer, setAnswer] = useState<string>(existingAnswer?.answer ?? '');
+    const [answer, setAnswer] = useState<string>(existingAnswer?.text ?? '');
     const isSubmitted = !!feedback || !!readOnly;
     const canSubmit = answer.trim() !== '' && !isSubmitted;
-    const wordCount = countWords(isSubmitted && existingAnswer?.answer !== undefined ? existingAnswer.answer : answer);
+    const wordCount = countWords(isSubmitted && existingAnswer?.text !== undefined ? existingAnswer.text : answer);
 
     function handleSubmit() {
         if (!canSubmit) return;
-        onSubmit({ answer: answer.trim() });
+        onSubmit({ text: answer.trim() });
     }
 
-    const displayValue = isSubmitted && existingAnswer?.answer !== undefined ? existingAnswer.answer : answer;
+    const displayValue = isSubmitted && existingAnswer?.text !== undefined ? existingAnswer.text : answer;
 
     return (
         <div className="space-y-3">

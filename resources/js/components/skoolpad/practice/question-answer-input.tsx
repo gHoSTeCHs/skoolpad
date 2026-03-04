@@ -186,30 +186,30 @@ export function QuestionAnswerInput({ questionType, responseConfig, onSubmit, fe
         case 'short_answer':
             return (
                 <ShortAnswerInput
-                    onSubmit={onSubmit as (data: { answer: string }) => void}
+                    onSubmit={onSubmit as (data: { text: string }) => void}
                     feedback={feedback ? { isCorrect: feedback.isCorrect, correctAnswer: null } : null}
                     readOnly={readOnly}
-                    existingAnswer={existingAnswer as { answer: string } | null}
+                    existingAnswer={existingAnswer as { text: string } | null}
                 />
             );
 
         case 'theory':
             return (
                 <TheoryInput
-                    onSubmit={onSubmit as (data: { answer: string }) => void}
+                    onSubmit={onSubmit as (data: { text: string }) => void}
                     feedback={feedback ? { isCorrect: feedback.isCorrect, correctAnswer: null } : null}
                     readOnly={readOnly}
-                    existingAnswer={existingAnswer as { answer: string } | null}
+                    existingAnswer={existingAnswer as { text: string } | null}
                 />
             );
 
         case 'essay':
             return (
                 <EssayInput
-                    onSubmit={onSubmit as (data: { answer: string }) => void}
+                    onSubmit={onSubmit as (data: { text: string }) => void}
                     feedback={feedback ? { isCorrect: feedback.isCorrect, correctAnswer: null } : null}
                     readOnly={readOnly}
-                    existingAnswer={existingAnswer as { answer: string } | null}
+                    existingAnswer={existingAnswer as { text: string } | null}
                 />
             );
 

@@ -4,23 +4,23 @@ import { cn } from '@/lib/utils';
 
 interface TheoryInputProps {
     responseConfig?: null;
-    onSubmit: (data: { answer: string }) => void;
+    onSubmit: (data: { text: string }) => void;
     feedback?: { isCorrect: boolean | null; correctAnswer: null } | null;
     readOnly?: boolean;
-    existingAnswer?: { answer: string } | null;
+    existingAnswer?: { text: string } | null;
 }
 
 export function TheoryInput({ onSubmit, feedback, readOnly, existingAnswer }: TheoryInputProps) {
-    const [answer, setAnswer] = useState<string>(existingAnswer?.answer ?? '');
+    const [answer, setAnswer] = useState<string>(existingAnswer?.text ?? '');
     const isSubmitted = !!feedback || !!readOnly;
     const canSubmit = answer.trim() !== '' && !isSubmitted;
 
     function handleSubmit() {
         if (!canSubmit) return;
-        onSubmit({ answer: answer.trim() });
+        onSubmit({ text: answer.trim() });
     }
 
-    const displayValue = isSubmitted && existingAnswer?.answer !== undefined ? existingAnswer.answer : answer;
+    const displayValue = isSubmitted && existingAnswer?.text !== undefined ? existingAnswer.text : answer;
 
     return (
         <div className="space-y-3">
