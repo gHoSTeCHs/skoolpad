@@ -14,6 +14,7 @@ import type {
     ResponseConfig,
     TrueFalseConfig,
 } from '@/types/questions';
+import type { PracticeQuestionData } from '@/types/practice';
 
 import { AssertionReasonInput } from './assertion-reason-input';
 import { CalculationInput } from './calculation-input';
@@ -21,6 +22,7 @@ import { ClozeInput } from './cloze-input';
 import { DiagramLabelInput } from './diagram-label-input';
 import { EssayInput } from './essay-input';
 import { FillBlankInput } from './fill-blank-input';
+import { GroupRenderer } from './group-renderer';
 import { MatchingInput } from './matching-input';
 import { MatrixMatchingInput } from './matrix-matching-input';
 import { McqInput } from './mcq-input';
@@ -38,9 +40,11 @@ interface QuestionAnswerInputProps {
     feedback?: { isCorrect: boolean | null; correctAnswer: Record<string, unknown> | null } | null;
     readOnly?: boolean;
     existingAnswer?: Record<string, unknown> | null;
+    mediaUrl?: string | null;
+    children?: PracticeQuestionData['children'];
 }
 
-export function QuestionAnswerInput({ questionType, responseConfig, onSubmit, feedback, readOnly, existingAnswer }: QuestionAnswerInputProps) {
+export function QuestionAnswerInput({ questionType, responseConfig, onSubmit, feedback, readOnly, existingAnswer, mediaUrl, children }: QuestionAnswerInputProps) {
     switch (questionType) {
         case 'mcq':
             if (!responseConfig) return null;
@@ -237,6 +241,7 @@ export function QuestionAnswerInput({ questionType, responseConfig, onSubmit, fe
                     feedback={feedback ? { isCorrect: feedback.isCorrect, correctAnswer: { labels: (feedback.correctAnswer as { labels?: { label: string; answer: string }[] })?.labels } } : null}
                     readOnly={readOnly}
                     existingAnswer={existingAnswer as { labels: Record<string, string> } | null}
+                    mediaUrl={mediaUrl}
                 />
             );
 
@@ -260,6 +265,17 @@ export function QuestionAnswerInput({ questionType, responseConfig, onSubmit, fe
                     }
                     readOnly={readOnly}
                     existingAnswer={existingAnswer as { matches: Record<string, number[]> } | null}
+                />
+            );
+
+        case 'group':
+            return (
+                <GroupRenderer
+                    children={children ?? []}
+                    onSubmit={onSubmit as (data: { group_answers: Record<string, Record<string, unknown>> }) => void}
+                    feedback={feedback}
+                    readOnly={readOnly}
+                    existingAnswer={existingAnswer as { group_answers: Record<string, Record<string, unknown>> } | null}
                 />
             );
 
