@@ -148,6 +148,11 @@ class PracticeController extends Controller
             return redirect()->route('practice.results', $session);
         }
 
+        if (! $session->is_resumable && $session->completed_at === null) {
+            return redirect()->route('practice.configure')
+                ->with('warning', 'That practice session has expired.');
+        }
+
         $questions = $this->practiceService->getSessionQuestions($session);
         $answers = $session->practiceAnswers()->get()->keyBy('question_id');
 
@@ -221,6 +226,10 @@ class PracticeController extends Controller
 
         if ($session->completed_at) {
             abort(422, 'Session is already completed.');
+        }
+
+        if (! $session->is_resumable) {
+            abort(422, 'Session has expired.');
         }
 
         $validated = $request->validate([
@@ -382,6 +391,43 @@ class PracticeController extends Controller
             QuestionType::Mcq => [
                 'correct_label' => collect($question->response_config['options'] ?? [])
                     ->firstWhere('is_correct', true)['label'] ?? null,
+            ],
+            QuestionType::MultiSelectMcq => [
+                'correct_labels' => collect($question->response_config['options'] ?? [])
+                    ->where('is_correct', true)->pluck('label')->values()->toArray(),
+            ],
+            QuestionType::TrueFalse => [
+                'correct_answer' => $question->response_config['correct_answer'] ?? null,
+            ],
+            QuestionType::NumericEntry => [
+                'answer' => $question->response_config['answer'] ?? null,
+                'tolerance' => $question->response_config['tolerance'] ?? 0,
+                'unit' => $question->response_config['unit'] ?? null,
+            ],
+            QuestionType::AssertionReason => [
+                'correct_label' => collect($question->response_config['options'] ?? [])
+                    ->firstWhere('is_correct', true)['label'] ?? null,
+            ],
+            QuestionType::Matching => [
+                'pairs' => $question->response_config['pairs'] ?? [],
+            ],
+            QuestionType::Ordering => [
+                'correct_order' => $question->response_config['correct_order'] ?? [],
+                'items' => $question->response_config['items'] ?? [],
+            ],
+            QuestionType::Cloze => [
+                'gaps' => $question->response_config['gaps'] ?? [],
+            ],
+            QuestionType::FillBlank => [
+                'blanks' => $question->response_config['blanks'] ?? [],
+            ],
+            QuestionType::DiagramLabel => [
+                'labels' => $question->response_config['labels'] ?? [],
+            ],
+            QuestionType::MatrixMatching => [
+                'mapping' => $question->response_config['mapping'] ?? [],
+                'left' => $question->response_config['left'] ?? [],
+                'right' => $question->response_config['right'] ?? [],
             ],
             default => null,
         };

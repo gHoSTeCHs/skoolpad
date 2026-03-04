@@ -4,9 +4,11 @@ namespace App\Services;
 
 use App\Enums\PracticeMode;
 use App\Enums\QuestionType;
+use App\Enums\SpacedRepetitionStatus;
 use App\Models\PracticeAnswer;
 use App\Models\PracticeSession;
 use App\Models\Question;
+use App\Models\SpacedRepetitionItem;
 use App\Models\User;
 use Illuminate\Support\Collection;
 
@@ -72,6 +74,11 @@ class PracticeService
         }
 
         $limit = $config['question_count'] ?? 20;
+        $mode = $config['mode'] ?? null;
+
+        if ($mode === PracticeMode::YearWalk->value) {
+            return $query->orderBy('year')->orderBy('id')->limit($limit)->get();
+        }
 
         return $query->inRandomOrder()->limit($limit)->get();
     }
@@ -141,6 +148,14 @@ class PracticeService
 
         if ($session->mode === PracticeMode::Review) {
             $this->spacedRepService->processReviewAnswer($session->user, $question, (bool) $isCorrect);
+        } elseif ($isCorrect) {
+            $existingItem = SpacedRepetitionItem::where('user_id', $session->user_id)
+                ->where('question_id', $question->id)
+                ->where('status', SpacedRepetitionStatus::Active)
+                ->exists();
+            if ($existingItem) {
+                $this->spacedRepService->processReviewAnswer($session->user, $question, true);
+            }
         }
 
         $session->update(['last_activity_at' => now()]);
@@ -167,8 +182,8 @@ class PracticeService
         ]);
 
         foreach ($answers as $answer) {
-            if ($answer->is_correct !== null) {
-                $this->spacedRepService->scheduleReview($session->user, $answer->question, (bool) $answer->is_correct);
+            if ($answer->is_correct === false) {
+                $this->spacedRepService->scheduleReview($session->user, $answer->question, false);
             }
         }
 
@@ -179,6 +194,16 @@ class PracticeService
     {
         return in_array($type, [
             QuestionType::Mcq,
+            QuestionType::MultiSelectMcq,
+            QuestionType::TrueFalse,
+            QuestionType::NumericEntry,
+            QuestionType::AssertionReason,
+            QuestionType::Cloze,
+            QuestionType::Matching,
+            QuestionType::Ordering,
+            QuestionType::FillBlank,
+            QuestionType::DiagramLabel,
+            QuestionType::MatrixMatching,
         ]);
     }
 
@@ -190,6 +215,16 @@ class PracticeService
 
         return match ($question->question_type) {
             QuestionType::Mcq => $this->gradeMcq($question, $responseData),
+            QuestionType::MultiSelectMcq => $this->gradeMultiSelect($question, $responseData),
+            QuestionType::TrueFalse => $this->gradeTrueFalse($question, $responseData),
+            QuestionType::NumericEntry => $this->gradeNumericEntry($question, $responseData),
+            QuestionType::AssertionReason => $this->gradeAssertionReason($question, $responseData),
+            QuestionType::Cloze => $this->gradeCloze($question, $responseData),
+            QuestionType::Matching => $this->gradeMatching($question, $responseData),
+            QuestionType::Ordering => $this->gradeOrdering($question, $responseData),
+            QuestionType::FillBlank => $this->gradeFillBlank($question, $responseData),
+            QuestionType::DiagramLabel => $this->gradeDiagramLabel($question, $responseData),
+            QuestionType::MatrixMatching => $this->gradeMatrixMatching($question, $responseData),
             default => null,
         };
     }
@@ -201,5 +236,167 @@ class PracticeService
         $correctOption = collect($options)->firstWhere('is_correct', true);
 
         return $correctOption && $selectedLabel === $correctOption['label'];
+    }
+
+    private function gradeMultiSelect(Question $question, array $responseData): bool
+    {
+        $selected = collect($responseData['selected_labels'] ?? [])->sort()->values()->toArray();
+        $correct = collect($question->response_config['options'] ?? [])
+            ->where('is_correct', true)
+            ->pluck('label')
+            ->sort()
+            ->values()
+            ->toArray();
+
+        return $selected === $correct;
+    }
+
+    private function gradeTrueFalse(Question $question, array $responseData): bool
+    {
+        return ($responseData['answer'] ?? null) === ($question->response_config['correct_answer'] ?? null);
+    }
+
+    private function gradeNumericEntry(Question $question, array $responseData): bool
+    {
+        $value = $responseData['value'] ?? null;
+        $correct = $question->response_config['answer'] ?? null;
+
+        if ($value === null || $correct === null) {
+            return false;
+        }
+
+        $tolerance = (float) ($question->response_config['tolerance'] ?? 0);
+
+        return abs((float) $value - (float) $correct) <= $tolerance;
+    }
+
+    private function gradeAssertionReason(Question $question, array $responseData): bool
+    {
+        $selected = $responseData['selected'] ?? null;
+        $correctOption = collect($question->response_config['options'] ?? [])->firstWhere('is_correct', true);
+
+        return $correctOption && $selected === $correctOption['label'];
+    }
+
+    private function gradeCloze(Question $question, array $responseData): bool
+    {
+        $studentGaps = $responseData['gaps'] ?? [];
+        $configGaps = $question->response_config['gaps'] ?? [];
+
+        if (empty($configGaps)) {
+            return false;
+        }
+
+        foreach ($configGaps as $gap) {
+            $position = (string) $gap['position'];
+
+            if ((int) ($studentGaps[$position] ?? -1) !== (int) $gap['correct']) {
+                return false;
+            }
+        }
+
+        return true;
+    }
+
+    private function gradeMatching(Question $question, array $responseData): bool
+    {
+        $studentPairs = $responseData['pairs'] ?? [];
+        $configPairs = $question->response_config['pairs'] ?? [];
+
+        if (empty($configPairs)) {
+            return false;
+        }
+
+        foreach (array_keys($configPairs) as $index) {
+            if ((int) ($studentPairs[(string) $index] ?? -1) !== (int) $index) {
+                return false;
+            }
+        }
+
+        return true;
+    }
+
+    private function gradeOrdering(Question $question, array $responseData): bool
+    {
+        $student = array_map('intval', $responseData['order'] ?? []);
+        $correct = array_map('intval', $question->response_config['correct_order'] ?? []);
+
+        return $student === $correct;
+    }
+
+    private function gradeFillBlank(Question $question, array $responseData): bool
+    {
+        $studentBlanks = $responseData['blanks'] ?? [];
+        $configBlanks = $question->response_config['blanks'] ?? [];
+        $caseSensitive = $question->response_config['case_sensitive'] ?? false;
+
+        if (empty($configBlanks)) {
+            return false;
+        }
+
+        $correct = 0;
+
+        foreach ($configBlanks as $blank) {
+            $position = (string) $blank['position'];
+            $studentAnswer = $studentBlanks[$position] ?? '';
+
+            foreach ($blank['correct_answers'] ?? [] as $accepted) {
+                $matches = $caseSensitive
+                    ? $studentAnswer === $accepted
+                    : strtolower(trim($studentAnswer)) === strtolower(trim($accepted));
+
+                if ($matches) {
+                    $correct++;
+                    break;
+                }
+            }
+        }
+
+        return ($correct / count($configBlanks)) >= 0.8;
+    }
+
+    private function gradeDiagramLabel(Question $question, array $responseData): bool
+    {
+        $studentLabels = $responseData['labels'] ?? [];
+        $configLabels = $question->response_config['labels'] ?? [];
+
+        if (empty($configLabels)) {
+            return false;
+        }
+
+        foreach ($configLabels as $index => $label) {
+            $key = 'hotspot_'.$index;
+            $student = strtolower(trim($studentLabels[$key] ?? ''));
+            $correct = strtolower(trim($label['answer'] ?? ''));
+
+            if ($student !== $correct) {
+                return false;
+            }
+        }
+
+        return true;
+    }
+
+    private function gradeMatrixMatching(Question $question, array $responseData): bool
+    {
+        $studentMatches = $responseData['matches'] ?? [];
+        $correctMapping = $question->response_config['mapping'] ?? [];
+
+        if (empty($correctMapping)) {
+            return false;
+        }
+
+        foreach ($correctMapping as $leftIndex => $rightIndices) {
+            $studentRight = array_map('intval', $studentMatches[(string) $leftIndex] ?? []);
+            $correctRight = array_map('intval', (array) $rightIndices);
+            sort($studentRight);
+            sort($correctRight);
+
+            if ($studentRight !== $correctRight) {
+                return false;
+            }
+        }
+
+        return true;
     }
 }
