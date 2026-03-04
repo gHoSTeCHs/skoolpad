@@ -307,8 +307,8 @@ class PracticeService
             return false;
         }
 
-        foreach (array_keys($configPairs) as $index) {
-            if ((int) ($studentPairs[(string) $index] ?? -1) !== (int) $index) {
+        foreach ($configPairs as $leftIndex => $correctRightIndex) {
+            if ((int) ($studentPairs[(string) $leftIndex] ?? -1) !== (int) $correctRightIndex) {
                 return false;
             }
         }
