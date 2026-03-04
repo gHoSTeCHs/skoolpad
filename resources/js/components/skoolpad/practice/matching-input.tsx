@@ -71,7 +71,12 @@ export function MatchingInput({ responseConfig, onSubmit, feedback, readOnly, ex
         if (existingAnswer?.pairs) {
             return pairs.map((_, i) => String(existingAnswer.pairs[String(i)] ?? i));
         }
-        return pairs.map((_, i) => String(i));
+        const shuffled = pairs.map((_, i) => String(i));
+        for (let i = shuffled.length - 1; i > 0; i--) {
+            const j = Math.floor(Math.random() * (i + 1));
+            [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+        }
+        return shuffled;
     });
 
     const sensors = useSensors(
