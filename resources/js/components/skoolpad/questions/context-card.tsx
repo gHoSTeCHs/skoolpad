@@ -43,11 +43,18 @@ export default function ContextCard({ context }: { context: ContextCardData }) {
                 </div>
             )}
             {context.contextType === 'diagram' && context.mediaUrl && (
-                <div className="flex h-[120px] items-center justify-center rounded-md border-2 border-dashed border-border bg-[var(--bg-raised)]">
-                    <div className="text-center">
-                        <div className="text-2xl">{'\uD83D\uDDBC\uFE0F'}</div>
-                        <p className="mt-1 text-[10px] text-muted-foreground" style={{ fontFamily: 'var(--font-body)' }}>Diagram: {context.mediaUrl}</p>
-                    </div>
+                <div className="overflow-hidden rounded-md border border-border bg-[var(--bg-raised)]">
+                    <img
+                        src={context.mediaUrl}
+                        alt={context.title ?? 'Diagram'}
+                        className="mx-auto max-h-[400px] w-auto object-contain"
+                        onError={(e) => {
+                            const target = e.currentTarget;
+                            target.style.display = 'none';
+                            target.parentElement!.classList.add('flex', 'h-[120px]', 'items-center', 'justify-center', 'border-dashed', 'border-2');
+                            target.parentElement!.innerHTML = '<div class="text-center"><div class="text-2xl">\uD83D\uDDBC\uFE0F</div><p class="mt-1 text-[10px] text-muted-foreground">Image failed to load</p></div>';
+                        }}
+                    />
                 </div>
             )}
             {context.tableData && (

@@ -60,7 +60,7 @@ export function EssayInput({ onSubmit, feedback, readOnly, existingAnswer }: Ess
             {isSubmitted && (
                 <div className="mt-3 rounded-md border border-amber-400/60 bg-amber-50/60 px-4 py-3 dark:bg-amber-900/20 reader:bg-amber-900/20">
                     <p className="text-sm font-medium text-amber-700 dark:text-amber-400 reader:text-amber-400">
-                        Answer submitted — teacher grading required.
+                        Answer submitted — grading not available in this version.
                     </p>
                 </div>
             )}

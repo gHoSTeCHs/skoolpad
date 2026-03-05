@@ -12,7 +12,7 @@ interface DiagramLabelInputProps {
     mediaUrl?: string | null;
 }
 
-export function DiagramLabelInput({ responseConfig, onSubmit, feedback, readOnly, existingAnswer }: DiagramLabelInputProps) {
+export function DiagramLabelInput({ responseConfig, onSubmit, feedback, readOnly, existingAnswer, mediaUrl }: DiagramLabelInputProps) {
     const labels = responseConfig?.labels ?? [];
     const isSubmitted = !!feedback || !!readOnly;
 
@@ -61,6 +61,16 @@ export function DiagramLabelInput({ responseConfig, onSubmit, feedback, readOnly
 
     return (
         <div className="space-y-3">
+            {mediaUrl && (
+                <div className="overflow-hidden rounded-md border border-border bg-muted/30">
+                    <img
+                        src={mediaUrl}
+                        alt="Diagram to label"
+                        className="mx-auto max-h-[400px] w-auto object-contain"
+                    />
+                </div>
+            )}
+
             <p className="text-xs text-muted-foreground" style={{ fontFamily: 'var(--font-body)' }}>
                 Label each part of the diagram
             </p>

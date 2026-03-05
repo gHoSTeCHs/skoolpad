@@ -1,5 +1,5 @@
 import { Head, router } from '@inertiajs/react';
-import { useCallback, useRef, useState } from 'react';
+import { useCallback, useMemo, useRef, useState } from 'react';
 
 import PracticeController from '@/actions/App/Http/Controllers/Student/PracticeController';
 import { Button } from '@/components/ui/button';
@@ -18,6 +18,7 @@ export default function PracticeShow({ session, questions, answers: serverAnswer
     const [submitting, setSubmitting] = useState(false);
     const [showGrid, setShowGrid] = useState(false);
     const [showEndConfirm, setShowEndConfirm] = useState(false);
+    const [prevIndex, setPrevIndex] = useState<number | null>(null);
     const questionStartTime = useRef(Date.now());
     const isTimed = session.mode === 'timed' && session.time_limit_seconds !== null;
     const isReviewMode = session.mode === 'review';
@@ -27,6 +28,16 @@ export default function PracticeShow({ session, questions, answers: serverAnswer
     const totalAnswered = Object.keys(localAnswers).length;
     const allAnswered = totalAnswered >= questions.length;
 
+    const persistedContextIds = useMemo(() => {
+        if (prevIndex === null || prevIndex === currentIndex) return [];
+        const isSequential = Math.abs(currentIndex - prevIndex) === 1;
+        if (!isSequential) return [];
+
+        const prevContextIds = new Set(questions[prevIndex]?.contexts.map((c) => c.id) ?? []);
+        const currentContextIds = currentQuestion?.contexts.map((c) => c.id) ?? [];
+        return currentContextIds.filter((id) => prevContextIds.has(id));
+    }, [prevIndex, currentIndex, questions, currentQuestion]);
+
     const getCsrfToken = useCallback((): string => {
         const match = document.cookie.match(/XSRF-TOKEN=([^;]+)/);
         return match ? decodeURIComponent(match[1]) : '';
@@ -34,6 +45,7 @@ export default function PracticeShow({ session, questions, answers: serverAnswer
 
     function navigateTo(index: number) {
         if (index < 0 || index >= questions.length) return;
+        setPrevIndex(currentIndex);
         setCurrentIndex(index);
         setCurrentFeedback(null);
         questionStartTime.current = Date.now();
@@ -224,6 +236,7 @@ export default function PracticeShow({ session, questions, answers: serverAnswer
                             feedback={currentFeedback}
                             readOnly={!!existingAnswer}
                             existingAnswer={existingAnswer}
+                            persistedContextIds={persistedContextIds}
                         />
                     )}
                 </main>

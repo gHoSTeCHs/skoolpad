@@ -301,3 +301,178 @@ it('creates session with question_ids stored', function () {
     expect($session->mode)->toBe(PracticeMode::Untimed);
     expect($session->user_id)->toBe($this->user->id);
 });
+
+it('grades multi_select_mcq correctly when all correct labels selected', function () {
+    $question = Question::factory()->create([
+        'institution_course_id' => $this->course->id,
+        'question_type' => QuestionType::MultiSelectMcq,
+        'response_config' => [
+            'options' => [
+                ['label' => 'A', 'text' => 'First', 'is_correct' => true],
+                ['label' => 'B', 'text' => 'Second', 'is_correct' => false],
+                ['label' => 'C', 'text' => 'Third', 'is_correct' => true],
+                ['label' => 'D', 'text' => 'Fourth', 'is_correct' => false],
+            ],
+        ],
+    ]);
+
+    expect($this->service->gradeAnswer($question, ['selected_labels' => ['C', 'A']]))->toBeTrue();
+});
+
+it('grades true_false correctly when answer matches', function () {
+    $question = Question::factory()->create([
+        'institution_course_id' => $this->course->id,
+        'question_type' => QuestionType::TrueFalse,
+        'response_config' => ['correct_answer' => true],
+    ]);
+
+    expect($this->service->gradeAnswer($question, ['answer' => true]))->toBeTrue();
+});
+
+it('grades cloze correctly when all gaps match', function () {
+    $question = Question::factory()->create([
+        'institution_course_id' => $this->course->id,
+        'question_type' => QuestionType::Cloze,
+        'response_config' => [
+            'gaps' => [
+                ['position' => 0, 'options' => ['cat', 'dog', 'bird'], 'correct' => 1],
+                ['position' => 1, 'options' => ['red', 'blue', 'green'], 'correct' => 2],
+            ],
+        ],
+    ]);
+
+    expect($this->service->gradeAnswer($question, ['gaps' => ['0' => 1, '1' => 2]]))->toBeTrue();
+});
+
+it('grades cloze incorrectly when a gap is wrong', function () {
+    $question = Question::factory()->create([
+        'institution_course_id' => $this->course->id,
+        'question_type' => QuestionType::Cloze,
+        'response_config' => [
+            'gaps' => [
+                ['position' => 0, 'options' => ['cat', 'dog', 'bird'], 'correct' => 1],
+                ['position' => 1, 'options' => ['red', 'blue', 'green'], 'correct' => 2],
+            ],
+        ],
+    ]);
+
+    expect($this->service->gradeAnswer($question, ['gaps' => ['0' => 1, '1' => 0]]))->toBeFalse();
+});
+
+it('grades matching correctly when all pairs match', function () {
+    $question = Question::factory()->create([
+        'institution_course_id' => $this->course->id,
+        'question_type' => QuestionType::Matching,
+        'response_config' => [
+            'pairs' => [0 => 2, 1 => 0, 2 => 1],
+        ],
+    ]);
+
+    expect($this->service->gradeAnswer($question, ['pairs' => ['0' => 2, '1' => 0, '2' => 1]]))->toBeTrue();
+});
+
+it('grades ordering correctly when order matches', function () {
+    $question = Question::factory()->create([
+        'institution_course_id' => $this->course->id,
+        'question_type' => QuestionType::Ordering,
+        'response_config' => ['correct_order' => [0, 1, 2, 3]],
+    ]);
+
+    expect($this->service->gradeAnswer($question, ['order' => [0, 1, 2, 3]]))->toBeTrue();
+});
+
+it('grades numeric_entry correctly when within tolerance', function () {
+    $question = Question::factory()->create([
+        'institution_course_id' => $this->course->id,
+        'question_type' => QuestionType::NumericEntry,
+        'response_config' => ['answer' => 42, 'tolerance' => 0.5],
+    ]);
+
+    expect($this->service->gradeAnswer($question, ['value' => 42.3]))->toBeTrue();
+});
+
+it('grades assertion_reason correctly when correct option selected', function () {
+    $question = Question::factory()->create([
+        'institution_course_id' => $this->course->id,
+        'question_type' => QuestionType::AssertionReason,
+        'response_config' => [
+            'options' => [
+                ['label' => 'A', 'text' => 'Both true, R explains A', 'is_correct' => true],
+                ['label' => 'B', 'text' => 'Both true, R does not explain A', 'is_correct' => false],
+                ['label' => 'C', 'text' => 'A true, R false', 'is_correct' => false],
+            ],
+        ],
+    ]);
+
+    expect($this->service->gradeAnswer($question, ['selected' => 'A']))->toBeTrue();
+});
+
+it('grades matrix_matching correctly when all mappings match', function () {
+    $question = Question::factory()->create([
+        'institution_course_id' => $this->course->id,
+        'question_type' => QuestionType::MatrixMatching,
+        'response_config' => [
+            'mapping' => [0 => [1, 2], 1 => [0], 2 => [1]],
+        ],
+    ]);
+
+    expect($this->service->gradeAnswer($question, ['matches' => ['0' => [2, 1], '1' => [0], '2' => [1]]]))->toBeTrue();
+});
+
+it('grades fill_blank correctly when at least 80% correct', function () {
+    $question = Question::factory()->create([
+        'institution_course_id' => $this->course->id,
+        'question_type' => QuestionType::FillBlank,
+        'response_config' => [
+            'blanks' => [
+                ['position' => 0, 'correct_answers' => ['Paris']],
+                ['position' => 1, 'correct_answers' => ['London']],
+                ['position' => 2, 'correct_answers' => ['Berlin']],
+                ['position' => 3, 'correct_answers' => ['Madrid']],
+                ['position' => 4, 'correct_answers' => ['Rome']],
+            ],
+        ],
+    ]);
+
+    expect($this->service->gradeAnswer($question, [
+        'blanks' => ['0' => 'paris', '1' => 'London', '2' => 'berlin', '3' => 'madrid', '4' => 'wrong'],
+    ]))->toBeTrue();
+});
+
+it('grades fill_blank incorrectly when below 80% correct', function () {
+    $question = Question::factory()->create([
+        'institution_course_id' => $this->course->id,
+        'question_type' => QuestionType::FillBlank,
+        'response_config' => [
+            'blanks' => [
+                ['position' => 0, 'correct_answers' => ['Paris']],
+                ['position' => 1, 'correct_answers' => ['London']],
+                ['position' => 2, 'correct_answers' => ['Berlin']],
+                ['position' => 3, 'correct_answers' => ['Madrid']],
+                ['position' => 4, 'correct_answers' => ['Rome']],
+            ],
+        ],
+    ]);
+
+    expect($this->service->gradeAnswer($question, [
+        'blanks' => ['0' => 'paris', '1' => 'London', '2' => 'berlin', '3' => 'wrong', '4' => 'wrong'],
+    ]))->toBeFalse();
+});
+
+it('grades diagram_label correctly when all labels match case-insensitively', function () {
+    $question = Question::factory()->create([
+        'institution_course_id' => $this->course->id,
+        'question_type' => QuestionType::DiagramLabel,
+        'response_config' => [
+            'labels' => [
+                ['label' => 'Part A', 'answer' => 'Mitochondria'],
+                ['label' => 'Part B', 'answer' => 'Nucleus'],
+                ['label' => 'Part C', 'answer' => 'Ribosome'],
+            ],
+        ],
+    ]);
+
+    expect($this->service->gradeAnswer($question, [
+        'labels' => ['hotspot_0' => 'mitochondria', 'hotspot_1' => 'NUCLEUS', 'hotspot_2' => 'ribosome'],
+    ]))->toBeTrue();
+});
