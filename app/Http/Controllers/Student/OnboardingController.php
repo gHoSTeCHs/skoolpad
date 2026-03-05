@@ -12,6 +12,7 @@ use App\Models\Country;
 use App\Models\CurriculumTier;
 use App\Models\EducationLevel;
 use App\Models\EducationSystem;
+use App\Models\ExamGoal;
 use App\Models\Faculty;
 use App\Models\Institution;
 use App\Models\InstitutionCourse;
@@ -109,6 +110,15 @@ class OnboardingController extends Controller
             'invite_code' => $this->generateInviteCode(),
         ]);
 
+        if (! empty($validated['exam_goals'])) {
+            foreach ($validated['exam_goals'] as $assessmentTypeId) {
+                ExamGoal::create([
+                    'user_id' => $request->user()->id,
+                    'assessment_type_id' => $assessmentTypeId,
+                    'is_active' => true,
+                ]);
+            }
+        }
     }
 
     private function generateInviteCode(): string

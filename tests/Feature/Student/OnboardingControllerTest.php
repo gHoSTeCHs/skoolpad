@@ -391,6 +391,27 @@ test('store stores exam_goals as array', function () {
     expect($profile->exam_goals)->toBe([$assessment->id]);
 });
 
+test('store creates exam goal records for secondary student', function () {
+    $system = \App\Models\EducationSystem::factory()->create();
+    $tier = \App\Models\CurriculumTier::factory()->for($system)->create(['is_tertiary' => false]);
+    $level = \App\Models\EducationLevel::factory()->for($tier, 'curriculumTier')->create();
+    $assessment = \App\Models\AssessmentType::factory()->exitExam()->create(['education_system_id' => $system->id]);
+
+    $this->post(route('onboarding.store'), [
+        'student_type' => 'secondary',
+        'education_system_id' => $system->id,
+        'education_level_id' => $level->id,
+        'exam_goals' => [$assessment->id],
+    ])->assertRedirect(route('dashboard'));
+
+    $this->assertDatabaseHas('exam_goals', [
+        'user_id' => $this->student->id,
+        'assessment_type_id' => $assessment->id,
+        'is_active' => true,
+    ]);
+    expect(\App\Models\ExamGoal::where('user_id', $this->student->id)->count())->toBe(1);
+});
+
 test('countries endpoint returns countries with non-tertiary systems', function () {
     $country = \App\Models\Country::factory()->create();
     $system = \App\Models\EducationSystem::factory()->create(['country_id' => $country->id]);
