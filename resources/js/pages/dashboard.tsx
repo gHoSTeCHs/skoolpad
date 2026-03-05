@@ -1,8 +1,10 @@
 import { Head, Link, router } from '@inertiajs/react';
-import { ArrowRight, BookOpen, PlayCircle, RotateCcw, ShieldCheck } from 'lucide-react';
+import { ArrowRight, BookOpen, Calendar, GraduationCap, PlayCircle, RotateCcw, ShieldCheck } from 'lucide-react';
 import { useState } from 'react';
+import ExamPrepController from '@/actions/App/Http/Controllers/Student/ExamPrepController';
 import LevelProgressionController from '@/actions/App/Http/Controllers/Student/LevelProgressionController';
 import ParentInvitationController from '@/actions/App/Http/Controllers/Student/ParentInvitationController';
+import { configure as practiceConfigureRoute } from '@/actions/App/Http/Controllers/Student/PracticeController';
 import ReviewQueueController from '@/actions/App/Http/Controllers/Student/ReviewQueueController';
 import { show as subjectShow } from '@/actions/App/Http/Controllers/Student/SubjectController';
 import { dismiss as studyPlanDismiss } from '@/actions/App/Http/Controllers/Student/StudyPlanController';
@@ -39,6 +41,30 @@ interface SuggestedTopic {
     id: string;
     title: string;
     slug: string;
+}
+
+interface ExamPrepDailyPlanTopic {
+    id: string;
+    title: string;
+    accuracy: number;
+    weight: string;
+}
+
+interface ExamPrepDailyPlan {
+    days_remaining: number;
+    topics_remaining: number;
+    topics_per_day: number;
+    today_topics: ExamPrepDailyPlanTopic[];
+    suggested_question_count: number;
+    suggested_time_minutes: number;
+}
+
+interface ExamPrepCardData {
+    assessment_type_name: string;
+    course_title: string | null;
+    exam_date: string | null;
+    days_remaining: number | null;
+    daily_plan: ExamPrepDailyPlan | null;
 }
 
 interface Props {
@@ -85,6 +111,7 @@ interface Props {
         label: string;
         url: string;
     } | null;
+    exam_prep_card?: ExamPrepCardData | null;
 }
 
 const breadcrumbs: BreadcrumbItem[] = [
@@ -114,7 +141,7 @@ function getSubtitle(student: Props['student']): string {
     return parts.join(' · ') || "Here's your learning progress";
 }
 
-export default function Dashboard({ student, courses, subjects, stats, suggested_topics, guided_study, study_plan_dismissed, parent_invitation, level_progression, review_queue_count, continue_studying }: Props) {
+export default function Dashboard({ student, courses, subjects, stats, suggested_topics, guided_study, study_plan_dismissed, parent_invitation, level_progression, review_queue_count, continue_studying, exam_prep_card }: Props) {
     const firstName = student?.name.split(' ')[0] ?? 'Student';
     const isTertiary = student?.student_type === 'tertiary';
     const isSecondary = student?.student_type === 'secondary';
@@ -264,6 +291,80 @@ export default function Dashboard({ student, courses, subjects, stats, suggested
                                 <ArrowRight className="size-4 shrink-0 text-muted-foreground" />
                             </Link>
                         )}
+                    </div>
+                )}
+
+                {isSecondary && exam_prep_card && (
+                    <div className="rounded-xl border bg-card p-5">
+                        <div className="flex items-start justify-between gap-4">
+                            <div className="flex items-center gap-3">
+                                <div className="flex size-10 shrink-0 items-center justify-center rounded-lg bg-violet-100 dark:bg-violet-900/40 reader:bg-violet-900/40">
+                                    <GraduationCap className="size-5 text-violet-600 dark:text-violet-400 reader:text-violet-400" />
+                                </div>
+                                <div>
+                                    <p className="text-sm font-semibold">{exam_prep_card.assessment_type_name}</p>
+                                    {exam_prep_card.course_title && (
+                                        <p className="text-xs text-muted-foreground" style={{ fontFamily: 'var(--font-body)' }}>
+                                            {exam_prep_card.course_title}
+                                        </p>
+                                    )}
+                                </div>
+                            </div>
+                            <div className="flex items-center gap-2 text-right">
+                                <Calendar className="size-4 text-muted-foreground" />
+                                {exam_prep_card.days_remaining !== null ? (
+                                    <span className={cn(
+                                        'text-sm font-semibold',
+                                        exam_prep_card.days_remaining <= 7
+                                            ? 'text-red-600 dark:text-red-400 reader:text-red-400'
+                                            : exam_prep_card.days_remaining <= 30
+                                              ? 'text-amber-600 dark:text-amber-400 reader:text-amber-400'
+                                              : 'text-muted-foreground',
+                                    )}>
+                                        {exam_prep_card.days_remaining} day{exam_prep_card.days_remaining !== 1 ? 's' : ''} left
+                                    </span>
+                                ) : (
+                                    <Link
+                                        href={ExamPrepController.index.url()}
+                                        className="text-sm font-medium text-primary hover:underline"
+                                    >
+                                        Set exam date
+                                    </Link>
+                                )}
+                            </div>
+                        </div>
+
+                        {exam_prep_card.daily_plan && exam_prep_card.daily_plan.today_topics.length > 0 && (
+                            <div className="mt-4 rounded-lg bg-muted/50 p-3">
+                                <p className="text-xs font-medium text-muted-foreground">Today&apos;s focus topics</p>
+                                <div className="mt-2 flex flex-wrap gap-2">
+                                    {exam_prep_card.daily_plan.today_topics.slice(0, 4).map((topic) => (
+                                        <Badge key={topic.id} variant="secondary" className="text-xs">
+                                            {topic.title}
+                                        </Badge>
+                                    ))}
+                                    {exam_prep_card.daily_plan.today_topics.length > 4 && (
+                                        <Badge variant="outline" className="text-xs">
+                                            +{exam_prep_card.daily_plan.today_topics.length - 4} more
+                                        </Badge>
+                                    )}
+                                </div>
+                            </div>
+                        )}
+
+                        <div className="mt-4 flex items-center gap-3">
+                            <Button size="sm" asChild>
+                                <Link href={practiceConfigureRoute.url()}>
+                                    Start Today&apos;s Prep
+                                </Link>
+                            </Button>
+                            <Link
+                                href={ExamPrepController.index.url()}
+                                className="text-sm font-medium text-primary hover:underline"
+                            >
+                                View Exam Prep
+                            </Link>
+                        </div>
                     </div>
                 )}
 
