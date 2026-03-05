@@ -84,7 +84,7 @@ class SpacedRepetitionService
     }
 
     /** @return array<int, int> */
-    public function getUpcomingCounts(User $user, int $days = 7): array
+    public function getUpcomingCounts(User $user, int $days = 14): array
     {
         $counts = [];
 

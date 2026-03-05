@@ -84,6 +84,18 @@ it('validates course enrollment on start', function () {
     $response->assertForbidden();
 });
 
+it('rejects invalid assessment_type_id on start', function () {
+    $response = $this->post(route('practice.start'), [
+        'institution_course_id' => $this->course->id,
+        'topic_ids' => [$this->topic->id],
+        'question_count' => 5,
+        'mode' => PracticeMode::Untimed->value,
+        'assessment_type_id' => fake()->uuid(),
+    ]);
+
+    $response->assertSessionHasErrors('assessment_type_id');
+});
+
 it('validates at least one topic on start', function () {
     $response = $this->post(route('practice.start'), [
         'institution_course_id' => $this->course->id,

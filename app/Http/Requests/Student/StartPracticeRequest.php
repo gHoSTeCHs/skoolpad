@@ -26,6 +26,7 @@ class StartPracticeRequest extends FormRequest
             'question_count' => ['required_without:question_id', 'nullable', 'integer', 'min:1', 'max:100'],
             'mode' => ['required_without:question_id', 'nullable', Rule::enum(PracticeMode::class)],
             'time_limit_seconds' => ['nullable', 'required_if:mode,timed', 'integer', 'min:30'],
+            'assessment_type_id' => ['nullable', 'uuid', 'exists:assessment_types,id'],
             'question_id' => ['nullable', 'uuid', 'exists:questions,id'],
         ];
     }

@@ -1,11 +1,15 @@
 <?php
 
+use App\Enums\SpacedRepetitionStatus;
+use App\Models\BlockCompletion;
+use App\Models\ContentBlock;
 use App\Models\Department;
 use App\Models\Faculty;
 use App\Models\Institution;
 use App\Models\InstitutionCourse;
 use App\Models\PracticeAnswer;
 use App\Models\PracticeSession;
+use App\Models\SpacedRepetitionItem;
 use App\Models\StudentCourse;
 use App\Models\StudentProfile;
 use App\Models\User;
@@ -135,5 +139,92 @@ test('dashboard includes questions_practiced and overall_accuracy stats', functi
         ->assertInertia(fn ($page) => $page
             ->where('stats.questions_practiced', 3)
             ->where('stats.overall_accuracy', 67)
+        );
+});
+
+test('review_queue_count returns 0 when no items due', function () {
+    $this->get(route('dashboard'))
+        ->assertOk()
+        ->assertInertia(fn ($page) => $page
+            ->where('review_queue_count', 0)
+        );
+});
+
+test('review_queue_count returns correct count when spaced repetition items are due', function () {
+    SpacedRepetitionItem::factory()->create([
+        'user_id' => $this->student->id,
+        'next_review_at' => today(),
+        'status' => SpacedRepetitionStatus::Active,
+    ]);
+    SpacedRepetitionItem::factory()->create([
+        'user_id' => $this->student->id,
+        'next_review_at' => today()->subDay(),
+        'status' => SpacedRepetitionStatus::Active,
+    ]);
+    SpacedRepetitionItem::factory()->create([
+        'user_id' => $this->student->id,
+        'next_review_at' => today()->addWeek(),
+        'status' => SpacedRepetitionStatus::Active,
+    ]);
+
+    $this->get(route('dashboard'))
+        ->assertOk()
+        ->assertInertia(fn ($page) => $page
+            ->where('review_queue_count', 2)
+        );
+});
+
+test('continue_studying returns null when no recent activity', function () {
+    $this->get(route('dashboard'))
+        ->assertOk()
+        ->assertInertia(fn ($page) => $page
+            ->where('continue_studying', null)
+        );
+});
+
+test('continue_studying returns practice session data when resumable session exists', function () {
+    $course = InstitutionCourse::factory()->create([
+        'institution_id' => $this->institution->id,
+        'owning_department_id' => $this->department->id,
+    ]);
+
+    StudentCourse::factory()->create([
+        'student_profile_id' => $this->profile->id,
+        'institution_course_id' => $course->id,
+    ]);
+
+    PracticeSession::factory()->create([
+        'user_id' => $this->student->id,
+        'institution_course_id' => $course->id,
+        'is_resumable' => true,
+        'completed_at' => null,
+        'last_activity_at' => now(),
+        'question_count' => 10,
+    ]);
+
+    $this->get(route('dashboard'))
+        ->assertOk()
+        ->assertInertia(fn ($page) => $page
+            ->where('continue_studying.type', 'practice')
+            ->has('continue_studying.label')
+            ->has('continue_studying.url')
+        );
+});
+
+test('continue_studying returns topic data when block completion exists', function () {
+    $block = ContentBlock::factory()->create();
+
+    BlockCompletion::factory()->create([
+        'user_id' => $this->student->id,
+        'content_block_id' => $block->id,
+        'completed_at' => now(),
+    ]);
+
+    $this->get(route('dashboard'))
+        ->assertOk()
+        ->assertInertia(fn ($page) => $page
+            ->where('continue_studying.type', 'topic')
+            ->has('continue_studying.label')
+            ->has('continue_studying.url')
         );
 });

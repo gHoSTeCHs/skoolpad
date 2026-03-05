@@ -1,4 +1,4 @@
-import { Head, Link } from '@inertiajs/react';
+import { Head, Link, router } from '@inertiajs/react';
 import { ArrowRight, BookOpen, PlayCircle, RotateCcw, ShieldCheck } from 'lucide-react';
 import { useState } from 'react';
 import LevelProgressionController from '@/actions/App/Http/Controllers/Student/LevelProgressionController';
@@ -227,7 +227,21 @@ export default function Dashboard({ student, courses, subjects, stats, suggested
                                         {review_queue_count === 0 ? 'All caught up!' : `${review_queue_count} item${review_queue_count !== 1 ? 's' : ''} due for review`}
                                     </p>
                                 </div>
-                                <ArrowRight className="size-4 shrink-0 text-muted-foreground" />
+                                {review_queue_count > 0 ? (
+                                    <Button
+                                        size="sm"
+                                        className="shrink-0"
+                                        onClick={(e) => {
+                                            e.preventDefault();
+                                            e.stopPropagation();
+                                            router.post(ReviewQueueController.start.url());
+                                        }}
+                                    >
+                                        Start Review
+                                    </Button>
+                                ) : (
+                                    <ArrowRight className="size-4 shrink-0 text-muted-foreground" />
+                                )}
                             </Link>
                         )}
 
