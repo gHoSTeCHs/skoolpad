@@ -144,6 +144,13 @@ class PracticeController extends Controller
             abort(403);
         }
 
+        if ($session->is_resumable
+            && ! $session->completed_at
+            && $session->last_activity_at?->diffInHours(now()) >= 24
+        ) {
+            $session->update(['is_resumable' => false]);
+        }
+
         if (! $session->is_resumable && $session->completed_at) {
             return redirect()->route('practice.results', $session);
         }
@@ -253,7 +260,7 @@ class PracticeController extends Controller
             abort(422, 'Question has already been answered.');
         }
 
-        $question = Question::findOrFail($questionId);
+        $question = Question::with('children')->findOrFail($questionId);
 
         $answerData = array_merge($validated, [
             'selected_label' => $validated['selected_label'] ?? ($validated['response_data']['selected_label'] ?? null),
@@ -312,7 +319,8 @@ class PracticeController extends Controller
 
         $answers = $session->practiceAnswers()
             ->with([
-                'question:id,content,question_type,response_config,marks,difficulty_level',
+                'question:id,content,question_type,response_config,marks,difficulty_level,parent_question_id',
+                'question.children:id,content,question_type,response_config,marks,parent_question_id,sort_order',
                 'question.topicLinks.canonicalTopic:id,title',
                 'question.answers' => fn ($q) => $q->where('depth_level', 'quick')->where('is_published', true),
             ])
@@ -428,6 +436,11 @@ class PracticeController extends Controller
                 'mapping' => $question->response_config['mapping'] ?? [],
                 'left' => $question->response_config['left'] ?? [],
                 'right' => $question->response_config['right'] ?? [],
+            ],
+            QuestionType::Group => [
+                'children' => $question->children->mapWithKeys(fn ($child) => [
+                    $child->id => $this->getCorrectAnswerData($child),
+                ])->toArray(),
             ],
             default => null,
         };

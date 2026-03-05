@@ -25,27 +25,37 @@ export function GroupRenderer({ children, onSubmit, feedback, readOnly, existing
 
     return (
         <div className="space-y-6">
-            {children.map((child, index) => (
-                <div key={child.id} className="rounded-lg border border-border/60 p-4">
-                    <div className="mb-3 flex items-center gap-2">
-                        <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-muted text-xs font-bold text-muted-foreground">
-                            {index + 1}
-                        </span>
-                        <p className="text-sm leading-relaxed" style={{ fontFamily: 'var(--font-content)' }}>
-                            {child.content}
-                        </p>
+            {children.map((child, index) => {
+                const childFeedback = feedback?.correctAnswer
+                    ? {
+                        isCorrect: feedback.isCorrect,
+                        correctAnswer: ((feedback.correctAnswer as Record<string, Record<string, unknown>>)?.children?.[child.id] ?? null) as Record<string, unknown> | null,
+                    }
+                    : feedback ? { isCorrect: feedback.isCorrect, correctAnswer: null } : null;
+
+                return (
+                    <div key={child.id} className="rounded-lg border border-border/60 p-4">
+                        <div className="mb-3 flex items-center gap-2">
+                            <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-muted text-xs font-bold text-muted-foreground">
+                                {index + 1}
+                            </span>
+                            <p className="text-sm leading-relaxed" style={{ fontFamily: 'var(--font-content)' }}>
+                                {child.content}
+                            </p>
+                        </div>
+                        <QuestionAnswerInput
+                            questionType={child.question_type}
+                            responseConfig={child.response_config}
+                            onSubmit={(data) => handleChildAnswer(child.id, data)}
+                            feedback={childFeedback}
+                            readOnly={isSubmitted || childAnswers[child.id] !== undefined}
+                            existingAnswer={
+                                (existingAnswer?.group_answers?.[child.id] ?? childAnswers[child.id]) as Record<string, unknown> | null
+                            }
+                        />
                     </div>
-                    <QuestionAnswerInput
-                        questionType={child.question_type}
-                        responseConfig={child.response_config}
-                        onSubmit={(data) => handleChildAnswer(child.id, data)}
-                        readOnly={isSubmitted || childAnswers[child.id] !== undefined}
-                        existingAnswer={
-                            (existingAnswer?.group_answers?.[child.id] ?? childAnswers[child.id]) as Record<string, unknown> | null
-                        }
-                    />
-                </div>
-            ))}
+                );
+            })}
             {!isSubmitted && allAnswered && (
                 <button
                     type="button"

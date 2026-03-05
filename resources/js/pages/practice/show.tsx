@@ -20,6 +20,7 @@ export default function PracticeShow({ session, questions, answers: serverAnswer
     const [showEndConfirm, setShowEndConfirm] = useState(false);
     const questionStartTime = useRef(Date.now());
     const isTimed = session.mode === 'timed' && session.time_limit_seconds !== null;
+    const isReviewMode = session.mode === 'review';
 
     const currentQuestion = questions[currentIndex];
     const existingAnswer = currentQuestion ? localAnswers[currentQuestion.id] ?? null : null;
@@ -69,19 +70,27 @@ export default function PracticeShow({ session, questions, answers: serverAnswer
             .then((response: AnswerSubmissionResponse) => {
                 setCurrentFeedback(response);
 
-                setLocalAnswers((prev) => ({
-                    ...prev,
-                    [currentQuestion.id]: {
-                        id: crypto.randomUUID(),
-                        question_id: currentQuestion.id,
-                        selected_option_label: (data as { selected_label?: string }).selected_label ?? null,
-                        response_data: data,
-                        is_correct: response.is_correct,
-                        time_spent_seconds: timeSpent,
-                        was_skipped: false,
-                        sequence_order: currentIndex,
-                    },
-                }));
+                setLocalAnswers((prev) => {
+                    const updated = {
+                        ...prev,
+                        [currentQuestion.id]: {
+                            id: crypto.randomUUID(),
+                            question_id: currentQuestion.id,
+                            selected_option_label: (data as { selected_label?: string }).selected_label ?? null,
+                            response_data: data,
+                            is_correct: response.is_correct,
+                            time_spent_seconds: timeSpent,
+                            was_skipped: false,
+                            sequence_order: currentIndex,
+                        },
+                    };
+
+                    if (isReviewMode && Object.keys(updated).length >= questions.length) {
+                        setTimeout(() => router.post(PracticeController.complete.url(session.id)), 1500);
+                    }
+
+                    return updated;
+                });
             })
             .catch(() => {})
             .finally(() => setSubmitting(false));

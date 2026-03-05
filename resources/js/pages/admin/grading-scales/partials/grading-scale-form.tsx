@@ -40,7 +40,7 @@ export default function GradingScaleForm({ gradingScale, scaleTypes }: GradingSc
         scale_min: gradingScale?.scale_min ?? 0,
         scale_max: gradingScale?.scale_max ?? 100,
         pass_threshold: gradingScale?.pass_threshold ?? 40,
-        grade_boundaries: fromModel(gradingScale?.grade_boundaries),
+        grade_boundaries: fromModel(gradingScale?.grade_boundaries ?? null),
         classification_labels: gradingScale?.classification_labels ? JSON.stringify(gradingScale.classification_labels, null, 2) : '',
     });
 

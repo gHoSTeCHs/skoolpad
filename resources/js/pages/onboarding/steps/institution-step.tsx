@@ -11,6 +11,7 @@ interface InstitutionStepProps {
     selectedInstitution: InstitutionSearchResult | null;
     onSelect: (institution: InstitutionSearchResult) => void;
     onNext: () => void;
+    onBack?: () => void;
 }
 
 export default function InstitutionStep({ value, selectedInstitution, onSelect, onNext }: InstitutionStepProps) {

@@ -47,9 +47,11 @@ export default function InstitutionForm({ institution, institutionTypes, institu
         };
 
         if (isEditing) {
-            form.transform(() => data).put(InstitutionController.update.url(institution!.id));
+            form.transform(() => data);
+            form.put(InstitutionController.update.url(institution!.id));
         } else {
-            form.transform(() => data).post(InstitutionController.store.url());
+            form.transform(() => data);
+            form.post(InstitutionController.store.url());
         }
     }
 

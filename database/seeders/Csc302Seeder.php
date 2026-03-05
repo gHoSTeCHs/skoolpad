@@ -13,28 +13,51 @@ use App\Enums\TopicWeight;
 use App\Models\CanonicalTopic;
 use App\Models\ContentBlock;
 use App\Models\CourseTopicMapping;
+use App\Models\Discipline;
+use App\Models\Institution;
+use App\Models\InstitutionCourse;
 use App\Models\QuestionAnswer;
 use App\Models\QuestionPaper;
 use App\Models\QuestionSection;
 use App\Models\QuestionTopicLink;
 use App\Models\StudentCourse;
+use App\Models\StudentProfile;
+use App\Models\User;
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Str;
 
 class Csc302Seeder extends Seeder
 {
-    private string $courseId = '019ca059-e10b-716f-bacd-34f929a46a03';
+    private string $courseId;
 
-    private string $disciplineId = '019ca059-dec5-714b-bd0f-b2a874596251';
+    private string $disciplineId;
 
-    private string $contentUserId = '019ca059-e347-727d-8eca-ea95d0a917e7';
+    private string $contentUserId;
 
-    private string $studentProfileId = '019ca059-e565-7104-92f6-52711a2c3bc7';
+    private string $studentProfileId;
 
-    private string $normalizationTopicId = '019ca059-e0d7-7304-9a66-298ddd4153c5';
+    private string $normalizationTopicId;
 
     public function run(): void
     {
+        $mouau = Institution::where('abbreviation', 'MOUAU')->firstOrFail();
+
+        $this->courseId = InstitutionCourse::where('institution_id', $mouau->id)
+            ->where('course_code', 'CSC 302')
+            ->firstOrFail()
+            ->id;
+
+        $this->disciplineId = Discipline::where('slug', 'computer-science')->firstOrFail()->id;
+
+        $this->contentUserId = User::where('email', 'content@skoolpad.com')->firstOrFail()->id;
+
+        $this->studentProfileId = StudentProfile::whereHas(
+            'user',
+            fn ($q) => $q->where('email', 'student@skoolpad.com')
+        )->firstOrFail()->id;
+
+        $this->normalizationTopicId = CanonicalTopic::where('slug', 'database-normalization')->firstOrFail()->id;
+
         $this->enrollStudent();
         $topics = $this->createTopics();
         $this->mapTopics($topics);

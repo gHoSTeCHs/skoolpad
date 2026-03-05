@@ -18,7 +18,7 @@ class StartPracticeRequest extends FormRequest
     {
         return [
             'institution_course_id' => ['required_without:question_id', 'nullable', 'uuid', 'exists:institution_courses,id'],
-            'topic_ids' => ['required_without:question_id', 'nullable', 'array'],
+            'topic_ids' => ['required_without:question_id', 'nullable', 'array', 'min:1'],
             'topic_ids.*' => ['uuid', 'exists:canonical_topics,id'],
             'question_types' => ['nullable', 'array'],
             'question_types.*' => ['string', Rule::in(array_column(\App\Enums\QuestionType::cases(), 'value'))],

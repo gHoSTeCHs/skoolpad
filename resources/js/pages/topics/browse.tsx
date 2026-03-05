@@ -40,7 +40,7 @@ export default function TopicsBrowse({ topics, filterOptions, appliedFilters, to
 
     function navigateWithFilters(overrides: Record<string, string | undefined>) {
         const params: Record<string, string | undefined> = {
-            ...appliedFilters,
+            ...(appliedFilters as Record<string, string | undefined>),
             ...overrides,
         };
 

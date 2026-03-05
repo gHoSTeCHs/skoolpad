@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Link } from '@inertiajs/react';
+import { Link, router } from '@inertiajs/react';
 import { Check, ChevronDown, Dumbbell, ExternalLink, Info, X } from 'lucide-react';
 import SpBadge from '@/components/skoolpad/sp-badge';
 import { QuestionTypeBadge } from '@/components/skoolpad/questions';
@@ -8,8 +8,8 @@ import ContextCard from '@/components/skoolpad/questions/context-card';
 import { ContentRenderer } from '@/components/shared/content-renderer';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { cn } from '@/lib/utils';
+import PracticeController from '@/actions/App/Http/Controllers/Student/PracticeController';
 import { read as topicRead, show as topicShow } from '@/actions/App/Http/Controllers/Student/TopicController';
 import type { CourseQuestion, CourseQuestionAnswer } from '@/types/student-courses';
 import type { AnswerDepthLevel } from '@/types/questions';
@@ -234,17 +234,18 @@ export function QuestionCardExpandable({
                     )}
 
                     <div className="mt-4 flex flex-wrap items-center gap-3">
-                        <TooltipProvider>
-                            <Tooltip>
-                                <TooltipTrigger asChild>
-                                    <Button variant="outline" size="sm" disabled className="gap-1.5 opacity-60">
-                                        <Dumbbell className="size-3.5" />
-                                        Practice this
-                                    </Button>
-                                </TooltipTrigger>
-                                <TooltipContent>Available in a future update</TooltipContent>
-                            </Tooltip>
-                        </TooltipProvider>
+                        <Button
+                            variant="outline"
+                            size="sm"
+                            className="gap-1.5"
+                            onClick={() => router.post(PracticeController.start.url(), {
+                                question_id: question.id,
+                                mode: 'untimed',
+                            })}
+                        >
+                            <Dumbbell className="size-3.5" />
+                            Practice this
+                        </Button>
 
                         {primaryTopic && (
                             <Link

@@ -62,6 +62,8 @@ interface Props {
         practice_sessions: number;
         study_hours: number;
         streak_days: number;
+        questions_practiced: number;
+        overall_accuracy: number;
     };
     suggested_topics: SuggestedTopic[];
     parent_invitation?: {
@@ -150,7 +152,7 @@ export default function Dashboard({ student, courses, subjects, stats, suggested
                     </p>
                 </div>
 
-                <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+                <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6">
                     <StatCard
                         label={isTertiary ? 'Courses' : 'Subjects'}
                         value={String(isTertiary ? stats.courses_count : subjects.length)}
@@ -166,6 +168,18 @@ export default function Dashboard({ student, courses, subjects, stats, suggested
                         value={String(stats.practice_sessions)}
                         change={stats.practice_sessions === 0 ? 'Start practising' : `${stats.practice_sessions} session${stats.practice_sessions !== 1 ? 's' : ''}`}
                         trend={stats.practice_sessions > 0 ? 'up' : 'neutral'}
+                    />
+                    <StatCard
+                        label="Questions"
+                        value={String(stats.questions_practiced)}
+                        change={stats.questions_practiced === 0 ? 'Start practising' : `${stats.questions_practiced} answered`}
+                        trend={stats.questions_practiced > 0 ? 'up' : 'neutral'}
+                    />
+                    <StatCard
+                        label="Accuracy"
+                        value={`${stats.overall_accuracy}%`}
+                        change={stats.overall_accuracy === 0 ? 'No graded answers' : `${stats.overall_accuracy}% correct`}
+                        trend={stats.overall_accuracy >= 70 ? 'up' : stats.overall_accuracy > 0 ? 'neutral' : 'neutral'}
                     />
                     <StatCard
                         label="Hours"

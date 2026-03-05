@@ -185,7 +185,13 @@
       "Bash(cd \"C:/Users/hp/Herd/skoolpad\" && \"C:/Users/hp/.config/herd/bin/php.bat\" artisan test --compact --filter=\"transcribe|review\" 2>&1)",
       "Bash(cd \"C:/Users/hp/Herd/skoolpad\" && \"C:/Users/hp/.config/herd/bin/php.bat\" artisan test --compact --filter=\"transcribe\" 2>&1)",
       "Bash(cd \"C:/Users/hp/Herd/skoolpad\" && \"C:/Users/hp/.config/herd/bin/php.bat\" artisan test --compact tests/Feature/Admin/QuestionControllerTest.php tests/Feature/QuestionSystemTest.php tests/Feature/Admin/BulkImportControllerTest.php tests/Feature/Admin/ReviewQueueControllerTest.php tests/Unit/Models/QuestionTest.php tests/Feature/MigrationTest.php 2>&1)",
-      "mcp__laravel-boost__application-info"
+      "mcp__laravel-boost__application-info",
+      "Skill(commit-commands:commit)",
+      "mcp__plugin_laravel-boost_laravel-boost__database-query",
+      "mcp__plugin_laravel-boost_laravel-boost__database-schema",
+      "Skill(commit-commands:commit-push-pr)",
+      "mcp__plugin_laravel-boost_laravel-boost__get-config",
+      "mcp__plugin_laravel-boost_laravel-boost__list-routes"
     ]
   },
   "enableAllProjectMcpServers": true,

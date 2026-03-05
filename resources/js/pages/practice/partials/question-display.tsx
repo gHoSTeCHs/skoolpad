@@ -1,4 +1,5 @@
 import { QuestionAnswerInput } from '@/components/skoolpad/practice/question-answer-input';
+import ContextCard from '@/components/skoolpad/questions/context-card';
 import { ContentRenderer } from '@/components/shared/content-renderer';
 import type { AnswerSubmissionResponse, PracticeAnswerData, PracticeQuestionData } from '@/types/practice';
 
@@ -19,13 +20,18 @@ export function QuestionDisplay({ question, onSubmit, onSkip, feedback, readOnly
             {question.contexts.length > 0 && (
                 <div className="space-y-2">
                     {question.contexts.map((ctx) => (
-                        <div key={ctx.id} className="rounded-lg border bg-card p-4">
-                            <span className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground" style={{ fontFamily: 'var(--font-body)' }}>
-                                {ctx.context_type.replace('_', ' ')} context
-                            </span>
-                            {ctx.title && <p className="mt-1 text-xs font-medium italic text-muted-foreground">{ctx.title}</p>}
-                            {ctx.content && <div className="mt-2 text-sm" style={{ fontFamily: 'var(--font-content)' }}>{ctx.content}</div>}
-                        </div>
+                        <ContextCard
+                            key={ctx.id}
+                            context={{
+                                id: ctx.id,
+                                contextType: ctx.context_type,
+                                title: ctx.title ?? undefined,
+                                content: ctx.content ?? undefined,
+                                mediaUrl: ctx.media_url ?? undefined,
+                                tableData: ctx.table_data ?? undefined,
+                                wordBank: ctx.word_bank ?? undefined,
+                            }}
+                        />
                     ))}
                 </div>
             )}

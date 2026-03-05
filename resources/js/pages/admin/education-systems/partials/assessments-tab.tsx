@@ -106,11 +106,13 @@ export default function AssessmentsTab({ assessments, tiers, gradingScales, syst
         };
 
         if (editing) {
-            form.transform(() => data).put(AssessmentTypeController.update.url(editing.id), {
+            form.transform(() => data);
+            form.put(AssessmentTypeController.update.url(editing.id), {
                 onSuccess: () => setDialogOpen(false),
             });
         } else {
-            form.transform(() => data).post(AssessmentTypeController.store.url(systemId), {
+            form.transform(() => data);
+            form.post(AssessmentTypeController.store.url(systemId), {
                 onSuccess: () => setDialogOpen(false),
             });
         }

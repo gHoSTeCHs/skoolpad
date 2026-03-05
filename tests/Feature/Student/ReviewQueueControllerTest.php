@@ -183,6 +183,23 @@ it('calendar returns 14-day forecast', function () {
     expect($calendar['2'])->toBe(1);
 });
 
+it('start rejects unenrolled course', function () {
+    $unenrolledCourse = InstitutionCourse::factory()->create();
+
+    SpacedRepetitionItem::factory()->create([
+        'user_id' => $this->user->id,
+        'question_id' => $this->questions->first()->id,
+        'status' => SpacedRepetitionStatus::Active,
+        'next_review_at' => today()->toDateString(),
+    ]);
+
+    $response = $this->post(route('review-queue.start'), [
+        'course_id' => $unenrolledCourse->id,
+    ]);
+
+    $response->assertForbidden();
+});
+
 it('index shows correct strength mapping', function () {
     SpacedRepetitionItem::factory()->create([
         'user_id' => $this->user->id,

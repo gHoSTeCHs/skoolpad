@@ -19,9 +19,13 @@ const breadcrumbs = [
 ];
 
 export default function PracticeConfigure({ enrolledCourses, modes, difficulties, questionTypes }: PracticeConfigPageProps) {
+    const searchParams = new URLSearchParams(window.location.search);
+    const prefilledCourseId = searchParams.get('institution_course_id') ?? '';
+    const prefilledTopicIds = searchParams.getAll('topic_ids[]');
+
     const form = useForm({
-        institution_course_id: '',
-        topic_ids: [] as string[],
+        institution_course_id: prefilledCourseId,
+        topic_ids: prefilledTopicIds,
         question_types: [] as string[],
         difficulty: 'all',
         question_count: 20,

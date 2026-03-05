@@ -87,7 +87,7 @@ export default function ContextEditor({ paper, context, contextTypeOptions }: Co
                 questionPaper: paper.id,
                 questionContext: context.id,
             }),
-            buildPayload(),
+            buildPayload() as unknown as Record<string, string | null>,
             {
                 preserveScroll: true,
                 only: ['paper'],

@@ -18,7 +18,7 @@ interface PastQuestionsTabProps {
 export function PastQuestionsTab({ courseId, questions, filterOptions, appliedFilters }: PastQuestionsTabProps) {
     function applyFilter(key: string, value: string | undefined) {
         const params: Record<string, string | undefined> = {
-            ...appliedFilters,
+            ...(appliedFilters as unknown as Record<string, string | undefined>),
             tab: 'past_questions',
             [key]: value,
         };

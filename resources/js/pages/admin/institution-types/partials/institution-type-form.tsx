@@ -79,9 +79,11 @@ export default function InstitutionTypeForm({ institutionType, countries, gradin
         };
 
         if (isEditing) {
-            form.transform(() => data).put(InstitutionTypeController.update.url(institutionType!.id));
+            form.transform(() => data);
+            form.put(InstitutionTypeController.update.url(institutionType!.id));
         } else {
-            form.transform(() => data).post(InstitutionTypeController.store.url());
+            form.transform(() => data);
+            form.post(InstitutionTypeController.store.url());
         }
     }
 

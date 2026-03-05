@@ -479,8 +479,7 @@ it('completeSession schedules spaced repetition for answered questions', functio
 
     $this->post(route('practice.complete', $session));
 
-    expect(SpacedRepetitionItem::where('user_id', $this->user->id)->count())->toBe(2);
-    expect(SpacedRepetitionItem::where('user_id', $this->user->id)->where('question_id', $this->questions[0]->id)->first()->interval_days)->toBe(1);
+    expect(SpacedRepetitionItem::where('user_id', $this->user->id)->count())->toBe(1);
     expect(SpacedRepetitionItem::where('user_id', $this->user->id)->where('question_id', $this->questions[1]->id)->first()->repetition_count)->toBe(0);
 });
 
@@ -511,4 +510,135 @@ it('available count respects topic filter combination', function () {
     ]));
     $bothTopicsResponse->assertOk();
     $bothTopicsResponse->assertJson(['count' => 7]);
+});
+
+it('start creates session with fewer questions when not enough available', function () {
+    $response = $this->post(route('practice.start'), [
+        'institution_course_id' => $this->course->id,
+        'topic_ids' => [$this->topic->id],
+        'question_count' => 20,
+        'mode' => \App\Enums\PracticeMode::Untimed->value,
+    ]);
+
+    $session = PracticeSession::first();
+    $response->assertRedirect(route('practice.show', $session));
+    expect($session->question_count)->toBe(5);
+});
+
+it('show redirects expired session to configure', function () {
+    $session = PracticeSession::factory()->create([
+        'user_id' => $this->user->id,
+        'institution_course_id' => $this->course->id,
+        'question_ids' => $this->questions->pluck('id')->toArray(),
+        'is_resumable' => false,
+        'completed_at' => null,
+    ]);
+
+    $response = $this->get(route('practice.show', $session));
+
+    $response->assertRedirect(route('practice.configure'));
+});
+
+it('answer updates last_activity_at', function () {
+    $question = $this->questions->first();
+    $session = PracticeSession::factory()->create([
+        'user_id' => $this->user->id,
+        'question_ids' => [$question->id],
+        'question_count' => 1,
+        'last_activity_at' => now()->subMinutes(5),
+    ]);
+
+    $this->postJson(route('practice.answer', $session), [
+        'question_id' => $question->id,
+        'selected_label' => 'A',
+        'time_spent_seconds' => 10,
+        'sequence_order' => 0,
+    ]);
+
+    expect($session->fresh()->last_activity_at->greaterThanOrEqualTo(now()->subMinute()))->toBeTrue();
+});
+
+it('answer stores null is_correct for non-gradable question types', function () {
+    $question = Question::factory()->create([
+        'institution_course_id' => $this->course->id,
+        'is_published' => true,
+        'question_type' => \App\Enums\QuestionType::ShortAnswer,
+        'response_config' => null,
+    ]);
+    $session = PracticeSession::factory()->create([
+        'user_id' => $this->user->id,
+        'question_ids' => [$question->id],
+        'question_count' => 1,
+    ]);
+
+    $this->postJson(route('practice.answer', $session), [
+        'question_id' => $question->id,
+        'text' => 'some answer text',
+        'time_spent_seconds' => 15,
+        'sequence_order' => 0,
+    ]);
+
+    expect(PracticeAnswer::where('question_id', $question->id)->first()->is_correct)->toBeNull();
+});
+
+it('expires session inactive for 24+ hours on show visit', function () {
+    $session = PracticeSession::factory()->create([
+        'user_id' => $this->user->id,
+        'institution_course_id' => $this->course->id,
+        'question_ids' => $this->questions->pluck('id')->toArray(),
+        'question_count' => 5,
+        'is_resumable' => true,
+        'completed_at' => null,
+        'last_activity_at' => now()->subHours(25),
+    ]);
+
+    $response = $this->get(route('practice.show', $session));
+
+    $response->assertRedirect(route('practice.configure'));
+    expect($session->fresh()->is_resumable)->toBeFalse();
+});
+
+it('show returns answered questions with existing answer data', function () {
+    $session = PracticeSession::factory()->create([
+        'user_id' => $this->user->id,
+        'institution_course_id' => $this->course->id,
+        'question_ids' => [$this->questions[0]->id, $this->questions[1]->id],
+        'question_count' => 2,
+    ]);
+    PracticeAnswer::factory()->create([
+        'practice_session_id' => $session->id,
+        'question_id' => $this->questions[0]->id,
+        'is_correct' => true,
+        'time_spent_seconds' => 10,
+        'sequence_order' => 0,
+    ]);
+
+    $response = $this->get(route('practice.show', $session));
+
+    $response->assertSuccessful();
+    $response->assertInertia(fn ($page) => $page
+        ->has('answers.'.$this->questions[0]->id, fn ($answer) => $answer
+            ->where('is_correct', true)
+            ->where('was_skipped', false)
+            ->has('response_data')
+            ->etc()
+        )
+        ->where('currentIndex', 1)
+    );
+});
+
+it('complete increments correct_count accurately', function () {
+    $session = PracticeSession::factory()->create([
+        'user_id' => $this->user->id,
+        'institution_course_id' => $this->course->id,
+        'question_ids' => [$this->questions[0]->id, $this->questions[1]->id, $this->questions[2]->id],
+        'question_count' => 3,
+    ]);
+    PracticeAnswer::factory()->create(['practice_session_id' => $session->id, 'question_id' => $this->questions[0]->id, 'is_correct' => true, 'time_spent_seconds' => 10]);
+    PracticeAnswer::factory()->create(['practice_session_id' => $session->id, 'question_id' => $this->questions[1]->id, 'is_correct' => true, 'time_spent_seconds' => 10]);
+    PracticeAnswer::factory()->create(['practice_session_id' => $session->id, 'question_id' => $this->questions[2]->id, 'is_correct' => false, 'time_spent_seconds' => 10]);
+
+    $this->post(route('practice.complete', $session));
+
+    expect($session->fresh()->correct_count)->toBe(2);
 });

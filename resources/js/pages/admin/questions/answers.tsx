@@ -18,10 +18,10 @@ interface Props {
     answers: AnswerDepthData[];
 }
 
-const QUESTION_TYPE_LABELS: Record<QuestionType, string> = {
+const QUESTION_TYPE_LABELS: Partial<Record<QuestionType, string>> = {
     mcq: 'MCQ',
     theory: 'Theory',
-    fill_in_blank: 'Fill in Blank',
+    fill_blank: 'Fill in Blank',
 };
 
 export default function AdminQuestionsAnswers({ question, answers }: Props) {

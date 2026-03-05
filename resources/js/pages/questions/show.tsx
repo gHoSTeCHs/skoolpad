@@ -1,5 +1,7 @@
-import { Head, Link } from '@inertiajs/react';
-import { ArrowLeft, ExternalLink } from 'lucide-react';
+import { Head, Link, router } from '@inertiajs/react';
+import { ArrowLeft, Dumbbell, ExternalLink } from 'lucide-react';
+import PracticeController from '@/actions/App/Http/Controllers/Student/PracticeController';
+import { Button } from '@/components/ui/button';
 import SpBadge from '@/components/skoolpad/sp-badge';
 import { QuestionTypeBadge } from '@/components/skoolpad/questions';
 import { DifficultyBadge } from '@/components/skoolpad/block-tree';
@@ -56,6 +58,18 @@ export default function QuestionShow({ question }: QuestionShowProps) {
                         {question.marks && (
                             <span className="text-[11px] text-muted-foreground">{question.marks} mark{question.marks !== 1 ? 's' : ''}</span>
                         )}
+                        <Button
+                            variant="outline"
+                            size="sm"
+                            className="gap-1.5"
+                            onClick={() => router.post(PracticeController.start.url(), {
+                                question_id: question.id,
+                                mode: 'untimed',
+                            })}
+                        >
+                            <Dumbbell className="size-3.5" />
+                            Practice this
+                        </Button>
                     </div>
 
                     {question.institution_course && (
@@ -85,10 +99,10 @@ export default function QuestionShow({ question }: QuestionShowProps) {
                         </h3>
                         <div className="flex flex-wrap gap-2">
                             {primaryTopic && (
-                                <SpBadge variant="info">{primaryTopic.title}</SpBadge>
+                                <SpBadge variant="neutral">{primaryTopic.title}</SpBadge>
                             )}
                             {otherTopics.map((tl) => (
-                                <SpBadge key={tl.id} variant="default">{tl.canonical_topic.title}</SpBadge>
+                                <SpBadge key={tl.id} variant="neutral">{tl.canonical_topic.title}</SpBadge>
                             ))}
                         </div>
                     </div>

@@ -60,7 +60,7 @@ class SpacedRepetitionService
         return $this->scheduleReview($user, $question, $isCorrect);
     }
 
-    public function getDueItems(User $user, ?InstitutionCourse $course = null, int $limit = 20): Collection
+    public function getDueItems(User $user, ?InstitutionCourse $course = null, ?int $limit = null): Collection
     {
         return SpacedRepetitionItem::query()
             ->where('user_id', $user->id)
@@ -68,8 +68,8 @@ class SpacedRepetitionService
             ->whereDate('next_review_at', '<=', today())
             ->when($course, fn ($q) => $q->whereHas('question', fn ($sub) => $sub->where('institution_course_id', $course->id)))
             ->with(['question:id,institution_course_id,content,question_type,difficulty_level', 'question.institutionCourse:id,course_code'])
-            ->inRandomOrder()
-            ->limit($limit)
+            ->orderBy('next_review_at', 'asc')
+            ->limit($limit ?? (int) config('practice.review_queue_limit', 50))
             ->get();
     }
 

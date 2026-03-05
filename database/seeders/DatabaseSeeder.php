@@ -733,6 +733,8 @@ class DatabaseSeeder extends Seeder
         $this->seedContentBlocks();
         $this->seedCourseBlockMappings($mouau, $unn);
         $this->seedSchemeOfWork($nerdc);
+
+        $this->call(Csc302Seeder::class);
     }
 
     private function seedQuestions(User $admin, Institution $mouau, Institution $unn): void

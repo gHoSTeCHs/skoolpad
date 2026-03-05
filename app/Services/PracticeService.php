@@ -253,7 +253,14 @@ class PracticeService
 
     private function gradeTrueFalse(Question $question, array $responseData): bool
     {
-        return ($responseData['answer'] ?? null) === ($question->response_config['correct_answer'] ?? null);
+        $answer = $responseData['answer'] ?? null;
+        $correct = $question->response_config['correct_answer'] ?? null;
+
+        if ($answer === null || $correct === null) {
+            return $answer === $correct;
+        }
+
+        return filter_var($answer, FILTER_VALIDATE_BOOLEAN) === filter_var($correct, FILTER_VALIDATE_BOOLEAN);
     }
 
     private function gradeNumericEntry(Question $question, array $responseData): bool

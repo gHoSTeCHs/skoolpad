@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\BlockCompletion;
 use App\Models\CanonicalTopic;
 use App\Models\LevelSubject;
+use App\Models\PracticeAnswer;
 use App\Models\PracticeSession;
 use App\Models\StudentProfile;
 use App\Services\GuidedStudyService;
@@ -76,6 +77,8 @@ class DashboardController extends Controller
                 'practice_sessions' => $practiceCount,
                 'study_hours' => $studyHours,
                 'streak_days' => 0,
+                'questions_practiced' => PracticeAnswer::whereHas('practiceSession', fn ($q) => $q->where('user_id', $user->id))->count(),
+                'overall_accuracy' => $this->calculateOverallAccuracy($user),
             ],
             'suggested_topics' => $suggestedTopics,
             'guided_study' => null,
@@ -135,6 +138,8 @@ class DashboardController extends Controller
                 'practice_sessions' => $practiceCount,
                 'study_hours' => $studyHours,
                 'streak_days' => 0,
+                'questions_practiced' => PracticeAnswer::whereHas('practiceSession', fn ($q) => $q->where('user_id', $user->id))->count(),
+                'overall_accuracy' => $this->calculateOverallAccuracy($user),
             ],
             'suggested_topics' => [],
             'guided_study' => $guidedStudy,
@@ -144,6 +149,25 @@ class DashboardController extends Controller
             'review_queue_count' => $reviewQueueCount,
             'continue_studying' => $continueStudying,
         ]);
+    }
+
+    private function calculateOverallAccuracy(mixed $user): int
+    {
+        $total = PracticeAnswer::query()
+            ->whereHas('practiceSession', fn ($q) => $q->where('user_id', $user->id))
+            ->whereNotNull('is_correct')
+            ->count();
+
+        if ($total === 0) {
+            return 0;
+        }
+
+        $correct = PracticeAnswer::query()
+            ->whereHas('practiceSession', fn ($q) => $q->where('user_id', $user->id))
+            ->where('is_correct', true)
+            ->count();
+
+        return (int) round($correct / $total * 100);
     }
 
     /** @return array{type: string, label: string, url: string}|null */
@@ -175,7 +199,7 @@ class DashboardController extends Controller
             return [
                 'type' => 'practice',
                 'label' => "{$answered}/{$lastSession->question_count} questions in {$courseCode}",
-                'url' => "/practice/{$lastSession->id}",
+                'url' => route('practice.show', $lastSession),
             ];
         }
 
@@ -187,7 +211,7 @@ class DashboardController extends Controller
         return [
             'type' => 'topic',
             'label' => $topic->title,
-            'url' => "/topics/{$topic->slug}",
+            'url' => route('topics.show', $topic),
         ];
     }
 

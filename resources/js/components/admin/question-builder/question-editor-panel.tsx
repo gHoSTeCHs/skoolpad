@@ -72,7 +72,7 @@ export default function QuestionEditorPanel({ paper, question, enumOptions }: Qu
                 marks: marks ?? undefined,
                 difficulty_level: difficulty || undefined,
                 bloom_level: bloomLevel || undefined,
-                response_config: responseConfig,
+                response_config: responseConfig as unknown as string,
                 source: 'manual',
                 status: question.status || 'draft',
             },

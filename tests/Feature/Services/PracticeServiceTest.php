@@ -225,6 +225,68 @@ it('completes session with correct aggregates', function () {
     expect($result->is_resumable)->toBeFalse();
 });
 
+it('selectQuestions returns randomized order across calls', function () {
+    Question::factory()->count(20)->create(['institution_course_id' => $this->course->id, 'is_published' => true]);
+
+    $orders = [];
+    for ($i = 0; $i < 5; $i++) {
+        $result = $this->service->selectQuestions([
+            'institution_course_id' => $this->course->id,
+            'question_count' => 20,
+        ]);
+        $orders[] = $result->pluck('id')->toArray();
+    }
+
+    $uniqueOrders = array_unique(array_map('serialize', $orders));
+    expect(count($uniqueOrders))->toBeGreaterThan(1);
+});
+
+it('selects questions matching combined course, topic, difficulty, and type filters', function () {
+    $otherTopic = CanonicalTopic::factory()->create();
+
+    $matchAll = Question::factory()->create([
+        'institution_course_id' => $this->course->id,
+        'is_published' => true,
+        'difficulty_level' => QuestionDifficulty::Easy,
+        'question_type' => QuestionType::Mcq,
+    ]);
+    QuestionTopicLink::factory()->create(['question_id' => $matchAll->id, 'canonical_topic_id' => $this->topic->id]);
+
+    $wrongDifficulty = Question::factory()->create([
+        'institution_course_id' => $this->course->id,
+        'is_published' => true,
+        'difficulty_level' => QuestionDifficulty::Hard,
+        'question_type' => QuestionType::Mcq,
+    ]);
+    QuestionTopicLink::factory()->create(['question_id' => $wrongDifficulty->id, 'canonical_topic_id' => $this->topic->id]);
+
+    $wrongType = Question::factory()->theory()->create([
+        'institution_course_id' => $this->course->id,
+        'is_published' => true,
+        'difficulty_level' => QuestionDifficulty::Easy,
+    ]);
+    QuestionTopicLink::factory()->create(['question_id' => $wrongType->id, 'canonical_topic_id' => $this->topic->id]);
+
+    $wrongTopic = Question::factory()->create([
+        'institution_course_id' => $this->course->id,
+        'is_published' => true,
+        'difficulty_level' => QuestionDifficulty::Easy,
+        'question_type' => QuestionType::Mcq,
+    ]);
+    QuestionTopicLink::factory()->create(['question_id' => $wrongTopic->id, 'canonical_topic_id' => $otherTopic->id]);
+
+    $result = $this->service->selectQuestions([
+        'institution_course_id' => $this->course->id,
+        'topic_ids' => [$this->topic->id],
+        'difficulty' => 'easy',
+        'question_types' => [QuestionType::Mcq->value],
+        'question_count' => 20,
+    ]);
+
+    expect($result)->toHaveCount(1);
+    expect($result->first()->id)->toBe($matchAll->id);
+});
+
 it('creates session with question_ids stored', function () {
     Question::factory()->count(5)->create(['institution_course_id' => $this->course->id, 'is_published' => true]);
 

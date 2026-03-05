@@ -67,6 +67,16 @@ class ReviewQueueController extends Controller
             ? InstitutionCourse::find($selectedCourseId)
             : null;
 
+        if ($course) {
+            $enrolledCourseIds = $user->studentProfile->studentCourses()
+                ->where('is_archived', false)
+                ->pluck('institution_course_id');
+
+            if (! $enrolledCourseIds->contains($course->id)) {
+                abort(403, 'You are not enrolled in this course.');
+            }
+        }
+
         $dueItems = $this->spacedRepService->getDueItems($user, $course);
 
         if ($dueItems->isEmpty()) {
