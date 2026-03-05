@@ -13,6 +13,7 @@ use App\Http\Requests\Student\StartPracticeRequest;
 use App\Models\PracticeSession;
 use App\Models\Question;
 use App\Models\SpacedRepetitionItem;
+use App\Services\ExamPrepService;
 use App\Services\PracticeService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
@@ -64,11 +65,26 @@ class PracticeController extends Controller
             ->filter(fn ($t) => $t !== QuestionType::Group)
             ->map(fn ($t) => ['value' => $t->value, 'label' => $t->label()]);
 
+        $assessmentTypes = [];
+        if ($profile?->isSecondary()) {
+            $assessmentTypes = $user->examGoals()
+                ->where('is_active', true)
+                ->with('assessmentType:id,name,slug')
+                ->get()
+                ->map(fn ($g) => [
+                    'id' => $g->assessmentType->id,
+                    'name' => $g->assessmentType->name,
+                ])
+                ->unique('id')
+                ->values();
+        }
+
         return Inertia::render('practice/configure', [
             'enrolledCourses' => $enrolledCourses,
             'modes' => $modes,
             'difficulties' => $difficulties,
             'questionTypes' => $questionTypes,
+            'assessmentTypes' => $assessmentTypes,
         ]);
     }
 
@@ -98,6 +114,7 @@ class PracticeController extends Controller
                 'question_types' => [],
                 'difficulty' => 'all',
                 'time_limit_seconds' => null,
+                'assessment_type_id' => $validated['assessment_type_id'] ?? null,
                 'exclude_user_id' => $user->id,
             ];
         } else {
@@ -113,6 +130,7 @@ class PracticeController extends Controller
                 'question_count' => $validated['question_count'],
                 'mode' => $validated['mode'],
                 'time_limit_seconds' => $validated['time_limit_seconds'] ?? null,
+                'assessment_type_id' => $validated['assessment_type_id'] ?? null,
                 'exclude_user_id' => $user->id,
             ];
         }
@@ -319,7 +337,7 @@ class PracticeController extends Controller
 
         $answers = $session->practiceAnswers()
             ->with([
-                'question:id,content,question_type,response_config,marks,difficulty_level,parent_question_id',
+                'question:id,content,question_type,response_config,marks,difficulty_level,parent_question_id,question_section_id',
                 'question.children:id,content,question_type,response_config,marks,parent_question_id,sort_order',
                 'question.topicLinks.canonicalTopic:id,title',
                 'question.answers' => fn ($q) => $q->where('depth_level', 'quick')->where('is_published', true),
@@ -371,6 +389,29 @@ class PracticeController extends Controller
             ];
         }
 
+        $predictiveScore = null;
+        if ($session->assessment_type_id) {
+            $predictiveScore = app(ExamPrepService::class)->getPredictiveScore($session);
+        }
+
+        $sectionBreakdown = null;
+        if ($session->question_paper_id) {
+            $paper = $session->questionPaper()->with('sections')->first();
+            if ($paper) {
+                $sectionBreakdown = $paper->sections->sortBy('sort_order')->map(function ($section) use ($answers) {
+                    $sectionAnswers = $answers->filter(fn ($a) => $a->question->question_section_id === $section->id);
+
+                    return [
+                        'section_label' => $section->label,
+                        'correct' => $sectionAnswers->where('is_correct', true)->count(),
+                        'total' => $sectionAnswers->count(),
+                        'marks_earned' => $sectionAnswers->where('is_correct', true)->sum(fn ($a) => $a->question->marks ?? 0),
+                        'marks_possible' => $section->marks,
+                    ];
+                })->values();
+            }
+        }
+
         return Inertia::render('practice/results', [
             'session' => [
                 'id' => $session->id,
@@ -390,6 +431,8 @@ class PracticeController extends Controller
             'perQuestion' => $perQuestion,
             'perTopic' => $perTopic,
             'reviewMetrics' => $reviewMetrics,
+            'predictiveScore' => $predictiveScore,
+            'sectionBreakdown' => $sectionBreakdown,
         ]);
     }
 

@@ -1,12 +1,17 @@
 <?php
 
 use App\Enums\PracticeMode;
+use App\Models\AssessmentType;
 use App\Models\CanonicalTopic;
 use App\Models\CourseTopicMapping;
+use App\Models\ExamGoal;
+use App\Models\GradingScale;
 use App\Models\InstitutionCourse;
 use App\Models\PracticeAnswer;
 use App\Models\PracticeSession;
 use App\Models\Question;
+use App\Models\QuestionPaper;
+use App\Models\QuestionSection;
 use App\Models\QuestionTopicLink;
 use App\Models\SpacedRepetitionItem;
 use App\Models\StudentCourse;
@@ -653,4 +658,142 @@ it('complete increments correct_count accurately', function () {
     $this->post(route('practice.complete', $session));
 
     expect($session->fresh()->correct_count)->toBe(2);
+});
+
+it('configure page includes assessment types for secondary students with exam goals', function () {
+    $this->profile->delete();
+
+    $secondaryProfile = StudentProfile::factory()->secondary()->create([
+        'user_id' => $this->user->id,
+    ]);
+
+    StudentCourse::factory()->create([
+        'student_profile_id' => $secondaryProfile->id,
+        'institution_course_id' => $this->course->id,
+    ]);
+
+    $assessmentType = AssessmentType::factory()->create();
+    ExamGoal::factory()->create([
+        'user_id' => $this->user->id,
+        'assessment_type_id' => $assessmentType->id,
+        'is_active' => true,
+    ]);
+
+    $response = $this->get(route('practice.configure'));
+
+    $response->assertSuccessful();
+    $response->assertInertia(fn ($page) => $page
+        ->component('practice/configure')
+        ->has('assessmentTypes', 1)
+    );
+});
+
+it('start passes assessment_type_id to session config', function () {
+    $assessmentType = AssessmentType::factory()->create();
+    ExamGoal::factory()->create([
+        'user_id' => $this->user->id,
+        'assessment_type_id' => $assessmentType->id,
+        'is_active' => true,
+    ]);
+
+    $response = $this->post(route('practice.start'), [
+        'institution_course_id' => $this->course->id,
+        'topic_ids' => [$this->topic->id],
+        'question_count' => 5,
+        'mode' => PracticeMode::Untimed->value,
+        'assessment_type_id' => $assessmentType->id,
+    ]);
+
+    $session = PracticeSession::first();
+    $response->assertRedirect(route('practice.show', $session));
+    expect($session->assessment_type_id)->toBe($assessmentType->id);
+});
+
+it('results include predictive score when assessment type present', function () {
+    $gradingScale = GradingScale::factory()->create();
+    $assessmentType = AssessmentType::factory()->create([
+        'grading_scale_id' => $gradingScale->id,
+    ]);
+
+    $session = PracticeSession::factory()->completed()->create([
+        'user_id' => $this->user->id,
+        'institution_course_id' => $this->course->id,
+        'assessment_type_id' => $assessmentType->id,
+        'question_ids' => [$this->questions[0]->id],
+        'question_count' => 1,
+        'correct_count' => 1,
+        'score_percentage' => 100,
+    ]);
+    PracticeAnswer::factory()->create([
+        'practice_session_id' => $session->id,
+        'question_id' => $this->questions[0]->id,
+        'is_correct' => true,
+        'sequence_order' => 0,
+    ]);
+
+    $response = $this->get(route('practice.results', $session));
+
+    $response->assertSuccessful();
+    $response->assertInertia(fn ($page) => $page
+        ->component('practice/results')
+        ->has('predictiveScore')
+        ->where('predictiveScore.grade', 'A')
+        ->where('predictiveScore.is_passing', true)
+    );
+});
+
+it('results include section breakdown for full mock sessions', function () {
+    $assessmentType = AssessmentType::factory()->create();
+    $paper = QuestionPaper::factory()->create([
+        'assessment_type_id' => $assessmentType->id,
+        'institution_course_id' => $this->course->id,
+        'is_published' => true,
+    ]);
+    $section = QuestionSection::factory()->create([
+        'question_paper_id' => $paper->id,
+        'label' => 'Section A',
+        'marks' => 50,
+        'sort_order' => 1,
+    ]);
+
+    $question = Question::factory()->create([
+        'institution_course_id' => $this->course->id,
+        'question_paper_id' => $paper->id,
+        'question_section_id' => $section->id,
+        'is_published' => true,
+        'marks' => 10,
+    ]);
+    QuestionTopicLink::factory()->create([
+        'question_id' => $question->id,
+        'canonical_topic_id' => $this->topic->id,
+    ]);
+
+    $session = PracticeSession::factory()->completed()->create([
+        'user_id' => $this->user->id,
+        'institution_course_id' => $this->course->id,
+        'assessment_type_id' => $assessmentType->id,
+        'question_paper_id' => $paper->id,
+        'mode' => PracticeMode::FullMock,
+        'question_ids' => [$question->id],
+        'question_count' => 1,
+        'correct_count' => 1,
+        'score_percentage' => 100,
+    ]);
+    PracticeAnswer::factory()->create([
+        'practice_session_id' => $session->id,
+        'question_id' => $question->id,
+        'is_correct' => true,
+        'sequence_order' => 0,
+    ]);
+
+    $response = $this->get(route('practice.results', $session));
+
+    $response->assertSuccessful();
+    $response->assertInertia(fn ($page) => $page
+        ->component('practice/results')
+        ->has('sectionBreakdown', 1)
+        ->where('sectionBreakdown.0.section_label', 'Section A')
+        ->where('sectionBreakdown.0.correct', 1)
+        ->where('sectionBreakdown.0.total', 1)
+    );
 });
