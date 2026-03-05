@@ -1,6 +1,7 @@
 import { Head, Link } from '@inertiajs/react';
 import { useState } from 'react';
 
+import ExamPrepController from '@/actions/App/Http/Controllers/Student/ExamPrepController';
 import PracticeController from '@/actions/App/Http/Controllers/Student/PracticeController';
 import CourseController from '@/actions/App/Http/Controllers/Student/CourseController';
 import ReviewQueueController from '@/actions/App/Http/Controllers/Student/ReviewQueueController';
@@ -8,11 +9,13 @@ import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import type { PracticeResultsPageProps } from '@/types/practice';
 
+import { PredictiveScore } from './partials/predictive-score';
 import { QuestionReviewRow, getQuestionStatus } from './partials/question-review-row';
 import { ScoreSummary } from './partials/score-summary';
+import { SectionBreakdown } from './partials/section-breakdown';
 import { TopicBreakdown } from './partials/topic-breakdown';
 
-export default function PracticeResults({ session, perQuestion, perTopic, reviewMetrics }: PracticeResultsPageProps) {
+export default function PracticeResults({ session, perQuestion, perTopic, reviewMetrics, predictiveScore, sectionBreakdown }: PracticeResultsPageProps) {
     const isReviewMode = session.mode === 'review';
     const [expandedId, setExpandedId] = useState<string | null>(null);
     const [filter, setFilter] = useState<'all' | 'correct' | 'incorrect' | 'skipped'>('all');
@@ -48,6 +51,9 @@ export default function PracticeResults({ session, perQuestion, perTopic, review
 
                 <main className="mx-auto max-w-4xl space-y-6 px-4 py-6">
                     <ScoreSummary session={session} />
+
+                    {predictiveScore && <PredictiveScore score={predictiveScore} />}
+                    {sectionBreakdown && sectionBreakdown.length > 0 && <SectionBreakdown sections={sectionBreakdown} />}
 
                     {isReviewMode && reviewMetrics ? (
                         <div className="grid grid-cols-3 gap-3">
@@ -149,6 +155,11 @@ export default function PracticeResults({ session, perQuestion, perTopic, review
                                 <Button variant="outline" asChild>
                                     <Link href={PracticeController.configure.url()}>Practice Again</Link>
                                 </Button>
+                                {session.mode === 'full_mock' && (
+                                    <Button variant="outline" asChild>
+                                        <Link href={ExamPrepController.index.url()}>View Exam Prep</Link>
+                                    </Button>
+                                )}
                                 {(() => {
                                     const weakTopics = perTopic.filter((t) => t.accuracy < 70 && t.total > 0);
                                     if (weakTopics.length === 0) return null;
