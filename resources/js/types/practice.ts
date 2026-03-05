@@ -16,6 +16,7 @@ export interface PracticeConfigPageProps {
     modes: { value: PracticeMode; label: string }[];
     difficulties: { value: string; label: string }[];
     questionTypes: { value: string; label: string }[];
+    assessmentTypes: { id: string; name: string }[];
 }
 
 export interface PracticeSessionData {
@@ -116,4 +117,55 @@ export interface PracticeResultsPageProps {
         accuracy: number;
     }[];
     reviewMetrics?: ReviewMetrics;
+    predictiveScore?: PredictiveScore | null;
+    sectionBreakdown?: SectionBreakdownData[] | null;
+}
+
+export interface ExamGoalData {
+    id: string;
+    assessment_type: {
+        id: string;
+        name: string;
+        is_exit_exam: boolean;
+        is_entrance_exam: boolean;
+    };
+    institution_course: {
+        id: string;
+        course_code: string;
+        course_title: string;
+    } | null;
+    exam_date: string | null;
+    target_score: number | null;
+    days_remaining: number | null;
+}
+
+export interface MockPaperData {
+    id: string;
+    title: string;
+    year: number | null;
+    duration_minutes: number;
+    total_marks: number;
+    question_count: number;
+}
+
+export interface ExamPrepPageProps {
+    goals: ExamGoalData[];
+    papers: Record<string, MockPaperData[]>;
+}
+
+export interface PredictiveScore {
+    percentage: number;
+    grade: string;
+    is_passing: boolean;
+    pass_threshold: number;
+    next_grade: string | null;
+    points_to_next: number | null;
+}
+
+export interface SectionBreakdownData {
+    section_label: string;
+    correct: number;
+    total: number;
+    marks_earned: number;
+    marks_possible: number;
 }
