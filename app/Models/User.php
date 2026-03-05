@@ -146,4 +146,9 @@ class User extends Authenticatable
     {
         return $this->hasMany(Leaderboard::class);
     }
+
+    public function examGoals(): HasMany
+    {
+        return $this->hasMany(ExamGoal::class);
+    }
 }
