@@ -4,7 +4,6 @@ import { useState } from 'react';
 import PracticeController from '@/actions/App/Http/Controllers/Student/PracticeController';
 import CourseController from '@/actions/App/Http/Controllers/Student/CourseController';
 import ReviewQueueController from '@/actions/App/Http/Controllers/Student/ReviewQueueController';
-import { dashboard } from '@/routes';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import type { PracticeResultsPageProps } from '@/types/practice';
@@ -132,10 +131,7 @@ export default function PracticeResults({ session, perQuestion, perTopic, review
                         {isReviewMode ? (
                             <>
                                 <Button variant="outline" asChild>
-                                    <Link href={dashboard().url}>Back to Dashboard</Link>
-                                </Button>
-                                <Button variant="outline" asChild>
-                                    <Link href={ReviewQueueController.index.url()}>Back to Review Queue</Link>
+                                    <Link href={ReviewQueueController.index.url()}>Back to Dashboard</Link>
                                 </Button>
                             </>
                         ) : (
