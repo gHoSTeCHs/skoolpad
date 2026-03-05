@@ -3,11 +3,13 @@
 use App\Enums\PracticeMode;
 use App\Enums\QuestionDifficulty;
 use App\Enums\QuestionType;
+use App\Models\AssessmentType;
 use App\Models\CanonicalTopic;
 use App\Models\InstitutionCourse;
 use App\Models\PracticeAnswer;
 use App\Models\PracticeSession;
 use App\Models\Question;
+use App\Models\QuestionAssessmentLink;
 use App\Models\QuestionTopicLink;
 use App\Models\StudentCourse;
 use App\Models\StudentProfile;
@@ -475,4 +477,54 @@ it('grades diagram_label correctly when all labels match case-insensitively', fu
     expect($this->service->gradeAnswer($question, [
         'labels' => ['hotspot_0' => 'mitochondria', 'hotspot_1' => 'NUCLEUS', 'hotspot_2' => 'ribosome'],
     ]))->toBeTrue();
+});
+
+it('selects questions matching assessment type filter', function () {
+    $assessmentType = AssessmentType::factory()->create();
+    $matchingQ = Question::factory()->create([
+        'institution_course_id' => $this->course->id,
+        'is_published' => true,
+    ]);
+    $nonMatchingQ = Question::factory()->create([
+        'institution_course_id' => $this->course->id,
+        'is_published' => true,
+    ]);
+
+    QuestionAssessmentLink::create([
+        'question_id' => $matchingQ->id,
+        'assessment_type_id' => $assessmentType->id,
+    ]);
+
+    $result = $this->service->selectQuestions([
+        'institution_course_id' => $this->course->id,
+        'assessment_type_id' => $assessmentType->id,
+        'question_count' => 20,
+    ]);
+
+    expect($result)->toHaveCount(1);
+    expect($result->first()->id)->toBe($matchingQ->id);
+});
+
+it('counts questions matching assessment type', function () {
+    $assessmentType = AssessmentType::factory()->create();
+    $matchingQ = Question::factory()->create([
+        'institution_course_id' => $this->course->id,
+        'is_published' => true,
+    ]);
+    Question::factory()->create([
+        'institution_course_id' => $this->course->id,
+        'is_published' => true,
+    ]);
+
+    QuestionAssessmentLink::create([
+        'question_id' => $matchingQ->id,
+        'assessment_type_id' => $assessmentType->id,
+    ]);
+
+    $count = $this->service->getAvailableQuestionCount([
+        'institution_course_id' => $this->course->id,
+        'assessment_type_id' => $assessmentType->id,
+    ]);
+
+    expect($count)->toBe(1);
 });

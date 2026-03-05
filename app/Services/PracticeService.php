@@ -59,6 +59,10 @@ class PracticeService
             $query->whereIn('question_type', $config['question_types']);
         }
 
+        if (! empty($config['assessment_type_id'])) {
+            $query->whereHas('questionAssessmentLinks', fn ($q) => $q->where('assessment_type_id', $config['assessment_type_id']));
+        }
+
         if (! empty($config['exclude_user_id'])) {
             $userId = $config['exclude_user_id'];
 
@@ -100,6 +104,10 @@ class PracticeService
 
         if (! empty($config['question_types'])) {
             $query->whereIn('question_type', $config['question_types']);
+        }
+
+        if (! empty($config['assessment_type_id'])) {
+            $query->whereHas('questionAssessmentLinks', fn ($q) => $q->where('assessment_type_id', $config['assessment_type_id']));
         }
 
         return $query->count();
