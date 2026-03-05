@@ -18,10 +18,11 @@ const breadcrumbs = [
     { title: 'Configure', href: '#' },
 ];
 
-export default function PracticeConfigure({ enrolledCourses, modes, difficulties, questionTypes }: PracticeConfigPageProps) {
+export default function PracticeConfigure({ enrolledCourses, modes, difficulties, questionTypes, assessmentTypes }: PracticeConfigPageProps) {
     const searchParams = new URLSearchParams(window.location.search);
     const prefilledCourseId = searchParams.get('institution_course_id') ?? '';
     const prefilledTopicIds = searchParams.getAll('topic_ids[]');
+    const prefilledAssessmentTypeId = searchParams.get('assessment_type_id') ?? '';
 
     const form = useForm({
         institution_course_id: prefilledCourseId,
@@ -31,6 +32,7 @@ export default function PracticeConfigure({ enrolledCourses, modes, difficulties
         question_count: 20,
         mode: 'untimed',
         time_limit_seconds: null as number | null,
+        assessment_type_id: prefilledAssessmentTypeId,
     });
 
     const [availableCount, setAvailableCount] = useState<number | null>(null);
@@ -55,6 +57,7 @@ export default function PracticeConfigure({ enrolledCourses, modes, difficulties
         form.data.topic_ids.forEach((id) => params.append('topic_ids[]', id));
         form.data.question_types.forEach((t) => params.append('question_types[]', t));
         if (form.data.difficulty) params.set('difficulty', form.data.difficulty);
+        if (form.data.assessment_type_id) params.set('assessment_type_id', form.data.assessment_type_id);
 
         fetch(`${PracticeController.availableCount.url()}?${params.toString()}`, {
             signal: controller.signal,
@@ -63,7 +66,7 @@ export default function PracticeConfigure({ enrolledCourses, modes, difficulties
             .then((r) => r.json())
             .then((data) => setAvailableCount(data.count))
             .catch(() => {});
-    }, [form.data.institution_course_id, form.data.topic_ids, form.data.question_types, form.data.difficulty]);
+    }, [form.data.institution_course_id, form.data.topic_ids, form.data.question_types, form.data.difficulty, form.data.assessment_type_id]);
 
     useEffect(() => {
         const timer = setTimeout(fetchAvailableCount, 300);
@@ -184,6 +187,25 @@ export default function PracticeConfigure({ enrolledCourses, modes, difficulties
                                     </SelectContent>
                                 </Select>
                             </FormField>
+
+                            {assessmentTypes.length > 0 && (
+                                <FormField label="Assessment Type" name="assessment_type_id" description="Filter questions by exam type">
+                                    <Select
+                                        value={form.data.assessment_type_id || 'none'}
+                                        onValueChange={(v) => form.setData('assessment_type_id', v === 'none' ? '' : v)}
+                                    >
+                                        <SelectTrigger id="assessment_type_id">
+                                            <SelectValue placeholder="Any assessment type" />
+                                        </SelectTrigger>
+                                        <SelectContent>
+                                            <SelectItem value="none">Any assessment type</SelectItem>
+                                            {assessmentTypes.map((at) => (
+                                                <SelectItem key={at.id} value={at.id}>{at.name}</SelectItem>
+                                            ))}
+                                        </SelectContent>
+                                    </Select>
+                                </FormField>
+                            )}
 
                             {form.data.mode === 'timed' && (
                                 <FormField label="Time Limit (minutes)" name="time_limit_seconds" error={form.errors.time_limit_seconds} required>
