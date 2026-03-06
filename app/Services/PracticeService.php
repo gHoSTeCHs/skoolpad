@@ -20,10 +20,14 @@ class PracticeService
     {
         $questions = $this->selectQuestions($config);
 
+        $topicIds = $config['topic_ids'] ?? [];
+        $singleTopicId = count($topicIds) === 1 ? $topicIds[0] : ($config['canonical_topic_id'] ?? null);
+
         return PracticeSession::create([
             'user_id' => $user->id,
             'institution_course_id' => $config['institution_course_id'],
-            'canonical_topic_id' => $config['canonical_topic_id'] ?? null,
+            'canonical_topic_id' => $singleTopicId,
+            'canonical_topic_ids' => ! empty($topicIds) ? $topicIds : null,
             'assessment_type_id' => $config['assessment_type_id'] ?? null,
             'mode' => $config['mode'],
             'question_count' => $questions->count(),

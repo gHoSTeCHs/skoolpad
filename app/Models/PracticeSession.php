@@ -18,6 +18,7 @@ class PracticeSession extends Model
         'user_id',
         'institution_course_id',
         'canonical_topic_id',
+        'canonical_topic_ids',
         'assessment_type_id',
         'question_paper_id',
         'question_ids',
@@ -38,6 +39,7 @@ class PracticeSession extends Model
     {
         return [
             'question_ids' => 'array',
+            'canonical_topic_ids' => 'array',
             'mode' => PracticeMode::class,
             'is_resumable' => 'boolean',
             'last_activity_at' => 'datetime',

@@ -78,7 +78,7 @@ class DashboardController extends Controller
                 'courses_count' => $courses->count(),
                 'practice_sessions' => $practiceCount,
                 'study_hours' => $studyHours,
-                'streak_days' => 0,
+                'streak_days' => $this->calculateStreakDays($user),
                 'questions_practiced' => PracticeAnswer::whereHas('practiceSession', fn ($q) => $q->where('user_id', $user->id))->count(),
                 'overall_accuracy' => $this->calculateOverallAccuracy($user),
             ],
@@ -163,7 +163,7 @@ class DashboardController extends Controller
                 'courses_count' => 0,
                 'practice_sessions' => $practiceCount,
                 'study_hours' => $studyHours,
-                'streak_days' => 0,
+                'streak_days' => $this->calculateStreakDays($user),
                 'questions_practiced' => PracticeAnswer::whereHas('practiceSession', fn ($q) => $q->where('user_id', $user->id))->count(),
                 'overall_accuracy' => $this->calculateOverallAccuracy($user),
             ],
@@ -191,6 +191,44 @@ class DashboardController extends Controller
         }
 
         return (int) round($stats->correct / $stats->total * 100);
+    }
+
+    private function calculateStreakDays(User $user): int
+    {
+        $activeDates = PracticeSession::query()
+            ->where('user_id', $user->id)
+            ->whereNotNull('completed_at')
+            ->selectRaw('completed_at::date as active_date')
+            ->distinct()
+            ->orderByDesc('active_date')
+            ->limit(90)
+            ->pluck('active_date')
+            ->map(fn ($d) => (string) $d);
+
+        if ($activeDates->isEmpty()) {
+            return 0;
+        }
+
+        $streak = 0;
+        $checkDate = today();
+
+        if ($activeDates->first() !== $checkDate->toDateString()) {
+            $checkDate = today()->subDay();
+            if ($activeDates->first() !== $checkDate->toDateString()) {
+                return 0;
+            }
+        }
+
+        foreach ($activeDates as $date) {
+            if ($date === $checkDate->toDateString()) {
+                $streak++;
+                $checkDate = $checkDate->subDay();
+            } else {
+                break;
+            }
+        }
+
+        return $streak;
     }
 
     /** @return array{type: string, label: string, url: string}|null */

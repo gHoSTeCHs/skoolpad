@@ -211,6 +211,77 @@ test('continue_studying returns practice session data when resumable session exi
         );
 });
 
+test('streak_days returns 0 when no completed sessions', function () {
+    $this->get(route('dashboard'))
+        ->assertOk()
+        ->assertInertia(fn ($page) => $page
+            ->where('stats.streak_days', 0)
+        );
+});
+
+test('streak_days counts consecutive days of practice', function () {
+    $course = InstitutionCourse::factory()->create([
+        'institution_id' => $this->institution->id,
+        'owning_department_id' => $this->department->id,
+    ]);
+
+    StudentCourse::factory()->create([
+        'student_profile_id' => $this->profile->id,
+        'institution_course_id' => $course->id,
+    ]);
+
+    PracticeSession::factory()->completed()->create([
+        'user_id' => $this->student->id,
+        'institution_course_id' => $course->id,
+        'completed_at' => today(),
+    ]);
+    PracticeSession::factory()->completed()->create([
+        'user_id' => $this->student->id,
+        'institution_course_id' => $course->id,
+        'completed_at' => today()->subDay(),
+    ]);
+    PracticeSession::factory()->completed()->create([
+        'user_id' => $this->student->id,
+        'institution_course_id' => $course->id,
+        'completed_at' => today()->subDays(2),
+    ]);
+
+    $this->get(route('dashboard'))
+        ->assertOk()
+        ->assertInertia(fn ($page) => $page
+            ->where('stats.streak_days', 3)
+        );
+});
+
+test('streak_days breaks on gap day', function () {
+    $course = InstitutionCourse::factory()->create([
+        'institution_id' => $this->institution->id,
+        'owning_department_id' => $this->department->id,
+    ]);
+
+    StudentCourse::factory()->create([
+        'student_profile_id' => $this->profile->id,
+        'institution_course_id' => $course->id,
+    ]);
+
+    PracticeSession::factory()->completed()->create([
+        'user_id' => $this->student->id,
+        'institution_course_id' => $course->id,
+        'completed_at' => today(),
+    ]);
+    PracticeSession::factory()->completed()->create([
+        'user_id' => $this->student->id,
+        'institution_course_id' => $course->id,
+        'completed_at' => today()->subDays(2),
+    ]);
+
+    $this->get(route('dashboard'))
+        ->assertOk()
+        ->assertInertia(fn ($page) => $page
+            ->where('stats.streak_days', 1)
+        );
+});
+
 test('continue_studying returns topic data when block completion exists', function () {
     $block = ContentBlock::factory()->create();
 

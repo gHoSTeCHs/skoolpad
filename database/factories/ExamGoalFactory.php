@@ -2,6 +2,7 @@
 
 namespace Database\Factories;
 
+use App\Models\AssessmentSubject;
 use App\Models\AssessmentType;
 use App\Models\InstitutionCourse;
 use App\Models\User;
@@ -29,6 +30,13 @@ class ExamGoalFactory extends Factory
     {
         return $this->state(fn () => [
             'institution_course_id' => InstitutionCourse::factory(),
+        ]);
+    }
+
+    public function withSubject(): static
+    {
+        return $this->state(fn () => [
+            'assessment_subject_id' => AssessmentSubject::factory(),
         ]);
     }
 

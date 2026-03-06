@@ -15,6 +15,7 @@ class ExamGoal extends Model
     protected $fillable = [
         'user_id',
         'assessment_type_id',
+        'assessment_subject_id',
         'institution_course_id',
         'exam_date',
         'target_score',
@@ -39,6 +40,11 @@ class ExamGoal extends Model
     public function assessmentType(): BelongsTo
     {
         return $this->belongsTo(AssessmentType::class);
+    }
+
+    public function assessmentSubject(): BelongsTo
+    {
+        return $this->belongsTo(AssessmentSubject::class);
     }
 
     public function institutionCourse(): BelongsTo
