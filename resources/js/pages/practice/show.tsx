@@ -23,6 +23,8 @@ export default function PracticeShow({ session, questions, answers: serverAnswer
     const [savedVisible, setSavedVisible] = useState(false);
     const questionStartTime = useRef(Date.now());
     const isTimed = session.mode === 'timed' && session.time_limit_seconds !== null;
+    const elapsed = Object.values(serverAnswers).reduce((sum, a) => sum + (a.time_spent_seconds ?? 0), 0);
+    const timerInitialSeconds = isTimed ? Math.max(0, session.time_limit_seconds! - elapsed) : 0;
     const isReviewMode = session.mode === 'review';
 
     const currentQuestion = questions[currentIndex];
@@ -216,7 +218,7 @@ export default function PracticeShow({ session, questions, answers: serverAnswer
                             )}
                             {isTimed && (
                                 <TimerDisplay
-                                    totalSeconds={session.time_limit_seconds!}
+                                    totalSeconds={timerInitialSeconds}
                                     onTimeUp={handleTimeUp}
                                     isRunning={!session.completed_at}
                                 />
