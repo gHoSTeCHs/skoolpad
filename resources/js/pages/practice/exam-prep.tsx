@@ -2,6 +2,7 @@ import { Head } from '@inertiajs/react';
 import { BookOpen } from 'lucide-react';
 
 import ExamPrepController from '@/actions/App/Http/Controllers/Student/ExamPrepController';
+import PracticeController from '@/actions/App/Http/Controllers/Student/PracticeController';
 import AppLayout from '@/layouts/app-layout';
 import type { ExamPrepPageProps } from '@/types/practice';
 
@@ -9,7 +10,7 @@ import { ExamGoalCard } from './partials/exam-goal-card';
 import { MockPaperCard } from './partials/mock-paper-card';
 
 const breadcrumbs = [
-    { title: 'Practice', href: '/practice/configure' },
+    { title: 'Practice', href: PracticeController.configure.url() },
     { title: 'Exam Prep', href: ExamPrepController.index.url() },
 ];
 

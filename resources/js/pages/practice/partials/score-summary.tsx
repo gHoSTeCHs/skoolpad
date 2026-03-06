@@ -1,26 +1,9 @@
-import { cn } from '@/lib/utils';
+import { modeLabels } from '@/lib/practice';
+import { cn, formatDuration } from '@/lib/utils';
 import type { PracticeResultsPageProps } from '@/types/practice';
 
 interface ScoreSummaryProps {
     session: PracticeResultsPageProps['session'];
-}
-
-const modeLabels: Record<string, string> = {
-    timed: 'Timed',
-    untimed: 'Practice',
-    review: 'Review',
-    speed_drill: 'Speed Drill',
-    weak_topic: 'Weak Topics',
-    year_walk: 'Year Walk',
-    random_mix: 'Random Mix',
-    full_mock: 'Full Mock',
-};
-
-function formatDuration(seconds: number): string {
-    const m = Math.floor(seconds / 60);
-    const s = seconds % 60;
-    if (m === 0) return `${s}s`;
-    return `${m}m ${s}s`;
 }
 
 export function ScoreSummary({ session }: ScoreSummaryProps) {

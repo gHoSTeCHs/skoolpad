@@ -3,6 +3,7 @@ import { useCallback, useMemo, useRef, useState } from 'react';
 
 import PracticeController from '@/actions/App/Http/Controllers/Student/PracticeController';
 import { Button } from '@/components/ui/button';
+import { modeLabels } from '@/lib/practice';
 import { cn } from '@/lib/utils';
 import type { AnswerSubmissionResponse, PracticeAnswerData, PracticeShowPageProps } from '@/types/practice';
 
@@ -181,17 +182,6 @@ export default function PracticeShow({ session, questions, answers: serverAnswer
         router.post(PracticeController.complete.url(session.id));
     }
 
-    const modeLabel: Record<string, string> = {
-        timed: 'Timed',
-        untimed: 'Practice',
-        review: 'Review',
-        speed_drill: 'Speed Drill',
-        weak_topic: 'Weak Topics',
-        year_walk: 'Year Walk',
-        random_mix: 'Random Mix',
-        full_mock: 'Full Mock',
-    };
-
     return (
         <>
             <Head title={`Practice — Q${currentIndex + 1} of ${questions.length}`} />
@@ -205,7 +195,7 @@ export default function PracticeShow({ session, questions, answers: serverAnswer
                                 <span className="text-muted-foreground">/{questions.length}</span>
                             </span>
                             <span className="rounded-md bg-muted px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
-                                {modeLabel[session.mode] ?? session.mode}
+                                {modeLabels[session.mode] ?? session.mode}
                             </span>
                         </div>
 

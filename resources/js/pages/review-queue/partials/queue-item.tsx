@@ -1,5 +1,5 @@
 import { Badge } from '@/components/ui/badge';
-import { cn } from '@/lib/utils';
+import { cn, stripHtml } from '@/lib/utils';
 import type { ReviewQueueItem, ReviewStrength } from '@/types/student-review-queue';
 
 const strengthConfig: Record<ReviewStrength, { label: string; className: string }> = {
@@ -16,11 +16,6 @@ const strengthConfig: Record<ReviewStrength, { label: string; className: string 
         className: 'border-emerald-200 bg-emerald-50 text-emerald-700 dark:border-emerald-800/50 dark:bg-emerald-950/40 dark:text-emerald-400 reader:border-emerald-800/50 reader:bg-emerald-950/40 reader:text-emerald-400',
     },
 };
-
-function stripHtml(html: string): string {
-    if (typeof html !== 'string') return '';
-    return html.replace(/<[^>]*>/g, '').replace(/&nbsp;/g, ' ').replace(/\s+/g, ' ').trim();
-}
 
 export default function QueueItem({ item }: { item: ReviewQueueItem }) {
     const config = strengthConfig[item.strength];

@@ -18,7 +18,7 @@ export function TimerDisplay({ totalSeconds, onTimeUp, isRunning }: TimerDisplay
     }, []);
 
     useEffect(() => {
-        if (!isRunning || remaining <= 0) return;
+        if (!isRunning) return;
 
         const interval = setInterval(() => {
             setRemaining((prev) => {
@@ -32,7 +32,7 @@ export function TimerDisplay({ totalSeconds, onTimeUp, isRunning }: TimerDisplay
         }, 1000);
 
         return () => clearInterval(interval);
-    }, [isRunning, remaining, handleTimeUp]);
+    }, [isRunning, handleTimeUp]);
 
     const minutes = Math.floor(remaining / 60);
     const seconds = remaining % 60;

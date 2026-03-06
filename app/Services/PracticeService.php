@@ -35,6 +35,20 @@ class PracticeService
         ]);
     }
 
+    public function createReviewSession(User $user, array $questionIds, ?string $institutionCourseId = null): PracticeSession
+    {
+        return PracticeSession::create([
+            'user_id' => $user->id,
+            'institution_course_id' => $institutionCourseId,
+            'mode' => PracticeMode::Review,
+            'question_count' => count($questionIds),
+            'correct_count' => 0,
+            'is_resumable' => true,
+            'last_activity_at' => now(),
+            'question_ids' => $questionIds,
+        ]);
+    }
+
     public function selectQuestions(array $config): Collection
     {
         if (! empty($config['question_id'])) {
@@ -154,8 +168,8 @@ class PracticeService
             $question->increment('correct_count');
         }
 
-        if ($session->mode === PracticeMode::Review) {
-            $this->spacedRepService->processReviewAnswer($session->user, $question, (bool) $isCorrect);
+        if ($session->mode === PracticeMode::Review && $isCorrect !== null) {
+            $this->spacedRepService->processReviewAnswer($session->user, $question, $isCorrect);
         } elseif ($isCorrect) {
             $existingItem = SpacedRepetitionItem::where('user_id', $session->user_id)
                 ->where('question_id', $question->id)
@@ -190,7 +204,7 @@ class PracticeService
         ]);
 
         foreach ($answers as $answer) {
-            if ($answer->is_correct === false) {
+            if ($answer->is_correct === false && $answer->question) {
                 $this->spacedRepService->scheduleReview($session->user, $answer->question, false);
             }
         }
@@ -265,7 +279,7 @@ class PracticeService
         $correct = $question->response_config['correct_answer'] ?? null;
 
         if ($answer === null || $correct === null) {
-            return $answer === $correct;
+            return false;
         }
 
         return filter_var($answer, FILTER_VALIDATE_BOOLEAN) === filter_var($correct, FILTER_VALIDATE_BOOLEAN);

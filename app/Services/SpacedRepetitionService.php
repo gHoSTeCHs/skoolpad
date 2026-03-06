@@ -11,7 +11,7 @@ use Illuminate\Support\Collection;
 
 class SpacedRepetitionService
 {
-    private const INTERVAL_MAP = [0 => 1, 1 => 3, 2 => 7, 3 => 21];
+    private const INTERVAL_MAP = [0 => 3, 1 => 7, 2 => 21];
 
     public function scheduleReview(User $user, Question $question, bool $isCorrect): SpacedRepetitionItem
     {
@@ -27,20 +27,21 @@ class SpacedRepetitionService
             $item->status = SpacedRepetitionStatus::Active;
         }
 
-        if ($isCorrect) {
+        if ($item->status === SpacedRepetitionStatus::Graduated) {
+            if ($isCorrect) {
+                return $item;
+            }
+
+            $item->repetition_count = 0;
+            $item->interval_days = 1;
+            $item->status = SpacedRepetitionStatus::Active;
+        } elseif ($isCorrect) {
             $rep = $item->repetition_count;
+            $item->interval_days = self::INTERVAL_MAP[$rep] ?? 21;
+            $item->repetition_count = $rep + 1;
 
-            if ($rep >= 4) {
+            if ($item->repetition_count >= 3) {
                 $item->status = SpacedRepetitionStatus::Graduated;
-                $item->interval_days = 21;
-            } else {
-                $item->interval_days = self::INTERVAL_MAP[$rep] ?? 21;
-                $item->repetition_count = $rep + 1;
-                $item->status = SpacedRepetitionStatus::Active;
-
-                if ($item->repetition_count >= 4) {
-                    $item->status = SpacedRepetitionStatus::Graduated;
-                }
             }
         } else {
             $item->repetition_count = 0;
@@ -86,16 +87,22 @@ class SpacedRepetitionService
     /** @return array<int, int> */
     public function getUpcomingCounts(User $user, int $days = 14): array
     {
+        $startDate = today();
+        $endDate = today()->addDays($days - 1);
+
+        $rows = SpacedRepetitionItem::query()
+            ->where('user_id', $user->id)
+            ->where('status', SpacedRepetitionStatus::Active)
+            ->whereBetween('next_review_at', [$startDate->toDateString(), $endDate->toDateString()])
+            ->selectRaw('next_review_at::date as review_date, count(*) as total')
+            ->groupBy('review_date')
+            ->pluck('total', 'review_date');
+
         $counts = [];
 
         for ($i = 0; $i < $days; $i++) {
             $date = today()->addDays($i)->toDateString();
-
-            $counts[$i] = SpacedRepetitionItem::query()
-                ->where('user_id', $user->id)
-                ->where('status', SpacedRepetitionStatus::Active)
-                ->whereDate('next_review_at', $date)
-                ->count();
+            $counts[$i] = (int) ($rows[$date] ?? 0);
         }
 
         return $counts;

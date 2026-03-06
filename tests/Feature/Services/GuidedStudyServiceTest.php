@@ -18,7 +18,7 @@ use App\Services\GuidedStudyService;
 use Illuminate\Support\Carbon;
 
 beforeEach(function () {
-    $this->service = new GuidedStudyService;
+    $this->service = app(GuidedStudyService::class);
     $this->user = User::factory()->create();
 
     $this->system = EducationSystem::factory()->create();

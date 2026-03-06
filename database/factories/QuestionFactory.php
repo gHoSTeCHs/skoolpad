@@ -26,7 +26,7 @@ class QuestionFactory extends Factory
             'difficulty_level' => fake()->randomElement(QuestionDifficulty::cases()),
             'sort_order' => 0,
             'depth_level' => 0,
-            'is_published' => false,
+            'is_published' => true,
             'year' => fake()->numberBetween(2018, 2025),
             'semester' => fake()->randomElement(['first', 'second']),
             'attempt_count' => 0,
@@ -52,6 +52,7 @@ class QuestionFactory extends Factory
     {
         return $this->state(fn (array $attributes) => [
             'status' => QuestionStatus::Draft,
+            'is_published' => false,
             'published_at' => null,
         ]);
     }

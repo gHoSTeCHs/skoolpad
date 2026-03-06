@@ -105,8 +105,10 @@ export function OrderingInput({ responseConfig, onSubmit, feedback, readOnly, ex
         if (!isSubmitted) {
             return 'border-border hover:border-primary/40';
         }
-        const correctOrder = feedback?.correctAnswer?.correct_order ?? [];
-        const isCorrect = correctOrder[position] === originalIndex;
+        if (!feedback?.correctAnswer?.correct_order) {
+            return 'border-border opacity-70';
+        }
+        const isCorrect = feedback.correctAnswer.correct_order[position] === originalIndex;
         return isCorrect
             ? 'border-emerald-500 bg-emerald-500/10'
             : 'border-destructive bg-destructive/10';

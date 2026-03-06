@@ -82,7 +82,7 @@ export function TrueFalseInput({ responseConfig, onSubmit, feedback, readOnly, e
     }
 
     const effectiveSelected = getEffectiveSelected();
-    const canSubmit = selected !== null && !isSubmitted;
+    const canSubmit = selected !== null && !isSubmitted && (!requiresJustification || justification.trim().length > 0);
 
     return (
         <div className="space-y-4">

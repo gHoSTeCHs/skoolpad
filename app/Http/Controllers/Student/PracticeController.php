@@ -2,7 +2,6 @@
 
 namespace App\Http\Controllers\Student;
 
-use App\Concerns\Paginates;
 use App\Enums\AnswerDepthLevel;
 use App\Enums\PracticeMode;
 use App\Enums\QuestionDifficulty;
@@ -10,6 +9,7 @@ use App\Enums\QuestionType;
 use App\Enums\SpacedRepetitionStatus;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Student\StartPracticeRequest;
+use App\Http\Requests\Student\SubmitAnswerRequest;
 use App\Models\PracticeSession;
 use App\Models\Question;
 use App\Models\SpacedRepetitionItem;
@@ -23,8 +23,6 @@ use Inertia\Response;
 
 class PracticeController extends Controller
 {
-    use Paginates;
-
     public function __construct(private PracticeService $practiceService) {}
 
     public function configure(Request $request): Response
@@ -219,7 +217,9 @@ class PracticeController extends Controller
                     'response_config' => $child->response_config,
                     'marks' => $child->marks,
                 ]),
-                'quick_answer' => $q->answers->first()?->only(['content', 'content_plain']),
+                'quick_answer' => $answers->has($q->id)
+                    ? $q->answers->first()?->only(['content', 'content_plain'])
+                    : null,
                 'topic_links' => $q->topicLinks->map(fn ($tl) => [
                     'canonical_topic' => [
                         'id' => $tl->canonicalTopic->id,
@@ -241,7 +241,7 @@ class PracticeController extends Controller
         ]);
     }
 
-    public function answer(PracticeSession $session, Request $request): JsonResponse
+    public function answer(PracticeSession $session, SubmitAnswerRequest $request): JsonResponse
     {
         $user = $request->user();
 
@@ -257,15 +257,7 @@ class PracticeController extends Controller
             abort(422, 'Session has expired.');
         }
 
-        $validated = $request->validate([
-            'question_id' => ['required', 'uuid'],
-            'selected_label' => ['nullable', 'string'],
-            'text' => ['nullable', 'string'],
-            'response_data' => ['nullable', 'array'],
-            'time_spent_seconds' => ['required', 'integer', 'min:0'],
-            'sequence_order' => ['required', 'integer', 'min:0'],
-            'was_skipped' => ['boolean'],
-        ]);
+        $validated = $request->validated();
 
         $questionId = $validated['question_id'];
 
@@ -340,7 +332,7 @@ class PracticeController extends Controller
                 'question:id,content,question_type,response_config,marks,difficulty_level,parent_question_id,question_section_id',
                 'question.children:id,content,question_type,response_config,marks,parent_question_id,sort_order',
                 'question.topicLinks.canonicalTopic:id,title',
-                'question.answers' => fn ($q) => $q->where('depth_level', 'quick')->where('is_published', true),
+                'question.answers' => fn ($q) => $q->where('depth_level', AnswerDepthLevel::Quick)->where('is_published', true),
             ])
             ->orderBy('sequence_order')
             ->get();

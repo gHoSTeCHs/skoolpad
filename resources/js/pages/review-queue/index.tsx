@@ -24,7 +24,7 @@ function getDueCountColor(count: number): string {
 export default function ReviewQueue({ dueCount, dueItems, enrolledCourses, selectedCourseId, calendar }: ReviewQueuePageProps) {
     function handleCourseFilter(value: string) {
         const courseParam = value === 'all' ? undefined : value;
-        router.get(ReviewQueueController.index.url(), { course: courseParam }, { preserveState: true });
+        router.get(ReviewQueueController.index.url(), { course: courseParam }, { preserveState: true, preserveScroll: true, replace: true });
     }
 
     function handleStartReview() {

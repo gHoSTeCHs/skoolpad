@@ -9,6 +9,7 @@ use App\Models\LevelSubject;
 use App\Models\PracticeAnswer;
 use App\Models\PracticeSession;
 use App\Models\StudentProfile;
+use App\Models\User;
 use App\Services\ExamPrepService;
 use App\Services\GuidedStudyService;
 use App\Services\SpacedRepetitionService;
@@ -32,7 +33,7 @@ class DashboardController extends Controller
         return $this->renderSecondary($user, $profile);
     }
 
-    private function renderTertiary(mixed $user, StudentProfile $profile): Response
+    private function renderTertiary(User $user, StudentProfile $profile): Response
     {
         $courses = $profile->studentCourses()
             ->with(['institutionCourse' => fn ($q) => $q->withCount(['topics', 'questions'])])
@@ -90,7 +91,7 @@ class DashboardController extends Controller
         ]);
     }
 
-    private function renderSecondary(mixed $user, ?StudentProfile $profile): Response
+    private function renderSecondary(User $user, ?StudentProfile $profile): Response
     {
         $subjects = [];
 
@@ -177,27 +178,23 @@ class DashboardController extends Controller
         ]);
     }
 
-    private function calculateOverallAccuracy(mixed $user): int
+    private function calculateOverallAccuracy(User $user): int
     {
-        $total = PracticeAnswer::query()
+        $stats = PracticeAnswer::query()
             ->whereHas('practiceSession', fn ($q) => $q->where('user_id', $user->id))
             ->whereNotNull('is_correct')
-            ->count();
+            ->selectRaw('count(*) as total, sum(case when is_correct = true then 1 else 0 end) as correct')
+            ->first();
 
-        if ($total === 0) {
+        if (! $stats || $stats->total === 0) {
             return 0;
         }
 
-        $correct = PracticeAnswer::query()
-            ->whereHas('practiceSession', fn ($q) => $q->where('user_id', $user->id))
-            ->where('is_correct', true)
-            ->count();
-
-        return (int) round($correct / $total * 100);
+        return (int) round($stats->correct / $stats->total * 100);
     }
 
     /** @return array{type: string, label: string, url: string}|null */
-    private function getContinueStudying(mixed $user): ?array
+    private function getContinueStudying(User $user): ?array
     {
         $lastSession = PracticeSession::where('user_id', $user->id)
             ->where('is_resumable', true)

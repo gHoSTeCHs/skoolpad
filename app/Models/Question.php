@@ -181,7 +181,8 @@ class Question extends Model
 
     public function scopePublished(Builder $query): Builder
     {
-        return $query->where('status', QuestionStatus::Published);
+        return $query->where('status', QuestionStatus::Published)
+            ->where('is_published', true);
     }
 
     public function scopeByStatus(Builder $query, string $status): Builder

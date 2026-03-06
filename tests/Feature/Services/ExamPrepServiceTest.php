@@ -152,18 +152,21 @@ it('creates mock session with questions in section order', function () {
         'question_section_id' => $sectionB->id,
         'sort_order' => 1,
         'institution_course_id' => $this->course->id,
+        'is_published' => true,
     ]);
     $q1 = Question::factory()->create([
         'question_paper_id' => $paper->id,
         'question_section_id' => $sectionA->id,
         'sort_order' => 1,
         'institution_course_id' => $this->course->id,
+        'is_published' => true,
     ]);
     $q2 = Question::factory()->create([
         'question_paper_id' => $paper->id,
         'question_section_id' => $sectionA->id,
         'sort_order' => 2,
         'institution_course_id' => $this->course->id,
+        'is_published' => true,
     ]);
 
     $session = $this->service->createMockSession($this->user, $paper);
@@ -317,7 +320,7 @@ it('identifies weak topics below 70% threshold', function () {
     $result = $this->service->getTopicGaps($this->user, $this->goal);
 
     expect($result)->toHaveCount(1);
-    expect($result->first()['topic_title'])->toBe('Weak Topic');
+    expect($result->first()['title'])->toBe('Weak Topic');
     expect($result->first()['accuracy'])->toBeLessThan(70);
 });
 

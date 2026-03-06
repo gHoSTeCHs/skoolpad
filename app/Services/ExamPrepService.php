@@ -39,6 +39,7 @@ class ExamPrepService
     {
         $questions = Question::query()
             ->where('question_paper_id', $paper->id)
+            ->published()
             ->orderBy('question_section_id')
             ->orderBy('sort_order')
             ->get();
@@ -210,7 +211,6 @@ class ExamPrepService
 
             $result = [
                 'topic_id' => $mapping->canonical_topic_id,
-                'topic_title' => $mapping->topic->title ?? 'Unknown',
                 'title' => $mapping->topic->title ?? 'Unknown',
                 'correct' => $correct,
                 'total' => $total,

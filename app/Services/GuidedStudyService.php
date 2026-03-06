@@ -6,13 +6,13 @@ use App\Models\BlockCompletion;
 use App\Models\CalendarTerm;
 use App\Models\ContentBlock;
 use App\Models\LevelSubject;
+use App\Models\PracticeAnswer;
 use App\Models\SchemeOfWorkItem;
 use App\Models\StudentProfile;
 use App\Models\TopicCompletion;
 use App\Models\User;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Collection;
-use Illuminate\Support\Facades\DB;
 
 class GuidedStudyService
 {
@@ -23,6 +23,8 @@ class GuidedStudyService
     private const SPACED_REP_MINUTES = 2;
 
     private const WEAK_TOPIC_MINUTES = 5;
+
+    public function __construct(private SpacedRepetitionService $spacedRepService) {}
 
     /**
      * @return array{daily_goal_minutes: int, total_estimated_minutes: int, completed_minutes: int, current_term: int, current_week: int, items: array<int, array{type: string, priority_tier: int, subject_name: string, level_subject_id: string, topic_label: string, canonical_topic_id: ?string, content_block_id: ?string, estimated_minutes: int, is_completed: bool}>}
@@ -152,7 +154,7 @@ class GuidedStudyService
             return 0;
         }
 
-        $dueItems = app(SpacedRepetitionService::class)->getDueItems($user);
+        $dueItems = $this->spacedRepService->getDueItems($user);
 
         foreach ($dueItems as $item) {
             if ($minutesBudget <= 0) {
@@ -259,7 +261,7 @@ class GuidedStudyService
             return 0;
         }
 
-        $weakTopics = DB::table('practice_answers')
+        $weakTopics = PracticeAnswer::query()
             ->join('practice_sessions', 'practice_answers.practice_session_id', '=', 'practice_sessions.id')
             ->join('question_topic_links', 'practice_answers.question_id', '=', 'question_topic_links.question_id')
             ->join('canonical_topics', 'question_topic_links.canonical_topic_id', '=', 'canonical_topics.id')
@@ -268,12 +270,7 @@ class GuidedStudyService
             ->groupBy('canonical_topics.id', 'canonical_topics.title')
             ->havingRaw('COUNT(*) >= 5')
             ->havingRaw('AVG(CASE WHEN practice_answers.is_correct THEN 1.0 ELSE 0.0 END) < 0.6')
-            ->select([
-                'canonical_topics.id as topic_id',
-                'canonical_topics.title as topic_title',
-                DB::raw('COUNT(*) as attempts'),
-                DB::raw('AVG(CASE WHEN practice_answers.is_correct THEN 1.0 ELSE 0.0 END) as accuracy'),
-            ])
+            ->selectRaw('canonical_topics.id as topic_id, canonical_topics.title as topic_title, COUNT(*) as attempts, AVG(CASE WHEN practice_answers.is_correct THEN 1.0 ELSE 0.0 END) as accuracy')
             ->orderBy('accuracy')
             ->limit(5)
             ->get();

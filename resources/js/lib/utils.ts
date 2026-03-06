@@ -21,3 +21,15 @@ export function formatDate(dateString: string): string {
         day: 'numeric',
     });
 }
+
+export function formatDuration(seconds: number): string {
+    const m = Math.floor(seconds / 60);
+    const s = seconds % 60;
+    if (m === 0) return `${s}s`;
+    return `${m}m ${s}s`;
+}
+
+export function stripHtml(html: string): string {
+    if (typeof html !== 'string') return '';
+    return html.replace(/<[^>]*>/g, '').replace(/&nbsp;/g, ' ').replace(/\s+/g, ' ').trim();
+}

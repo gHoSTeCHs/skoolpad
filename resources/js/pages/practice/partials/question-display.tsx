@@ -5,6 +5,7 @@ import ContextCard from '@/components/skoolpad/questions/context-card';
 import { ContentRenderer } from '@/components/shared/content-renderer';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import type { AnswerSubmissionResponse, PracticeAnswerData, PracticeQuestionData } from '@/types/practice';
+import type { RenderableContent } from '@/types/tiptap';
 
 interface QuestionDisplayProps {
     question: PracticeQuestionData;
@@ -74,7 +75,7 @@ export function QuestionDisplay({ question, onSubmit, onSkip, feedback, readOnly
                         Quick Explanation
                     </p>
                     <div className="text-sm" style={{ fontFamily: 'var(--font-content)' }}>
-                        <ContentRenderer content={feedback.quick_answer_content as unknown as string} />
+                        <ContentRenderer content={feedback.quick_answer_content as RenderableContent} />
                     </div>
                 </div>
             )}

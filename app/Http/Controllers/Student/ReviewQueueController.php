@@ -2,10 +2,9 @@
 
 namespace App\Http\Controllers\Student;
 
-use App\Enums\PracticeMode;
 use App\Http\Controllers\Controller;
 use App\Models\InstitutionCourse;
-use App\Models\PracticeSession;
+use App\Services\PracticeService;
 use App\Services\SpacedRepetitionService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
@@ -15,7 +14,10 @@ use Inertia\Response;
 
 class ReviewQueueController extends Controller
 {
-    public function __construct(private SpacedRepetitionService $spacedRepService) {}
+    public function __construct(
+        private SpacedRepetitionService $spacedRepService,
+        private PracticeService $practiceService,
+    ) {}
 
     public function index(Request $request): Response
     {
@@ -85,18 +87,12 @@ class ReviewQueueController extends Controller
         }
 
         $questionIds = $dueItems->pluck('question_id')->values()->toArray();
-        $institutionCourseId = $dueItems->first()->question?->institution_course_id;
 
-        $session = PracticeSession::create([
-            'user_id' => $user->id,
-            'institution_course_id' => $institutionCourseId,
-            'mode' => PracticeMode::Review,
-            'question_count' => count($questionIds),
-            'correct_count' => 0,
-            'is_resumable' => true,
-            'last_activity_at' => now(),
-            'question_ids' => $questionIds,
-        ]);
+        $session = $this->practiceService->createReviewSession(
+            $user,
+            $questionIds,
+            $course?->id,
+        );
 
         return redirect()->route('practice.show', $session);
     }

@@ -26,27 +26,24 @@ it('creates new spaced repetition item on first correct review', function () {
     expect($item)->toBeInstanceOf(SpacedRepetitionItem::class);
     expect($item->user_id)->toBe($this->user->id);
     expect($item->question_id)->toBe($this->question->id);
-    expect($item->interval_days)->toBe(1);
+    expect($item->interval_days)->toBe(3);
     expect($item->repetition_count)->toBe(1);
     expect($item->status)->toBe(SpacedRepetitionStatus::Active);
     expect(SpacedRepetitionItem::count())->toBe(1);
 });
 
-it('increments interval on successive correct answers (1→3→7→21)', function () {
+it('increments interval on successive correct answers (3→7→21)', function () {
     $item = $this->service->scheduleReview($this->user, $this->question, true);
-    expect($item->interval_days)->toBe(1);
+    expect($item->interval_days)->toBe(3);
     expect($item->repetition_count)->toBe(1);
 
     $item = $this->service->scheduleReview($this->user, $this->question, true);
-    expect($item->interval_days)->toBe(3);
+    expect($item->interval_days)->toBe(7);
     expect($item->repetition_count)->toBe(2);
 
     $item = $this->service->scheduleReview($this->user, $this->question, true);
-    expect($item->interval_days)->toBe(7);
-    expect($item->repetition_count)->toBe(3);
-
-    $item = $this->service->scheduleReview($this->user, $this->question, true);
     expect($item->interval_days)->toBe(21);
+    expect($item->repetition_count)->toBe(3);
     expect($item->status)->toBe(SpacedRepetitionStatus::Graduated);
 });
 
@@ -62,14 +59,13 @@ it('resets interval and rep count to initial values on incorrect answer', functi
     expect(SpacedRepetitionItem::count())->toBe(1);
 });
 
-it('graduates item after four consecutive correct answers', function () {
-    $this->service->scheduleReview($this->user, $this->question, true);
+it('graduates item after three consecutive correct answers', function () {
     $this->service->scheduleReview($this->user, $this->question, true);
     $this->service->scheduleReview($this->user, $this->question, true);
     $item = $this->service->scheduleReview($this->user, $this->question, true);
 
     expect($item->status)->toBe(SpacedRepetitionStatus::Graduated);
-    expect($item->repetition_count)->toBe(4);
+    expect($item->repetition_count)->toBe(3);
 });
 
 it('getDueItems returns only items due today or earlier', function () {
@@ -209,7 +205,6 @@ it('scheduleReview reactivates graduated item on incorrect answer', function () 
     $this->service->scheduleReview($this->user, $this->question, true);
     $this->service->scheduleReview($this->user, $this->question, true);
     $this->service->scheduleReview($this->user, $this->question, true);
-    $this->service->scheduleReview($this->user, $this->question, true);
 
     $item = $this->service->scheduleReview($this->user, $this->question, false);
 
@@ -252,7 +247,6 @@ it('getDueItems returns items ordered by next_review_at ascending', function () 
 });
 
 it('scheduleReview ignores graduated item on correct answer', function () {
-    $this->service->scheduleReview($this->user, $this->question, true);
     $this->service->scheduleReview($this->user, $this->question, true);
     $this->service->scheduleReview($this->user, $this->question, true);
     $this->service->scheduleReview($this->user, $this->question, true);

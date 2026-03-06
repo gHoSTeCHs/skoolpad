@@ -37,8 +37,10 @@ export function MatrixMatchingInput({ responseConfig, onSubmit, feedback, readOn
         });
     }
 
+    const hasSelections = Object.values(checked).some((arr) => arr.length > 0);
+
     function handleSubmit() {
-        if (isSubmitted) return;
+        if (isSubmitted || !hasSelections) return;
         const matches: Record<string, number[]> = {};
         leftItems.forEach((_, i) => {
             matches[String(i)] = checked[String(i)] ?? [];
@@ -118,7 +120,11 @@ export function MatrixMatchingInput({ responseConfig, onSubmit, feedback, readOn
                 <button
                     type="button"
                     onClick={handleSubmit}
-                    className="rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground shadow-xs hover:bg-primary/90 transition-colors"
+                    disabled={!hasSelections}
+                    className={cn(
+                        'rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground shadow-xs transition-colors',
+                        hasSelections ? 'hover:bg-primary/90' : 'opacity-50 cursor-not-allowed',
+                    )}
                 >
                     Submit Answer
                 </button>

@@ -1,8 +1,9 @@
 import { Clock } from 'lucide-react';
 
 import { ContentRenderer } from '@/components/shared/content-renderer';
-import { cn } from '@/lib/utils';
+import { cn, formatDuration, stripHtml } from '@/lib/utils';
 import type { PracticeResultsPageProps } from '@/types/practice';
+import type { RenderableContent } from '@/types/tiptap';
 
 type QuestionItem = PracticeResultsPageProps['perQuestion'][number];
 
@@ -44,23 +45,11 @@ export function getQuestionStatus(q: QuestionItem) {
     return STATUS_CONFIG.ungraded;
 }
 
-function formatDuration(seconds: number): string {
-    const m = Math.floor(seconds / 60);
-    const s = seconds % 60;
-    if (m === 0) return `${s}s`;
-    return `${m}m ${s}s`;
-}
-
 function formatMcqAnswer(data: Record<string, unknown> | null): string | null {
     if (!data) return null;
     const label = (data as { selected_label?: string }).selected_label
         ?? (data as { correct_label?: string }).correct_label;
     return label ?? null;
-}
-
-function stripHtml(html: string): string {
-    if (typeof html !== 'string') return '';
-    return html.replace(/<[^>]*>/g, '').replace(/\s+/g, ' ').trim();
 }
 
 interface QuestionReviewRowProps {
@@ -146,7 +135,7 @@ export function QuestionReviewRow({ question: q, index, isExpanded, onToggle }: 
                                     Explanation
                                 </p>
                                 <div className="text-sm" style={{ fontFamily: 'var(--font-content)' }}>
-                                    <ContentRenderer content={q.quick_answer as unknown as string} />
+                                    <ContentRenderer content={q.quick_answer as RenderableContent} />
                                 </div>
                             </div>
                         )}
