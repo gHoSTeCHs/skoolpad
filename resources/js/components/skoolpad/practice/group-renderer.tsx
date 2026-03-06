@@ -33,6 +33,8 @@ export function GroupRenderer({ children, onSubmit, feedback, readOnly, existing
                     }
                     : feedback ? { isCorrect: feedback.isCorrect, correctAnswer: null } : null;
 
+                const childMediaUrl = child.contexts?.find((c) => c.context_type === 'diagram')?.media_url ?? null;
+
                 return (
                     <div key={child.id} className="rounded-lg border border-border/60 p-4">
                         <div className="mb-3 flex items-center gap-2">
@@ -52,6 +54,7 @@ export function GroupRenderer({ children, onSubmit, feedback, readOnly, existing
                             existingAnswer={
                                 (existingAnswer?.group_answers?.[child.id] ?? childAnswers[child.id]) as Record<string, unknown> | null
                             }
+                            mediaUrl={childMediaUrl}
                         />
                     </div>
                 );

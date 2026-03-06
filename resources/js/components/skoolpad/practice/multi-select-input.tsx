@@ -43,18 +43,24 @@ export function MultiSelectInput({ responseConfig, onSubmit, feedback, readOnly,
                 : 'border-border hover:border-primary/40 hover:bg-accent/50';
         }
 
+        if (!feedback) {
+            const effectiveSelected = getEffectiveSelected();
+            return effectiveSelected.includes(option.label)
+                ? 'border-primary/40 bg-primary/5 opacity-70'
+                : 'border-border opacity-50';
+        }
+
         const effectiveSelected = getEffectiveSelected();
         const studentSelected = effectiveSelected.includes(option.label);
         const isCorrectByBackend = correctLabels.includes(option.label);
-        const resolvedCorrect = feedback ? isCorrectByBackend : option.is_correct;
 
-        if (resolvedCorrect && studentSelected) {
+        if (isCorrectByBackend && studentSelected) {
             return 'border-emerald-500 bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 reader:text-emerald-400';
         }
-        if (resolvedCorrect && !studentSelected) {
+        if (isCorrectByBackend && !studentSelected) {
             return 'border-emerald-500 opacity-70';
         }
-        if (studentSelected && !resolvedCorrect) {
+        if (studentSelected && !isCorrectByBackend) {
             return 'border-destructive bg-destructive/10 text-destructive';
         }
         return 'border-border opacity-50';
@@ -65,12 +71,16 @@ export function MultiSelectInput({ responseConfig, onSubmit, feedback, readOnly,
             return selectedLabels.includes(option.label) ? 'bg-primary text-primary-foreground' : 'bg-muted text-muted-foreground';
         }
 
+        if (!feedback) {
+            const effectiveSelected = getEffectiveSelected();
+            return effectiveSelected.includes(option.label) ? 'bg-primary/40 text-white' : 'bg-muted text-muted-foreground';
+        }
+
         const effectiveSelected = getEffectiveSelected();
         const studentSelected = effectiveSelected.includes(option.label);
         const isCorrectByBackend = correctLabels.includes(option.label);
-        const resolvedCorrect = feedback ? isCorrectByBackend : option.is_correct;
 
-        if (resolvedCorrect) return 'bg-emerald-500 text-white';
+        if (isCorrectByBackend) return 'bg-emerald-500 text-white';
         if (studentSelected) return 'bg-destructive text-white';
         return 'bg-muted text-muted-foreground';
     }
@@ -80,13 +90,17 @@ export function MultiSelectInput({ responseConfig, onSubmit, feedback, readOnly,
             return selectedLabels.includes(option.label) ? 'border-primary bg-primary' : 'border-border bg-background';
         }
 
+        if (!feedback) {
+            const effectiveSelected = getEffectiveSelected();
+            return effectiveSelected.includes(option.label) ? 'border-primary/40 bg-primary/10' : 'border-border bg-background opacity-50';
+        }
+
         const effectiveSelected = getEffectiveSelected();
         const studentSelected = effectiveSelected.includes(option.label);
         const isCorrectByBackend = correctLabels.includes(option.label);
-        const resolvedCorrect = feedback ? isCorrectByBackend : option.is_correct;
 
-        if (resolvedCorrect && studentSelected) return 'border-emerald-500 bg-emerald-500';
-        if (resolvedCorrect && !studentSelected) return 'border-emerald-500 bg-background';
+        if (isCorrectByBackend && studentSelected) return 'border-emerald-500 bg-emerald-500';
+        if (isCorrectByBackend && !studentSelected) return 'border-emerald-500 bg-background';
         if (studentSelected) return 'border-destructive bg-destructive';
         return 'border-border bg-background';
     }

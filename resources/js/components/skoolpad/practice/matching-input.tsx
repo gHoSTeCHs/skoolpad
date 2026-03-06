@@ -110,6 +110,9 @@ export function MatchingInput({ responseConfig, onSubmit, feedback, readOnly, ex
         if (!isSubmitted) {
             return 'border-border hover:border-primary/40';
         }
+        if (!feedback) {
+            return 'border-border opacity-70';
+        }
         const originalRightIndex = Number(rightIds[leftPosition]);
         const isCorrect = originalRightIndex === leftPosition;
         return isCorrect

@@ -38,10 +38,17 @@ export function AssertionReasonInput({ responseConfig, onSubmit, feedback, readO
                 : 'border-border hover:border-primary/40 hover:bg-accent/50';
         }
 
+        if (!feedback) {
+            const effectiveSelected = getEffectiveSelected();
+            return effectiveSelected === option.label
+                ? 'border-primary/40 bg-primary/5 opacity-70'
+                : 'border-border opacity-50';
+        }
+
         const effectiveSelected = getEffectiveSelected();
         const studentSelected = effectiveSelected === option.label;
         const correctLabel = feedback?.correctAnswer?.correct_label;
-        const isCorrectOption = correctLabel ? option.label === correctLabel : option.is_correct;
+        const isCorrectOption = option.label === correctLabel;
 
         if (isCorrectOption) {
             return 'border-emerald-500 bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 reader:text-emerald-400';
@@ -57,10 +64,15 @@ export function AssertionReasonInput({ responseConfig, onSubmit, feedback, readO
             return selectedLabel === option.label ? 'bg-primary text-primary-foreground' : 'bg-muted text-muted-foreground';
         }
 
+        if (!feedback) {
+            const effectiveSelected = getEffectiveSelected();
+            return effectiveSelected === option.label ? 'bg-primary/40 text-white' : 'bg-muted text-muted-foreground';
+        }
+
         const effectiveSelected = getEffectiveSelected();
         const studentSelected = effectiveSelected === option.label;
         const correctLabel = feedback?.correctAnswer?.correct_label;
-        const isCorrectOption = correctLabel ? option.label === correctLabel : option.is_correct;
+        const isCorrectOption = option.label === correctLabel;
 
         if (isCorrectOption) return 'bg-emerald-500 text-white';
         if (studentSelected) return 'bg-destructive text-white';

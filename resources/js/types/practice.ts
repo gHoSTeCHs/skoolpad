@@ -43,6 +43,7 @@ export interface PracticeQuestionData {
         question_type: QuestionType;
         response_config: ResponseConfig;
         marks: number | null;
+        contexts: { id: string; context_type: string; media_url?: string | null }[];
     }[];
     quick_answer: { content: Record<string, unknown> | null; content_plain: string | null } | null;
     topic_links: { canonical_topic: { id: string; title: string } }[];

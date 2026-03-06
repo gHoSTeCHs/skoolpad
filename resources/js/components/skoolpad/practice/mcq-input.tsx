@@ -33,6 +33,13 @@ export function McqInput({ responseConfig, onSubmit, feedback, readOnly, existin
                 : 'border-border hover:border-primary/40 hover:bg-accent/50';
         }
 
+        if (!feedback) {
+            const effectiveSelected = existingAnswer?.selected_label ?? selectedLabel;
+            return effectiveSelected === option.label
+                ? 'border-primary/40 bg-primary/5 opacity-70'
+                : 'border-border opacity-50';
+        }
+
         const studentSelected = (existingAnswer?.selected_label ?? selectedLabel) === option.label;
         const isCorrectOption = option.is_correct;
 
@@ -51,6 +58,12 @@ export function McqInput({ responseConfig, onSubmit, feedback, readOnly, existin
                 ? 'bg-primary text-primary-foreground'
                 : 'bg-muted text-muted-foreground';
         }
+
+        if (!feedback) {
+            const effectiveSelected = existingAnswer?.selected_label ?? selectedLabel;
+            return effectiveSelected === option.label ? 'bg-primary/40 text-white' : 'bg-muted text-muted-foreground';
+        }
+
         const studentSelected = (existingAnswer?.selected_label ?? selectedLabel) === option.label;
         if (option.is_correct) return 'bg-emerald-500 text-white';
         if (studentSelected) return 'bg-destructive text-white';

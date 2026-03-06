@@ -16,6 +16,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { useFilterHandlers } from '@/hooks/use-filter-handlers';
 import AdminLayout from '@/layouts/admin-layout';
 import type { BaseFilters } from '@/hooks/use-filter-handlers';
+import { formatMinutes } from '@/lib/utils';
 import type { PaginatedData } from '@/types/models';
 
 interface PaperListItem {
@@ -59,18 +60,6 @@ function formatDate(dateString: string): string {
         month: 'short',
         day: 'numeric',
     });
-}
-
-function formatDuration(minutes: number | null): string {
-    if (!minutes) {
-        return '—';
-    }
-    if (minutes < 60) {
-        return `${minutes}m`;
-    }
-    const hours = Math.floor(minutes / 60);
-    const remaining = minutes % 60;
-    return remaining > 0 ? `${hours}h ${remaining}m` : `${hours}h`;
 }
 
 const columns: ColumnDef<PaperListItem>[] = [
@@ -128,7 +117,7 @@ const columns: ColumnDef<PaperListItem>[] = [
     {
         id: 'duration_minutes',
         header: 'Duration',
-        cell: (row) => formatDuration(row.duration_minutes),
+        cell: (row) => formatMinutes(row.duration_minutes),
     },
     {
         id: 'is_published',

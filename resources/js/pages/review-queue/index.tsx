@@ -77,33 +77,31 @@ export default function ReviewQueue({ dueCount, dueItems, enrolledCourses, selec
                     </div>
                 </div>
 
-                {dueItems.length === 0 ? (
-                    <div className="flex flex-col items-center justify-center rounded-xl border-2 border-dashed border-emerald-200 bg-emerald-50/30 py-16 dark:border-emerald-800/30 dark:bg-emerald-950/10 reader:border-emerald-800/30 reader:bg-emerald-950/10">
-                        <div className="flex size-14 items-center justify-center rounded-full bg-emerald-100 dark:bg-emerald-900/40 reader:bg-emerald-900/40">
-                            <CheckCircle2 className="size-7 text-emerald-600 dark:text-emerald-400 reader:text-emerald-400" />
-                        </div>
-                        <h3 className="font-display mt-4 text-lg font-semibold">All caught up!</h3>
-                        <p className="mt-1 max-w-xs text-center text-sm text-muted-foreground" style={{ fontFamily: 'var(--font-body)' }}>
-                            No items due for review right now. Keep practising and new reviews will appear here.
-                        </p>
+                <div className="grid gap-6 lg:grid-cols-3">
+                    <div className="lg:col-span-2">
+                        {dueItems.length === 0 ? (
+                            <div className="flex flex-col items-center justify-center rounded-xl border-2 border-dashed border-emerald-200 bg-emerald-50/30 py-16 dark:border-emerald-800/30 dark:bg-emerald-950/10 reader:border-emerald-800/30 reader:bg-emerald-950/10">
+                                <div className="flex size-14 items-center justify-center rounded-full bg-emerald-100 dark:bg-emerald-900/40 reader:bg-emerald-900/40">
+                                    <CheckCircle2 className="size-7 text-emerald-600 dark:text-emerald-400 reader:text-emerald-400" />
+                                </div>
+                                <h3 className="font-display mt-4 text-lg font-semibold">All caught up!</h3>
+                                <p className="mt-1 max-w-xs text-center text-sm text-muted-foreground" style={{ fontFamily: 'var(--font-body)' }}>
+                                    No items due for review right now. Keep practising and new reviews will appear here.
+                                </p>
+                            </div>
+                        ) : (
+                            <div className="space-y-2">
+                                {dueItems.map((item) => (
+                                    <QueueItem key={item.id} item={item} />
+                                ))}
+                            </div>
+                        )}
                     </div>
-                ) : (
-                    <div className="grid gap-6 lg:grid-cols-3">
-                        <div className="space-y-2 lg:col-span-2">
-                            {dueItems.map((item) => (
-                                <QueueItem key={item.id} item={item} />
-                            ))}
-                        </div>
 
-                        <div className="space-y-4">
-                            <ReviewCalendar calendar={calendar} />
-                        </div>
+                    <div className="space-y-4">
+                        <ReviewCalendar calendar={calendar} />
                     </div>
-                )}
-
-                {dueItems.length === 0 && (
-                    <ReviewCalendar calendar={calendar} />
-                )}
+                </div>
             </div>
         </AppLayout>
     );

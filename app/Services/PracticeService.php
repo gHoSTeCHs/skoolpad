@@ -2,6 +2,7 @@
 
 namespace App\Services;
 
+use App\Enums\AnswerDepthLevel;
 use App\Enums\PracticeMode;
 use App\Enums\QuestionType;
 use App\Enums\SpacedRepetitionStatus;
@@ -141,8 +142,8 @@ class PracticeService
             ->with([
                 'topicLinks.canonicalTopic:id,title',
                 'contexts',
-                'children',
-                'answers' => fn ($q) => $q->where('is_published', true)->where('depth_level', 'quick'),
+                'children.contexts',
+                'answers' => fn ($q) => $q->where('is_published', true)->where('depth_level', AnswerDepthLevel::Quick),
             ])
             ->get();
 

@@ -216,6 +216,11 @@ class PracticeController extends Controller
                     'question_type' => $child->question_type->value,
                     'response_config' => $child->response_config,
                     'marks' => $child->marks,
+                    'contexts' => $child->contexts->map(fn ($c) => [
+                        'id' => $c->id,
+                        'context_type' => $c->context_type->value ?? $c->context_type,
+                        'media_url' => $c->media_url,
+                    ]),
                 ]),
                 'quick_answer' => $answers->has($q->id)
                     ? $q->answers->first()?->only(['content', 'content_plain'])

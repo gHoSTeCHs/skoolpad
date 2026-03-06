@@ -1,5 +1,5 @@
 import { Head, router } from '@inertiajs/react';
-import { useCallback, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
 import PracticeController from '@/actions/App/Http/Controllers/Student/PracticeController';
 import { Button } from '@/components/ui/button';
@@ -20,6 +20,7 @@ export default function PracticeShow({ session, questions, answers: serverAnswer
     const [showGrid, setShowGrid] = useState(false);
     const [showEndConfirm, setShowEndConfirm] = useState(false);
     const [prevIndex, setPrevIndex] = useState<number | null>(null);
+    const [savedVisible, setSavedVisible] = useState(false);
     const questionStartTime = useRef(Date.now());
     const isTimed = session.mode === 'timed' && session.time_limit_seconds !== null;
     const isReviewMode = session.mode === 'review';
@@ -38,6 +39,12 @@ export default function PracticeShow({ session, questions, answers: serverAnswer
         const currentContextIds = currentQuestion?.contexts.map((c) => c.id) ?? [];
         return currentContextIds.filter((id) => prevContextIds.has(id));
     }, [prevIndex, currentIndex, questions, currentQuestion]);
+
+    useEffect(() => {
+        if (!savedVisible) return;
+        const timer = setTimeout(() => setSavedVisible(false), 2000);
+        return () => clearTimeout(timer);
+    }, [savedVisible]);
 
     const getCsrfToken = useCallback((): string => {
         const match = document.cookie.match(/XSRF-TOKEN=([^;]+)/);
@@ -82,6 +89,7 @@ export default function PracticeShow({ session, questions, answers: serverAnswer
             })
             .then((response: AnswerSubmissionResponse) => {
                 setCurrentFeedback(response);
+                setSavedVisible(true);
 
                 setLocalAnswers((prev) => {
                     const updated = {
@@ -136,6 +144,7 @@ export default function PracticeShow({ session, questions, answers: serverAnswer
                 return r.json();
             })
             .then(() => {
+                setSavedVisible(true);
                 setLocalAnswers((prev) => ({
                     ...prev,
                     [currentQuestion.id]: {
@@ -200,6 +209,11 @@ export default function PracticeShow({ session, questions, answers: serverAnswer
                         </div>
 
                         <div className="flex items-center gap-3">
+                            {savedVisible && (
+                                <span className="text-xs font-medium text-emerald-600 dark:text-emerald-400 reader:text-emerald-400 transition-opacity" style={{ fontFamily: 'var(--font-body)' }}>
+                                    Saved ✓
+                                </span>
+                            )}
                             {isTimed && (
                                 <TimerDisplay
                                     totalSeconds={session.time_limit_seconds!}

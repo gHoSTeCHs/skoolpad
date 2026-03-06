@@ -29,6 +29,18 @@ export function formatDuration(seconds: number): string {
     return `${m}m ${s}s`;
 }
 
+/**
+ * Formats a duration in minutes into a human-readable string (e.g. "1h 30m", "45m")
+ * @example formatMinutes(90) => '1h 30m'
+ */
+export function formatMinutes(minutes: number | null): string {
+    if (!minutes) return '—';
+    if (minutes < 60) return `${minutes}m`;
+    const hours = Math.floor(minutes / 60);
+    const remaining = minutes % 60;
+    return remaining > 0 ? `${hours}h ${remaining}m` : `${hours}h`;
+}
+
 export function stripHtml(html: string): string {
     if (typeof html !== 'string') return '';
     return html.replace(/<[^>]*>/g, '').replace(/&nbsp;/g, ' ').replace(/\s+/g, ' ').trim();

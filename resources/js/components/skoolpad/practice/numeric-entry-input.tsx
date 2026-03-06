@@ -38,7 +38,7 @@ export function NumericEntryInput({ responseConfig, onSubmit, feedback, readOnly
     }
 
     const displayValue = isSubmitted && existingAnswer?.value !== undefined ? String(existingAnswer.value) : value;
-    const canSubmit = value.trim() !== '' && !isSubmitted;
+    const canSubmit = value.trim() !== '' && !isNaN(Number(value.trim())) && !isSubmitted;
 
     return (
         <div className="space-y-3">
