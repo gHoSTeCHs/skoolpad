@@ -72,11 +72,13 @@ export function McqInput({ responseConfig, onSubmit, feedback, readOnly, existin
 
     return (
         <div className="space-y-3">
-            <div className="space-y-2">
+            <div className="space-y-2" role="radiogroup">
                 {options.map((option) => (
                     <button
                         key={option.label}
                         type="button"
+                        role="radio"
+                        aria-checked={selectedLabel === option.label}
                         onClick={() => handleSelect(option.label)}
                         disabled={isSubmitted}
                         className={cn(

@@ -103,7 +103,7 @@ export function AssertionReasonInput({ responseConfig, onSubmit, feedback, readO
                 </div>
             </div>
 
-            <div className="space-y-2">
+            <div className="space-y-2" role="radiogroup">
                 <p className="text-xs text-muted-foreground" style={{ fontFamily: 'var(--font-body)' }}>
                     Select the option that best describes the relationship between the assertion and reason
                 </p>
@@ -111,6 +111,8 @@ export function AssertionReasonInput({ responseConfig, onSubmit, feedback, readO
                     <button
                         key={option.label}
                         type="button"
+                        role="radio"
+                        aria-checked={selectedLabel === option.label}
                         onClick={() => handleSelect(option.label)}
                         disabled={isSubmitted}
                         className={cn(

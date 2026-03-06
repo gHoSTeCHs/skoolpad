@@ -86,11 +86,13 @@ export function TrueFalseInput({ responseConfig, onSubmit, feedback, readOnly, e
 
     return (
         <div className="space-y-4">
-            <div className="grid grid-cols-2 gap-3">
+            <div className="grid grid-cols-2 gap-3" role="radiogroup">
                 {([true, false] as const).map((value) => (
                     <button
                         key={String(value)}
                         type="button"
+                        role="radio"
+                        aria-checked={getEffectiveSelected() === value}
                         onClick={() => handleSelect(value)}
                         disabled={isSubmitted}
                         className={cn(

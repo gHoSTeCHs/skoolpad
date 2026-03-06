@@ -112,11 +112,13 @@ export function MultiSelectInput({ responseConfig, onSubmit, feedback, readOnly,
             <p className="text-xs text-muted-foreground" style={{ fontFamily: 'var(--font-body)' }}>
                 Select all that apply
             </p>
-            <div className="space-y-2">
+            <div className="space-y-2" role="group">
                 {options.map((option) => (
                     <button
                         key={option.label}
                         type="button"
+                        role="checkbox"
+                        aria-checked={selectedLabels.includes(option.label)}
                         onClick={() => handleToggle(option.label)}
                         disabled={isSubmitted}
                         className={cn(
