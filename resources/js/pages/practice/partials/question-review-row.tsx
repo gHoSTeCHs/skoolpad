@@ -61,6 +61,7 @@ interface QuestionReviewRowProps {
 
 export function QuestionReviewRow({ question: q, index, isExpanded, onToggle }: QuestionReviewRowProps) {
     const status = getQuestionStatus(q);
+    const strippedContent = stripHtml(q.question_content);
 
     return (
         <div className={cn('overflow-hidden rounded-xl border transition-colors', isExpanded ? status.border : 'border-border')}>
@@ -75,8 +76,8 @@ export function QuestionReviewRow({ question: q, index, isExpanded, onToggle }: 
 
                 <div className="min-w-0 flex-1">
                     <p className="truncate text-sm" style={{ fontFamily: 'var(--font-body)' }}>
-                        {stripHtml(q.question_content).slice(0, 100)}
-                        {stripHtml(q.question_content).length > 100 ? '...' : ''}
+                        {strippedContent.slice(0, 100)}
+                        {strippedContent.length > 100 ? '...' : ''}
                     </p>
                 </div>
 
