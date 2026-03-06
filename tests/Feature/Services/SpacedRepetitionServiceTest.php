@@ -246,6 +246,23 @@ it('getDueItems returns items ordered by next_review_at ascending', function () 
     expect($dueItems[2]->id)->toBe($newest->id);
 });
 
+it('creates new spaced repetition item on first incorrect review', function () {
+    $item = $this->service->scheduleReview($this->user, $this->question, false);
+
+    expect($item)->toBeInstanceOf(SpacedRepetitionItem::class);
+    expect($item->interval_days)->toBe(1);
+    expect($item->repetition_count)->toBe(0);
+    expect($item->status)->toBe(SpacedRepetitionStatus::Active);
+    expect(SpacedRepetitionItem::count())->toBe(1);
+});
+
+it('does not duplicate spaced repetition item across multiple calls', function () {
+    $this->service->scheduleReview($this->user, $this->question, true);
+    $this->service->scheduleReview($this->user, $this->question, false);
+
+    expect(SpacedRepetitionItem::count())->toBe(1);
+});
+
 it('scheduleReview ignores graduated item on correct answer', function () {
     $this->service->scheduleReview($this->user, $this->question, true);
     $this->service->scheduleReview($this->user, $this->question, true);

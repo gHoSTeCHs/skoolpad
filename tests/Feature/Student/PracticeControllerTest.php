@@ -575,6 +575,138 @@ it('answer updates last_activity_at', function () {
     expect($session->fresh()->last_activity_at->greaterThanOrEqualTo(now()->subMinute()))->toBeTrue();
 });
 
+it('answer auto-grades multi_select correctly', function () {
+    $question = Question::factory()->create([
+        'institution_course_id' => $this->course->id,
+        'is_published' => true,
+        'question_type' => \App\Enums\QuestionType::MultiSelectMcq,
+        'response_config' => [
+            'options' => [
+                ['label' => 'A', 'text' => 'Option A', 'is_correct' => true],
+                ['label' => 'B', 'text' => 'Option B', 'is_correct' => false],
+                ['label' => 'C', 'text' => 'Option C', 'is_correct' => true],
+                ['label' => 'D', 'text' => 'Option D', 'is_correct' => false],
+            ],
+        ],
+    ]);
+    $session = PracticeSession::factory()->create([
+        'user_id' => $this->user->id,
+        'question_ids' => [$question->id],
+        'question_count' => 1,
+    ]);
+
+    $response = $this->postJson(route('practice.answer', $session), [
+        'question_id' => $question->id,
+        'response_data' => ['selected_labels' => ['A', 'C']],
+        'time_spent_seconds' => 15,
+        'sequence_order' => 0,
+    ]);
+
+    $response->assertOk();
+    $response->assertJson(['is_correct' => true]);
+});
+
+it('answer auto-grades true_false correctly', function () {
+    $question = Question::factory()->trueFalse()->create([
+        'institution_course_id' => $this->course->id,
+        'is_published' => true,
+    ]);
+    $session = PracticeSession::factory()->create([
+        'user_id' => $this->user->id,
+        'question_ids' => [$question->id],
+        'question_count' => 1,
+    ]);
+
+    $response = $this->postJson(route('practice.answer', $session), [
+        'question_id' => $question->id,
+        'response_data' => ['answer' => true],
+        'time_spent_seconds' => 10,
+        'sequence_order' => 0,
+    ]);
+
+    $response->assertOk();
+    $response->assertJson(['is_correct' => true]);
+});
+
+it('answer auto-grades matching correctly', function () {
+    $question = Question::factory()->create([
+        'institution_course_id' => $this->course->id,
+        'is_published' => true,
+        'question_type' => \App\Enums\QuestionType::Matching,
+        'response_config' => [
+            'pairs' => ['0' => 2, '1' => 0, '2' => 1],
+        ],
+    ]);
+    $session = PracticeSession::factory()->create([
+        'user_id' => $this->user->id,
+        'question_ids' => [$question->id],
+        'question_count' => 1,
+    ]);
+
+    $response = $this->postJson(route('practice.answer', $session), [
+        'question_id' => $question->id,
+        'response_data' => ['pairs' => ['0' => 2, '1' => 0, '2' => 1]],
+        'time_spent_seconds' => 20,
+        'sequence_order' => 0,
+    ]);
+
+    $response->assertOk();
+    $response->assertJson(['is_correct' => true]);
+});
+
+it('answer auto-grades ordering correctly', function () {
+    $question = Question::factory()->create([
+        'institution_course_id' => $this->course->id,
+        'is_published' => true,
+        'question_type' => \App\Enums\QuestionType::Ordering,
+        'response_config' => [
+            'correct_order' => [0, 1, 2, 3],
+        ],
+    ]);
+    $session = PracticeSession::factory()->create([
+        'user_id' => $this->user->id,
+        'question_ids' => [$question->id],
+        'question_count' => 1,
+    ]);
+
+    $response = $this->postJson(route('practice.answer', $session), [
+        'question_id' => $question->id,
+        'response_data' => ['order' => [0, 1, 2, 3]],
+        'time_spent_seconds' => 25,
+        'sequence_order' => 0,
+    ]);
+
+    $response->assertOk();
+    $response->assertJson(['is_correct' => true]);
+});
+
+it('answer auto-grades numeric_entry with tolerance', function () {
+    $question = Question::factory()->create([
+        'institution_course_id' => $this->course->id,
+        'is_published' => true,
+        'question_type' => \App\Enums\QuestionType::NumericEntry,
+        'response_config' => [
+            'answer' => '42',
+            'tolerance' => 0.5,
+        ],
+    ]);
+    $session = PracticeSession::factory()->create([
+        'user_id' => $this->user->id,
+        'question_ids' => [$question->id],
+        'question_count' => 1,
+    ]);
+
+    $response = $this->postJson(route('practice.answer', $session), [
+        'question_id' => $question->id,
+        'response_data' => ['value' => 42.3],
+        'time_spent_seconds' => 30,
+        'sequence_order' => 0,
+    ]);
+
+    $response->assertOk();
+    $response->assertJson(['is_correct' => true]);
+});
+
 it('answer stores null is_correct for non-gradable question types', function () {
     $question = Question::factory()->create([
         'institution_course_id' => $this->course->id,

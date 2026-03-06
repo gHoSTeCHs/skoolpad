@@ -154,7 +154,8 @@ class PracticeService
 
     public function submitAnswer(PracticeSession $session, Question $question, array $answerData): PracticeAnswer
     {
-        $isCorrect = ! empty($answerData['was_skipped']) ? null : $this->gradeAnswer($question, $answerData);
+        $gradeData = array_merge($answerData['response_data'] ?? [], $answerData);
+        $isCorrect = ! empty($answerData['was_skipped']) ? null : $this->gradeAnswer($question, $gradeData);
 
         $answer = PracticeAnswer::create([
             'practice_session_id' => $session->id,
