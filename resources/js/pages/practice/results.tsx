@@ -162,9 +162,9 @@ export default function PracticeResults({ session, perQuestion, perTopic, review
                                 )}
                                 {(() => {
                                     const weakTopics = perTopic.filter((t) => t.accuracy < 70 && t.total > 0);
-                                    if (weakTopics.length === 0) return null;
+                                    if (weakTopics.length === 0 || !session.institution_course) return null;
                                     const params = new URLSearchParams();
-                                    params.set('institution_course_id', session.institution_course?.id ?? '');
+                                    params.set('institution_course_id', session.institution_course.id);
                                     weakTopics.forEach((t) => params.append('topic_ids[]', t.topic_id));
                                     return (
                                         <Button variant="outline" asChild>
