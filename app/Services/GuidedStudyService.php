@@ -255,6 +255,9 @@ class GuidedStudyService
         return $minutesBudget;
     }
 
+    /**
+     * Tier 3 — Practice sessions for topics where accuracy < 60% over 5+ attempts
+     */
     private function addWeakTopics(Collection $items, int $minutesBudget, User $user): int
     {
         if ($minutesBudget <= 0) {
