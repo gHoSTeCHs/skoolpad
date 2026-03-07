@@ -75,7 +75,12 @@ export function QuestionReviewRow({ question: q, index, isExpanded, onToggle }: 
                 </span>
 
                 <div className="min-w-0 flex-1">
-                    <p className="truncate text-sm" style={{ fontFamily: 'var(--font-body)' }}>
+                    <div className="flex items-center gap-1.5">
+                        <span className="shrink-0 rounded bg-muted px-1.5 py-0.5 text-[10px] font-medium uppercase tracking-wider text-muted-foreground">
+                            {q.question_type.replace(/_/g, ' ')}
+                        </span>
+                    </div>
+                    <p className="mt-0.5 truncate text-sm" style={{ fontFamily: 'var(--font-body)' }}>
                         {strippedContent.slice(0, 100)}
                         {strippedContent.length > 100 ? '...' : ''}
                     </p>

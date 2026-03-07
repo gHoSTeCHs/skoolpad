@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 
 import { QuestionAnswerInput } from '@/components/skoolpad/practice/question-answer-input';
 import ContextCard from '@/components/skoolpad/questions/context-card';
@@ -6,6 +6,8 @@ import { ContentRenderer } from '@/components/shared/content-renderer';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import type { AnswerSubmissionResponse, PracticeAnswerData, PracticeQuestionData } from '@/types/practice';
 import type { RenderableContent } from '@/types/tiptap';
+
+const INLINE_BLANK_PATTERN = /_{3,}|\{\{blank\}\}|\{\{(\d+)\}\}|\{\{gap\}\}|\[gap\]/;
 
 interface QuestionDisplayProps {
     question: PracticeQuestionData;
@@ -23,27 +25,44 @@ export function QuestionDisplay({ question, onSubmit, onSkip, feedback, readOnly
     const newContexts = question.contexts.filter((ctx) => !persistedContextIds.includes(ctx.id));
     const sharedContexts = question.contexts.filter((ctx) => persistedContextIds.includes(ctx.id));
 
+    const isInlineType = question.question_type === 'fill_blank' || question.question_type === 'cloze';
+    const hasInlineMarkers = useMemo(() => {
+        if (!isInlineType) return false;
+        const content = question.content;
+        if (!content) return false;
+        try {
+            const parsed = JSON.parse(content);
+            if (parsed?.type === 'doc') {
+                const text = JSON.stringify(parsed);
+                return INLINE_BLANK_PATTERN.test(text);
+            }
+        } catch { /* not JSON */ }
+        return INLINE_BLANK_PATTERN.test(content);
+    }, [question.content, isInlineType]);
+
     return (
         <div className="space-y-4">
             {sharedContexts.length > 0 && (
-                <div className="rounded-md border border-dashed border-border bg-muted/30 px-3 py-2">
-                    <p className="text-xs text-muted-foreground" style={{ fontFamily: 'var(--font-body)' }}>
-                        Context from previous question still applies
-                    </p>
+                <div className="space-y-2">
+                    {sharedContexts.map((ctx) => (
+                        <CollapsibleContext key={ctx.id} ctx={ctx} defaultOpen={false} />
+                    ))}
                 </div>
             )}
 
             {newContexts.length > 0 && (
                 <div className="space-y-2">
                     {newContexts.map((ctx) => (
-                        <CollapsibleContext key={ctx.id} ctx={ctx} />
+                        <CollapsibleContext key={ctx.id} ctx={ctx} defaultOpen />
                     ))}
                 </div>
             )}
 
-            <div className="prose prose-sm dark:prose-invert reader:prose-invert max-w-none" style={{ fontFamily: 'var(--font-content)' }}>
-                <ContentRenderer content={question.content} />
-            </div>
+            {!hasInlineMarkers && (
+                <div className="prose prose-sm dark:prose-invert reader:prose-invert max-w-none" style={{ fontFamily: 'var(--font-content)' }}>
+                    <ContentRenderer content={question.content} />
+                </div>
+            )}
 
             {question.marks && (
                 <span className="inline-flex items-center rounded-md bg-muted px-2 py-0.5 text-xs font-medium text-muted-foreground">
@@ -66,6 +85,7 @@ export function QuestionDisplay({ question, onSubmit, onSkip, feedback, readOnly
                     readOnly={readOnly}
                     existingAnswer={existingAnswer?.response_data as Record<string, unknown> | null}
                     mediaUrl={question.contexts.find((ctx) => ctx.context_type === 'diagram')?.media_url}
+                    questionContent={question.content}
                 />
             </div>
 
@@ -93,8 +113,8 @@ export function QuestionDisplay({ question, onSubmit, onSkip, feedback, readOnly
     );
 }
 
-function CollapsibleContext({ ctx }: { ctx: PracticeQuestionData['contexts'][number] }) {
-    const [open, setOpen] = useState(true);
+function CollapsibleContext({ ctx, defaultOpen = true }: { ctx: PracticeQuestionData['contexts'][number]; defaultOpen?: boolean }) {
+    const [open, setOpen] = useState(defaultOpen);
     const typeLabel = ctx.context_type.replace('_', ' ');
 
     return (

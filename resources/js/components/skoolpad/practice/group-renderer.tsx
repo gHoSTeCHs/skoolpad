@@ -1,5 +1,6 @@
 import { useState } from 'react';
 
+import { ContentRenderer } from '@/components/shared/content-renderer';
 import type { PracticeQuestionData } from '@/types/practice';
 
 import { QuestionAnswerInput } from './question-answer-input';
@@ -37,20 +38,20 @@ export function GroupRenderer({ children, onSubmit, feedback, readOnly, existing
 
                 return (
                     <div key={child.id} className="rounded-lg border border-border/60 p-4">
-                        <div className="mb-3 flex items-center gap-2">
-                            <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-muted text-xs font-bold text-muted-foreground">
+                        <div className="mb-3 flex items-start gap-2">
+                            <span className="mt-0.5 flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-muted text-xs font-bold text-muted-foreground">
                                 {index + 1}
                             </span>
-                            <p className="text-sm leading-relaxed" style={{ fontFamily: 'var(--font-content)' }}>
-                                {child.content}
-                            </p>
+                            <div className="prose prose-sm dark:prose-invert reader:prose-invert max-w-none" style={{ fontFamily: 'var(--font-content)' }}>
+                                <ContentRenderer content={child.content} />
+                            </div>
                         </div>
                         <QuestionAnswerInput
                             questionType={child.question_type}
                             responseConfig={child.response_config}
                             onSubmit={(data) => handleChildAnswer(child.id, data)}
                             feedback={childFeedback}
-                            readOnly={isSubmitted || childAnswers[child.id] !== undefined}
+                            readOnly={isSubmitted}
                             existingAnswer={
                                 (existingAnswer?.group_answers?.[child.id] ?? childAnswers[child.id]) as Record<string, unknown> | null
                             }

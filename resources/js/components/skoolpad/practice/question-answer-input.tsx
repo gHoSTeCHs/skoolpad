@@ -42,9 +42,10 @@ interface QuestionAnswerInputProps {
     existingAnswer?: Record<string, unknown> | null;
     mediaUrl?: string | null;
     children?: PracticeQuestionData['children'];
+    questionContent?: string;
 }
 
-export function QuestionAnswerInput({ questionType, responseConfig, onSubmit, feedback, readOnly, existingAnswer, mediaUrl, children }: QuestionAnswerInputProps) {
+export function QuestionAnswerInput({ questionType, responseConfig, onSubmit, feedback, readOnly, existingAnswer, mediaUrl, children, questionContent }: QuestionAnswerInputProps) {
     switch (questionType) {
         case 'mcq':
             if (!responseConfig) return null;
@@ -167,6 +168,7 @@ export function QuestionAnswerInput({ questionType, responseConfig, onSubmit, fe
                     }
                     readOnly={readOnly}
                     existingAnswer={existingAnswer as { blanks: Record<string, string> } | null}
+                    questionContent={questionContent}
                 />
             );
 
@@ -188,6 +190,7 @@ export function QuestionAnswerInput({ questionType, responseConfig, onSubmit, fe
                     }
                     readOnly={readOnly}
                     existingAnswer={existingAnswer as { gaps: Record<string, number> } | null}
+                    questionContent={questionContent}
                 />
             );
 

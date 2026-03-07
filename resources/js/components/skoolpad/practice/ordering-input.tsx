@@ -75,7 +75,12 @@ export function OrderingInput({ responseConfig, onSubmit, feedback, readOnly, ex
         if (existingAnswer?.order) {
             return existingAnswer.order.map(String);
         }
-        return items.map((_, i) => String(i));
+        const ids = items.map((_, i) => String(i));
+        for (let i = ids.length - 1; i > 0; i--) {
+            const j = Math.floor(Math.random() * (i + 1));
+            [ids[i], ids[j]] = [ids[j], ids[i]];
+        }
+        return ids;
     });
 
     const sensors = useSensors(

@@ -1,3 +1,5 @@
+import { useEffect, useState } from 'react';
+
 import { modeLabels } from '@/lib/practice';
 import { cn, formatDuration } from '@/lib/utils';
 import type { PracticeResultsPageProps } from '@/types/practice';
@@ -8,24 +10,42 @@ interface ScoreSummaryProps {
 
 export function ScoreSummary({ session }: ScoreSummaryProps) {
     const score = session.score_percentage ?? 0;
-    const scoreColor = score >= 80 ? 'text-emerald-600 dark:text-emerald-400 reader:text-emerald-400'
+    const isGreat = score >= 80;
+    const scoreColor = isGreat ? 'text-emerald-600 dark:text-emerald-400 reader:text-emerald-400'
         : score >= 60 ? 'text-yellow-600 dark:text-yellow-400 reader:text-yellow-400'
         : 'text-destructive';
+    const [animate, setAnimate] = useState(false);
+
+    useEffect(() => {
+        if (isGreat) {
+            const timer = setTimeout(() => setAnimate(true), 100);
+            return () => clearTimeout(timer);
+        }
+    }, [isGreat]);
 
     return (
-        <div className="rounded-xl border bg-card p-6 text-center">
+        <div className={cn('rounded-xl border bg-card p-6 text-center transition-all duration-700', isGreat && animate && 'ring-2 ring-emerald-500/30')}>
             <span className="rounded-md bg-muted px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
                 {modeLabels[session.mode] ?? session.mode}
             </span>
 
-            <div className="mt-4">
-                <span className={cn('font-display text-5xl font-bold tabular-nums', scoreColor)}>
+            <div className="mt-4 relative">
+                {isGreat && animate && (
+                    <span className="absolute inset-0 flex items-center justify-center">
+                        <span className="absolute h-20 w-20 animate-ping rounded-full bg-emerald-400/20" />
+                    </span>
+                )}
+                <span className={cn(
+                    'font-display text-5xl font-bold tabular-nums relative',
+                    scoreColor,
+                    isGreat && animate && 'animate-bounce',
+                )} style={{ animationIterationCount: 2, animationDuration: '0.6s' }}>
                     {Math.round(score)}%
                 </span>
             </div>
 
             <p className="mt-2 text-sm text-muted-foreground" style={{ fontFamily: 'var(--font-body)' }}>
-                {session.correct_count} of {session.question_count} correct
+                {session.correct_count}/{session.question_count} correct ({Math.round(score)}%)
             </p>
 
             <div className="mt-4 flex items-center justify-center gap-6 text-sm text-muted-foreground" style={{ fontFamily: 'var(--font-body)' }}>

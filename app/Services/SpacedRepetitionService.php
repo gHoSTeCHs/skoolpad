@@ -40,7 +40,7 @@ class SpacedRepetitionService
             $item->interval_days = self::INTERVAL_MAP[$rep] ?? 21;
             $item->repetition_count = $rep + 1;
 
-            if ($item->repetition_count >= 3) {
+            if ($item->repetition_count >= 4) {
                 $item->status = SpacedRepetitionStatus::Graduated;
             }
         } else {

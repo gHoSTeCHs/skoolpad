@@ -202,15 +202,15 @@ export default function PracticeShow({ session, questions, answers: serverAnswer
                     <div className="mx-auto flex h-14 max-w-4xl items-center justify-between gap-3 px-4">
                         <div className="flex items-center gap-3">
                             <span className="text-sm font-semibold" style={{ fontFamily: 'var(--font-body)' }}>
-                                Q{currentIndex + 1}
-                                <span className="text-muted-foreground">/{questions.length}</span>
-                            </span>
-                            <span className="rounded-md bg-muted px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
-                                {modeLabels[session.mode] ?? session.mode}
+                                Question {currentIndex + 1}
+                                <span className="text-muted-foreground"> of {questions.length}</span>
                             </span>
                         </div>
 
                         <div className="flex items-center gap-3">
+                            <span className="rounded-md bg-muted px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
+                                {modeLabels[session.mode] ?? session.mode}
+                            </span>
                             {savedVisible && (
                                 <span className="text-xs font-medium text-emerald-600 dark:text-emerald-400 reader:text-emerald-400 transition-opacity" style={{ fontFamily: 'var(--font-body)' }}>
                                     Saved ✓

@@ -113,8 +113,10 @@ export function MatchingInput({ responseConfig, onSubmit, feedback, readOnly, ex
         if (!feedback) {
             return 'border-border opacity-70';
         }
-        const originalRightIndex = Number(rightIds[leftPosition]);
-        const isCorrect = originalRightIndex === leftPosition;
+        const studentRightIndex = Number(rightIds[leftPosition]);
+        const correctPairs = (feedback.correctAnswer?.pairs ?? {}) as Record<string, number>;
+        const correctRightIndex = correctPairs[String(leftPosition)] ?? leftPosition;
+        const isCorrect = studentRightIndex === correctRightIndex;
         return isCorrect
             ? 'border-emerald-500 bg-emerald-500/10'
             : 'border-destructive bg-destructive/10';

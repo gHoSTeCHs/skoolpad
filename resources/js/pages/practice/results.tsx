@@ -137,6 +137,9 @@ export default function PracticeResults({ session, perQuestion, perTopic, review
                         {isReviewMode ? (
                             <>
                                 <Button variant="outline" asChild>
+                                    <Link href={PracticeController.configure.url()}>Continue Studying</Link>
+                                </Button>
+                                <Button variant="outline" asChild>
                                     <Link href={ReviewQueueController.index.url()}>Back to Dashboard</Link>
                                 </Button>
                             </>
