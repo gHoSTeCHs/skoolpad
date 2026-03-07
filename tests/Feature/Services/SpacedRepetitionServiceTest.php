@@ -1,8 +1,12 @@
 <?php
 
 use App\Enums\SpacedRepetitionStatus;
+use App\Models\CanonicalTopic;
 use App\Models\InstitutionCourse;
+use App\Models\LevelSubject;
 use App\Models\Question;
+use App\Models\QuestionTopicLink;
+use App\Models\SchemeOfWorkItem;
 use App\Models\SpacedRepetitionItem;
 use App\Models\StudentProfile;
 use App\Services\SpacedRepetitionService;
@@ -269,6 +273,86 @@ it('does not duplicate spaced repetition item across multiple calls', function (
     $this->service->scheduleReview($this->user, $this->question, false);
 
     expect(SpacedRepetitionItem::count())->toBe(1);
+});
+
+it('getDueItems filters by level subject for secondary students', function () {
+    $topic1 = CanonicalTopic::factory()->create();
+    $topic2 = CanonicalTopic::factory()->create();
+
+    $levelSubject = LevelSubject::factory()->create();
+    $otherSubject = LevelSubject::factory()->create();
+
+    SchemeOfWorkItem::factory()->create([
+        'curriculum_subject_level_id' => $levelSubject->id,
+        'canonical_topic_id' => $topic1->id,
+    ]);
+    SchemeOfWorkItem::factory()->create([
+        'curriculum_subject_level_id' => $otherSubject->id,
+        'canonical_topic_id' => $topic2->id,
+    ]);
+
+    $subjectQuestion = Question::factory()->create(['institution_course_id' => null, 'is_published' => true]);
+    $otherQuestion = Question::factory()->create(['institution_course_id' => null, 'is_published' => true]);
+    QuestionTopicLink::factory()->create(['question_id' => $subjectQuestion->id, 'canonical_topic_id' => $topic1->id]);
+    QuestionTopicLink::factory()->create(['question_id' => $otherQuestion->id, 'canonical_topic_id' => $topic2->id]);
+
+    SpacedRepetitionItem::factory()->create([
+        'user_id' => $this->user->id,
+        'question_id' => $subjectQuestion->id,
+        'status' => SpacedRepetitionStatus::Active,
+        'next_review_at' => today()->toDateString(),
+    ]);
+    SpacedRepetitionItem::factory()->create([
+        'user_id' => $this->user->id,
+        'question_id' => $otherQuestion->id,
+        'status' => SpacedRepetitionStatus::Active,
+        'next_review_at' => today()->toDateString(),
+    ]);
+
+    $allItems = $this->service->getDueItems($this->user);
+    expect($allItems)->toHaveCount(2);
+
+    $filtered = $this->service->getDueItems($this->user, null, null, $levelSubject);
+    expect($filtered)->toHaveCount(1);
+    expect($filtered->first()->question_id)->toBe($subjectQuestion->id);
+});
+
+it('getDueCount filters by level subject for secondary students', function () {
+    $topic1 = CanonicalTopic::factory()->create();
+    $topic2 = CanonicalTopic::factory()->create();
+
+    $levelSubject = LevelSubject::factory()->create();
+    $otherSubject = LevelSubject::factory()->create();
+
+    SchemeOfWorkItem::factory()->create([
+        'curriculum_subject_level_id' => $levelSubject->id,
+        'canonical_topic_id' => $topic1->id,
+    ]);
+    SchemeOfWorkItem::factory()->create([
+        'curriculum_subject_level_id' => $otherSubject->id,
+        'canonical_topic_id' => $topic2->id,
+    ]);
+
+    $subjectQuestion = Question::factory()->create(['institution_course_id' => null, 'is_published' => true]);
+    $otherQuestion = Question::factory()->create(['institution_course_id' => null, 'is_published' => true]);
+    QuestionTopicLink::factory()->create(['question_id' => $subjectQuestion->id, 'canonical_topic_id' => $topic1->id]);
+    QuestionTopicLink::factory()->create(['question_id' => $otherQuestion->id, 'canonical_topic_id' => $topic2->id]);
+
+    SpacedRepetitionItem::factory()->create([
+        'user_id' => $this->user->id,
+        'question_id' => $subjectQuestion->id,
+        'status' => SpacedRepetitionStatus::Active,
+        'next_review_at' => today()->toDateString(),
+    ]);
+    SpacedRepetitionItem::factory()->create([
+        'user_id' => $this->user->id,
+        'question_id' => $otherQuestion->id,
+        'status' => SpacedRepetitionStatus::Active,
+        'next_review_at' => today()->toDateString(),
+    ]);
+
+    expect($this->service->getDueCount($this->user))->toBe(2);
+    expect($this->service->getDueCount($this->user, null, $levelSubject))->toBe(1);
 });
 
 it('scheduleReview ignores graduated item on correct answer', function () {

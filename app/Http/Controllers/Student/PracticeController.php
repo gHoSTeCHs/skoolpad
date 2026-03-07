@@ -222,6 +222,7 @@ class PracticeController extends Controller
             'topic_ids' => $request->input('topic_ids', []),
             'question_types' => $request->input('question_types', []),
             'difficulty' => $request->string('difficulty', 'all')->value(),
+            'assessment_type_id' => $request->string('assessment_type_id')->value() ?: null,
         ];
 
         $count = $this->practiceService->getAvailableQuestionCount($config);

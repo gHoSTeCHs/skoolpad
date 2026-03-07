@@ -16,6 +16,7 @@ use App\Models\QuestionSection;
 use App\Models\QuestionTopicLink;
 use App\Models\SchemeOfWorkItem;
 use App\Models\SpacedRepetitionItem;
+use App\Models\Stream;
 use App\Models\StudentCourse;
 use App\Models\StudentProfile;
 use App\Services\PracticeService;
@@ -1050,4 +1051,103 @@ it('results show level_subject in secondary session results', function () {
         ->where('session.level_subject.subject_name', $levelSubject->curriculumSubject->name)
         ->where('session.institution_course', null)
     );
+});
+
+it('start creates session for secondary student using a specific question_id', function () {
+    $this->profile->delete();
+
+    $secondaryProfile = StudentProfile::factory()->secondary()->create([
+        'user_id' => $this->user->id,
+    ]);
+
+    $levelSubject = LevelSubject::factory()->create([
+        'education_level_id' => $secondaryProfile->education_level_id,
+    ]);
+    SchemeOfWorkItem::factory()->create([
+        'curriculum_subject_level_id' => $levelSubject->id,
+        'canonical_topic_id' => $this->topic->id,
+    ]);
+
+    $secondaryQuestion = Question::factory()->create([
+        'institution_course_id' => null,
+        'is_published' => true,
+    ]);
+    QuestionTopicLink::factory()->create([
+        'question_id' => $secondaryQuestion->id,
+        'canonical_topic_id' => $this->topic->id,
+    ]);
+
+    $response = $this->post(route('practice.start'), [
+        'level_subject_id' => $levelSubject->id,
+        'question_id' => $secondaryQuestion->id,
+        'mode' => PracticeMode::Untimed->value,
+    ]);
+
+    $session = PracticeSession::first();
+    $response->assertRedirect(route('practice.show', $session));
+    expect($session->level_subject_id)->toBe($levelSubject->id);
+    expect($session->institution_course_id)->toBeNull();
+    expect($session->question_count)->toBe(1);
+    expect($session->question_ids)->toContain($secondaryQuestion->id);
+});
+
+it('start rejects secondary student starting a subject from a different stream', function () {
+    $this->profile->delete();
+
+    $educationSystem = \App\Models\EducationSystem::factory()->create();
+    $tier = \App\Models\CurriculumTier::factory()->for($educationSystem)->create(['is_tertiary' => false]);
+    $level = \App\Models\EducationLevel::factory()->for($tier, 'curriculumTier')->create();
+
+    $stream1 = Stream::factory()->create(['education_system_id' => $educationSystem->id]);
+    $stream2 = Stream::factory()->create(['education_system_id' => $educationSystem->id]);
+
+    $secondaryProfile = StudentProfile::factory()->secondary()->create([
+        'user_id' => $this->user->id,
+        'education_level_id' => $level->id,
+        'education_system_id' => $educationSystem->id,
+        'stream_id' => $stream1->id,
+    ]);
+
+    $subjectForStream2 = LevelSubject::factory()->create([
+        'education_level_id' => $level->id,
+        'stream_id' => $stream2->id,
+    ]);
+
+    $response = $this->post(route('practice.start'), [
+        'level_subject_id' => $subjectForStream2->id,
+        'topic_ids' => [$this->topic->id],
+        'question_count' => 5,
+        'mode' => PracticeMode::Untimed->value,
+    ]);
+
+    $response->assertForbidden();
+});
+
+it('available count includes assessment type filter when provided', function () {
+    $assessmentType = AssessmentType::factory()->create();
+
+    $questionWithType = Question::factory()->create([
+        'institution_course_id' => $this->course->id,
+        'is_published' => true,
+    ]);
+    QuestionTopicLink::factory()->create([
+        'question_id' => $questionWithType->id,
+        'canonical_topic_id' => $this->topic->id,
+    ]);
+    $questionWithType->assessmentTypes()->attach($assessmentType->id, ['year' => 2024]);
+
+    $responseAll = $this->getJson(route('api.practice.available-count', [
+        'institution_course_id' => $this->course->id,
+        'topic_ids' => [$this->topic->id],
+    ]));
+    $responseFiltered = $this->getJson(route('api.practice.available-count', [
+        'institution_course_id' => $this->course->id,
+        'topic_ids' => [$this->topic->id],
+        'assessment_type_id' => $assessmentType->id,
+    ]));
+
+    $responseAll->assertOk();
+    $responseFiltered->assertOk();
+    expect($responseFiltered->json('count'))->toBeLessThan($responseAll->json('count'));
+    expect($responseFiltered->json('count'))->toBe(1);
 });
