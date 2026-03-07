@@ -9,6 +9,7 @@ use App\Models\LevelSubject;
 use App\Models\PracticeSession;
 use App\Models\Question;
 use App\Models\QuestionTopicLink;
+use App\Models\SchemeOfWorkItem;
 use App\Models\SpacedRepetitionItem;
 use App\Models\StudentCourse;
 use App\Models\StudentProfile;
@@ -252,4 +253,145 @@ it('index shows subjects for secondary students', function () {
         ->has('enrolledSubjects', 1)
         ->where('enrolledSubjects.0.subject_name', $levelSubject->curriculumSubject->name)
     );
+});
+
+it('index filters by level subject for secondary students', function () {
+    $this->profile->delete();
+
+    $secondaryProfile = StudentProfile::factory()->secondary()->create([
+        'user_id' => $this->user->id,
+    ]);
+
+    $topic1 = CanonicalTopic::factory()->create();
+    $topic2 = CanonicalTopic::factory()->create();
+
+    $subject1 = LevelSubject::factory()->create([
+        'education_level_id' => $secondaryProfile->education_level_id,
+    ]);
+    $subject2 = LevelSubject::factory()->create([
+        'education_level_id' => $secondaryProfile->education_level_id,
+    ]);
+
+    SchemeOfWorkItem::factory()->create([
+        'curriculum_subject_level_id' => $subject1->id,
+        'canonical_topic_id' => $topic1->id,
+    ]);
+    SchemeOfWorkItem::factory()->create([
+        'curriculum_subject_level_id' => $subject2->id,
+        'canonical_topic_id' => $topic2->id,
+    ]);
+
+    $question1 = Question::factory()->create(['institution_course_id' => null, 'is_published' => true]);
+    $question2 = Question::factory()->create(['institution_course_id' => null, 'is_published' => true]);
+    QuestionTopicLink::factory()->create(['question_id' => $question1->id, 'canonical_topic_id' => $topic1->id]);
+    QuestionTopicLink::factory()->create(['question_id' => $question2->id, 'canonical_topic_id' => $topic2->id]);
+
+    SpacedRepetitionItem::factory()->create([
+        'user_id' => $this->user->id,
+        'question_id' => $question1->id,
+        'status' => SpacedRepetitionStatus::Active,
+        'next_review_at' => today()->toDateString(),
+    ]);
+    SpacedRepetitionItem::factory()->create([
+        'user_id' => $this->user->id,
+        'question_id' => $question2->id,
+        'status' => SpacedRepetitionStatus::Active,
+        'next_review_at' => today()->toDateString(),
+    ]);
+
+    $response = $this->get(route('review-queue.index', ['subject' => $subject1->id]));
+
+    $response->assertOk();
+    $response->assertInertia(fn ($page) => $page
+        ->has('dueItems', 1)
+        ->where('selectedSubjectId', $subject1->id)
+    );
+});
+
+it('start filters due items by level subject for secondary students', function () {
+    $this->profile->delete();
+
+    $secondaryProfile = StudentProfile::factory()->secondary()->create([
+        'user_id' => $this->user->id,
+    ]);
+
+    $topic1 = CanonicalTopic::factory()->create();
+    $topic2 = CanonicalTopic::factory()->create();
+
+    $subject1 = LevelSubject::factory()->create([
+        'education_level_id' => $secondaryProfile->education_level_id,
+    ]);
+    $subject2 = LevelSubject::factory()->create([
+        'education_level_id' => $secondaryProfile->education_level_id,
+    ]);
+
+    SchemeOfWorkItem::factory()->create([
+        'curriculum_subject_level_id' => $subject1->id,
+        'canonical_topic_id' => $topic1->id,
+    ]);
+    SchemeOfWorkItem::factory()->create([
+        'curriculum_subject_level_id' => $subject2->id,
+        'canonical_topic_id' => $topic2->id,
+    ]);
+
+    $question1 = Question::factory()->create(['institution_course_id' => null, 'is_published' => true]);
+    $question2 = Question::factory()->create(['institution_course_id' => null, 'is_published' => true]);
+    QuestionTopicLink::factory()->create(['question_id' => $question1->id, 'canonical_topic_id' => $topic1->id]);
+    QuestionTopicLink::factory()->create(['question_id' => $question2->id, 'canonical_topic_id' => $topic2->id]);
+
+    SpacedRepetitionItem::factory()->create([
+        'user_id' => $this->user->id,
+        'question_id' => $question1->id,
+        'status' => SpacedRepetitionStatus::Active,
+        'next_review_at' => today()->toDateString(),
+    ]);
+    SpacedRepetitionItem::factory()->create([
+        'user_id' => $this->user->id,
+        'question_id' => $question2->id,
+        'status' => SpacedRepetitionStatus::Active,
+        'next_review_at' => today()->toDateString(),
+    ]);
+
+    $response = $this->post(route('review-queue.start'), [
+        'level_subject_id' => $subject1->id,
+    ]);
+
+    $response->assertRedirect();
+    $session = PracticeSession::where('user_id', $this->user->id)->first();
+    expect($session)->not->toBeNull();
+    expect($session->mode)->toBe(PracticeMode::Review);
+    expect($session->question_count)->toBe(1);
+    expect($session->question_ids)->toContain($question1->id);
+    expect($session->question_ids)->not->toContain($question2->id);
+    expect($session->level_subject_id)->toBe($subject1->id);
+});
+
+it('start rejects level subject from different education level', function () {
+    $this->profile->delete();
+
+    $secondaryProfile = StudentProfile::factory()->secondary()->create([
+        'user_id' => $this->user->id,
+    ]);
+
+    $otherSubject = LevelSubject::factory()->create();
+
+    $topic = CanonicalTopic::factory()->create();
+    SchemeOfWorkItem::factory()->create([
+        'curriculum_subject_level_id' => $otherSubject->id,
+        'canonical_topic_id' => $topic->id,
+    ]);
+    $question = Question::factory()->create(['institution_course_id' => null, 'is_published' => true]);
+    QuestionTopicLink::factory()->create(['question_id' => $question->id, 'canonical_topic_id' => $topic->id]);
+    SpacedRepetitionItem::factory()->create([
+        'user_id' => $this->user->id,
+        'question_id' => $question->id,
+        'status' => SpacedRepetitionStatus::Active,
+        'next_review_at' => today()->toDateString(),
+    ]);
+
+    $response = $this->post(route('review-queue.start'), [
+        'level_subject_id' => $otherSubject->id,
+    ]);
+
+    $response->assertForbidden();
 });

@@ -4,7 +4,9 @@ namespace App\Services;
 
 use App\Enums\SpacedRepetitionStatus;
 use App\Models\InstitutionCourse;
+use App\Models\LevelSubject;
 use App\Models\Question;
+use App\Models\SchemeOfWorkItem;
 use App\Models\SpacedRepetitionItem;
 use App\Models\User;
 use Illuminate\Support\Collection;
@@ -61,27 +63,38 @@ class SpacedRepetitionService
         return $this->scheduleReview($user, $question, $isCorrect);
     }
 
-    public function getDueItems(User $user, ?InstitutionCourse $course = null, ?int $limit = null): Collection
+    public function getDueItems(User $user, ?InstitutionCourse $course = null, ?int $limit = null, ?LevelSubject $levelSubject = null): Collection
     {
         return SpacedRepetitionItem::query()
             ->where('user_id', $user->id)
             ->where('status', SpacedRepetitionStatus::Active)
             ->whereDate('next_review_at', '<=', today())
             ->when($course, fn ($q) => $q->whereHas('question', fn ($sub) => $sub->where('institution_course_id', $course->id)))
+            ->when($levelSubject, fn ($q) => $q->whereHas('question.topicLinks', fn ($sub) => $sub->whereIn('canonical_topic_id', $this->getTopicIdsForLevelSubject($levelSubject))))
             ->with(['question:id,institution_course_id,content,question_type,difficulty_level', 'question.institutionCourse:id,course_code'])
             ->orderBy('next_review_at', 'asc')
             ->limit($limit ?? (int) config('practice.review_queue_limit', 50))
             ->get();
     }
 
-    public function getDueCount(User $user, ?InstitutionCourse $course = null): int
+    public function getDueCount(User $user, ?InstitutionCourse $course = null, ?LevelSubject $levelSubject = null): int
     {
         return SpacedRepetitionItem::query()
             ->where('user_id', $user->id)
             ->where('status', SpacedRepetitionStatus::Active)
             ->whereDate('next_review_at', '<=', today())
             ->when($course, fn ($q) => $q->whereHas('question', fn ($sub) => $sub->where('institution_course_id', $course->id)))
+            ->when($levelSubject, fn ($q) => $q->whereHas('question.topicLinks', fn ($sub) => $sub->whereIn('canonical_topic_id', $this->getTopicIdsForLevelSubject($levelSubject))))
             ->count();
+    }
+
+    /** @return array<int, string> */
+    private function getTopicIdsForLevelSubject(LevelSubject $levelSubject): array
+    {
+        return SchemeOfWorkItem::where('curriculum_subject_level_id', $levelSubject->id)
+            ->whereNotNull('canonical_topic_id')
+            ->pluck('canonical_topic_id')
+            ->toArray();
     }
 
     /** @return array<int, int> */

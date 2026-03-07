@@ -21,16 +21,20 @@ function getDueCountColor(count: number): string {
     return 'border-red-200 bg-red-50 text-red-700 dark:border-red-800/50 dark:bg-red-950/40 dark:text-red-400 reader:border-red-800/50 reader:bg-red-950/40 reader:text-red-400';
 }
 
-export default function ReviewQueue({ dueCount, dueItems, enrolledCourses, enrolledSubjects, isSecondary, selectedCourseId, calendar }: ReviewQueuePageProps) {
-    function handleCourseFilter(value: string) {
-        const courseParam = value === 'all' ? undefined : value;
-        router.get(ReviewQueueController.index.url(), { course: courseParam }, { preserveState: true, preserveScroll: true, replace: true });
+export default function ReviewQueue({ dueCount, dueItems, enrolledCourses, enrolledSubjects, isSecondary, selectedCourseId, selectedSubjectId, calendar }: ReviewQueuePageProps) {
+    const selectedFilterId = isSecondary ? selectedSubjectId : selectedCourseId;
+
+    function handleFilterChange(value: string) {
+        const filterValue = value === 'all' ? undefined : value;
+        const params = isSecondary ? { subject: filterValue } : { course: filterValue };
+        router.get(ReviewQueueController.index.url(), params, { preserveState: true, preserveScroll: true, replace: true });
     }
 
     function handleStartReview() {
-        router.post(ReviewQueueController.start.url(), {
-            course_id: selectedCourseId ?? undefined,
-        });
+        const data = isSecondary
+            ? { level_subject_id: selectedSubjectId ?? undefined }
+            : { course_id: selectedCourseId ?? undefined };
+        router.post(ReviewQueueController.start.url(), data);
     }
 
     const filterItems = isSecondary ? enrolledSubjects : enrolledCourses;
@@ -56,7 +60,7 @@ export default function ReviewQueue({ dueCount, dueItems, enrolledCourses, enrol
 
                     <div className="flex items-center gap-2">
                         {showFilter && (
-                            <Select value={selectedCourseId ?? 'all'} onValueChange={handleCourseFilter}>
+                            <Select value={selectedFilterId ?? 'all'} onValueChange={handleFilterChange}>
                                 <SelectTrigger className="w-[180px]">
                                     <SelectValue placeholder={isSecondary ? 'All Subjects' : 'All Courses'} />
                                 </SelectTrigger>

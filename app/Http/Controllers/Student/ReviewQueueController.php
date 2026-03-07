@@ -54,12 +54,19 @@ class ReviewQueueController extends Controller
         }
 
         $selectedCourseId = $request->query('course');
-        $course = $selectedCourseId
-            ? InstitutionCourse::find($selectedCourseId)
-            : null;
+        $selectedSubjectId = $request->query('subject');
 
-        $dueItems = $this->spacedRepService->getDueItems($user, $course);
-        $dueCount = $this->spacedRepService->getDueCount($user);
+        $course = null;
+        $levelSubject = null;
+
+        if ($isSecondary && $selectedSubjectId) {
+            $levelSubject = LevelSubject::find($selectedSubjectId);
+        } elseif ($selectedCourseId) {
+            $course = InstitutionCourse::find($selectedCourseId);
+        }
+
+        $dueItems = $this->spacedRepService->getDueItems($user, $course, null, $levelSubject);
+        $dueCount = $this->spacedRepService->getDueCount($user, $course, $levelSubject);
         $calendar = $this->spacedRepService->getUpcomingCounts($user, 14);
 
         return Inertia::render('review-queue/index', [
@@ -77,6 +84,7 @@ class ReviewQueueController extends Controller
             'enrolledSubjects' => $enrolledSubjects,
             'isSecondary' => $isSecondary,
             'selectedCourseId' => $selectedCourseId,
+            'selectedSubjectId' => $selectedSubjectId,
             'calendar' => $calendar,
         ]);
     }
@@ -102,6 +110,7 @@ class ReviewQueueController extends Controller
             }
         }
 
+        $levelSubject = null;
         if ($levelSubjectId) {
             $levelSubject = LevelSubject::findOrFail($levelSubjectId);
             if ($levelSubject->education_level_id !== $profile->education_level_id) {
@@ -109,7 +118,7 @@ class ReviewQueueController extends Controller
             }
         }
 
-        $dueItems = $this->spacedRepService->getDueItems($user, $course);
+        $dueItems = $this->spacedRepService->getDueItems($user, $course, null, $levelSubject);
 
         if ($dueItems->isEmpty()) {
             return redirect()->route('review-queue.index')

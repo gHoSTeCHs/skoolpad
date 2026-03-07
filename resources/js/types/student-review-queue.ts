@@ -17,6 +17,7 @@ export interface ReviewQueuePageProps {
     enrolledSubjects: { id: string; subject_name: string }[];
     isSecondary: boolean;
     selectedCourseId: string | null;
+    selectedSubjectId: string | null;
     calendar: Record<number, number>;
 }
 
