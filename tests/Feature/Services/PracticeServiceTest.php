@@ -6,6 +6,7 @@ use App\Enums\QuestionType;
 use App\Models\AssessmentType;
 use App\Models\CanonicalTopic;
 use App\Models\InstitutionCourse;
+use App\Models\LevelSubject;
 use App\Models\PracticeAnswer;
 use App\Models\PracticeSession;
 use App\Models\Question;
@@ -527,4 +528,44 @@ it('counts questions matching assessment type', function () {
     ]);
 
     expect($count)->toBe(1);
+});
+
+it('selects questions by topic_ids when no institution_course_id', function () {
+    $matchingQ = Question::factory()->create(['institution_course_id' => $this->course->id, 'is_published' => true]);
+    $nonMatchingQ = Question::factory()->create(['institution_course_id' => $this->course->id, 'is_published' => true]);
+
+    QuestionTopicLink::factory()->create(['question_id' => $matchingQ->id, 'canonical_topic_id' => $this->topic->id]);
+
+    $result = $this->service->selectQuestions([
+        'topic_ids' => [$this->topic->id],
+        'question_count' => 20,
+    ]);
+
+    expect($result)->toHaveCount(1);
+    expect($result->first()->id)->toBe($matchingQ->id);
+});
+
+it('counts questions by topic_ids without course filter', function () {
+    $matchingQ = Question::factory()->create(['institution_course_id' => $this->course->id, 'is_published' => true]);
+    QuestionTopicLink::factory()->create(['question_id' => $matchingQ->id, 'canonical_topic_id' => $this->topic->id]);
+
+    $count = $this->service->getAvailableQuestionCount([
+        'topic_ids' => [$this->topic->id],
+    ]);
+
+    expect($count)->toBe(1);
+});
+
+it('creates session with level_subject_id', function () {
+    $levelSubject = LevelSubject::factory()->create();
+    Question::factory()->count(3)->create(['institution_course_id' => $this->course->id, 'is_published' => true]);
+
+    $session = $this->service->createSession($this->user, [
+        'level_subject_id' => $levelSubject->id,
+        'mode' => PracticeMode::Untimed->value,
+        'question_count' => 5,
+    ]);
+
+    expect($session->level_subject_id)->toBe($levelSubject->id);
+    expect($session->institution_course_id)->toBeNull();
 });

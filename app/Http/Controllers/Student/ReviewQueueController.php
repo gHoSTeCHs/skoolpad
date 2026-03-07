@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Student;
 
 use App\Http\Controllers\Controller;
 use App\Models\InstitutionCourse;
+use App\Models\LevelSubject;
 use App\Services\PracticeService;
 use App\Services\SpacedRepetitionService;
 use Illuminate\Http\JsonResponse;
@@ -23,16 +24,34 @@ class ReviewQueueController extends Controller
     {
         $user = $request->user();
         $profile = $user->studentProfile;
+        $isSecondary = $profile?->isSecondary() ?? false;
 
-        $enrolledCourses = $profile->studentCourses()
-            ->where('is_archived', false)
-            ->with(['institutionCourse:id,course_code,course_title'])
-            ->get()
-            ->map(fn ($sc) => [
-                'id' => $sc->institutionCourse->id,
-                'course_code' => $sc->institutionCourse->course_code,
-                'course_title' => $sc->institutionCourse->course_title,
-            ]);
+        $enrolledCourses = [];
+        $enrolledSubjects = [];
+
+        if ($isSecondary) {
+            $enrolledSubjects = LevelSubject::query()
+                ->where('education_level_id', $profile->education_level_id)
+                ->when($profile->stream_id, fn ($q) => $q->where(function ($q2) use ($profile) {
+                    $q2->where('stream_id', $profile->stream_id)->orWhereNull('stream_id');
+                }))
+                ->with(['curriculumSubject:id,name'])
+                ->get()
+                ->map(fn ($ls) => [
+                    'id' => $ls->id,
+                    'subject_name' => $ls->curriculumSubject->name,
+                ]);
+        } else {
+            $enrolledCourses = $profile->studentCourses()
+                ->where('is_archived', false)
+                ->with(['institutionCourse:id,course_code,course_title'])
+                ->get()
+                ->map(fn ($sc) => [
+                    'id' => $sc->institutionCourse->id,
+                    'course_code' => $sc->institutionCourse->course_code,
+                    'course_title' => $sc->institutionCourse->course_title,
+                ]);
+        }
 
         $selectedCourseId = $request->query('course');
         $course = $selectedCourseId
@@ -55,6 +74,8 @@ class ReviewQueueController extends Controller
                 'course_code' => $item->question?->institutionCourse?->course_code,
             ]),
             'enrolledCourses' => $enrolledCourses,
+            'enrolledSubjects' => $enrolledSubjects,
+            'isSecondary' => $isSecondary,
             'selectedCourseId' => $selectedCourseId,
             'calendar' => $calendar,
         ]);
@@ -63,19 +84,28 @@ class ReviewQueueController extends Controller
     public function start(Request $request): RedirectResponse
     {
         $user = $request->user();
+        $profile = $user->studentProfile;
 
         $selectedCourseId = $request->input('course_id');
+        $levelSubjectId = $request->input('level_subject_id');
         $course = $selectedCourseId
             ? InstitutionCourse::find($selectedCourseId)
             : null;
 
         if ($course) {
-            $enrolledCourseIds = $user->studentProfile->studentCourses()
+            $enrolledCourseIds = $profile->studentCourses()
                 ->where('is_archived', false)
                 ->pluck('institution_course_id');
 
             if (! $enrolledCourseIds->contains($course->id)) {
                 abort(403, 'You are not enrolled in this course.');
+            }
+        }
+
+        if ($levelSubjectId) {
+            $levelSubject = LevelSubject::findOrFail($levelSubjectId);
+            if ($levelSubject->education_level_id !== $profile->education_level_id) {
+                abort(403, 'This subject is not available for your education level.');
             }
         }
 
@@ -92,6 +122,7 @@ class ReviewQueueController extends Controller
             $user,
             $questionIds,
             $course?->id,
+            $levelSubjectId,
         );
 
         return redirect()->route('practice.show', $session);

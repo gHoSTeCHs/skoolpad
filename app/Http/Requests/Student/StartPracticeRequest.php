@@ -17,7 +17,8 @@ class StartPracticeRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'institution_course_id' => ['required_without:question_id', 'uuid', 'exists:institution_courses,id'],
+            'institution_course_id' => ['required_without_all:question_id,level_subject_id', 'nullable', 'uuid', 'exists:institution_courses,id'],
+            'level_subject_id' => ['required_without_all:question_id,institution_course_id', 'nullable', 'uuid', 'exists:level_subjects,id'],
             'topic_ids' => ['required_without:question_id', 'array', 'min:1'],
             'topic_ids.*' => ['uuid', 'exists:canonical_topics,id'],
             'question_types' => ['nullable', 'array'],

@@ -7,12 +7,14 @@ use App\Models\CourseTopicMapping;
 use App\Models\ExamGoal;
 use App\Models\GradingScale;
 use App\Models\InstitutionCourse;
+use App\Models\LevelSubject;
 use App\Models\PracticeAnswer;
 use App\Models\PracticeSession;
 use App\Models\Question;
 use App\Models\QuestionPaper;
 use App\Models\QuestionSection;
 use App\Models\QuestionTopicLink;
+use App\Models\SchemeOfWorkItem;
 use App\Models\SpacedRepetitionItem;
 use App\Models\StudentCourse;
 use App\Models\StudentProfile;
@@ -927,5 +929,125 @@ it('results include section breakdown for full mock sessions', function () {
         ->where('sectionBreakdown.0.section_label', 'Section A')
         ->where('sectionBreakdown.0.correct', 1)
         ->where('sectionBreakdown.0.total', 1)
+    );
+});
+
+it('configure returns enrolled subjects for secondary students', function () {
+    $this->profile->delete();
+
+    $secondaryProfile = StudentProfile::factory()->secondary()->create([
+        'user_id' => $this->user->id,
+    ]);
+
+    $levelSubject = LevelSubject::factory()->create([
+        'education_level_id' => $secondaryProfile->education_level_id,
+    ]);
+    SchemeOfWorkItem::factory()->create([
+        'curriculum_subject_level_id' => $levelSubject->id,
+        'canonical_topic_id' => $this->topic->id,
+    ]);
+
+    $response = $this->get(route('practice.configure'));
+
+    $response->assertSuccessful();
+    $response->assertInertia(fn ($page) => $page
+        ->component('practice/configure')
+        ->where('isSecondary', true)
+        ->has('enrolledSubjects', 1)
+        ->where('enrolledSubjects.0.subject_name', $levelSubject->curriculumSubject->name)
+        ->has('enrolledSubjects.0.topics', 1)
+    );
+});
+
+it('start creates session with level_subject_id for secondary', function () {
+    $this->profile->delete();
+
+    $secondaryProfile = StudentProfile::factory()->secondary()->create([
+        'user_id' => $this->user->id,
+    ]);
+
+    $levelSubject = LevelSubject::factory()->create([
+        'education_level_id' => $secondaryProfile->education_level_id,
+    ]);
+    SchemeOfWorkItem::factory()->create([
+        'curriculum_subject_level_id' => $levelSubject->id,
+        'canonical_topic_id' => $this->topic->id,
+    ]);
+
+    $response = $this->post(route('practice.start'), [
+        'level_subject_id' => $levelSubject->id,
+        'topic_ids' => [$this->topic->id],
+        'question_count' => 5,
+        'mode' => PracticeMode::Untimed->value,
+    ]);
+
+    $session = PracticeSession::first();
+    $response->assertRedirect(route('practice.show', $session));
+    expect($session->level_subject_id)->toBe($levelSubject->id);
+    expect($session->institution_course_id)->toBeNull();
+});
+
+it('start validates level_subject belongs to student education level', function () {
+    $this->profile->delete();
+
+    $secondaryProfile = StudentProfile::factory()->secondary()->create([
+        'user_id' => $this->user->id,
+    ]);
+
+    $otherLevelSubject = LevelSubject::factory()->create();
+
+    $response = $this->post(route('practice.start'), [
+        'level_subject_id' => $otherLevelSubject->id,
+        'topic_ids' => [$this->topic->id],
+        'question_count' => 5,
+        'mode' => PracticeMode::Untimed->value,
+    ]);
+
+    $response->assertForbidden();
+});
+
+it('available count returns count matching topics for secondary', function () {
+    $response = $this->getJson(route('api.practice.available-count', [
+        'topic_ids' => [$this->topic->id],
+    ]));
+
+    $response->assertOk();
+    $response->assertJson(['count' => 5]);
+});
+
+it('results show level_subject in secondary session results', function () {
+    $this->profile->delete();
+
+    $secondaryProfile = StudentProfile::factory()->secondary()->create([
+        'user_id' => $this->user->id,
+    ]);
+
+    $levelSubject = LevelSubject::factory()->create([
+        'education_level_id' => $secondaryProfile->education_level_id,
+    ]);
+
+    $session = PracticeSession::factory()->completed()->create([
+        'user_id' => $this->user->id,
+        'institution_course_id' => null,
+        'level_subject_id' => $levelSubject->id,
+        'question_ids' => [$this->questions[0]->id],
+        'question_count' => 1,
+        'correct_count' => 1,
+    ]);
+    PracticeAnswer::factory()->create([
+        'practice_session_id' => $session->id,
+        'question_id' => $this->questions[0]->id,
+        'is_correct' => true,
+        'sequence_order' => 0,
+    ]);
+
+    $response = $this->get(route('practice.results', $session));
+
+    $response->assertSuccessful();
+    $response->assertInertia(fn ($page) => $page
+        ->component('practice/results')
+        ->where('session.level_subject.id', $levelSubject->id)
+        ->where('session.level_subject.subject_name', $levelSubject->curriculumSubject->name)
+        ->where('session.institution_course', null)
     );
 });

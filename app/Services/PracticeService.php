@@ -26,7 +26,8 @@ class PracticeService
 
         return PracticeSession::create([
             'user_id' => $user->id,
-            'institution_course_id' => $config['institution_course_id'],
+            'institution_course_id' => $config['institution_course_id'] ?? null,
+            'level_subject_id' => $config['level_subject_id'] ?? null,
             'canonical_topic_id' => $singleTopicId,
             'canonical_topic_ids' => ! empty($topicIds) ? $topicIds : null,
             'assessment_type_id' => $config['assessment_type_id'] ?? null,
@@ -40,11 +41,12 @@ class PracticeService
         ]);
     }
 
-    public function createReviewSession(User $user, array $questionIds, ?string $institutionCourseId = null): PracticeSession
+    public function createReviewSession(User $user, array $questionIds, ?string $institutionCourseId = null, ?string $levelSubjectId = null): PracticeSession
     {
         return PracticeSession::create([
             'user_id' => $user->id,
             'institution_course_id' => $institutionCourseId,
+            'level_subject_id' => $levelSubjectId,
             'mode' => PracticeMode::Review,
             'question_count' => count($questionIds),
             'correct_count' => 0,
@@ -60,10 +62,11 @@ class PracticeService
             return Question::where('id', $config['question_id'])->get();
         }
 
-        $query = Question::query()
-            ->published()
-            ->whereNotNull('institution_course_id')
-            ->where('institution_course_id', $config['institution_course_id']);
+        $query = Question::query()->published();
+
+        if (! empty($config['institution_course_id'])) {
+            $query->where('institution_course_id', $config['institution_course_id']);
+        }
 
         if (! empty($config['topic_ids'])) {
             $topicIds = $config['topic_ids'];
@@ -108,10 +111,11 @@ class PracticeService
 
     public function getAvailableQuestionCount(array $config): int
     {
-        $query = Question::query()
-            ->published()
-            ->whereNotNull('institution_course_id')
-            ->where('institution_course_id', $config['institution_course_id']);
+        $query = Question::query()->published();
+
+        if (! empty($config['institution_course_id'])) {
+            $query->where('institution_course_id', $config['institution_course_id']);
+        }
 
         if (! empty($config['topic_ids'])) {
             $query->whereHas('topicLinks', fn ($q) => $q->whereIn('canonical_topic_id', $config['topic_ids']));

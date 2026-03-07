@@ -11,8 +11,16 @@ export interface EnrolledCourse {
     topics: { id: string; title: string }[];
 }
 
+export interface EnrolledSubject {
+    id: string;
+    subject_name: string;
+    topics: { id: string; title: string }[];
+}
+
 export interface PracticeConfigPageProps {
     enrolledCourses: EnrolledCourse[];
+    enrolledSubjects: EnrolledSubject[];
+    isSecondary: boolean;
     modes: { value: PracticeMode; label: string }[];
     difficulties: { value: string; label: string }[];
     questionTypes: { value: string; label: string }[];
@@ -97,6 +105,10 @@ export interface PracticeResultsPageProps {
             id: string;
             course_code: string;
             course_title: string;
+        } | null;
+        level_subject: {
+            id: string;
+            subject_name: string;
         } | null;
     };
     perQuestion: {

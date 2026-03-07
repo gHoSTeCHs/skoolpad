@@ -6,6 +6,7 @@ use App\Enums\QuestionDifficulty;
 use App\Enums\QuestionSource;
 use App\Enums\QuestionStatus;
 use App\Enums\QuestionType;
+use App\Models\ExamSubject;
 use App\Models\InstitutionCourse;
 use App\Models\User;
 use Illuminate\Database\Eloquent\Factories\Factory;
@@ -104,6 +105,14 @@ class QuestionFactory extends Factory
             'question_type' => QuestionType::Group,
             'marks' => null,
             'response_config' => null,
+        ]);
+    }
+
+    public function forExamSubject(?ExamSubject $subject = null): static
+    {
+        return $this->state(fn () => [
+            'institution_course_id' => null,
+            'exam_subject_id' => $subject?->id ?? ExamSubject::factory(),
         ]);
     }
 }

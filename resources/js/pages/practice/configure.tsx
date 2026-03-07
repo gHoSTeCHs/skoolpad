@@ -7,7 +7,6 @@ import { Card, CardContent, CardFooter, CardHeader, CardTitle } from '@/componen
 import { Checkbox } from '@/components/ui/checkbox';
 import { FormField } from '@/components/ui/form-field';
 import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import AppLayout from '@/layouts/app-layout';
 import type { PracticeConfigPageProps } from '@/types/practice';
@@ -18,14 +17,16 @@ const breadcrumbs = [
     { title: 'Configure', href: '#' },
 ];
 
-export default function PracticeConfigure({ enrolledCourses, modes, difficulties, questionTypes, assessmentTypes }: PracticeConfigPageProps) {
+export default function PracticeConfigure({ enrolledCourses, enrolledSubjects, isSecondary, modes, difficulties, questionTypes, assessmentTypes }: PracticeConfigPageProps) {
     const searchParams = new URLSearchParams(window.location.search);
     const prefilledCourseId = searchParams.get('institution_course_id') ?? '';
+    const prefilledSubjectId = searchParams.get('level_subject_id') ?? '';
     const prefilledTopicIds = searchParams.getAll('topic_ids[]');
     const prefilledAssessmentTypeId = searchParams.get('assessment_type_id') ?? '';
 
     const form = useForm({
         institution_course_id: prefilledCourseId,
+        level_subject_id: prefilledSubjectId,
         topic_ids: prefilledTopicIds,
         question_types: [] as string[],
         difficulty: 'all',
@@ -39,11 +40,13 @@ export default function PracticeConfigure({ enrolledCourses, modes, difficulties
     const [customCount, setCustomCount] = useState(false);
     const abortRef = useRef<AbortController | null>(null);
 
+    const selectedItemId = isSecondary ? form.data.level_subject_id : form.data.institution_course_id;
     const selectedCourse = enrolledCourses.find((c) => c.id === form.data.institution_course_id);
-    const courseTopics = selectedCourse?.topics ?? [];
+    const selectedSubject = enrolledSubjects.find((s) => s.id === form.data.level_subject_id);
+    const itemTopics = isSecondary ? (selectedSubject?.topics ?? []) : (selectedCourse?.topics ?? []);
 
     const fetchAvailableCount = useCallback(() => {
-        if (!form.data.institution_course_id) {
+        if (!selectedItemId) {
             setAvailableCount(null);
             return;
         }
@@ -53,7 +56,9 @@ export default function PracticeConfigure({ enrolledCourses, modes, difficulties
         abortRef.current = controller;
 
         const params = new URLSearchParams();
-        params.set('institution_course_id', form.data.institution_course_id);
+        if (!isSecondary && form.data.institution_course_id) {
+            params.set('institution_course_id', form.data.institution_course_id);
+        }
         form.data.topic_ids.forEach((id) => params.append('topic_ids[]', id));
         form.data.question_types.forEach((t) => params.append('question_types[]', t));
         if (form.data.difficulty) params.set('difficulty', form.data.difficulty);
@@ -66,19 +71,29 @@ export default function PracticeConfigure({ enrolledCourses, modes, difficulties
             .then((r) => r.json())
             .then((data) => setAvailableCount(data.count))
             .catch(() => {});
-    }, [form.data.institution_course_id, form.data.topic_ids, form.data.question_types, form.data.difficulty, form.data.assessment_type_id]);
+    }, [selectedItemId, isSecondary, form.data.institution_course_id, form.data.topic_ids, form.data.question_types, form.data.difficulty, form.data.assessment_type_id]);
 
     useEffect(() => {
         const timer = setTimeout(fetchAvailableCount, 300);
         return () => clearTimeout(timer);
     }, [fetchAvailableCount]);
 
-    function handleCourseChange(courseId: string) {
-        form.setData((prev) => ({
-            ...prev,
-            institution_course_id: courseId,
-            topic_ids: [],
-        }));
+    function handleItemChange(itemId: string) {
+        if (isSecondary) {
+            form.setData((prev) => ({
+                ...prev,
+                level_subject_id: itemId,
+                institution_course_id: '',
+                topic_ids: [],
+            }));
+        } else {
+            form.setData((prev) => ({
+                ...prev,
+                institution_course_id: itemId,
+                level_subject_id: '',
+                topic_ids: [],
+            }));
+        }
     }
 
     function handleTopicToggle(topicId: string, checked: boolean) {
@@ -89,8 +104,8 @@ export default function PracticeConfigure({ enrolledCourses, modes, difficulties
     }
 
     function handleSelectAllTopics() {
-        const allSelected = form.data.topic_ids.length === courseTopics.length;
-        form.setData('topic_ids', allSelected ? [] : courseTopics.map((t) => t.id));
+        const allSelected = form.data.topic_ids.length === itemTopics.length;
+        form.setData('topic_ids', allSelected ? [] : itemTopics.map((t) => t.id));
     }
 
     function handleQuestionTypeToggle(typeValue: string, checked: boolean) {
@@ -112,12 +127,15 @@ export default function PracticeConfigure({ enrolledCourses, modes, difficulties
     function handleSubmit(e: React.FormEvent) {
         e.preventDefault();
 
-        const topicIds = form.data.topic_ids.length > 0 ? form.data.topic_ids : courseTopics.map((t) => t.id);
+        const topicIds = form.data.topic_ids.length > 0 ? form.data.topic_ids : itemTopics.map((t) => t.id);
         form.transform((data) => ({ ...data, topic_ids: topicIds }));
         form.post(PracticeController.start.url());
     }
 
-    const canStart = form.data.institution_course_id && !form.processing;
+    const canStart = !!selectedItemId && !form.processing;
+    const itemLabel = isSecondary ? 'Subject' : 'Course';
+    const itemFieldName = isSecondary ? 'level_subject_id' : 'institution_course_id';
+    const itemError = isSecondary ? form.errors.level_subject_id : form.errors.institution_course_id;
 
     return (
         <AppLayout breadcrumbs={breadcrumbs}>
@@ -136,32 +154,39 @@ export default function PracticeConfigure({ enrolledCourses, modes, difficulties
                             <CardTitle>Session Settings</CardTitle>
                         </CardHeader>
                         <CardContent className="space-y-6">
-                            <FormField label="Course" name="institution_course_id" error={form.errors.institution_course_id} required>
-                                <Select value={form.data.institution_course_id} onValueChange={handleCourseChange}>
-                                    <SelectTrigger id="institution_course_id">
-                                        <SelectValue placeholder="Select a course" />
+                            <FormField label={itemLabel} name={itemFieldName} error={itemError} required>
+                                <Select value={selectedItemId} onValueChange={handleItemChange}>
+                                    <SelectTrigger id={itemFieldName}>
+                                        <SelectValue placeholder={`Select a ${itemLabel.toLowerCase()}`} />
                                     </SelectTrigger>
                                     <SelectContent>
-                                        {enrolledCourses.map((c) => (
-                                            <SelectItem key={c.id} value={c.id}>
-                                                {c.course_code} — {c.course_title}
-                                            </SelectItem>
-                                        ))}
+                                        {isSecondary
+                                            ? enrolledSubjects.map((s) => (
+                                                <SelectItem key={s.id} value={s.id}>
+                                                    {s.subject_name}
+                                                </SelectItem>
+                                            ))
+                                            : enrolledCourses.map((c) => (
+                                                <SelectItem key={c.id} value={c.id}>
+                                                    {c.course_code} — {c.course_title}
+                                                </SelectItem>
+                                            ))
+                                        }
                                     </SelectContent>
                                 </Select>
                             </FormField>
 
-                            {courseTopics.length > 0 && (
+                            {itemTopics.length > 0 && (
                                 <FormField label="Topics" name="topic_ids" error={form.errors.topic_ids} description="Leave empty to include all topics">
                                     <div className="space-y-2 rounded-md border border-border p-3">
                                         <div className="flex items-center justify-between border-b border-border pb-2">
                                             <button type="button" onClick={handleSelectAllTopics} className="text-xs font-medium text-primary hover:underline">
-                                                {form.data.topic_ids.length === courseTopics.length ? 'Deselect all' : 'Select all'}
+                                                {form.data.topic_ids.length === itemTopics.length ? 'Deselect all' : 'Select all'}
                                             </button>
-                                            <span className="text-xs text-muted-foreground">{form.data.topic_ids.length}/{courseTopics.length} selected</span>
+                                            <span className="text-xs text-muted-foreground">{form.data.topic_ids.length}/{itemTopics.length} selected</span>
                                         </div>
                                         <div className="max-h-48 space-y-1.5 overflow-y-auto">
-                                            {courseTopics.map((t) => (
+                                            {itemTopics.map((t) => (
                                                 <label key={t.id} className="flex items-center gap-2 rounded px-1 py-0.5 hover:bg-accent">
                                                     <Checkbox
                                                         checked={form.data.topic_ids.includes(t.id)}

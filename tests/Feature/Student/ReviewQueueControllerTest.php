@@ -5,6 +5,7 @@ use App\Enums\SpacedRepetitionStatus;
 use App\Models\CanonicalTopic;
 use App\Models\CourseTopicMapping;
 use App\Models\InstitutionCourse;
+use App\Models\LevelSubject;
 use App\Models\PracticeSession;
 use App\Models\Question;
 use App\Models\QuestionTopicLink;
@@ -229,5 +230,26 @@ it('index shows correct strength mapping', function () {
     $response->assertInertia(fn ($page) => $page
         ->has('dueItems', 3)
         ->where('dueItems.0.strength', fn ($s) => in_array($s, ['weak', 'growing', 'strong']))
+    );
+});
+
+it('index shows subjects for secondary students', function () {
+    $this->profile->delete();
+
+    $secondaryProfile = StudentProfile::factory()->secondary()->create([
+        'user_id' => $this->user->id,
+    ]);
+
+    $levelSubject = LevelSubject::factory()->create([
+        'education_level_id' => $secondaryProfile->education_level_id,
+    ]);
+
+    $response = $this->get(route('review-queue.index'));
+
+    $response->assertOk();
+    $response->assertInertia(fn ($page) => $page
+        ->where('isSecondary', true)
+        ->has('enrolledSubjects', 1)
+        ->where('enrolledSubjects.0.subject_name', $levelSubject->curriculumSubject->name)
     );
 });

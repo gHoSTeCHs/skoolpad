@@ -21,7 +21,7 @@ function getDueCountColor(count: number): string {
     return 'border-red-200 bg-red-50 text-red-700 dark:border-red-800/50 dark:bg-red-950/40 dark:text-red-400 reader:border-red-800/50 reader:bg-red-950/40 reader:text-red-400';
 }
 
-export default function ReviewQueue({ dueCount, dueItems, enrolledCourses, selectedCourseId, calendar }: ReviewQueuePageProps) {
+export default function ReviewQueue({ dueCount, dueItems, enrolledCourses, enrolledSubjects, isSecondary, selectedCourseId, calendar }: ReviewQueuePageProps) {
     function handleCourseFilter(value: string) {
         const courseParam = value === 'all' ? undefined : value;
         router.get(ReviewQueueController.index.url(), { course: courseParam }, { preserveState: true, preserveScroll: true, replace: true });
@@ -32,6 +32,9 @@ export default function ReviewQueue({ dueCount, dueItems, enrolledCourses, selec
             course_id: selectedCourseId ?? undefined,
         });
     }
+
+    const filterItems = isSecondary ? enrolledSubjects : enrolledCourses;
+    const showFilter = filterItems.length > 1;
 
     return (
         <AppLayout breadcrumbs={breadcrumbs}>
@@ -52,18 +55,25 @@ export default function ReviewQueue({ dueCount, dueItems, enrolledCourses, selec
                     </div>
 
                     <div className="flex items-center gap-2">
-                        {enrolledCourses.length > 1 && (
+                        {showFilter && (
                             <Select value={selectedCourseId ?? 'all'} onValueChange={handleCourseFilter}>
                                 <SelectTrigger className="w-[180px]">
-                                    <SelectValue placeholder="All Courses" />
+                                    <SelectValue placeholder={isSecondary ? 'All Subjects' : 'All Courses'} />
                                 </SelectTrigger>
                                 <SelectContent>
-                                    <SelectItem value="all">All Courses</SelectItem>
-                                    {enrolledCourses.map((c) => (
-                                        <SelectItem key={c.id} value={c.id}>
-                                            {c.course_code}
-                                        </SelectItem>
-                                    ))}
+                                    <SelectItem value="all">{isSecondary ? 'All Subjects' : 'All Courses'}</SelectItem>
+                                    {isSecondary
+                                        ? enrolledSubjects.map((s) => (
+                                            <SelectItem key={s.id} value={s.id}>
+                                                {s.subject_name}
+                                            </SelectItem>
+                                        ))
+                                        : enrolledCourses.map((c) => (
+                                            <SelectItem key={c.id} value={c.id}>
+                                                {c.course_code}
+                                            </SelectItem>
+                                        ))
+                                    }
                                 </SelectContent>
                             </Select>
                         )}

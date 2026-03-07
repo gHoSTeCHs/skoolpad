@@ -17,6 +17,7 @@ class PracticeSession extends Model
     protected $fillable = [
         'user_id',
         'institution_course_id',
+        'level_subject_id',
         'canonical_topic_id',
         'canonical_topic_ids',
         'assessment_type_id',
@@ -55,6 +56,11 @@ class PracticeSession extends Model
     public function institutionCourse(): BelongsTo
     {
         return $this->belongsTo(InstitutionCourse::class);
+    }
+
+    public function levelSubject(): BelongsTo
+    {
+        return $this->belongsTo(LevelSubject::class);
     }
 
     public function canonicalTopic(): BelongsTo

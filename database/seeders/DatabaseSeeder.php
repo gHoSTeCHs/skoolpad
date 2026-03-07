@@ -735,6 +735,7 @@ class DatabaseSeeder extends Seeder
         $this->seedSchemeOfWork($nerdc);
 
         $this->call(Csc302Seeder::class);
+        $this->call(SecondaryPracticeSeeder::class);
     }
 
     private function seedQuestions(User $admin, Institution $mouau, Institution $unn): void

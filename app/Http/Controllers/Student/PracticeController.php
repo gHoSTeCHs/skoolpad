@@ -10,6 +10,7 @@ use App\Enums\SpacedRepetitionStatus;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Student\StartPracticeRequest;
 use App\Http\Requests\Student\SubmitAnswerRequest;
+use App\Models\LevelSubject;
 use App\Models\PracticeSession;
 use App\Models\Question;
 use App\Models\SpacedRepetitionItem;
@@ -47,6 +48,30 @@ class PracticeController extends Controller
                 ]),
             ]);
 
+        $enrolledSubjects = [];
+        $isSecondary = $profile?->isSecondary() ?? false;
+        if ($isSecondary) {
+            $enrolledSubjects = LevelSubject::query()
+                ->where('education_level_id', $profile->education_level_id)
+                ->when($profile->stream_id, fn ($q) => $q->where(function ($q2) use ($profile) {
+                    $q2->where('stream_id', $profile->stream_id)->orWhereNull('stream_id');
+                }))
+                ->with([
+                    'curriculumSubject:id,name',
+                    'schemeOfWorkItems' => fn ($q) => $q->whereNotNull('canonical_topic_id'),
+                    'schemeOfWorkItems.canonicalTopic:id,title',
+                ])
+                ->get()
+                ->map(fn ($ls) => [
+                    'id' => $ls->id,
+                    'subject_name' => $ls->curriculumSubject->name,
+                    'topics' => $ls->schemeOfWorkItems
+                        ->whereNotNull('canonical_topic_id')
+                        ->map(fn ($sow) => ['id' => $sow->canonicalTopic->id, 'title' => $sow->canonicalTopic->title])
+                        ->unique('id')->values(),
+                ]);
+        }
+
         $modes = collect([
             PracticeMode::Untimed,
             PracticeMode::Timed,
@@ -79,6 +104,8 @@ class PracticeController extends Controller
 
         return Inertia::render('practice/configure', [
             'enrolledCourses' => $enrolledCourses,
+            'enrolledSubjects' => $enrolledSubjects,
+            'isSecondary' => $isSecondary,
             'modes' => $modes,
             'difficulties' => $difficulties,
             'questionTypes' => $questionTypes,
@@ -91,6 +118,10 @@ class PracticeController extends Controller
         $user = $request->user();
         $profile = $user->studentProfile;
         $validated = $request->validated();
+
+        if ($profile?->isSecondary() && ! empty($validated['level_subject_id'])) {
+            return $this->startSecondary($user, $profile, $validated);
+        }
 
         $enrolledCourseIds = $profile->studentCourses()
             ->where('is_archived', false)
@@ -138,10 +169,56 @@ class PracticeController extends Controller
         return redirect()->route('practice.show', $session);
     }
 
+    private function startSecondary(\App\Models\User $user, \App\Models\StudentProfile $profile, array $validated): RedirectResponse
+    {
+        $levelSubject = LevelSubject::findOrFail($validated['level_subject_id']);
+
+        if ($levelSubject->education_level_id !== $profile->education_level_id) {
+            abort(403, 'This subject is not available for your education level.');
+        }
+
+        if ($profile->stream_id && $levelSubject->stream_id && $levelSubject->stream_id !== $profile->stream_id) {
+            abort(403, 'This subject is not available for your stream.');
+        }
+
+        if (! empty($validated['question_id'])) {
+            $question = Question::findOrFail($validated['question_id']);
+
+            $config = [
+                'level_subject_id' => $levelSubject->id,
+                'question_id' => $validated['question_id'],
+                'question_count' => 1,
+                'mode' => $validated['mode'] ?? PracticeMode::Untimed->value,
+                'topic_ids' => $question->topicLinks->pluck('canonical_topic_id')->toArray(),
+                'question_types' => [],
+                'difficulty' => 'all',
+                'time_limit_seconds' => null,
+                'assessment_type_id' => $validated['assessment_type_id'] ?? null,
+                'exclude_user_id' => $user->id,
+            ];
+        } else {
+            $config = [
+                'level_subject_id' => $levelSubject->id,
+                'topic_ids' => $validated['topic_ids'],
+                'question_types' => $validated['question_types'] ?? [],
+                'difficulty' => $validated['difficulty'] ?? 'all',
+                'question_count' => $validated['question_count'],
+                'mode' => $validated['mode'],
+                'time_limit_seconds' => $validated['time_limit_seconds'] ?? null,
+                'assessment_type_id' => $validated['assessment_type_id'] ?? null,
+                'exclude_user_id' => $user->id,
+            ];
+        }
+
+        $session = $this->practiceService->createSession($user, $config);
+
+        return redirect()->route('practice.show', $session);
+    }
+
     public function availableCount(Request $request): JsonResponse
     {
         $config = [
-            'institution_course_id' => $request->string('institution_course_id')->value(),
+            'institution_course_id' => $request->string('institution_course_id')->value() ?: null,
             'topic_ids' => $request->input('topic_ids', []),
             'question_types' => $request->input('question_types', []),
             'difficulty' => $request->string('difficulty', 'all')->value(),
@@ -330,7 +407,7 @@ class PracticeController extends Controller
             return redirect()->route('practice.show', $session);
         }
 
-        $session->load(['institutionCourse:id,course_code,course_title']);
+        $session->load(['institutionCourse:id,course_code,course_title', 'levelSubject.curriculumSubject:id,name']);
 
         $answers = $session->practiceAnswers()
             ->with([
@@ -423,6 +500,10 @@ class PracticeController extends Controller
                     'id' => $session->institutionCourse->id,
                     'course_code' => $session->institutionCourse->course_code,
                     'course_title' => $session->institutionCourse->course_title,
+                ] : null,
+                'level_subject' => $session->levelSubject ? [
+                    'id' => $session->levelSubject->id,
+                    'subject_name' => $session->levelSubject->curriculumSubject->name,
                 ] : null,
             ],
             'perQuestion' => $perQuestion,
