@@ -1505,7 +1505,11 @@ class Csc302Seeder extends Seeder
                 'content' => $mcq['content'],
                 'marks' => 2,
                 'sort_order' => $index + 1,
-                'response_config' => $mcq['options'],
+                'response_config' => ['options' => array_map(fn ($opt) => [
+                    'label' => $opt['label'],
+                    'text' => $opt['content'],
+                    'is_correct' => $opt['is_correct'],
+                ], $mcq['options'])],
                 'difficulty_level' => QuestionDifficulty::Medium,
                 'bloom_level' => BloomLevel::Understand,
                 'status' => QuestionStatus::Published,
