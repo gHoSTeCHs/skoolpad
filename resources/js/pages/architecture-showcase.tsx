@@ -1,10 +1,15 @@
 import { Head } from '@inertiajs/react';
 import { useState } from 'react';
 import { BlockTypeIcon, DifficultyBadge } from '@/components/skoolpad/block-tree';
+import { CalendarDayCell, CalendarGrid, CalendarHeader, CalendarMini, ExamDayCell, ExamDayModal, ExamPeriodSetupModal, useCalendar, useExamPeriod } from '@/components/skoolpad/calendar';
+import type { CalendarDay, CalendarMiniEvent } from '@/components/skoolpad/calendar';
+import { Button } from '@/components/ui/button';
+import { ClipboardList, Pencil, Plus, X } from 'lucide-react';
 import { QuestionTypeBadge, QuestionRenderer, ContextCard, QUESTION_TYPE_META } from '@/components/skoolpad/questions';
 import type { ShowcaseQuestion } from '@/components/skoolpad/questions';
 import type { ContextCardData } from '@/components/skoolpad/questions';
 import SpBadge from '@/components/skoolpad/sp-badge';
+import { cn } from '@/lib/utils';
 import { useAppearance } from '@/hooks/use-appearance';
 
 interface Block {
@@ -1443,6 +1448,76 @@ export default function ArchitectureShowcase() {
     const [expandedFormats, setExpandedFormats] = useState<Record<number, boolean>>({ 0: true, 3: true, 8: true });
     const [selectedSystem, setSelectedSystem] = useState(0);
     const [selectedTertiaryCountry, setSelectedTertiaryCountry] = useState(0);
+    const [calendarSelectedDate, setCalendarSelectedDate] = useState<string | null>(null);
+    const [miniSelectedDate, setMiniSelectedDate] = useState<Date | undefined>(undefined);
+    const [examSetupOpen, setExamSetupOpen] = useState(false);
+    const [examDayModalOpen, setExamDayModalOpen] = useState(false);
+    const [examDayModalDate, setExamDayModalDate] = useState('');
+
+    const examPeriod = useExamPeriod();
+    const fullCalendar = useCalendar();
+    const syncedCalendar = useCalendar();
+
+    const today = new Date();
+    const thisYear = today.getFullYear();
+    const thisMonth = today.getMonth();
+
+    function makeDateKey(daysFromToday: number): string {
+        const d = new Date(thisYear, thisMonth, today.getDate() + daysFromToday);
+        return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+    }
+
+    if (!examPeriod.period && examPeriod.entries.length === 0) {
+        const periodStart = makeDateKey(2);
+        const periodEnd = makeDateKey(22);
+        examPeriod.setPeriod({ label: 'Second Semester Finals', startDate: periodStart, endDate: periodEnd });
+
+        const mockExams: { daysOffset: number; courseCode: string; courseName: string; time: string }[] = [
+            { daysOffset: 3, courseCode: 'CHM 201', courseName: 'Organic Chemistry', time: '09:00' },
+            { daysOffset: 5, courseCode: 'MTH 211', courseName: 'Linear Algebra', time: '09:00' },
+            { daysOffset: 5, courseCode: 'CSC 201', courseName: 'Data Structures', time: '14:00' },
+            { daysOffset: 8, courseCode: 'PHY 201', courseName: 'Classical Mechanics', time: '10:00' },
+            { daysOffset: 12, courseCode: 'ENG 211', courseName: 'Technical Writing', time: '09:00' },
+            { daysOffset: 12, courseCode: 'BIO 203', courseName: 'Microbiology', time: '14:00' },
+            { daysOffset: 12, courseCode: 'STA 201', courseName: 'Statistics', time: '16:00' },
+            { daysOffset: 18, courseCode: 'CSC 311', courseName: 'Operating Systems', time: '09:00' },
+        ];
+        for (const exam of mockExams) {
+            examPeriod.addEntry({
+                date: makeDateKey(exam.daysOffset),
+                time: exam.time,
+                courseCode: exam.courseCode,
+                courseName: exam.courseName,
+                venue: '',
+                notes: '',
+            });
+        }
+    }
+
+    const MOCK_COURSES = [
+        { code: 'CHM 201', name: 'Organic Chemistry' },
+        { code: 'MTH 211', name: 'Linear Algebra' },
+        { code: 'CSC 201', name: 'Data Structures' },
+        { code: 'PHY 201', name: 'Classical Mechanics' },
+        { code: 'ENG 211', name: 'Technical Writing' },
+        { code: 'BIO 203', name: 'Microbiology' },
+        { code: 'STA 201', name: 'Statistics' },
+        { code: 'CSC 311', name: 'Operating Systems' },
+    ];
+
+    const MINI_EVENT_DATES = new Map<string, CalendarMiniEvent>();
+    for (const entry of examPeriod.entries) {
+        const existing = MINI_EVENT_DATES.get(entry.date);
+        MINI_EVENT_DATES.set(entry.date, { count: (existing?.count ?? 0) + 1, variant: 'danger' });
+    }
+
+    const REVIEW_HEATMAP = new Map<string, number>();
+    for (let i = 0; i < 28; i++) {
+        const d = new Date(thisYear, thisMonth, today.getDate() + i);
+        const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+        const count = Math.max(0, Math.floor(Math.random() * 15) - 3);
+        if (count > 0) REVIEW_HEATMAP.set(key, count);
+    }
 
     function handleToggle(id: string) {
         setExpanded((prev) => ({ ...prev, [id]: !prev[id] }));
@@ -2507,6 +2582,256 @@ export default function ArchitectureShowcase() {
                                 <div className="rounded-lg border border-border bg-card px-3 py-2 text-center">
                                     <div className="text-[11px] font-bold" style={{ fontFamily: 'var(--font-body)' }}>Student picks their system</div>
                                     <div className="text-[9px] text-muted-foreground">at enrollment</div>
+                                </div>
+                            </div>
+                        </div>
+                    </section>
+                </div>
+
+                {/* Calendar System */}
+                <div className="mx-auto max-w-[1200px] px-10 max-md:px-4">
+                    <section className="border-b border-[var(--border-2)] py-14">
+                        <div className="mb-8">
+                            <div
+                                className="mb-2 inline-flex items-center gap-2 rounded-full border border-border bg-card px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.06em] text-muted-foreground"
+                                style={{ fontFamily: 'var(--font-body)' }}
+                            >
+                                <span className="size-1.5 rounded-full bg-primary" />
+                                Composable Primitives
+                            </div>
+                            <h2 className="text-[28px] font-bold tracking-tight max-md:text-[22px]" style={{ fontFamily: 'var(--font-display)' }}>
+                                Calendar System
+                            </h2>
+                            <p className="mt-1 text-sm text-muted-foreground" style={{ fontFamily: 'var(--font-body)' }}>
+                                A headless <code className="rounded bg-muted px-1.5 py-0.5 text-xs">useCalendar</code> hook with composable grid, header, and cell primitives. One system powers exam timetables, review heatmaps, dashboard widgets, and more.
+                            </p>
+                        </div>
+
+                        {/* Demo A: Full Calendar — Exam Period Timetable */}
+                        <div className="mb-10">
+                            <h3 className="mb-4 text-[16px] font-semibold" style={{ fontFamily: 'var(--font-display)' }}>
+                                Full Calendar — Exam Timetable Preview
+                            </h3>
+                            <div className="rounded-[var(--card-radius)] border border-border bg-card p-5">
+                                <CalendarHeader
+                                    monthLabel={fullCalendar.monthLabel}
+                                    isCurrentMonthToday={fullCalendar.isCurrentMonthToday}
+                                    onPrevMonth={fullCalendar.goToPrevMonth}
+                                    onNextMonth={fullCalendar.goToNextMonth}
+                                    onToday={fullCalendar.goToToday}
+                                >
+                                    {examPeriod.period ? (
+                                        <div className="flex items-center gap-2">
+                                            <Button
+                                                variant="outline"
+                                                size="sm"
+                                                className="gap-1.5 text-xs"
+                                                onClick={() => setExamSetupOpen(true)}
+                                            >
+                                                <Pencil className="size-3" />
+                                                Edit Period
+                                            </Button>
+                                            <Button
+                                                variant="ghost"
+                                                size="sm"
+                                                className="gap-1.5 text-xs text-destructive hover:text-destructive"
+                                                onClick={() => examPeriod.setPeriod(null)}
+                                            >
+                                                <X className="size-3" />
+                                                End Period
+                                            </Button>
+                                        </div>
+                                    ) : (
+                                        <Button
+                                            size="sm"
+                                            variant="destructive"
+                                            onClick={() => setExamSetupOpen(true)}
+                                            className="gap-1.5 text-xs"
+                                        >
+                                            <ClipboardList className="size-3.5" />
+                                            Set Exam Period
+                                        </Button>
+                                    )}
+                                </CalendarHeader>
+                                <CalendarGrid
+                                    weeks={fullCalendar.weeks}
+                                    weekDayLabels={fullCalendar.weekDayLabels}
+                                    className="mt-3"
+                                    onDateClick={(day) => {
+                                        setCalendarSelectedDate(day.dateKey);
+                                        if (examPeriod.isWithinPeriod(day.dateKey)) {
+                                            setExamDayModalDate(day.dateKey);
+                                            setExamDayModalOpen(true);
+                                        }
+                                    }}
+                                    renderDay={(day) => {
+                                        const dayEntries = examPeriod.entriesForDate(day.dateKey);
+                                        const withinPeriod = examPeriod.isWithinPeriod(day.dateKey);
+                                        const isStart = examPeriod.period?.startDate === day.dateKey;
+                                        const isEnd = examPeriod.period?.endDate === day.dateKey;
+                                        return (
+                                            <ExamDayCell
+                                                day={day}
+                                                entries={dayEntries}
+                                                isSelected={calendarSelectedDate === day.dateKey}
+                                                inPeriod={withinPeriod}
+                                                isPeriodStart={isStart}
+                                                isPeriodEnd={isEnd}
+                                            />
+                                        );
+                                    }}
+                                />
+                            </div>
+                            {examPeriod.period && (
+                                <div className="mt-3 flex flex-wrap items-center gap-4 text-[11px] text-muted-foreground" style={{ fontFamily: 'var(--font-body)' }}>
+                                    <span className="flex items-center gap-1.5">
+                                        <span className="size-3 rounded-sm bg-destructive/10 ring-1 ring-destructive/20" />
+                                        Exam period
+                                    </span>
+                                    <span className="flex items-center gap-1.5">
+                                        <span className="size-2 rounded-full bg-destructive/70" />
+                                        Scheduled exam
+                                    </span>
+                                    <span className="text-muted-foreground/60">
+                                        {examPeriod.period.label} · {examPeriod.entries.length} exam{examPeriod.entries.length !== 1 ? 's' : ''}
+                                    </span>
+                                </div>
+                            )}
+                        </div>
+
+                        <ExamPeriodSetupModal
+                            open={examSetupOpen}
+                            onOpenChange={setExamSetupOpen}
+                            initialPeriod={examPeriod.period}
+                            onSave={(period) => {
+                                examPeriod.setPeriod(period);
+                                setExamSetupOpen(false);
+                            }}
+                        />
+
+                        <ExamDayModal
+                            open={examDayModalOpen}
+                            onOpenChange={setExamDayModalOpen}
+                            dateKey={examDayModalDate}
+                            entries={examPeriod.entriesForDate(examDayModalDate)}
+                            onAddEntry={examPeriod.addEntry}
+                            onRemoveEntry={examPeriod.removeEntry}
+                            courses={MOCK_COURSES}
+                        />
+
+                        {/* Demo B: Mini Calendar */}
+                        <div className="mb-10">
+                            <h3 className="mb-4 text-[16px] font-semibold" style={{ fontFamily: 'var(--font-display)' }}>
+                                Mini Calendar — Dashboard Widget
+                            </h3>
+                            <div className="flex flex-col items-start gap-6 md:flex-row">
+                                <CalendarMini
+                                    selectedDate={miniSelectedDate}
+                                    onDateSelect={setMiniSelectedDate}
+                                    eventDates={MINI_EVENT_DATES}
+                                    className="w-full max-w-xs"
+                                />
+                                <div className="flex-1 rounded-[var(--card-radius)] border border-border bg-card p-5">
+                                    <p className="text-xs font-semibold text-muted-foreground" style={{ fontFamily: 'var(--font-body)' }}>
+                                        Selected date
+                                    </p>
+                                    <p className="mt-1 text-sm font-medium" style={{ fontFamily: 'var(--font-display)' }}>
+                                        {miniSelectedDate
+                                            ? miniSelectedDate.toLocaleDateString('en-NG', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })
+                                            : 'Click a date in the mini calendar'}
+                                    </p>
+                                    {miniSelectedDate && (() => {
+                                        const key = `${miniSelectedDate.getFullYear()}-${String(miniSelectedDate.getMonth() + 1).padStart(2, '0')}-${String(miniSelectedDate.getDate()).padStart(2, '0')}`;
+                                        const dayExams = examPeriod.entriesForDate(key);
+                                        if (dayExams.length === 0) return <p className="mt-2 text-xs text-muted-foreground">No exams scheduled.</p>;
+                                        return (
+                                            <div className="mt-3 space-y-2">
+                                                {dayExams.map((e) => (
+                                                    <div key={e.id} className="flex items-center gap-2 text-sm">
+                                                        <span className="size-2 shrink-0 rounded-full bg-destructive/70" />
+                                                        <span className="font-medium">{e.courseCode}</span>
+                                                        <span className="text-muted-foreground">{e.courseName}</span>
+                                                    </div>
+                                                ))}
+                                            </div>
+                                        );
+                                    })()}
+                                </div>
+                            </div>
+                        </div>
+
+                        {/* Demo C: Composability */}
+                        <div>
+                            <h3 className="mb-4 text-[16px] font-semibold" style={{ fontFamily: 'var(--font-display)' }}>
+                                Composability — Synced Dual Grids
+                            </h3>
+                            <p className="mb-4 text-xs text-muted-foreground" style={{ fontFamily: 'var(--font-body)' }}>
+                                Same <code className="rounded bg-muted px-1.5 py-0.5 text-[11px]">useCalendar</code> hook drives both grids. Navigation is synced, but each grid renders different content via its own <code className="rounded bg-muted px-1.5 py-0.5 text-[11px]">renderDay</code>.
+                            </p>
+                            <div className="mb-3">
+                                <CalendarHeader
+                                    monthLabel={syncedCalendar.monthLabel}
+                                    isCurrentMonthToday={syncedCalendar.isCurrentMonthToday}
+                                    onPrevMonth={syncedCalendar.goToPrevMonth}
+                                    onNextMonth={syncedCalendar.goToNextMonth}
+                                    onToday={syncedCalendar.goToToday}
+                                />
+                            </div>
+                            <div className="grid gap-4 md:grid-cols-2">
+                                <div className="rounded-[var(--card-radius)] border border-border bg-card p-4">
+                                    <p className="mb-2 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground" style={{ fontFamily: 'var(--font-body)' }}>
+                                        Exam Dots
+                                    </p>
+                                    <CalendarGrid
+                                        weeks={syncedCalendar.weeks}
+                                        weekDayLabels={syncedCalendar.weekDayLabels}
+                                        renderDay={(day) => {
+                                            const dayEntries = examPeriod.entriesForDate(day.dateKey);
+                                            return (
+                                                <CalendarDayCell day={day} className="min-h-8 md:min-h-10">
+                                                    {dayEntries.length > 0 && (
+                                                        <div className="mt-0.5 flex gap-0.5">
+                                                            {dayEntries.map((e) => (
+                                                                <span
+                                                                    key={e.id}
+                                                                    className="size-1.5 rounded-full bg-destructive/70"
+                                                                />
+                                                            ))}
+                                                        </div>
+                                                    )}
+                                                </CalendarDayCell>
+                                            );
+                                        }}
+                                    />
+                                </div>
+                                <div className="rounded-[var(--card-radius)] border border-border bg-card p-4">
+                                    <p className="mb-2 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground" style={{ fontFamily: 'var(--font-body)' }}>
+                                        Review Heatmap
+                                    </p>
+                                    <CalendarGrid
+                                        weeks={syncedCalendar.weeks}
+                                        weekDayLabels={syncedCalendar.weekDayLabels}
+                                        renderDay={(day: CalendarDay) => {
+                                            const count = REVIEW_HEATMAP.get(day.dateKey) ?? 0;
+                                            return (
+                                                <CalendarDayCell
+                                                    day={day}
+                                                    className={cn(
+                                                        'min-h-8 md:min-h-10',
+                                                        day.isCurrentMonth && count > 0 && count <= 3 && 'bg-emerald-100 dark:bg-emerald-950/50 reader:bg-emerald-950/50',
+                                                        day.isCurrentMonth && count > 3 && count <= 7 && 'bg-emerald-200 dark:bg-emerald-900/60 reader:bg-emerald-900/60',
+                                                        day.isCurrentMonth && count > 7 && 'bg-emerald-300 dark:bg-emerald-800/70 reader:bg-emerald-800/70',
+                                                    )}
+                                                >
+                                                    {count > 0 && day.isCurrentMonth && (
+                                                        <span className="mt-0.5 text-[9px] font-semibold tabular-nums text-emerald-700 dark:text-emerald-300 reader:text-emerald-300">
+                                                            {count}
+                                                        </span>
+                                                    )}
+                                                </CalendarDayCell>
+                                            );
+                                        }}
+                                    />
                                 </div>
                             </div>
                         </div>
