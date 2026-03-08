@@ -191,7 +191,9 @@
       "mcp__plugin_laravel-boost_laravel-boost__database-schema",
       "Skill(commit-commands:commit-push-pr)",
       "mcp__plugin_laravel-boost_laravel-boost__get-config",
-      "mcp__plugin_laravel-boost_laravel-boost__list-routes"
+      "mcp__plugin_laravel-boost_laravel-boost__list-routes",
+      "mcp__plugin_playwright_playwright__browser_wait_for",
+      "mcp__plugin_playwright_playwright__browser_run_code"
     ]
   },
   "enableAllProjectMcpServers": true,
