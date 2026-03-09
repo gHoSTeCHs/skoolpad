@@ -1,7 +1,7 @@
 import { Head } from '@inertiajs/react';
 import { useState } from 'react';
 import { BlockTypeIcon, DifficultyBadge } from '@/components/skoolpad/block-tree';
-import { CalendarDayCell, CalendarEntryModal, CalendarGrid, CalendarHeader, CalendarMini, ExamDayCell, ExamDayModal, ExamPeriodSetupModal, useCalendar, useExamPeriod } from '@/components/skoolpad/calendar';
+import { CalendarDayCell, CalendarEntryModal, CalendarGrid, CalendarHeader, CalendarMini, ExamDayCell, ExamDayModal, ExamPeriodSetupModal, LectureDayCell, SessionSetupModal, WeeklyScheduleModal, useCalendar, useExamPeriod, useWeeklySchedule } from '@/components/skoolpad/calendar';
 import type { CalendarDay, CalendarEntryData, CalendarEntryType, CalendarMiniEvent, ExistingEntry } from '@/components/skoolpad/calendar';
 import { Button } from '@/components/ui/button';
 import { BookOpen, Calendar, ClipboardList, GraduationCap, Pencil, Plus, X } from 'lucide-react';
@@ -1453,11 +1453,14 @@ export default function ArchitectureShowcase() {
     const [examSetupOpen, setExamSetupOpen] = useState(false);
     const [examDayModalOpen, setExamDayModalOpen] = useState(false);
     const [examDayModalDate, setExamDayModalDate] = useState('');
+    const [sessionSetupOpen, setSessionSetupOpen] = useState(false);
+    const [scheduleModalOpen, setScheduleModalOpen] = useState(false);
     const [entryModalOpen, setEntryModalOpen] = useState(false);
     const [entryModalDate, setEntryModalDate] = useState('');
     const [userEntries, setUserEntries] = useState<Map<string, { title: string; typeKey: string; variant: string }[]>>(new Map());
 
     const examPeriod = useExamPeriod();
+    const weeklySchedule = useWeeklySchedule();
     const fullCalendar = useCalendar();
     const syncedCalendar = useCalendar();
 
@@ -1497,6 +1500,26 @@ export default function ArchitectureShowcase() {
         }
     }
 
+    if (!weeklySchedule.session && weeklySchedule.template.length === 0) {
+        const sessionStart = makeDateKey(-28);
+        const sessionEnd = makeDateKey(56);
+        weeklySchedule.setSession({ label: 'Second Semester 2025/2026', startDate: sessionStart, endDate: sessionEnd });
+
+        const mockSlots: Omit<import('@/hooks/use-weekly-schedule').WeeklyScheduleSlot, 'id'>[] = [
+            { dayOfWeek: 1, startTime: '09:00', endTime: '11:00', courseCode: 'CHM 201', courseName: 'Organic Chemistry', venue: 'LT 301' },
+            { dayOfWeek: 1, startTime: '14:00', endTime: '16:00', courseCode: 'CSC 201', courseName: 'Data Structures', venue: 'Lab 2' },
+            { dayOfWeek: 2, startTime: '10:00', endTime: '12:00', courseCode: 'MTH 211', courseName: 'Linear Algebra', venue: 'Room 105' },
+            { dayOfWeek: 3, startTime: '09:00', endTime: '11:00', courseCode: 'PHY 201', courseName: 'Classical Mechanics', venue: 'LT 201' },
+            { dayOfWeek: 3, startTime: '14:00', endTime: '15:00', courseCode: 'ENG 211', courseName: 'Technical Writing', venue: 'Room 302' },
+            { dayOfWeek: 4, startTime: '08:00', endTime: '10:00', courseCode: 'BIO 203', courseName: 'Microbiology', venue: 'Lab 5' },
+            { dayOfWeek: 5, startTime: '09:00', endTime: '11:00', courseCode: 'STA 201', courseName: 'Statistics', venue: 'LT 102' },
+            { dayOfWeek: 5, startTime: '13:00', endTime: '15:00', courseCode: 'CSC 311', courseName: 'Operating Systems', venue: 'Lab 2' },
+        ];
+        for (const slot of mockSlots) {
+            weeklySchedule.addSlot(slot);
+        }
+    }
+
     const MOCK_COURSES = [
         { code: 'CHM 201', name: 'Organic Chemistry' },
         { code: 'MTH 211', name: 'Linear Algebra' },
@@ -1533,6 +1556,19 @@ export default function ArchitectureShowcase() {
     for (const [dateKey, entries] of userEntries) {
         const existing = MINI_EVENT_DATES.get(dateKey);
         MINI_EVENT_DATES.set(dateKey, { count: (existing?.count ?? 0) + entries.length, variant: existing?.variant ?? 'default' });
+    }
+    for (const week of fullCalendar.weeks) {
+        for (const day of week) {
+            if (!day.isCurrentMonth) continue;
+            const lectureCount = weeklySchedule.slotCountForDate(day.dateKey, examPeriod.isWithinPeriod);
+            if (lectureCount > 0) {
+                const existing = MINI_EVENT_DATES.get(day.dateKey);
+                MINI_EVENT_DATES.set(day.dateKey, {
+                    count: (existing?.count ?? 0) + lectureCount,
+                    variant: existing?.variant ?? 'default',
+                });
+            }
+        }
     }
 
     const REVIEW_HEATMAP = new Map<string, number>();
@@ -2644,38 +2680,41 @@ export default function ArchitectureShowcase() {
                                     onNextMonth={fullCalendar.goToNextMonth}
                                     onToday={fullCalendar.goToToday}
                                 >
-                                    {examPeriod.period ? (
-                                        <div className="flex items-center gap-2">
-                                            <Button
-                                                variant="outline"
-                                                size="sm"
-                                                className="gap-1.5 text-xs"
-                                                onClick={() => setExamSetupOpen(true)}
-                                            >
-                                                <Pencil className="size-3" />
-                                                Edit Period
+                                    <div className="flex items-center gap-2">
+                                        {weeklySchedule.session ? (
+                                            <>
+                                                <Button variant="outline" size="sm" className="gap-1.5 text-xs" onClick={() => setScheduleModalOpen(true)}>
+                                                    <BookOpen className="size-3" />
+                                                    Edit Schedule
+                                                </Button>
+                                                <Button variant="ghost" size="sm" className="gap-1.5 text-xs text-muted-foreground" onClick={() => setSessionSetupOpen(true)}>
+                                                    <Pencil className="size-3" />
+                                                </Button>
+                                            </>
+                                        ) : (
+                                            <Button size="sm" onClick={() => setSessionSetupOpen(true)} className="gap-1.5 text-xs">
+                                                <BookOpen className="size-3.5" />
+                                                Set Session
                                             </Button>
-                                            <Button
-                                                variant="ghost"
-                                                size="sm"
-                                                className="gap-1.5 text-xs text-destructive hover:text-destructive"
-                                                onClick={() => examPeriod.setPeriod(null)}
-                                            >
-                                                <X className="size-3" />
-                                                End Period
+                                        )}
+                                        {examPeriod.period ? (
+                                            <>
+                                                <Button variant="outline" size="sm" className="gap-1.5 text-xs" onClick={() => setExamSetupOpen(true)}>
+                                                    <Pencil className="size-3" />
+                                                    Edit Period
+                                                </Button>
+                                                <Button variant="ghost" size="sm" className="gap-1.5 text-xs text-destructive hover:text-destructive" onClick={() => examPeriod.setPeriod(null)}>
+                                                    <X className="size-3" />
+                                                    End Period
+                                                </Button>
+                                            </>
+                                        ) : (
+                                            <Button size="sm" variant="destructive" onClick={() => setExamSetupOpen(true)} className="gap-1.5 text-xs">
+                                                <ClipboardList className="size-3.5" />
+                                                Set Exam Period
                                             </Button>
-                                        </div>
-                                    ) : (
-                                        <Button
-                                            size="sm"
-                                            variant="destructive"
-                                            onClick={() => setExamSetupOpen(true)}
-                                            className="gap-1.5 text-xs"
-                                        >
-                                            <ClipboardList className="size-3.5" />
-                                            Set Exam Period
-                                        </Button>
-                                    )}
+                                        )}
+                                    </div>
                                 </CalendarHeader>
                                 <CalendarGrid
                                     weeks={fullCalendar.weeks}
@@ -2692,8 +2731,7 @@ export default function ArchitectureShowcase() {
                                         }
                                     }}
                                     renderDay={(day) => {
-                                        const withinPeriod = examPeriod.isWithinPeriod(day.dateKey);
-                                        if (withinPeriod) {
+                                        if (examPeriod.isWithinPeriod(day.dateKey)) {
                                             return (
                                                 <ExamDayCell
                                                     day={day}
@@ -2705,12 +2743,67 @@ export default function ArchitectureShowcase() {
                                                 />
                                             );
                                         }
+
+                                        const lectureSlots = weeklySchedule.slotsForDate(day.dateKey, examPeriod.isWithinPeriod);
                                         const generalEntries = userEntries.get(day.dateKey) ?? [];
+
+                                        if (lectureSlots.length > 0) {
+                                            return (
+                                                <LectureDayCell
+                                                    day={day}
+                                                    slots={lectureSlots}
+                                                    isSelected={calendarSelectedDate === day.dateKey}
+                                                    inSession={weeklySchedule.isWithinSession(day.dateKey)}
+                                                    isSessionStart={weeklySchedule.session?.startDate === day.dateKey}
+                                                    isSessionEnd={weeklySchedule.session?.endDate === day.dateKey}
+                                                >
+                                                    {generalEntries.length > 0 && day.isCurrentMonth && (
+                                                        <div className="mt-0.5 flex flex-wrap justify-center gap-0.5">
+                                                            {generalEntries.map((e, i) => {
+                                                                const entryType = ENTRY_TYPES.find((t) => t.key === e.typeKey);
+                                                                return (
+                                                                    <span
+                                                                        key={`${e.typeKey}-${i}`}
+                                                                        className={cn('size-1 rounded-full', entryType?.dotClass ?? 'bg-primary')}
+                                                                    />
+                                                                );
+                                                            })}
+                                                        </div>
+                                                    )}
+                                                </LectureDayCell>
+                                            );
+                                        }
+
+                                        if (weeklySchedule.isWithinSession(day.dateKey)) {
+                                            return (
+                                                <CalendarDayCell
+                                                    day={day}
+                                                    isSelected={calendarSelectedDate === day.dateKey}
+                                                    className={cn(
+                                                        day.isCurrentMonth && 'bg-primary/[0.02] dark:bg-primary/[0.04] reader:bg-primary/[0.04]',
+                                                        weeklySchedule.session?.startDate === day.dateKey && day.isCurrentMonth && 'rounded-l-xl bg-primary/[0.06]',
+                                                        weeklySchedule.session?.endDate === day.dateKey && day.isCurrentMonth && 'rounded-r-xl bg-primary/[0.06]',
+                                                    )}
+                                                >
+                                                    {generalEntries.length > 0 && day.isCurrentMonth && (
+                                                        <div className="mt-0.5 flex flex-wrap justify-center gap-0.5">
+                                                            {generalEntries.map((e, i) => {
+                                                                const entryType = ENTRY_TYPES.find((t) => t.key === e.typeKey);
+                                                                return (
+                                                                    <span
+                                                                        key={`${e.typeKey}-${i}`}
+                                                                        className={cn('size-1.5 rounded-full md:size-2', entryType?.dotClass ?? 'bg-primary')}
+                                                                    />
+                                                                );
+                                                            })}
+                                                        </div>
+                                                    )}
+                                                </CalendarDayCell>
+                                            );
+                                        }
+
                                         return (
-                                            <CalendarDayCell
-                                                day={day}
-                                                isSelected={calendarSelectedDate === day.dateKey}
-                                            >
+                                            <CalendarDayCell day={day} isSelected={calendarSelectedDate === day.dateKey}>
                                                 {generalEntries.length > 0 && day.isCurrentMonth && (
                                                     <div className="mt-0.5 flex flex-wrap justify-center gap-0.5">
                                                         {generalEntries.map((e, i) => {
@@ -2730,6 +2823,18 @@ export default function ArchitectureShowcase() {
                                 />
                             </div>
                             <div className="mt-3 flex flex-wrap items-center gap-4 text-[11px] text-muted-foreground" style={{ fontFamily: 'var(--font-body)' }}>
+                                {weeklySchedule.session && (
+                                    <>
+                                        <span className="flex items-center gap-1.5">
+                                            <span className="size-3 rounded-sm bg-primary/10 ring-1 ring-primary/20" />
+                                            Session period
+                                        </span>
+                                        <span className="flex items-center gap-1.5">
+                                            <span className="size-2 rounded-full bg-primary/70" />
+                                            Lecture
+                                        </span>
+                                    </>
+                                )}
                                 {examPeriod.period && (
                                     <>
                                         <span className="flex items-center gap-1.5">
@@ -2748,6 +2853,11 @@ export default function ArchitectureShowcase() {
                                         {type.label}
                                     </span>
                                 ))}
+                                {weeklySchedule.session && (
+                                    <span className="text-muted-foreground/60">
+                                        {weeklySchedule.session.label} · {weeklySchedule.template.length} lecture{weeklySchedule.template.length !== 1 ? 's' : ''}/week
+                                    </span>
+                                )}
                                 {examPeriod.period && (
                                     <span className="text-muted-foreground/60">
                                         {examPeriod.period.label} · {examPeriod.entries.length} exam{examPeriod.entries.length !== 1 ? 's' : ''}
@@ -2836,6 +2946,26 @@ export default function ArchitectureShowcase() {
                             })()}
                             title="Add Calendar Entry"
                             description="Add a lecture, review session, or event to your calendar."
+                        />
+
+                        <SessionSetupModal
+                            open={sessionSetupOpen}
+                            onOpenChange={setSessionSetupOpen}
+                            initialSession={weeklySchedule.session}
+                            onSave={(session) => {
+                                weeklySchedule.setSession(session);
+                                setSessionSetupOpen(false);
+                            }}
+                        />
+
+                        <WeeklyScheduleModal
+                            open={scheduleModalOpen}
+                            onOpenChange={setScheduleModalOpen}
+                            template={weeklySchedule.template}
+                            onAddSlot={weeklySchedule.addSlot}
+                            onRemoveSlot={weeklySchedule.removeSlot}
+                            slotsForDay={weeklySchedule.slotsForDay}
+                            courses={MOCK_COURSES}
                         />
 
                         {/* Demo B: Mini Calendar */}
