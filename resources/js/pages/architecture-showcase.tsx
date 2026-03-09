@@ -1,10 +1,10 @@
 import { Head } from '@inertiajs/react';
 import { useState } from 'react';
 import { BlockTypeIcon, DifficultyBadge } from '@/components/skoolpad/block-tree';
-import { CalendarDayCell, CalendarGrid, CalendarHeader, CalendarMini, ExamDayCell, ExamDayModal, ExamPeriodSetupModal, useCalendar, useExamPeriod } from '@/components/skoolpad/calendar';
-import type { CalendarDay, CalendarMiniEvent } from '@/components/skoolpad/calendar';
+import { CalendarDayCell, CalendarEntryModal, CalendarGrid, CalendarHeader, CalendarMini, ExamDayCell, ExamDayModal, ExamPeriodSetupModal, useCalendar, useExamPeriod } from '@/components/skoolpad/calendar';
+import type { CalendarDay, CalendarEntryData, CalendarEntryType, CalendarMiniEvent, ExistingEntry } from '@/components/skoolpad/calendar';
 import { Button } from '@/components/ui/button';
-import { ClipboardList, Pencil, Plus, X } from 'lucide-react';
+import { BookOpen, Calendar, ClipboardList, GraduationCap, Pencil, Plus, X } from 'lucide-react';
 import { QuestionTypeBadge, QuestionRenderer, ContextCard, QUESTION_TYPE_META } from '@/components/skoolpad/questions';
 import type { ShowcaseQuestion } from '@/components/skoolpad/questions';
 import type { ContextCardData } from '@/components/skoolpad/questions';
@@ -1453,6 +1453,9 @@ export default function ArchitectureShowcase() {
     const [examSetupOpen, setExamSetupOpen] = useState(false);
     const [examDayModalOpen, setExamDayModalOpen] = useState(false);
     const [examDayModalDate, setExamDayModalDate] = useState('');
+    const [entryModalOpen, setEntryModalOpen] = useState(false);
+    const [entryModalDate, setEntryModalDate] = useState('');
+    const [userEntries, setUserEntries] = useState<Map<string, { title: string; typeKey: string; variant: string }[]>>(new Map());
 
     const examPeriod = useExamPeriod();
     const fullCalendar = useCalendar();
@@ -1505,10 +1508,31 @@ export default function ArchitectureShowcase() {
         { code: 'CSC 311', name: 'Operating Systems' },
     ];
 
+    const ENTRY_TYPES: CalendarEntryType[] = [
+        { key: 'lecture', label: 'Lecture', icon: BookOpen, color: '#6366f1', dotClass: 'bg-indigo-500' },
+        { key: 'review', label: 'Review Session', icon: GraduationCap, color: '#10b981', dotClass: 'bg-emerald-500' },
+        { key: 'event', label: 'Event', icon: Calendar, color: '#f59e0b', dotClass: 'bg-amber-500' },
+    ];
+
+    const VARIANT_BY_TYPE: Record<string, string> = { lecture: 'default', review: 'success', event: 'warning' };
+
+    function handleAddEntry(entry: CalendarEntryData) {
+        setUserEntries((prev) => {
+            const next = new Map(prev);
+            const existing = next.get(entry.date) ?? [];
+            next.set(entry.date, [...existing, { title: entry.title, typeKey: entry.typeKey, variant: VARIANT_BY_TYPE[entry.typeKey] ?? 'default' }]);
+            return next;
+        });
+    }
+
     const MINI_EVENT_DATES = new Map<string, CalendarMiniEvent>();
     for (const entry of examPeriod.entries) {
         const existing = MINI_EVENT_DATES.get(entry.date);
         MINI_EVENT_DATES.set(entry.date, { count: (existing?.count ?? 0) + 1, variant: 'danger' });
+    }
+    for (const [dateKey, entries] of userEntries) {
+        const existing = MINI_EVENT_DATES.get(dateKey);
+        MINI_EVENT_DATES.set(dateKey, { count: (existing?.count ?? 0) + entries.length, variant: existing?.variant ?? 'default' });
     }
 
     const REVIEW_HEATMAP = new Map<string, number>();
@@ -2662,41 +2686,74 @@ export default function ArchitectureShowcase() {
                                         if (examPeriod.isWithinPeriod(day.dateKey)) {
                                             setExamDayModalDate(day.dateKey);
                                             setExamDayModalOpen(true);
+                                        } else {
+                                            setEntryModalDate(day.dateKey);
+                                            setEntryModalOpen(true);
                                         }
                                     }}
                                     renderDay={(day) => {
-                                        const dayEntries = examPeriod.entriesForDate(day.dateKey);
                                         const withinPeriod = examPeriod.isWithinPeriod(day.dateKey);
-                                        const isStart = examPeriod.period?.startDate === day.dateKey;
-                                        const isEnd = examPeriod.period?.endDate === day.dateKey;
+                                        if (withinPeriod) {
+                                            return (
+                                                <ExamDayCell
+                                                    day={day}
+                                                    entries={examPeriod.entriesForDate(day.dateKey)}
+                                                    isSelected={calendarSelectedDate === day.dateKey}
+                                                    inPeriod
+                                                    isPeriodStart={examPeriod.period?.startDate === day.dateKey}
+                                                    isPeriodEnd={examPeriod.period?.endDate === day.dateKey}
+                                                />
+                                            );
+                                        }
+                                        const generalEntries = userEntries.get(day.dateKey) ?? [];
                                         return (
-                                            <ExamDayCell
+                                            <CalendarDayCell
                                                 day={day}
-                                                entries={dayEntries}
                                                 isSelected={calendarSelectedDate === day.dateKey}
-                                                inPeriod={withinPeriod}
-                                                isPeriodStart={isStart}
-                                                isPeriodEnd={isEnd}
-                                            />
+                                            >
+                                                {generalEntries.length > 0 && day.isCurrentMonth && (
+                                                    <div className="mt-0.5 flex flex-wrap justify-center gap-0.5">
+                                                        {generalEntries.map((e, i) => {
+                                                            const entryType = ENTRY_TYPES.find((t) => t.key === e.typeKey);
+                                                            return (
+                                                                <span
+                                                                    key={`${e.typeKey}-${i}`}
+                                                                    className={cn('size-1.5 rounded-full md:size-2', entryType?.dotClass ?? 'bg-primary')}
+                                                                />
+                                                            );
+                                                        })}
+                                                    </div>
+                                                )}
+                                            </CalendarDayCell>
                                         );
                                     }}
                                 />
                             </div>
-                            {examPeriod.period && (
-                                <div className="mt-3 flex flex-wrap items-center gap-4 text-[11px] text-muted-foreground" style={{ fontFamily: 'var(--font-body)' }}>
-                                    <span className="flex items-center gap-1.5">
-                                        <span className="size-3 rounded-sm bg-destructive/10 ring-1 ring-destructive/20" />
-                                        Exam period
+                            <div className="mt-3 flex flex-wrap items-center gap-4 text-[11px] text-muted-foreground" style={{ fontFamily: 'var(--font-body)' }}>
+                                {examPeriod.period && (
+                                    <>
+                                        <span className="flex items-center gap-1.5">
+                                            <span className="size-3 rounded-sm bg-destructive/10 ring-1 ring-destructive/20" />
+                                            Exam period
+                                        </span>
+                                        <span className="flex items-center gap-1.5">
+                                            <span className="size-2 rounded-full bg-destructive/70" />
+                                            Scheduled exam
+                                        </span>
+                                    </>
+                                )}
+                                {ENTRY_TYPES.map((type) => (
+                                    <span key={type.key} className="flex items-center gap-1.5">
+                                        <span className={cn('size-2 rounded-full', type.dotClass)} />
+                                        {type.label}
                                     </span>
-                                    <span className="flex items-center gap-1.5">
-                                        <span className="size-2 rounded-full bg-destructive/70" />
-                                        Scheduled exam
-                                    </span>
+                                ))}
+                                {examPeriod.period && (
                                     <span className="text-muted-foreground/60">
                                         {examPeriod.period.label} · {examPeriod.entries.length} exam{examPeriod.entries.length !== 1 ? 's' : ''}
                                     </span>
-                                </div>
-                            )}
+                                )}
+                            </div>
                         </div>
 
                         <ExamPeriodSetupModal
@@ -2717,6 +2774,23 @@ export default function ArchitectureShowcase() {
                             onAddEntry={examPeriod.addEntry}
                             onRemoveEntry={examPeriod.removeEntry}
                             courses={MOCK_COURSES}
+                        />
+
+                        <CalendarEntryModal
+                            open={entryModalOpen}
+                            onOpenChange={setEntryModalOpen}
+                            entryTypes={ENTRY_TYPES}
+                            initialDate={entryModalDate}
+                            onSave={handleAddEntry}
+                            existingEntries={(() => {
+                                if (!entryModalDate) return [];
+                                return (userEntries.get(entryModalDate) ?? []).map((e) => ({
+                                    title: e.title,
+                                    typeKey: e.typeKey,
+                                } as ExistingEntry));
+                            })()}
+                            title="Add Calendar Entry"
+                            description="Add a lecture, review session, or event to your calendar."
                         />
 
                         {/* Demo B: Mini Calendar */}
