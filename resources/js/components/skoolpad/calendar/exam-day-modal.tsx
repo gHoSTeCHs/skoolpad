@@ -18,6 +18,7 @@ interface ExamDayModalProps {
     onAddEntry: (entry: Omit<ExamPeriodEntry, 'id'>) => void;
     onRemoveEntry: (id: string) => void;
     courses?: { code: string; name: string }[];
+    children?: React.ReactNode;
 }
 
 function formatDisplayDate(dateKey: string): string {
@@ -42,6 +43,7 @@ export function ExamDayModal({
     onAddEntry,
     onRemoveEntry,
     courses,
+    children,
 }: ExamDayModalProps) {
     const [courseCode, setCourseCode] = useState('');
     const [courseName, setCourseName] = useState('');
@@ -184,6 +186,8 @@ export function ExamDayModal({
                         </Button>
                     </div>
                 </div>
+
+                {children}
 
                 <div className="mt-4 flex justify-end">
                     <Button variant="outline" onClick={() => onOpenChange(false)}>

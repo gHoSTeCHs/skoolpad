@@ -2774,7 +2774,52 @@ export default function ArchitectureShowcase() {
                             onAddEntry={examPeriod.addEntry}
                             onRemoveEntry={examPeriod.removeEntry}
                             courses={MOCK_COURSES}
-                        />
+                        >
+                            {(() => {
+                                const dayGeneralEntries = userEntries.get(examDayModalDate) ?? [];
+                                return (
+                                    <div className="mt-4">
+                                        {dayGeneralEntries.length > 0 && (
+                                            <div className="mb-3 space-y-1.5">
+                                                <p className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
+                                                    Other Entries
+                                                </p>
+                                                {dayGeneralEntries.map((e, i) => {
+                                                    const entryType = ENTRY_TYPES.find((t) => t.key === e.typeKey);
+                                                    return (
+                                                        <div key={`${e.typeKey}-${i}`} className="flex items-center gap-2 rounded-lg border border-border px-3 py-2">
+                                                            {entryType && (
+                                                                <span
+                                                                    className="flex size-5 items-center justify-center rounded"
+                                                                    style={{ background: entryType.color + '18', color: entryType.color }}
+                                                                >
+                                                                    <entryType.icon className="size-3" />
+                                                                </span>
+                                                            )}
+                                                            <span className="text-sm font-medium">{e.title}</span>
+                                                            <span className="text-xs text-muted-foreground">{entryType?.label}</span>
+                                                        </div>
+                                                    );
+                                                })}
+                                            </div>
+                                        )}
+                                        <Button
+                                            variant="ghost"
+                                            size="sm"
+                                            className="w-full gap-1.5 text-xs text-muted-foreground"
+                                            onClick={() => {
+                                                setExamDayModalOpen(false);
+                                                setEntryModalDate(examDayModalDate);
+                                                setEntryModalOpen(true);
+                                            }}
+                                        >
+                                            <Plus className="size-3" />
+                                            Add other entry (lecture, review, event)
+                                        </Button>
+                                    </div>
+                                );
+                            })()}
+                        </ExamDayModal>
 
                         <CalendarEntryModal
                             open={entryModalOpen}
