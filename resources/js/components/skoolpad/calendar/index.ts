@@ -10,5 +10,8 @@ export type { CalendarEntryType, CalendarEntryData, ExistingEntry } from './cale
 export { ExamDayCell } from './exam-day-cell';
 export { ExamPeriodSetupModal } from './exam-period-setup-modal';
 export { ExamDayModal } from './exam-day-modal';
+export { LectureDayCell } from './lecture-day-cell';
 export { useExamPeriod } from '@/hooks/use-exam-period';
 export type { ExamPeriod, ExamPeriodEntry, UseExamPeriodReturn } from '@/hooks/use-exam-period';
+export { useWeeklySchedule } from '@/hooks/use-weekly-schedule';
+export type { SessionPeriod, WeeklyScheduleSlot, UseWeeklyScheduleReturn } from '@/hooks/use-weekly-schedule';
