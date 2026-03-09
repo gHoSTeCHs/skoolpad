@@ -22,7 +22,7 @@ export function CalendarHeader({
     children,
 }: CalendarHeaderProps) {
     return (
-        <div className={cn('flex items-center justify-between gap-2', className)}>
+        <div className={cn('flex flex-wrap items-center justify-between gap-2', className)}>
             <div className="flex items-center gap-1">
                 <Button variant="ghost" size="icon" onClick={onPrevMonth} aria-label="Previous month">
                     <ChevronLeft className="size-4" />
@@ -42,7 +42,7 @@ export function CalendarHeader({
                     </Button>
                 )}
             </div>
-            {children && <div className="flex items-center gap-2">{children}</div>}
+            {children && <div className="flex flex-wrap items-center gap-1.5 md:gap-2">{children}</div>}
         </div>
     );
 }

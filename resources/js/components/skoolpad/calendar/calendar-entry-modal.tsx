@@ -52,6 +52,7 @@ interface CalendarEntryModalProps {
     renderExtraFields?: (typeKey: string, data: CalendarEntryData, onChange: (field: string, value: unknown) => void) => React.ReactNode;
     title?: string;
     description?: string;
+    children?: React.ReactNode;
 }
 
 function formatDisplayDate(dateKey: string): string {
@@ -83,12 +84,14 @@ export function CalendarEntryModal({
     renderExtraFields,
     title,
     description,
+    children,
 }: CalendarEntryModalProps) {
     const isEditing = !!initialEntry?.title;
     const defaultType = entryTypes[0]?.key ?? '';
     const hasExisting = existingEntries && existingEntries.length > 0;
+    const hasViewContent = hasExisting || !!children;
 
-    const [mode, setMode] = useState<'view' | 'add'>(hasExisting ? 'view' : 'add');
+    const [mode, setMode] = useState<'view' | 'add'>(hasViewContent ? 'view' : 'add');
     const [data, setData] = useState<CalendarEntryData>(() =>
         makeEmptyData(defaultType, initialDate ?? '', initialEntry),
     );
@@ -96,7 +99,7 @@ export function CalendarEntryModal({
     useEffect(() => {
         if (open) {
             setData(makeEmptyData(defaultType, initialDate ?? '', initialEntry));
-            setMode(hasExisting ? 'view' : 'add');
+            setMode(hasViewContent ? 'view' : 'add');
         }
     }, [open, initialDate]);
 
@@ -199,14 +202,16 @@ export function CalendarEntryModal({
                                     );
                                 })}
                             </div>
-                        ) : (
+                        ) : !children ? (
                             <div className="flex flex-col items-center gap-2 py-6 text-center">
                                 <div className="flex size-10 items-center justify-center rounded-full bg-muted">
                                     <CalendarDays className="size-5 text-muted-foreground" />
                                 </div>
                                 <p className="text-sm text-muted-foreground">No entries for this day.</p>
                             </div>
-                        )}
+                        ) : null}
+
+                        {children}
 
                         <div className="mt-4 flex justify-end gap-2">
                             <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
@@ -308,7 +313,7 @@ export function CalendarEntryModal({
                         </div>
 
                         <DialogFooter className="mt-6">
-                            {hasExisting && (
+                            {hasViewContent && (
                                 <Button
                                     type="button"
                                     variant="ghost"

@@ -4,7 +4,7 @@ import { BlockTypeIcon, DifficultyBadge } from '@/components/skoolpad/block-tree
 import { CalendarDayCell, CalendarEntryModal, CalendarGrid, CalendarHeader, CalendarMini, ExamDayCell, ExamDayModal, ExamPeriodSetupModal, LectureDayCell, SessionSetupModal, WeeklyScheduleModal, useCalendar, useExamPeriod, useWeeklySchedule } from '@/components/skoolpad/calendar';
 import type { CalendarDay, CalendarEntryData, CalendarEntryType, CalendarMiniEvent, ExistingEntry } from '@/components/skoolpad/calendar';
 import { Button } from '@/components/ui/button';
-import { BookOpen, Calendar, ClipboardList, GraduationCap, Pencil, Plus, X } from 'lucide-react';
+import { BookOpen, Calendar, ClipboardList, Clock, GraduationCap, MapPin, Pencil, Plus, X } from 'lucide-react';
 import { QuestionTypeBadge, QuestionRenderer, ContextCard, QUESTION_TYPE_META } from '@/components/skoolpad/questions';
 import type { ShowcaseQuestion } from '@/components/skoolpad/questions';
 import type { ContextCardData } from '@/components/skoolpad/questions';
@@ -2680,38 +2680,43 @@ export default function ArchitectureShowcase() {
                                     onNextMonth={fullCalendar.goToNextMonth}
                                     onToday={fullCalendar.goToToday}
                                 >
-                                    <div className="flex items-center gap-2">
+                                    <div className="flex flex-wrap items-center gap-1.5 md:gap-2">
                                         {weeklySchedule.session ? (
                                             <>
                                                 <Button variant="outline" size="sm" className="gap-1.5 text-xs" onClick={() => setScheduleModalOpen(true)}>
                                                     <BookOpen className="size-3" />
-                                                    Edit Schedule
+                                                    <span className="hidden sm:inline">Edit Schedule</span>
+                                                    <span className="sm:hidden">Schedule</span>
                                                 </Button>
-                                                <Button variant="ghost" size="sm" className="gap-1.5 text-xs text-muted-foreground" onClick={() => setSessionSetupOpen(true)}>
+                                                <Button variant="ghost" size="icon" className="size-7 text-muted-foreground" onClick={() => setSessionSetupOpen(true)}>
                                                     <Pencil className="size-3" />
                                                 </Button>
                                             </>
                                         ) : (
                                             <Button size="sm" onClick={() => setSessionSetupOpen(true)} className="gap-1.5 text-xs">
                                                 <BookOpen className="size-3.5" />
-                                                Set Session
+                                                <span className="hidden sm:inline">Set Session</span>
+                                                <span className="sm:hidden">Session</span>
                                             </Button>
                                         )}
                                         {examPeriod.period ? (
                                             <>
                                                 <Button variant="outline" size="sm" className="gap-1.5 text-xs" onClick={() => setExamSetupOpen(true)}>
                                                     <Pencil className="size-3" />
-                                                    Edit Period
+                                                    <span className="hidden sm:inline">Edit Period</span>
+                                                    <span className="sm:hidden">Period</span>
                                                 </Button>
                                                 <Button variant="ghost" size="sm" className="gap-1.5 text-xs text-destructive hover:text-destructive" onClick={() => examPeriod.setPeriod(null)}>
                                                     <X className="size-3" />
-                                                    End Period
+                                                    <span className="hidden sm:inline">End Period</span>
+                                                    <span className="sm:hidden">End</span>
                                                 </Button>
                                             </>
                                         ) : (
                                             <Button size="sm" variant="destructive" onClick={() => setExamSetupOpen(true)} className="gap-1.5 text-xs">
                                                 <ClipboardList className="size-3.5" />
-                                                Set Exam Period
+                                                <span className="hidden sm:inline">Set Exam Period</span>
+                                                <span className="sm:hidden">Exams</span>
                                             </Button>
                                         )}
                                     </div>
@@ -2946,7 +2951,59 @@ export default function ArchitectureShowcase() {
                             })()}
                             title="Add Calendar Entry"
                             description="Add a lecture, review session, or event to your calendar."
-                        />
+                        >
+                            {(() => {
+                                if (!entryModalDate) return null;
+                                const lectures = weeklySchedule.slotsForDate(entryModalDate, examPeriod.isWithinPeriod);
+                                if (lectures.length === 0) return null;
+
+                                function fmtTime(t: string) {
+                                    if (!t) return '';
+                                    const [h, m] = t.split(':').map(Number);
+                                    const suffix = h >= 12 ? 'pm' : 'am';
+                                    const hour = h % 12 || 12;
+                                    return m > 0 ? `${hour}:${String(m).padStart(2, '0')}${suffix}` : `${hour}${suffix}`;
+                                }
+
+                                return (
+                                    <div className="mt-4">
+                                        <p className="mb-2 text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
+                                            Lectures
+                                        </p>
+                                        <div className="space-y-1.5">
+                                            {lectures.sort((a, b) => a.startTime.localeCompare(b.startTime)).map((slot) => (
+                                                <div
+                                                    key={slot.id}
+                                                    className="flex items-start gap-3 rounded-xl border border-border border-l-2 border-l-primary/50 px-4 py-3"
+                                                >
+                                                    <span className="mt-0.5 flex size-8 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary">
+                                                        <GraduationCap className="size-4" />
+                                                    </span>
+                                                    <div className="min-w-0 flex-1">
+                                                        <div className="flex items-center gap-2">
+                                                            <span className="text-sm font-bold">{slot.courseCode}</span>
+                                                            <span className="flex items-center gap-1 text-xs text-muted-foreground">
+                                                                <Clock size={10} />
+                                                                {fmtTime(slot.startTime)} – {fmtTime(slot.endTime)}
+                                                            </span>
+                                                        </div>
+                                                        {slot.courseName && (
+                                                            <p className="text-xs text-muted-foreground">{slot.courseName}</p>
+                                                        )}
+                                                        {slot.venue && (
+                                                            <p className="flex items-center gap-1 text-[11px] text-muted-foreground">
+                                                                <MapPin size={10} />
+                                                                {slot.venue}
+                                                            </p>
+                                                        )}
+                                                    </div>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    </div>
+                                );
+                            })()}
+                        </CalendarEntryModal>
 
                         <SessionSetupModal
                             open={sessionSetupOpen}
