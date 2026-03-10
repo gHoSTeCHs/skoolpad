@@ -3,6 +3,7 @@
 use App\Http\Controllers\Student\CourseController as StudentCourseController;
 use App\Http\Controllers\Student\DashboardController as StudentDashboardController;
 use App\Http\Controllers\Student\ExamPrepController;
+use App\Http\Controllers\Student\ExamTimetableController;
 use App\Http\Controllers\Student\LevelProgressionController;
 use App\Http\Controllers\Student\OnboardingController;
 use App\Http\Controllers\Student\ParentInvitationController;
@@ -87,6 +88,14 @@ Route::middleware(['auth', 'verified', 'onboarded'])->group(function () {
     Route::get('review-queue', [ReviewQueueController::class, 'index'])->name('review-queue.index');
     Route::post('review-queue/start', [ReviewQueueController::class, 'start'])->name('review-queue.start');
     Route::get('api/review-queue/calendar', [ReviewQueueController::class, 'calendar'])->name('api.review-queue.calendar');
+    Route::get('exam-timetable', [ExamTimetableController::class, 'index'])->name('exam-timetable.index');
+    Route::post('exam-timetable', [ExamTimetableController::class, 'store'])->name('exam-timetable.store');
+    Route::post('exam-timetable/start-studying', [ExamTimetableController::class, 'startStudying'])->name('exam-timetable.start-studying');
+    Route::put('exam-timetable/{entry}', [ExamTimetableController::class, 'update'])->name('exam-timetable.update');
+    Route::post('exam-timetable/{entry}/complete', [ExamTimetableController::class, 'complete'])->name('exam-timetable.complete');
+    Route::post('exam-timetable/{entry}/mock', [ExamTimetableController::class, 'startMock'])->name('exam-timetable.start-mock');
+    Route::delete('exam-timetable/{entry}', [ExamTimetableController::class, 'destroy'])->name('exam-timetable.destroy');
+    Route::get('api/exam-timetable/calendar', [ExamTimetableController::class, 'calendarData'])->name('api.exam-timetable.calendar');
     Route::get('knowledge-graph', fn () => Inertia::render('knowledge-graph/index'))->name('knowledge-graph.index');
     Route::get('search', fn () => Inertia::render('search/index'))->name('search.index');
     Route::get('cgpa-simulator', fn () => Inertia::render('cgpa-simulator/index'))->name('cgpa-simulator.index');
