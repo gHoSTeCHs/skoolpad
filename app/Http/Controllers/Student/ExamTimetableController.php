@@ -4,6 +4,8 @@ namespace App\Http\Controllers\Student;
 
 use App\Enums\PracticeMode;
 use App\Http\Controllers\Controller;
+use App\Http\Requests\Student\StartMockRequest;
+use App\Http\Requests\Student\StartStudyingRequest;
 use App\Http\Requests\Student\StoreExamTimetableRequest;
 use App\Http\Requests\Student\UpdateExamTimetableRequest;
 use App\Models\ExamGoal;
@@ -244,17 +246,13 @@ class ExamTimetableController extends Controller
         return redirect()->back()->with('success', 'Exam entry deleted.');
     }
 
-    public function startMock(Request $request, ExamTimetableEntry $entry): RedirectResponse
+    public function startMock(StartMockRequest $request, ExamTimetableEntry $entry): RedirectResponse
     {
         if ($entry->user_id !== $request->user()->id) {
             abort(403);
         }
 
-        $validated = $request->validate([
-            'question_paper_id' => ['required', 'uuid', 'exists:question_papers,id'],
-        ]);
-
-        $paper = \App\Models\QuestionPaper::query()->findOrFail($validated['question_paper_id']);
+        $paper = \App\Models\QuestionPaper::query()->findOrFail($request->validated('question_paper_id'));
 
         if (! $paper->is_published) {
             abort(403, 'This paper is not available.');
@@ -269,7 +267,7 @@ class ExamTimetableController extends Controller
         return redirect()->route('practice.show', $session);
     }
 
-    public function startStudying(Request $request): RedirectResponse
+    public function startStudying(StartStudyingRequest $request): RedirectResponse
     {
         $user = $request->user();
         $profile = $user->studentProfile;
@@ -278,11 +276,7 @@ class ExamTimetableController extends Controller
             return redirect()->back()->with('error', 'Complete your profile setup first.');
         }
 
-        $request->validate([
-            'entry_id' => ['nullable', 'uuid', 'exists:exam_timetable_entries,id'],
-        ]);
-
-        $entryId = $request->input('entry_id');
+        $entryId = $request->validated('entry_id');
         if ($entryId) {
             $entry = ExamTimetableEntry::query()->find($entryId);
             if (! $entry || $entry->user_id !== $user->id) {
@@ -390,7 +384,7 @@ class ExamTimetableController extends Controller
         }
 
         if (! empty($validated['level_subject_id'])) {
-            $levelSubject = LevelSubject::findOrFail($validated['level_subject_id']);
+            $levelSubject = LevelSubject::query()->findOrFail($validated['level_subject_id']);
 
             if ($levelSubject->education_level_id !== $profile->education_level_id) {
                 abort(403, 'This subject is not available for your education level.');
@@ -411,7 +405,7 @@ class ExamTimetableController extends Controller
         $validTopicIds = collect();
 
         if (! empty($validated['institution_course_id'])) {
-            $validTopicIds = \App\Models\InstitutionCourse::findOrFail($validated['institution_course_id'])
+            $validTopicIds = \App\Models\InstitutionCourse::query()->findOrFail($validated['institution_course_id'])
                 ->topics()
                 ->pluck('canonical_topics.id');
         } elseif (! empty($validated['level_subject_id'])) {

@@ -24,7 +24,10 @@ use Inertia\Response;
 
 class PracticeController extends Controller
 {
-    public function __construct(private PracticeService $practiceService) {}
+    public function __construct(
+        private readonly PracticeService $practiceService,
+        private readonly StudyPlannerService $studyPlannerService,
+    ) {}
 
     public function configure(Request $request): Response
     {
@@ -466,7 +469,7 @@ class PracticeController extends Controller
 
         $predictiveScore = null;
         if ($session->assessment_type_id) {
-            $predictiveScore = app(StudyPlannerService::class)->getPredictiveScore($session);
+            $predictiveScore = $this->studyPlannerService->getPredictiveScore($session);
         }
 
         $sectionBreakdown = null;

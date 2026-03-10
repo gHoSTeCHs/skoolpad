@@ -3,11 +3,10 @@ import { BookOpen, RotateCcw, Target } from 'lucide-react';
 import { startStudying } from '@/actions/App/Http/Controllers/Student/ExamTimetableController';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
-import type { DailyStudyPlan, ExamSummary } from '@/types/study-planner';
+import type { DailyStudyPlan } from '@/types/study-planner';
 
 interface DailyPlanCardProps {
     dailyPlan: DailyStudyPlan;
-    examSummary: ExamSummary | null;
 }
 
 const actionIcons = {
@@ -22,7 +21,7 @@ const actionLabels = {
     review: 'Review',
 } as const;
 
-export function DailyPlanCard({ dailyPlan, examSummary }: DailyPlanCardProps) {
+export function DailyPlanCard({ dailyPlan }: DailyPlanCardProps) {
     function handleStartStudying() {
         router.post(startStudying.url());
     }

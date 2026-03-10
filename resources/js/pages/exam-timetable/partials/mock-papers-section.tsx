@@ -44,7 +44,7 @@ function MockPaperRow({ paper, entryId }: { paper: MockPaperData; entryId: strin
                     )}
                 </div>
                 <div className="mt-0.5 flex items-center gap-2 text-[10px] text-muted-foreground">
-                    {paper.duration_minutes && (
+                    {paper.duration_minutes > 0 && (
                         <span className="flex items-center gap-0.5">
                             <Clock className="size-2.5" />
                             {paper.duration_minutes}m

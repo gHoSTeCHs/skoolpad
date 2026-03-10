@@ -1,8 +1,7 @@
 import { Head, Link, router } from '@inertiajs/react';
 import { ArrowRight, BookOpen, Calendar, GraduationCap, PlayCircle, RotateCcw, ShieldCheck } from 'lucide-react';
 import { useState } from 'react';
-import { index as examTimetableIndex } from '@/actions/App/Http/Controllers/Student/ExamTimetableController';
-import { startStudying } from '@/actions/App/Http/Controllers/Student/ExamTimetableController';
+import { index as examTimetableIndex, startStudying } from '@/actions/App/Http/Controllers/Student/ExamTimetableController';
 import LevelProgressionController from '@/actions/App/Http/Controllers/Student/LevelProgressionController';
 import ParentInvitationController from '@/actions/App/Http/Controllers/Student/ParentInvitationController';
 import { configure as practiceConfigureRoute } from '@/actions/App/Http/Controllers/Student/PracticeController';

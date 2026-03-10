@@ -135,23 +135,6 @@ export interface PracticeResultsPageProps {
     hasActiveExams?: boolean;
 }
 
-export interface ExamGoalData {
-    id: string;
-    assessment_type: {
-        id: string;
-        name: string;
-        is_exit_exam: boolean;
-        is_entrance_exam: boolean;
-    };
-    institution_course: {
-        id: string;
-        course_code: string;
-        course_title: string;
-    } | null;
-    exam_date: string | null;
-    target_score: number | null;
-    days_remaining: number | null;
-}
 
 export interface MockPaperData {
     id: string;
@@ -162,10 +145,6 @@ export interface MockPaperData {
     question_count: number;
 }
 
-export interface ExamPrepPageProps {
-    goals: ExamGoalData[];
-    papers: Record<string, MockPaperData[]>;
-}
 
 export interface PredictiveScore {
     percentage: number;

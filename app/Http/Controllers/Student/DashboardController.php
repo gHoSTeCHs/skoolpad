@@ -94,7 +94,6 @@ class DashboardController extends Controller
             'review_queue_count' => $reviewQueueCount,
             'continue_studying' => $continueStudying,
             'exam_timetable_card' => $examTimetableCard,
-            'has_active_exams' => $user->examTimetableEntries()->active()->exists(),
         ]);
     }
 
