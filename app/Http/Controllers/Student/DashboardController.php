@@ -10,9 +10,9 @@ use App\Models\PracticeAnswer;
 use App\Models\PracticeSession;
 use App\Models\StudentProfile;
 use App\Models\User;
-use App\Services\ExamPrepService;
 use App\Services\GuidedStudyService;
 use App\Services\SpacedRepetitionService;
+use App\Services\StudyPlannerService;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
 use Inertia\Response;
@@ -63,6 +63,11 @@ class DashboardController extends Controller
         $reviewQueueCount = app(SpacedRepetitionService::class)->getDueCount($user);
         $continueStudying = $this->getContinueStudying($user);
 
+        $examTimetableCard = null;
+        if ($user->examTimetableEntries()->active()->exists()) {
+            $examTimetableCard = app(StudyPlannerService::class)->getExamSummary($user, $profile);
+        }
+
         return Inertia::render('dashboard', [
             'student' => [
                 'name' => $user->name,
@@ -88,6 +93,8 @@ class DashboardController extends Controller
             'level_progression' => null,
             'review_queue_count' => $reviewQueueCount,
             'continue_studying' => $continueStudying,
+            'exam_timetable_card' => $examTimetableCard,
+            'has_active_exams' => $user->examTimetableEntries()->active()->exists(),
         ]);
     }
 
@@ -123,28 +130,9 @@ class DashboardController extends Controller
         $reviewQueueCount = app(SpacedRepetitionService::class)->getDueCount($user);
         $continueStudying = $this->getContinueStudying($user);
 
-        $examPrepCard = null;
-        if ($profile) {
-            $primaryGoal = $user->examGoals()
-                ->where('is_active', true)
-                ->with(['assessmentType:id,name', 'institutionCourse:id,course_code,course_title'])
-                ->first();
-
-            if ($primaryGoal) {
-                $daysRemaining = $primaryGoal->exam_date
-                    ? max(0, (int) now()->startOfDay()->diffInDays($primaryGoal->exam_date, false))
-                    : null;
-
-                $dailyPlan = app(ExamPrepService::class)->getDailyPlan($user, $primaryGoal);
-
-                $examPrepCard = [
-                    'assessment_type_name' => $primaryGoal->assessmentType->name,
-                    'course_title' => $primaryGoal->institutionCourse?->course_title,
-                    'exam_date' => $primaryGoal->exam_date?->toDateString(),
-                    'days_remaining' => $daysRemaining,
-                    'daily_plan' => $dailyPlan,
-                ];
-            }
+        $examTimetableCard = null;
+        if ($profile && $user->examTimetableEntries()->active()->exists()) {
+            $examTimetableCard = app(StudyPlannerService::class)->getExamSummary($user, $profile);
         }
 
         return Inertia::render('dashboard', [
@@ -174,7 +162,7 @@ class DashboardController extends Controller
             'level_progression' => $profile ? $this->getLevelProgression($profile) : null,
             'review_queue_count' => $reviewQueueCount,
             'continue_studying' => $continueStudying,
-            'exam_prep_card' => $examPrepCard,
+            'exam_timetable_card' => $examTimetableCard,
         ]);
     }
 

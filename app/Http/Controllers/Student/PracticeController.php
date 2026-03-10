@@ -14,8 +14,8 @@ use App\Models\LevelSubject;
 use App\Models\PracticeSession;
 use App\Models\Question;
 use App\Models\SpacedRepetitionItem;
-use App\Services\ExamPrepService;
 use App\Services\PracticeService;
+use App\Services\StudyPlannerService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -466,7 +466,7 @@ class PracticeController extends Controller
 
         $predictiveScore = null;
         if ($session->assessment_type_id) {
-            $predictiveScore = app(ExamPrepService::class)->getPredictiveScore($session);
+            $predictiveScore = app(StudyPlannerService::class)->getPredictiveScore($session);
         }
 
         $sectionBreakdown = null;
@@ -512,6 +512,7 @@ class PracticeController extends Controller
             'reviewMetrics' => $reviewMetrics,
             'predictiveScore' => $predictiveScore,
             'sectionBreakdown' => $sectionBreakdown,
+            'hasActiveExams' => $user->examTimetableEntries()->active()->exists(),
         ]);
     }
 
