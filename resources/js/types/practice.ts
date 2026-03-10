@@ -132,6 +132,7 @@ export interface PracticeResultsPageProps {
     reviewMetrics?: ReviewMetrics;
     predictiveScore?: PredictiveScore | null;
     sectionBreakdown?: SectionBreakdownData[] | null;
+    hasActiveExams?: boolean;
 }
 
 export interface ExamGoalData {

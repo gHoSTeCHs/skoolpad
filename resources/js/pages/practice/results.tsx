@@ -1,7 +1,7 @@
 import { Head, Link } from '@inertiajs/react';
 import { useState } from 'react';
 
-import ExamPrepController from '@/actions/App/Http/Controllers/Student/ExamPrepController';
+import { index as examTimetableIndex } from '@/actions/App/Http/Controllers/Student/ExamTimetableController';
 import PracticeController from '@/actions/App/Http/Controllers/Student/PracticeController';
 import CourseController from '@/actions/App/Http/Controllers/Student/CourseController';
 import ReviewQueueController from '@/actions/App/Http/Controllers/Student/ReviewQueueController';
@@ -15,7 +15,7 @@ import { ScoreSummary } from './partials/score-summary';
 import { SectionBreakdown } from './partials/section-breakdown';
 import { TopicBreakdown } from './partials/topic-breakdown';
 
-export default function PracticeResults({ session, perQuestion, perTopic, reviewMetrics, predictiveScore, sectionBreakdown }: PracticeResultsPageProps) {
+export default function PracticeResults({ session, perQuestion, perTopic, reviewMetrics, predictiveScore, sectionBreakdown, hasActiveExams }: PracticeResultsPageProps) {
     const isReviewMode = session.mode === 'review';
     const [expandedId, setExpandedId] = useState<string | null>(null);
     const [filter, setFilter] = useState<'all' | 'correct' | 'incorrect' | 'skipped'>('all');
@@ -158,9 +158,9 @@ export default function PracticeResults({ session, perQuestion, perTopic, review
                                 <Button variant="outline" asChild>
                                     <Link href={PracticeController.configure.url()}>Practice Again</Link>
                                 </Button>
-                                {session.mode === 'full_mock' && (
+                                {hasActiveExams && (
                                     <Button variant="outline" asChild>
-                                        <Link href={ExamPrepController.index.url()}>View Exam Prep</Link>
+                                        <Link href={examTimetableIndex.url()}>Back to Study Plan</Link>
                                     </Button>
                                 )}
                                 {(() => {
