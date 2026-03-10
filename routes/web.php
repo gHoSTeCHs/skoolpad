@@ -2,7 +2,6 @@
 
 use App\Http\Controllers\Student\CourseController as StudentCourseController;
 use App\Http\Controllers\Student\DashboardController as StudentDashboardController;
-use App\Http\Controllers\Student\ExamPrepController;
 use App\Http\Controllers\Student\ExamTimetableController;
 use App\Http\Controllers\Student\LevelProgressionController;
 use App\Http\Controllers\Student\OnboardingController;
@@ -77,9 +76,6 @@ Route::middleware(['auth', 'verified', 'onboarded'])->group(function () {
     Route::get('practice/configure', [PracticeController::class, 'configure'])->name('practice.configure');
     Route::post('practice/start', [PracticeController::class, 'start'])->name('practice.start');
     Route::get('api/practice/available-count', [PracticeController::class, 'availableCount'])->name('api.practice.available-count');
-    Route::get('practice/exam-prep', [ExamPrepController::class, 'index'])->name('practice.exam-prep');
-    Route::post('practice/exam-prep/start', [ExamPrepController::class, 'start'])->name('practice.exam-prep.start');
-    Route::get('api/practice/exam-prep/daily', [ExamPrepController::class, 'dailyPlan'])->name('api.practice.exam-prep.daily');
     Route::get('practice/{session}', [PracticeController::class, 'show'])->name('practice.show');
     Route::post('practice/{session}/answer', [PracticeController::class, 'answer'])->name('practice.answer');
     Route::post('practice/{session}/complete', [PracticeController::class, 'complete'])->name('practice.complete');
