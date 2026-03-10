@@ -3,6 +3,7 @@ import {
     BarChart3,
     BookOpen,
     Calculator,
+    CalendarCheck,
     FileQuestion,
     GraduationCap,
     LayoutGrid,
@@ -26,6 +27,7 @@ import {
     SidebarMenuItem,
 } from '@/components/ui/sidebar';
 import { index as coursesIndex } from '@/actions/App/Http/Controllers/Student/CourseController';
+import { index as timetableIndex } from '@/actions/App/Http/Controllers/Student/ExamTimetableController';
 import { index as papersIndex } from '@/actions/App/Http/Controllers/Student/QuestionPaperController';
 import { browse as topicsBrowse } from '@/actions/App/Http/Controllers/Student/TopicController';
 import { dashboard } from '@/routes';
@@ -41,6 +43,7 @@ const navGroups: NavGroup[] = [
             { title: 'Past Questions', href: papersIndex.url(), icon: FileQuestion },
             { title: 'Practice', href: '/practice', icon: Target },
             { title: 'Review Queue', href: '/review-queue', icon: ListChecks },
+            { title: 'Exam Timetable', href: timetableIndex.url(), icon: CalendarCheck },
         ],
     },
     {

@@ -272,6 +272,29 @@ export default function Dashboard({ student, courses, subjects, stats, suggested
                     </div>
                 )}
 
+                {!exam_timetable_card && (
+                    <div className="rounded-xl border bg-card p-5">
+                        <div className="flex items-center gap-3">
+                            <div className="flex size-10 shrink-0 items-center justify-center rounded-lg bg-primary/10">
+                                <GraduationCap className="size-5 text-primary" />
+                            </div>
+                            <div>
+                                <p className="text-sm font-semibold">Exam Timetable</p>
+                                <p className="text-xs text-muted-foreground" style={{ fontFamily: 'var(--font-body)' }}>
+                                    Add your exam dates to get a personalised daily study plan.
+                                </p>
+                            </div>
+                        </div>
+                        <div className="mt-4">
+                            <Button size="sm" variant="outline" asChild>
+                                <Link href={examTimetableIndex.url()}>
+                                    Set Up Timetable
+                                </Link>
+                            </Button>
+                        </div>
+                    </div>
+                )}
+
                 {exam_timetable_card && (
                     <div className={cn(
                         'rounded-xl border bg-card p-5',

@@ -151,4 +151,9 @@ class User extends Authenticatable
     {
         return $this->hasMany(ExamGoal::class);
     }
+
+    public function examTimetableEntries(): HasMany
+    {
+        return $this->hasMany(ExamTimetableEntry::class);
+    }
 }

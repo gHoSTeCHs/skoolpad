@@ -9,3 +9,4 @@ Artisan::command('inspire', function () {
 })->purpose('Display an inspiring quote');
 
 Schedule::command('practice:expire-sessions')->hourly();
+Schedule::command('exam-timetable:archive-past')->daily();

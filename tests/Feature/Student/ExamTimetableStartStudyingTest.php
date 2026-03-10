@@ -94,6 +94,37 @@ it('creates practice session and redirects when first item is practice', functio
     ]);
 });
 
+it('redirects to review queue when only review items exist', function () {
+    $emptyCourse = InstitutionCourse::factory()->create([
+        'institution_id' => $this->profile->institution_id,
+    ]);
+    StudentCourse::factory()->create([
+        'student_profile_id' => $this->profile->id,
+        'institution_course_id' => $emptyCourse->id,
+    ]);
+
+    $question = Question::factory()->create([
+        'institution_course_id' => $emptyCourse->id,
+    ]);
+
+    \App\Models\SpacedRepetitionItem::factory()->create([
+        'user_id' => $this->user->id,
+        'question_id' => $question->id,
+        'next_review_at' => now()->subDay()->toDateString(),
+    ]);
+
+    ExamTimetableEntry::factory()->create([
+        'user_id' => $this->user->id,
+        'institution_course_id' => $emptyCourse->id,
+        'exam_date' => now()->addDays(5),
+    ]);
+
+    $response = $this->post(route('exam-timetable.start-studying'));
+
+    $response->assertRedirect();
+    expect($response->getTargetUrl())->toContain('review-queue');
+});
+
 it('redirects back with message when no active entries', function () {
     $response = $this->post(route('exam-timetable.start-studying'));
 

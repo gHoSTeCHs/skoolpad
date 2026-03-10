@@ -2,7 +2,7 @@ export type StudyPlanItemType = 'review' | 'study' | 'practice';
 
 export interface StudyPlanItem {
     type: StudyPlanItemType;
-    priority_tier: 1 | 2 | 3 | 4;
+    priority_tier: 0 | 1 | 2 | 3 | 4;
     subject_name: string;
     level_subject_id: string;
     topic_label: string;

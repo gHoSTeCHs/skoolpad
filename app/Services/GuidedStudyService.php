@@ -24,7 +24,10 @@ class GuidedStudyService
 
     private const WEAK_TOPIC_MINUTES = 5;
 
-    public function __construct(private SpacedRepetitionService $spacedRepService) {}
+    public function __construct(
+        private SpacedRepetitionService $spacedRepService,
+        private StudyPlannerService $studyPlannerService,
+    ) {}
 
     /**
      * @return array{daily_goal_minutes: int, total_estimated_minutes: int, completed_minutes: int, current_term: int, current_week: int, items: array<int, array{type: string, priority_tier: int, subject_name: string, level_subject_id: string, topic_label: string, canonical_topic_id: ?string, content_block_id: ?string, estimated_minutes: int, is_completed: bool}>}
@@ -50,7 +53,31 @@ class GuidedStudyService
         $minutesBudget = $dailyGoal;
         $completedMinutes = 0;
 
-        $minutesBudget = $this->addSpacedRepetitionItems($items, $minutesBudget, $user);
+        $hasActiveExams = $user->examTimetableEntries()->active()->exists();
+
+        if ($hasActiveExams) {
+            $dailyPlan = $this->studyPlannerService->buildDailyPlan($user, $profile);
+            if ($dailyPlan) {
+                foreach ($dailyPlan['items'] as $planItem) {
+                    $items->push([
+                        'type' => $planItem['action'] === 'review' ? 'review' : ($planItem['action'] === 'read' ? 'study' : 'practice'),
+                        'priority_tier' => 0,
+                        'subject_name' => $planItem['subject_name'] ?? 'Exam Prep',
+                        'level_subject_id' => '',
+                        'topic_label' => $planItem['topic_title'],
+                        'canonical_topic_id' => $planItem['topic_id'],
+                        'content_block_id' => $planItem['content_block_id'] ?? null,
+                        'estimated_minutes' => $planItem['estimated_minutes'],
+                        'is_completed' => false,
+                    ]);
+                    $minutesBudget -= $planItem['estimated_minutes'];
+                }
+            }
+        }
+
+        if (! $hasActiveExams) {
+            $minutesBudget = $this->addSpacedRepetitionItems($items, $minutesBudget, $user);
+        }
 
         $minutesBudget = $this->addSchemeOfWorkItems(
             $items, $minutesBudget, $user, $levelSubjectIds, $termWeek, $completedMinutes

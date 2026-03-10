@@ -153,7 +153,7 @@ export default function ExamTimetable({ entries, enrolledCourses, enrolledSubjec
 
                     <div className="space-y-4">
                         {dailyPlan && (
-                            <DailyPlanCard dailyPlan={dailyPlan} examSummary={examSummary} />
+                            <DailyPlanCard dailyPlan={dailyPlan} />
                         )}
 
                         <div className="rounded-xl border bg-card p-4">
