@@ -101,7 +101,7 @@ Route::middleware(['auth', 'verified', 'onboarded'])->group(function () {
     Route::get('api/exam-timetable/calendar', [ExamTimetableController::class, 'calendarData'])->name('api.exam-timetable.calendar');
     Route::get('knowledge-graph', fn () => Inertia::render('knowledge-graph/index'))->name('knowledge-graph.index');
     Route::get('search', [SearchController::class, 'index'])->name('search.index');
-    Route::get('api/search', [SearchController::class, 'search'])->name('api.search');
+    Route::get('api/search', [SearchController::class, 'search'])->middleware('throttle:60,1')->name('api.search');
     Route::get('cgpa-simulator', fn () => Inertia::render('cgpa-simulator/index'))->name('cgpa-simulator.index');
     Route::get('upload', fn () => Inertia::render('upload/index'))->name('upload.index');
     Route::get('contributions', fn () => Inertia::render('contributions/index'))->name('contributions.index');

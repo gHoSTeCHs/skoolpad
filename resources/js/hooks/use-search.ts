@@ -1,5 +1,10 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import type { SearchEntityType, SearchResponse, SearchResultItem } from '@/types/search';
+import { useEffect, useMemo, useRef, useState } from 'react';
+import type { SearchResponse, SearchResultItem } from '@/types/search';
+
+function getCsrfToken(): string {
+    const match = document.cookie.match(/XSRF-TOKEN=([^;]+)/);
+    return match ? decodeURIComponent(match[1]) : '';
+}
 
 interface GroupedResults {
     topics: SearchResultItem[];
@@ -24,6 +29,7 @@ interface UseSearchReturn {
     totalCount: number;
     allResults: SearchResultItem[];
     isLoading: boolean;
+    error: string | null;
     sectionOrder: (keyof GroupedResults)[];
     sectionLabels: Record<keyof GroupedResults, string>;
 }
@@ -39,8 +45,15 @@ export function useSearch(): UseSearchReturn {
     const [query, setQuery] = useState('');
     const [results, setResults] = useState<SearchResponse | null>(null);
     const [isLoading, setIsLoading] = useState(false);
+    const [error, setError] = useState<string | null>(null);
     const debounceRef = useRef<ReturnType<typeof setTimeout>>(undefined);
     const abortRef = useRef<AbortController | null>(null);
+    const mountedRef = useRef(true);
+
+    useEffect(() => {
+        mountedRef.current = true;
+        return () => { mountedRef.current = false; };
+    }, []);
 
     useEffect(() => {
         clearTimeout(debounceRef.current);
@@ -48,10 +61,12 @@ export function useSearch(): UseSearchReturn {
         if (!query.trim() || query.trim().length < 2) {
             setResults(null);
             setIsLoading(false);
+            setError(null);
             return;
         }
 
         setIsLoading(true);
+        setError(null);
 
         debounceRef.current = setTimeout(async () => {
             abortRef.current?.abort();
@@ -61,16 +76,28 @@ export function useSearch(): UseSearchReturn {
             try {
                 const response = await fetch(`/api/search?q=${encodeURIComponent(query.trim())}`, {
                     signal: controller.signal,
-                    headers: { Accept: 'application/json', 'X-Requested-With': 'XMLHttpRequest' },
+                    headers: {
+                        'Accept': 'application/json',
+                        'X-Requested-With': 'XMLHttpRequest',
+                        'X-XSRF-TOKEN': getCsrfToken(),
+                    },
                 });
                 if (!response.ok) throw new Error('Search failed');
                 const data: SearchResponse = await response.json();
-                setResults(data);
+                if (mountedRef.current) {
+                    setResults(data);
+                    setError(null);
+                }
             } catch (err) {
                 if (err instanceof DOMException && err.name === 'AbortError') return;
-                setResults(null);
+                if (mountedRef.current) {
+                    setResults(null);
+                    setError('Search failed. Please try again.');
+                }
             } finally {
-                setIsLoading(false);
+                if (mountedRef.current) {
+                    setIsLoading(false);
+                }
             }
         }, 250);
 
@@ -100,17 +127,14 @@ export function useSearch(): UseSearchReturn {
 
     const totalCount = allResults.length;
 
-    const handleSetQuery = useCallback((newQuery: string) => {
-        setQuery(newQuery);
-    }, []);
-
     return {
         query,
-        setQuery: handleSetQuery,
+        setQuery,
         groupedResults,
         totalCount,
         allResults,
         isLoading,
+        error,
         sectionOrder: SECTION_ORDER,
         sectionLabels: SECTION_LABELS,
     };

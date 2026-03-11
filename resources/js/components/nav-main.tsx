@@ -10,7 +10,11 @@ import { useCurrentUrl } from '@/hooks/use-current-url';
 import { toUrl } from '@/lib/utils';
 import type { NavGroup } from '@/types';
 
-export function NavMain({ groups = [] }: { groups: NavGroup[] }) {
+interface NavMainProps {
+    groups: NavGroup[];
+}
+
+export function NavMain({ groups = [] }: NavMainProps) {
     const { currentUrl } = useCurrentUrl();
 
     return (

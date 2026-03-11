@@ -13,10 +13,10 @@ const entityConfig: Record<
     SearchEntityType,
     { icon: typeof BookOpen; colorClass: string; bgClass: string; label: string }
 > = {
-    topic: { icon: BookOpen, colorClass: 'text-emerald-600', bgClass: 'bg-emerald-600/10', label: 'Topic' },
-    course: { icon: GraduationCap, colorClass: 'text-blue-600', bgClass: 'bg-blue-600/10', label: 'Course' },
-    question: { icon: FileQuestion, colorClass: 'text-amber-600', bgClass: 'bg-amber-600/10', label: 'Question' },
-    note: { icon: StickyNote, colorClass: 'text-purple-600', bgClass: 'bg-purple-600/10', label: 'Note' },
+    topic: { icon: BookOpen, colorClass: 'text-emerald-600 dark:text-emerald-400 reader:text-emerald-400', bgClass: 'bg-emerald-600/10 dark:bg-emerald-400/10 reader:bg-emerald-400/10', label: 'Topic' },
+    course: { icon: GraduationCap, colorClass: 'text-blue-600 dark:text-blue-400 reader:text-blue-400', bgClass: 'bg-blue-600/10 dark:bg-blue-400/10 reader:bg-blue-400/10', label: 'Course' },
+    question: { icon: FileQuestion, colorClass: 'text-amber-600 dark:text-amber-400 reader:text-amber-400', bgClass: 'bg-amber-600/10 dark:bg-amber-400/10 reader:bg-amber-400/10', label: 'Question' },
+    note: { icon: StickyNote, colorClass: 'text-purple-600 dark:text-purple-400 reader:text-purple-400', bgClass: 'bg-purple-600/10 dark:bg-purple-400/10 reader:bg-purple-400/10', label: 'Note' },
 };
 
 function highlightText(text: string, query: string) {
@@ -26,7 +26,7 @@ function highlightText(text: string, query: string) {
     const parts = text.split(regex);
 
     return parts.map((part, i) =>
-        regex.test(part) ? (
+        part.toLowerCase() === query.toLowerCase() ? (
             <mark key={i} className="rounded-sm bg-primary/20 px-0.5 text-foreground">
                 {part}
             </mark>
@@ -62,17 +62,11 @@ export function SearchResultItemComponent({ result, isSelected, index, query, on
                         {config.label}
                     </span>
                 </div>
-                <p
-                    className="mt-0.5 truncate text-[12px] text-muted-foreground"
-                    style={{ fontFamily: 'var(--font-body)' }}
-                >
+                <p className="mt-0.5 truncate text-[12px] text-muted-foreground">
                     {highlightText(result.subtitle, query)}
                 </p>
                 {result.description && (
-                    <p
-                        className="mt-0.5 truncate text-[11px] text-muted-foreground/70"
-                        style={{ fontFamily: 'var(--font-body)' }}
-                    >
+                    <p className="mt-0.5 truncate text-[11px] text-muted-foreground/70">
                         {result.description}
                     </p>
                 )}

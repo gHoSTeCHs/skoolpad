@@ -7,6 +7,7 @@ use App\Models\InstitutionCourse;
 use App\Models\Question;
 use App\Models\StudentNote;
 use Illuminate\Support\Collection;
+use Illuminate\Support\Str;
 
 class SearchService
 {
@@ -30,9 +31,9 @@ class SearchService
     private function searchTopics(string $query, int $limit): Collection
     {
         return CanonicalTopic::query()
-            ->whereRaw("search_vector @@ plainto_tsquery('english', ?)", [$query])
-            ->where('is_published', true)
-            ->selectRaw("id, title, summary, discipline_id, ts_rank(search_vector, plainto_tsquery('english', ?)) as relevance", [$query])
+            ->fullTextSearch($query)
+            ->published()
+            ->selectRaw("*, ts_rank(search_vector, plainto_tsquery('english', ?)) as relevance", [$query])
             ->with('discipline:id,name')
             ->orderByDesc('relevance')
             ->limit($limit)
@@ -41,7 +42,7 @@ class SearchService
                 'id' => $topic->id,
                 'title' => $topic->title,
                 'subtitle' => $topic->discipline?->name ?? '',
-                'description' => $topic->summary ? \Illuminate\Support\Str::limit($topic->summary, 120) : '',
+                'description' => $topic->summary ? Str::limit($topic->summary, 120) : '',
                 'type' => 'topic',
                 'url' => route('topics.show', $topic->id),
             ]);
@@ -49,9 +50,13 @@ class SearchService
 
     private function searchCourses(string $query, ?string $institutionId, int $limit): Collection
     {
+        if (! $institutionId) {
+            return collect();
+        }
+
         return InstitutionCourse::query()
             ->search($query)
-            ->when($institutionId, fn ($q) => $q->where('institution_id', $institutionId))
+            ->where('institution_id', $institutionId)
             ->select('id', 'course_code', 'course_title', 'institution_id')
             ->with('institution:id,abbreviation')
             ->limit($limit)
@@ -69,16 +74,16 @@ class SearchService
     private function searchQuestions(string $query, int $limit): Collection
     {
         return Question::query()
-            ->whereRaw("search_vector @@ plainto_tsquery('english', ?)", [$query])
+            ->search($query)
             ->published()
-            ->selectRaw("id, content, question_type, institution_course_id, ts_rank(search_vector, plainto_tsquery('english', ?)) as relevance", [$query])
+            ->selectRaw("*, ts_rank(search_vector, plainto_tsquery('english', ?)) as relevance", [$query])
             ->with('institutionCourse:id,course_code')
             ->orderByDesc('relevance')
             ->limit($limit)
             ->get()
             ->map(fn (Question $question) => [
                 'id' => $question->id,
-                'title' => \Illuminate\Support\Str::limit(strip_tags($question->content), 80),
+                'title' => Str::limit(strip_tags($question->content), 80),
                 'subtitle' => $question->institutionCourse?->course_code ?? 'General',
                 'description' => $question->question_type->label(),
                 'type' => 'question',

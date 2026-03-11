@@ -138,6 +138,11 @@ class CanonicalTopic extends Model
         return $query->where('title', 'ilike', "%{$term}%");
     }
 
+    public function scopeFullTextSearch(Builder $query, string $term): Builder
+    {
+        return $query->whereRaw("search_vector @@ plainto_tsquery('english', ?)", [$term]);
+    }
+
     /**
      * Sync prerequisites with pivot data
      *

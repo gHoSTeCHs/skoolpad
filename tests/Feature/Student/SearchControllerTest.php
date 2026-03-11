@@ -5,6 +5,8 @@ use App\Models\Discipline;
 use App\Models\InstitutionCourse;
 use App\Models\StudentNote;
 use App\Models\StudentProfile;
+use App\Models\User;
+use Illuminate\Support\Facades\DB;
 
 uses(Illuminate\Foundation\Testing\RefreshDatabase::class);
 
@@ -21,24 +23,25 @@ it('renders the search page', function () {
     $response->assertInertia(fn ($page) => $page->component('search/index'));
 });
 
-it('returns empty results for short queries', function () {
+it('rejects short queries with validation error', function () {
     $response = $this->getJson(route('api.search', ['q' => 'a']));
 
-    $response->assertOk();
-    $response->assertJson([
-        'topics' => [],
-        'courses' => [],
-        'questions' => [],
-        'notes' => [],
-        'total' => 0,
-    ]);
+    $response->assertUnprocessable();
+    $response->assertJsonValidationErrors(['q']);
 });
 
-it('returns empty results for empty query', function () {
+it('rejects empty query with validation error', function () {
     $response = $this->getJson(route('api.search', ['q' => '']));
 
-    $response->assertOk();
-    $response->assertJson(['total' => 0]);
+    $response->assertUnprocessable();
+    $response->assertJsonValidationErrors(['q']);
+});
+
+it('rejects missing query with validation error', function () {
+    $response = $this->getJson(route('api.search'));
+
+    $response->assertUnprocessable();
+    $response->assertJsonValidationErrors(['q']);
 });
 
 it('searches published topics by title', function () {
@@ -60,7 +63,7 @@ it('searches published topics by title', function () {
     $response->assertJsonCount(1, 'topics');
     expect($response->json('topics.0.title'))->toBe('Binary Search Trees');
     expect($response->json('topics.0.type'))->toBe('topic');
-});
+})->skip(fn () => DB::getDriverName() !== 'pgsql', 'Full-text search requires PostgreSQL');
 
 it('excludes unpublished topics from results', function () {
     $discipline = Discipline::factory()->create();
@@ -74,7 +77,7 @@ it('excludes unpublished topics from results', function () {
 
     $response->assertOk();
     $response->assertJsonCount(0, 'topics');
-});
+})->skip(fn () => DB::getDriverName() !== 'pgsql', 'Full-text search requires PostgreSQL');
 
 it('searches courses by code and title', function () {
     $course = InstitutionCourse::factory()->create([
@@ -128,7 +131,7 @@ it('returns total count across all result types', function () {
 
     $response->assertOk();
     expect($response->json('total'))->toBeGreaterThanOrEqual(2);
-});
+})->skip(fn () => DB::getDriverName() !== 'pgsql', 'Full-text search requires PostgreSQL');
 
 it('returns results with correct shape', function () {
     $discipline = Discipline::factory()->create();
@@ -148,7 +151,7 @@ it('returns results with correct shape', function () {
         'notes',
         'total',
     ]);
-});
+})->skip(fn () => DB::getDriverName() !== 'pgsql', 'Full-text search requires PostgreSQL');
 
 it('prevents unauthenticated access to search', function () {
     auth()->logout();
@@ -156,4 +159,20 @@ it('prevents unauthenticated access to search', function () {
     $response = $this->getJson(route('api.search', ['q' => 'test']));
 
     $response->assertUnauthorized();
+});
+
+it('redirects non-onboarded users to onboarding', function () {
+    $user = User::factory()->create();
+
+    $response = $this->actingAs($user)->get(route('search.index'));
+
+    $response->assertRedirect(route('onboarding.index'));
+});
+
+it('redirects non-onboarded users from search api to onboarding', function () {
+    $user = User::factory()->create();
+
+    $response = $this->actingAs($user)->getJson(route('api.search', ['q' => 'test']));
+
+    $response->assertRedirect(route('onboarding.index'));
 });

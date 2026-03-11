@@ -7,9 +7,13 @@ interface SearchContextValue {
     close: () => void;
 }
 
+interface SearchProviderProps {
+    children: ReactNode;
+}
+
 const SearchContext = createContext<SearchContextValue | null>(null);
 
-export function SearchProvider({ children }: { children: ReactNode }) {
+export function SearchProvider({ children }: SearchProviderProps) {
     const { isOpen, open, close } = useSearchModal();
 
     return (

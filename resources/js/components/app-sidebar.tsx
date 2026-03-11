@@ -36,9 +36,14 @@ import { dashboard } from '@/routes';
 import type { NavGroup } from '@/types';
 import AppLogo from './app-logo';
 
+const isMac = typeof navigator !== 'undefined' && (
+    'userAgentData' in navigator
+        ? (navigator.userAgentData as { platform?: string })?.platform === 'macOS'
+        : /Mac/.test(navigator.platform)
+);
+
 function useNavGroups(): NavGroup[] {
     const { open } = useSearchContext();
-    const isMac = typeof navigator !== 'undefined' && navigator.platform.toLowerCase().includes('mac');
 
     return useMemo(() => [
         {
@@ -58,7 +63,7 @@ function useNavGroups(): NavGroup[] {
                 { title: 'Topics', href: topicsBrowse.url(), icon: BookOpen },
                 { title: 'Notes', href: '/notes', icon: StickyNote },
                 { title: 'Knowledge Graph', href: '/knowledge-graph', icon: Network },
-                { title: 'Search', href: '/search', icon: Search, onClick: open, badge: isMac ? '⌘K' : 'Ctrl+K' },
+                { title: 'Search', href: '#', icon: Search, onClick: open, badge: isMac ? '⌘K' : 'Ctrl+K' },
             ],
         },
         {
@@ -75,7 +80,7 @@ function useNavGroups(): NavGroup[] {
                 { title: 'Upload', href: '/upload', icon: Upload },
             ],
         },
-    ], [open, isMac]);
+    ], [open]);
 }
 
 export function AppSidebar() {
