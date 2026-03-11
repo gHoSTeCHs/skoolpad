@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
+import { search as searchAction } from '@/actions/App/Http/Controllers/Student/SearchController';
 import type { SearchResponse, SearchResultItem } from '@/types/search';
 
 function getCsrfToken(): string {
@@ -65,7 +66,6 @@ export function useSearch(): UseSearchReturn {
             return;
         }
 
-        setIsLoading(true);
         setError(null);
 
         debounceRef.current = setTimeout(async () => {
@@ -73,8 +73,13 @@ export function useSearch(): UseSearchReturn {
             const controller = new AbortController();
             abortRef.current = controller;
 
+            if (mountedRef.current) {
+                setIsLoading(true);
+            }
+
             try {
-                const response = await fetch(`/api/search?q=${encodeURIComponent(query.trim())}`, {
+                const url = searchAction.url({ query: { q: query.trim() } });
+                const response = await fetch(url, {
                     signal: controller.signal,
                     headers: {
                         'Accept': 'application/json',
@@ -125,7 +130,7 @@ export function useSearch(): UseSearchReturn {
         return flat;
     }, [groupedResults]);
 
-    const totalCount = allResults.length;
+    const totalCount = results?.total ?? 0;
 
     return {
         query,

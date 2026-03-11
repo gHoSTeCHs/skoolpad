@@ -192,11 +192,9 @@ export function SearchModal({ isOpen, onClose }: SearchModalProps) {
                                 Close
                             </span>
                         </div>
-                        {totalCount > 0 && (
-                            <span className="text-[11px] text-muted-foreground">
-                                {totalCount} result{totalCount !== 1 ? 's' : ''}
-                            </span>
-                        )}
+                        <span aria-live="polite" aria-atomic="true" className="text-[11px] text-muted-foreground">
+                            {totalCount > 0 && `${totalCount} result${totalCount !== 1 ? 's' : ''}`}
+                        </span>
                     </div>
                 </div>
             </div>

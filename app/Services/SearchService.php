@@ -16,7 +16,7 @@ class SearchService
     {
         $topics = $this->searchTopics($query, $limit);
         $courses = $this->searchCourses($query, $institutionId, $limit);
-        $questions = $this->searchQuestions($query, $limit);
+        $questions = $this->searchQuestions($query, $institutionId, $limit);
         $notes = $this->searchNotes($query, $userId, $limit);
 
         return [
@@ -31,9 +31,10 @@ class SearchService
     private function searchTopics(string $query, int $limit): Collection
     {
         return CanonicalTopic::query()
-            ->fullTextSearch($query)
+            ->search($query)
             ->published()
-            ->selectRaw("*, ts_rank(search_vector, plainto_tsquery('english', ?)) as relevance", [$query])
+            ->select('id', 'title', 'summary', 'discipline_id')
+            ->selectRaw("ts_rank(search_vector, plainto_tsquery('english', ?)) as relevance", [$query])
             ->with('discipline:id,name')
             ->orderByDesc('relevance')
             ->limit($limit)
@@ -71,12 +72,14 @@ class SearchService
             ]);
     }
 
-    private function searchQuestions(string $query, int $limit): Collection
+    private function searchQuestions(string $query, ?string $institutionId, int $limit): Collection
     {
         return Question::query()
             ->search($query)
             ->published()
-            ->selectRaw("*, ts_rank(search_vector, plainto_tsquery('english', ?)) as relevance", [$query])
+            ->when($institutionId, fn ($q) => $q->forInstitution($institutionId))
+            ->select('id', 'content', 'question_type', 'institution_course_id')
+            ->selectRaw("ts_rank(search_vector, plainto_tsquery('english', ?)) as relevance", [$query])
             ->with('institutionCourse:id,course_code')
             ->orderByDesc('relevance')
             ->limit($limit)

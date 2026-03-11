@@ -135,11 +135,6 @@ class CanonicalTopic extends Model
 
     public function scopeSearch(Builder $query, string $term): Builder
     {
-        return $query->where('title', 'ilike', "%{$term}%");
-    }
-
-    public function scopeFullTextSearch(Builder $query, string $term): Builder
-    {
         return $query->whereRaw("search_vector @@ plainto_tsquery('english', ?)", [$term]);
     }
 

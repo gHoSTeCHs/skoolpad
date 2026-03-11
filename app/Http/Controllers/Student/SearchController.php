@@ -22,7 +22,7 @@ class SearchController extends Controller
 
     public function search(SearchRequest $request): JsonResponse
     {
-        $user = $request->user();
+        $user = $request->user()->loadMissing('studentProfile');
         $profile = $user->studentProfile;
 
         $results = $this->searchService->search(
