@@ -9,6 +9,7 @@ export type * from './student-questions';
 export type * from './student-topics';
 export type * from './practice';
 export type * from './exam-timetable';
+export type * from './notes';
 export type * from './study-planner';
 export type * from './ui';
 

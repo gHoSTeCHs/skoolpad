@@ -32,6 +32,8 @@ export default function TopicShow({
     nextTopic,
     relatedQuestions,
     crossInstitutionCount,
+    topicNotes,
+    isSecondary,
 }: TopicShowProps) {
     const [localCompleted, setLocalCompleted] = useState(isTopicCompleted);
     const [simpleMode, setSimpleMode] = useState(false);
@@ -178,7 +180,12 @@ export default function TopicShow({
                     </div>
                 )}
 
-                <NotesPanel />
+                <NotesPanel
+                    topicNotes={topicNotes}
+                    topicId={topic.id}
+                    courseId={courseContext?.id}
+                    isSecondary={isSecondary}
+                />
 
                 {courseContext && (
                     <TopicNavigation

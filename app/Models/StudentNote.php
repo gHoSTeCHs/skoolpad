@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
@@ -43,5 +44,13 @@ class StudentNote extends Model
     public function institutionCourse(): BelongsTo
     {
         return $this->belongsTo(InstitutionCourse::class);
+    }
+
+    public function scopeSearch(Builder $query, string $term): Builder
+    {
+        return $query->where(function (Builder $q) use ($term) {
+            $q->where('title', 'ilike', "%{$term}%")
+                ->orWhereRaw('content::text ilike ?', ["%{$term}%"]);
+        });
     }
 }

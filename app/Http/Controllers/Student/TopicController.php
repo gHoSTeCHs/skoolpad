@@ -12,6 +12,7 @@ use App\Models\CourseTopicMapping;
 use App\Models\Discipline;
 use App\Models\InstitutionCourse;
 use App\Models\QuestionTopicLink;
+use App\Models\StudentNote;
 use App\Models\TopicCompletion;
 use App\Services\PrerequisiteGapService;
 use Illuminate\Http\RedirectResponse;
@@ -190,7 +191,7 @@ class TopicController extends Controller
         $nextTopic = null;
 
         if ($courseId) {
-            $course = InstitutionCourse::find($courseId);
+            $course = InstitutionCourse::query()->find($courseId);
             if ($course) {
                 $courseContext = [
                     'id' => $course->id,
@@ -272,6 +273,26 @@ class TopicController extends Controller
             ->where('canonical_topic_id', $topic->id)
             ->exists();
 
+        $profile = $user->studentProfile;
+        $isSecondary = $profile?->isSecondary() ?? false;
+
+        $topicNotes = [];
+        if (! $isSecondary) {
+            $topicNotes = StudentNote::query()
+                ->where('user_id', $user->id)
+                ->where('canonical_topic_id', $topic->id)
+                ->orderByDesc('is_pinned')
+                ->orderByDesc('updated_at')
+                ->get(['id', 'title', 'is_pinned', 'updated_at'])
+                ->map(fn ($n) => [
+                    'id' => $n->id,
+                    'title' => $n->title,
+                    'is_pinned' => $n->is_pinned,
+                    'updated_at' => $n->updated_at->toISOString(),
+                ])
+                ->all();
+        }
+
         return Inertia::render('topics/show', [
             'topic' => [
                 'id' => $topic->id,
@@ -298,6 +319,8 @@ class TopicController extends Controller
             'nextTopic' => $nextTopic,
             'relatedQuestions' => $relatedQuestions,
             'crossInstitutionCount' => $crossInstitutionCount,
+            'topicNotes' => $topicNotes,
+            'isSecondary' => $isSecondary,
         ]);
     }
 
@@ -311,7 +334,7 @@ class TopicController extends Controller
         $courseContext = null;
 
         if ($courseId) {
-            $course = InstitutionCourse::find($courseId);
+            $course = InstitutionCourse::query()->find($courseId);
             if ($course) {
                 $courseContext = [
                     'id' => $course->id,

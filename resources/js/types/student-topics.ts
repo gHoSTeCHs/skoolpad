@@ -1,5 +1,6 @@
 import type { CourseQuestion } from '@/types/student-courses';
 import type { PaginatedData } from '@/types/models';
+import type { TopicNoteItem } from '@/types/notes';
 import type { TiptapJSON } from '@/types/tiptap';
 
 export interface BrowseTopic {
@@ -117,4 +118,6 @@ export interface TopicShowProps {
     nextTopic: TopicNavItem | null;
     relatedQuestions: CourseQuestion[];
     crossInstitutionCount: number;
+    topicNotes: TopicNoteItem[];
+    isSecondary: boolean;
 }
