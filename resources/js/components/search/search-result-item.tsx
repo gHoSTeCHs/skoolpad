@@ -43,6 +43,9 @@ export function SearchResultItemComponent({ result, isSelected, index, query, on
     return (
         <button
             type="button"
+            role="option"
+            id={`search-result-${index}`}
+            aria-selected={isSelected}
             data-index={index}
             onClick={onClick}
             className={`flex w-full items-start gap-3 rounded-lg border p-3 text-left transition-colors ${

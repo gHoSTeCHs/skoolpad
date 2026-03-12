@@ -117,7 +117,11 @@ Route::middleware(['auth', 'verified', 'staff'])->prefix('admin')->name('admin.'
     Route::get('api/topics/search', function (Request $request) {
         return CanonicalTopic::query()
             ->where('is_published', true)
-            ->when($request->filled('q'), fn ($q) => $q->where('title', 'ilike', '%'.$request->string('q').'%'))
+            ->when($request->filled('q'), function ($q) use ($request) {
+                $escaped = str_replace(['%', '_'], ['\%', '\_'], $request->string('q'));
+
+                return $q->where('title', 'ilike', "%{$escaped}%");
+            })
             ->orderBy('title')
             ->limit(20)
             ->get(['id', 'title']);
@@ -125,8 +129,13 @@ Route::middleware(['auth', 'verified', 'staff'])->prefix('admin')->name('admin.'
     Route::get('api/institutions/{institution}/courses', function (Institution $institution, Request $request) {
         return InstitutionCourse::query()
             ->where('institution_id', $institution->id)
-            ->when($request->filled('q'), fn ($q) => $q->where('course_code', 'ilike', '%'.$request->string('q').'%'))
+            ->when($request->filled('q'), function ($q) use ($request) {
+                $escaped = str_replace(['%', '_'], ['\%', '\_'], $request->string('q'));
+
+                return $q->where('course_code', 'ilike', "%{$escaped}%");
+            })
             ->orderBy('course_code')
+            ->limit(200)
             ->get(['id', 'course_code', 'course_title']);
     })->name('api.institution.courses');
     Route::get('review-queue', [ReviewQueueController::class, 'index'])->name('review-queue.index');

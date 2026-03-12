@@ -149,13 +149,13 @@ export function SearchModal({ isOpen, onClose }: SearchModalProps) {
                 role="dialog"
                 aria-modal="true"
                 aria-label="Search"
-                className="fixed left-1/2 top-[15%] z-50 w-full max-w-xl -translate-x-1/2 px-4"
+                className="fixed left-1/2 top-4 z-50 w-full max-w-xl -translate-x-1/2 px-4 sm:top-[15%]"
             >
-                <div className="overflow-hidden rounded-2xl border border-border bg-card shadow-2xl">
+                <div className="max-h-[calc(100vh-2rem)] overflow-hidden rounded-2xl border border-border bg-card shadow-2xl sm:max-h-none">
                     <div className="border-b border-border p-4">
-                        <SearchInput value={query} onChange={setQuery} isLoading={isLoading} />
+                        <SearchInput value={query} onChange={setQuery} isLoading={isLoading} totalCount={totalCount} selectedIndex={selectedIndex} />
                     </div>
-                    <div ref={resultsRef} className="max-h-[60vh] overflow-y-auto p-4">
+                    <div ref={resultsRef} className="max-h-[calc(100vh-12rem)] overflow-y-auto p-4 sm:max-h-[60vh]">
                         {error ? (
                             <div className="flex flex-col items-center justify-center py-12 text-muted-foreground">
                                 <AlertCircle className="mb-3 size-10 text-destructive/60" />

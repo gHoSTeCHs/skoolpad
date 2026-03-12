@@ -58,7 +58,7 @@ export function SearchResults({
     }
 
     return (
-        <div className="space-y-4">
+        <div id="search-results-listbox" role="listbox" aria-label="Search results" className="space-y-4">
             {sectionOrder.map((key) => {
                 const results = groupedResults[key];
                 if (results.length === 0) return null;

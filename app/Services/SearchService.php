@@ -7,6 +7,7 @@ use App\Models\InstitutionCourse;
 use App\Models\Question;
 use App\Models\StudentNote;
 use Illuminate\Support\Collection;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Str;
 
 class SearchService
@@ -14,9 +15,11 @@ class SearchService
     /** @return array{topics: Collection, courses: Collection, questions: Collection, notes: Collection, total: int} */
     public function search(string $query, string $userId, ?string $institutionId = null, int $limit = 8): array
     {
-        $topics = $this->searchTopics($query, $limit);
+        $topicsCacheKey = 'search.topics.'.md5("{$query}.{$limit}");
+        $topics = Cache::remember($topicsCacheKey, 60, fn () => $this->searchTopics($query, $limit));
         $courses = $this->searchCourses($query, $institutionId, $limit);
-        $questions = $this->searchQuestions($query, $institutionId, $limit);
+        $questionsCacheKey = 'search.questions.'.md5("{$query}.{$institutionId}.{$limit}");
+        $questions = Cache::remember($questionsCacheKey, 60, fn () => $this->searchQuestions($query, $institutionId, $limit));
         $notes = $this->searchNotes($query, $userId, $limit);
 
         return [
@@ -85,7 +88,7 @@ class SearchService
                     $q->whereNotNull('exam_subject_id');
                 }
             })
-            ->select('id', 'content', 'question_type', 'institution_course_id')
+            ->selectRaw('id, LEFT(content, 200) as content, question_type, institution_course_id')
             ->selectRaw("ts_rank(search_vector, plainto_tsquery('english', ?)) as relevance", [$query])
             ->with('institutionCourse:id,course_code')
             ->orderByDesc('relevance')

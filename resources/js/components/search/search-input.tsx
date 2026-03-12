@@ -6,6 +6,8 @@ interface SearchInputProps {
     onChange: (value: string) => void;
     isLoading?: boolean;
     placeholder?: string;
+    totalCount?: number;
+    selectedIndex?: number;
 }
 
 export function SearchInput({
@@ -13,6 +15,8 @@ export function SearchInput({
     onChange,
     isLoading = false,
     placeholder = 'Search topics, courses, questions...',
+    totalCount = 0,
+    selectedIndex = -1,
 }: SearchInputProps) {
     const inputRef = useRef<HTMLInputElement>(null);
 
@@ -33,7 +37,12 @@ export function SearchInput({
                 value={value}
                 onChange={(e) => onChange(e.target.value)}
                 placeholder={placeholder}
+                role="combobox"
                 aria-label="Search"
+                aria-autocomplete="list"
+                aria-expanded={totalCount > 0}
+                aria-controls="search-results-listbox"
+                aria-activedescendant={selectedIndex >= 0 && totalCount > 0 ? `search-result-${selectedIndex}` : undefined}
                 className="w-full rounded-xl border border-border bg-background py-3 pl-11 pr-10 text-sm text-foreground placeholder:text-muted-foreground transition-all focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/30"
             />
             {value && (

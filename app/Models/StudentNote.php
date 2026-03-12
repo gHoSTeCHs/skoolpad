@@ -50,9 +50,6 @@ class StudentNote extends Model
     {
         $escaped = str_replace(['%', '_'], ['\%', '\_'], $term);
 
-        return $query->where(function (Builder $q) use ($escaped) {
-            $q->where('title', 'ilike', "%{$escaped}%")
-                ->orWhereRaw('content::text ilike ?', ["%{$escaped}%"]);
-        });
+        return $query->where('title', 'ilike', "%{$escaped}%");
     }
 }
