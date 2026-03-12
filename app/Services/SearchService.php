@@ -77,7 +77,14 @@ class SearchService
         return Question::query()
             ->search($query)
             ->published()
-            ->when($institutionId, fn ($q) => $q->forInstitution($institutionId))
+            ->where(function ($q) use ($institutionId) {
+                if ($institutionId) {
+                    $q->whereHas('institutionCourse', fn ($sub) => $sub->where('institution_id', $institutionId))
+                        ->orWhereNotNull('exam_subject_id');
+                } else {
+                    $q->whereNotNull('exam_subject_id');
+                }
+            })
             ->select('id', 'content', 'question_type', 'institution_course_id')
             ->selectRaw("ts_rank(search_vector, plainto_tsquery('english', ?)) as relevance", [$query])
             ->with('institutionCourse:id,course_code')

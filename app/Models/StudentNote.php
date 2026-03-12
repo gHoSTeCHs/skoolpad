@@ -48,9 +48,11 @@ class StudentNote extends Model
 
     public function scopeSearch(Builder $query, string $term): Builder
     {
-        return $query->where(function (Builder $q) use ($term) {
-            $q->where('title', 'ilike', "%{$term}%")
-                ->orWhereRaw('content::text ilike ?', ["%{$term}%"]);
+        $escaped = str_replace(['%', '_'], ['\%', '\_'], $term);
+
+        return $query->where(function (Builder $q) use ($escaped) {
+            $q->where('title', 'ilike', "%{$escaped}%")
+                ->orWhereRaw('content::text ilike ?', ["%{$escaped}%"]);
         });
     }
 }

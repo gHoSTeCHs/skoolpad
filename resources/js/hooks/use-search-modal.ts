@@ -11,13 +11,13 @@ export function useSearchModal() {
         function handleKeyDown(e: KeyboardEvent) {
             if ((e.metaKey || e.ctrlKey) && e.key === 'k') {
                 e.preventDefault();
-                open();
+                toggle();
             }
         }
 
         document.addEventListener('keydown', handleKeyDown);
         return () => document.removeEventListener('keydown', handleKeyDown);
-    }, [open]);
+    }, [toggle]);
 
     return { isOpen, open, close, toggle };
 }

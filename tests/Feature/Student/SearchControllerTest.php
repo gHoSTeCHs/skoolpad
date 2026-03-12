@@ -2,7 +2,9 @@
 
 use App\Models\CanonicalTopic;
 use App\Models\Discipline;
+use App\Models\Institution;
 use App\Models\InstitutionCourse;
+use App\Models\Question;
 use App\Models\StudentNote;
 use App\Models\StudentProfile;
 use App\Models\User;
@@ -176,3 +178,131 @@ it('redirects non-onboarded users from search api to onboarding', function () {
 
     $response->assertRedirect(route('onboarding.index'));
 });
+
+it('rejects queries exceeding max length', function () {
+    $response = $this->getJson(route('api.search', ['q' => str_repeat('a', 256)]));
+
+    $response->assertUnprocessable();
+    $response->assertJsonValidationErrors(['q']);
+});
+
+it('handles special characters in query without errors', function () {
+    $response = $this->getJson(route('api.search', ['q' => "'; DROP TABLE users; --"]));
+
+    $response->assertOk();
+    $response->assertJsonStructure(['topics', 'courses', 'questions', 'notes', 'total']);
+});
+
+it('handles ILIKE wildcard characters in query', function () {
+    StudentNote::factory()->create([
+        'user_id' => $this->user->id,
+        'title' => 'Regular note title',
+    ]);
+
+    $response = $this->getJson(route('api.search', ['q' => '%%']));
+
+    $response->assertOk();
+    $response->assertJsonCount(0, 'notes');
+});
+
+it('excludes courses from other institutions', function () {
+    $otherInstitution = Institution::factory()->create();
+    InstitutionCourse::factory()->create([
+        'course_code' => 'PHY 101',
+        'course_title' => 'Physics Fundamentals',
+        'institution_id' => $otherInstitution->id,
+    ]);
+
+    $response = $this->getJson(route('api.search', ['q' => 'PHY 101']));
+
+    $response->assertOk();
+    $response->assertJsonCount(0, 'courses');
+});
+
+it('returns empty courses for students without institution', function () {
+    $profile = StudentProfile::factory()->create(['institution_id' => null]);
+
+    InstitutionCourse::factory()->create([
+        'course_code' => 'MTH 101',
+        'course_title' => 'Mathematics',
+    ]);
+
+    $response = $this->actingAs($profile->user)
+        ->getJson(route('api.search', ['q' => 'MTH 101']));
+
+    $response->assertOk();
+    $response->assertJsonCount(0, 'courses');
+});
+
+it('searches published questions from institution courses', function () {
+    Question::factory()->create([
+        'content' => 'What is photosynthesis process',
+        'institution_course_id' => InstitutionCourse::factory()->create([
+            'institution_id' => $this->profile->institution_id,
+        ]),
+    ]);
+
+    $response = $this->getJson(route('api.search', ['q' => 'photosynthesis']));
+
+    $response->assertOk();
+    $response->assertJsonCount(1, 'questions');
+    expect($response->json('questions.0.type'))->toBe('question');
+})->skip(fn () => DB::getDriverName() !== 'pgsql', 'Full-text search requires PostgreSQL');
+
+it('includes exam-subject questions for institution-scoped students', function () {
+    Question::factory()->forExamSubject()->create([
+        'content' => 'What is osmosis in biology',
+    ]);
+
+    $response = $this->getJson(route('api.search', ['q' => 'osmosis']));
+
+    $response->assertOk();
+    $response->assertJsonCount(1, 'questions');
+})->skip(fn () => DB::getDriverName() !== 'pgsql', 'Full-text search requires PostgreSQL');
+
+it('excludes questions from other institutions courses', function () {
+    $otherInstitution = Institution::factory()->create();
+    Question::factory()->create([
+        'content' => 'Explain quantum entanglement theory',
+        'institution_course_id' => InstitutionCourse::factory()->create([
+            'institution_id' => $otherInstitution->id,
+        ]),
+    ]);
+
+    $response = $this->getJson(route('api.search', ['q' => 'quantum entanglement']));
+
+    $response->assertOk();
+    $response->assertJsonCount(0, 'questions');
+})->skip(fn () => DB::getDriverName() !== 'pgsql', 'Full-text search requires PostgreSQL');
+
+it('excludes draft questions from search results', function () {
+    Question::factory()->draft()->create([
+        'content' => 'What is thermodynamics draft',
+        'institution_course_id' => InstitutionCourse::factory()->create([
+            'institution_id' => $this->profile->institution_id,
+        ]),
+    ]);
+
+    $response = $this->getJson(route('api.search', ['q' => 'thermodynamics']));
+
+    $response->assertOk();
+    $response->assertJsonCount(0, 'questions');
+})->skip(fn () => DB::getDriverName() !== 'pgsql', 'Full-text search requires PostgreSQL');
+
+it('shows only exam-subject questions for students without institution', function () {
+    $profile = StudentProfile::factory()->create(['institution_id' => null]);
+
+    Question::factory()->forExamSubject()->create([
+        'content' => 'What is cellular respiration process',
+    ]);
+
+    Question::factory()->create([
+        'content' => 'What is cellular division mitosis',
+    ]);
+
+    $response = $this->actingAs($profile->user)
+        ->getJson(route('api.search', ['q' => 'cellular']));
+
+    $response->assertOk();
+    $response->assertJsonCount(1, 'questions');
+})->skip(fn () => DB::getDriverName() !== 'pgsql', 'Full-text search requires PostgreSQL');

@@ -115,9 +115,11 @@ class InstitutionCourse extends Model
 
     public function scopeSearch(Builder $query, string $term): Builder
     {
-        return $query->where(function (Builder $q) use ($term) {
-            $q->where('course_code', 'ilike', "%{$term}%")
-                ->orWhere('course_title', 'ilike', "%{$term}%");
+        $escaped = str_replace(['%', '_'], ['\%', '\_'], $term);
+
+        return $query->where(function (Builder $q) use ($escaped) {
+            $q->where('course_code', 'ilike', "%{$escaped}%")
+                ->orWhere('course_title', 'ilike', "%{$escaped}%");
         });
     }
 }

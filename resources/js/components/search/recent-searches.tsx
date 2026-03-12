@@ -40,6 +40,7 @@ export function RecentSearches({ history, onSelect, onClear }: RecentSearchesPro
             <div className="space-y-1">
                 {history.map((item) => (
                     <button
+                        type="button"
                         key={item.timestamp}
                         onClick={() => onSelect(item.query)}
                         className="flex w-full items-center gap-3 rounded-lg p-2.5 text-left transition-colors hover:bg-accent"

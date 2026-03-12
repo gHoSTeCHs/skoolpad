@@ -27,10 +27,17 @@ export function SearchModal({ isOpen, onClose }: SearchModalProps) {
     stateRef.current = { totalCount, allResults, selectedIndex, isOpen };
 
     useEffect(() => {
-        if (!isOpen) {
+        if (isOpen) {
+            document.body.style.overflow = 'hidden';
+        } else {
+            document.body.style.overflow = '';
             setQuery('');
             setSelectedIndex(0);
         }
+
+        return () => {
+            document.body.style.overflow = '';
+        };
     }, [isOpen, setQuery]);
 
     useEffect(() => {
@@ -193,7 +200,13 @@ export function SearchModal({ isOpen, onClose }: SearchModalProps) {
                             </span>
                         </div>
                         <span aria-live="polite" aria-atomic="true" className="text-[11px] text-muted-foreground">
-                            {totalCount > 0 && `${totalCount} result${totalCount !== 1 ? 's' : ''}`}
+                            {isLoading && query.trim().length >= 2
+                                ? 'Searching...'
+                                : totalCount > 0
+                                  ? `${totalCount} result${totalCount !== 1 ? 's' : ''}`
+                                  : query.trim().length >= 2
+                                    ? 'No results'
+                                    : ''}
                         </span>
                     </div>
                 </div>
