@@ -21,6 +21,7 @@ export type Institution = {
     website: string | null;
     logo_path: string | null;
     institution_type_id: string | null;
+    grading_scale_id: string | null;
     is_active: boolean;
     created_at: string;
     updated_at: string;
@@ -189,8 +190,8 @@ export type GradingScale = {
     scale_min: number | null;
     scale_max: number | null;
     pass_threshold: number | null;
-    grade_boundaries: { grade: string; min: number; max: number; points: number }[] | null;
-    classification_labels: Record<string, unknown> | null;
+    grade_boundaries: { label: string; min: number; max: number; gp: number; is_pass?: boolean }[] | null;
+    classification_labels: { label: string; min_cgpa: number }[] | null;
     created_at: string;
     updated_at: string;
     assessment_types_count?: number;

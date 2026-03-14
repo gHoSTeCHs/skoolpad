@@ -12,6 +12,7 @@ interface Props {
     institutionTypeModels: { id: string; name: string }[];
     ownershipTypes: EnumOption[];
     countries: Country[];
+    gradingScales: { id: string; name: string }[];
 }
 
 const breadcrumbs = [
@@ -19,7 +20,7 @@ const breadcrumbs = [
     { title: 'Create', href: '/admin/institutions/create' },
 ];
 
-export default function AdminInstitutionsCreate({ institutionTypes, institutionTypeModels, ownershipTypes, countries }: Props) {
+export default function AdminInstitutionsCreate({ institutionTypes, institutionTypeModels, ownershipTypes, countries, gradingScales }: Props) {
     return (
         <FormPageLayout
             title="Create Institution"
@@ -31,6 +32,7 @@ export default function AdminInstitutionsCreate({ institutionTypes, institutionT
                 institutionTypeModels={institutionTypeModels}
                 ownershipTypes={ownershipTypes}
                 countries={countries}
+                gradingScales={gradingScales}
             />
         </FormPageLayout>
     );

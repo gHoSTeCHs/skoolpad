@@ -10,6 +10,7 @@ use App\Http\Requests\Admin\StoreInstitutionRequest;
 use App\Http\Requests\Admin\UpdateInstitutionRequest;
 use App\Models\Country;
 use App\Models\EducationSystem;
+use App\Models\GradingScale;
 use App\Models\Institution;
 use App\Models\InstitutionType as InstitutionTypeModel;
 use Illuminate\Http\RedirectResponse;
@@ -63,6 +64,7 @@ class InstitutionController extends Controller
             'institutionTypeModels' => InstitutionTypeModel::orderBy('name')->get(['id', 'name']),
             'ownershipTypes' => OwnershipType::toSelectOptions(),
             'countries' => Country::all(),
+            'gradingScales' => GradingScale::query()->orderBy('name')->get(['id', 'name']),
         ]);
     }
 
@@ -118,6 +120,7 @@ class InstitutionController extends Controller
             'institutionTypeModels' => InstitutionTypeModel::orderBy('name')->get(['id', 'name']),
             'ownershipTypes' => OwnershipType::toSelectOptions(),
             'countries' => Country::all(),
+            'gradingScales' => GradingScale::query()->orderBy('name')->get(['id', 'name']),
         ]);
     }
 

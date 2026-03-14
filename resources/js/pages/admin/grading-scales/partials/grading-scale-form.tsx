@@ -24,10 +24,10 @@ function emptyRow(): GradeBoundaryRow {
 function fromModel(boundaries: GradingScale['grade_boundaries']): GradeBoundaryRow[] {
     if (!boundaries || boundaries.length === 0) return [emptyRow()];
     return boundaries.map((b) => ({
-        grade: String(b.grade),
+        grade: String(b.label),
         min: String(b.min),
         max: String(b.max),
-        points: String(b.points),
+        points: String(b.gp),
     }));
 }
 

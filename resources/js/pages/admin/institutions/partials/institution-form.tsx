@@ -19,9 +19,10 @@ interface InstitutionFormProps {
     institutionTypeModels?: { id: string; name: string }[];
     ownershipTypes: EnumOption[];
     countries: Country[];
+    gradingScales?: { id: string; name: string }[];
 }
 
-export default function InstitutionForm({ institution, institutionTypes, institutionTypeModels, ownershipTypes, countries }: InstitutionFormProps) {
+export default function InstitutionForm({ institution, institutionTypes, institutionTypeModels, ownershipTypes, countries, gradingScales }: InstitutionFormProps) {
     const isEditing = !!institution?.id;
 
     const form = useForm({
@@ -29,6 +30,7 @@ export default function InstitutionForm({ institution, institutionTypes, institu
         abbreviation: institution?.abbreviation ?? '',
         institution_type: institution?.institution_type ?? '',
         institution_type_id: institution?.institution_type_id ?? '',
+        grading_scale_id: institution?.grading_scale_id ?? '',
         ownership_type: institution?.ownership_type ?? '',
         country_id: institution?.country_id ?? '',
         state: institution?.state ?? '',
@@ -44,6 +46,7 @@ export default function InstitutionForm({ institution, institutionTypes, institu
         const data = {
             ...form.data,
             institution_type_id: form.data.institution_type_id || null,
+            grading_scale_id: form.data.grading_scale_id || null,
         };
 
         if (isEditing) {
@@ -121,7 +124,7 @@ export default function InstitutionForm({ institution, institutionTypes, institu
                     </div>
 
                     {institutionTypeModels && institutionTypeModels.length > 0 && (
-                        <FormField label="Institution Type (Detailed)" name="institution_type_id" error={form.errors.institution_type_id} description="Links to a detailed institution type with level progression and grading scale.">
+                        <FormField label="Institution Type (Detailed)" name="institution_type_id" error={form.errors.institution_type_id} description="Links to a detailed institution type with level progression and default grading scale.">
                             <Select
                                 value={form.data.institution_type_id ?? ''}
                                 onValueChange={(value) => form.setData('institution_type_id', value === 'none' ? '' : value)}
@@ -134,6 +137,27 @@ export default function InstitutionForm({ institution, institutionTypes, institu
                                     {institutionTypeModels.map((type) => (
                                         <SelectItem key={type.id} value={type.id}>
                                             {type.name}
+                                        </SelectItem>
+                                    ))}
+                                </SelectContent>
+                            </Select>
+                        </FormField>
+                    )}
+
+                    {gradingScales && gradingScales.length > 0 && (
+                        <FormField label="Grading Scale" name="grading_scale_id" error={form.errors.grading_scale_id} description="Overrides the default grading scale from the institution type. Leave empty to use the default.">
+                            <Select
+                                value={form.data.grading_scale_id ?? ''}
+                                onValueChange={(value) => form.setData('grading_scale_id', value === 'none' ? '' : value)}
+                            >
+                                <SelectTrigger id="grading_scale_id">
+                                    <SelectValue placeholder="Use default from institution type" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    <SelectItem value="none">Use default from institution type</SelectItem>
+                                    {gradingScales.map((scale) => (
+                                        <SelectItem key={scale.id} value={scale.id}>
+                                            {scale.name}
                                         </SelectItem>
                                     ))}
                                 </SelectContent>

@@ -23,6 +23,7 @@ class Institution extends Model
         'abbreviation',
         'institution_type',
         'institution_type_id',
+        'grading_scale_id',
         'ownership_type',
         'state',
         'city',
@@ -59,6 +60,11 @@ class Institution extends Model
     public function institutionTypeModel(): BelongsTo
     {
         return $this->belongsTo(\App\Models\InstitutionType::class, 'institution_type_id');
+    }
+
+    public function gradingScale(): BelongsTo
+    {
+        return $this->belongsTo(GradingScale::class);
     }
 
     public function educationSystems(): BelongsToMany

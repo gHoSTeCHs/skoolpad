@@ -12,6 +12,7 @@ export type * from './exam-timetable';
 export type * from './notes';
 export type * from './study-planner';
 export type * from './ui';
+export type * from './cgpa';
 
 import type { Appearance } from '@/hooks/use-appearance';
 import type { Auth } from './auth';

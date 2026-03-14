@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\Student\CgpaSimulatorController;
 use App\Http\Controllers\Student\CourseController as StudentCourseController;
 use App\Http\Controllers\Student\DashboardController as StudentDashboardController;
 use App\Http\Controllers\Student\ExamTimetableController;
@@ -102,7 +103,12 @@ Route::middleware(['auth', 'verified', 'onboarded'])->group(function () {
     Route::get('knowledge-graph', fn () => Inertia::render('knowledge-graph/index'))->name('knowledge-graph.index');
     Route::get('search', [SearchController::class, 'index'])->name('search.index');
     Route::get('api/search', [SearchController::class, 'search'])->middleware('throttle:30,1')->name('api.search');
-    Route::get('cgpa-simulator', fn () => Inertia::render('cgpa-simulator/index'))->name('cgpa-simulator.index');
+    Route::get('cgpa-simulator', [CgpaSimulatorController::class, 'index'])->name('cgpa-simulator.index');
+    Route::post('cgpa-simulator', [CgpaSimulatorController::class, 'store'])->name('cgpa-simulator.store');
+    Route::put('cgpa-simulator/{simulation}', [CgpaSimulatorController::class, 'update'])->name('cgpa-simulator.update');
+    Route::delete('cgpa-simulator/{simulation}', [CgpaSimulatorController::class, 'destroy'])->name('cgpa-simulator.destroy');
+    Route::post('cgpa-simulator/calculate', [CgpaSimulatorController::class, 'calculate'])->name('cgpa-simulator.calculate');
+    Route::post('cgpa-simulator/reverse-calculate', [CgpaSimulatorController::class, 'reverseCalculate'])->name('cgpa-simulator.reverse-calculate');
     Route::get('upload', fn () => Inertia::render('upload/index'))->name('upload.index');
     Route::get('contributions', fn () => Inertia::render('contributions/index'))->name('contributions.index');
     Route::get('profile', fn () => Inertia::render('profile/index'))->name('profile.index');
