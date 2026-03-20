@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Enums\AccountType;
 use App\Enums\UserRole;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
@@ -29,6 +30,7 @@ class User extends Authenticatable
         'avatar_path',
         'app_pin_hash',
         'app_preferences',
+        'account_type',
         'is_active',
         'last_login_at',
     ];
@@ -51,6 +53,7 @@ class User extends Authenticatable
             'email_verified_at' => 'datetime',
             'password' => 'hashed',
             'two_factor_confirmed_at' => 'datetime',
+            'account_type' => AccountType::class,
             'role' => UserRole::class,
             'secondary_role' => UserRole::class,
             'app_preferences' => 'array',

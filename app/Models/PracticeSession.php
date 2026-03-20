@@ -33,6 +33,7 @@ class PracticeSession extends Model
         'is_resumable',
         'last_activity_at',
         'completed_at',
+        'administered_by',
     ];
 
     /** @return array<string, string> */
@@ -81,5 +82,10 @@ class PracticeSession extends Model
     public function practiceAnswers(): HasMany
     {
         return $this->hasMany(PracticeAnswer::class);
+    }
+
+    public function administeredBy(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'administered_by');
     }
 }

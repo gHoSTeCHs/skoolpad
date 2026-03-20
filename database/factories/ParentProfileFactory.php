@@ -15,7 +15,7 @@ class ParentProfileFactory extends Factory
     public function definition(): array
     {
         return [
-            'user_id' => User::factory(),
+            'user_id' => User::factory()->parent(),
             'phone_number' => fake()->phoneNumber(),
             'relationship' => fake()->randomElement(ParentalRelationship::cases()),
             'notification_preferences' => [],

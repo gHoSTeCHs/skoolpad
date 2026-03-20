@@ -1,8 +1,10 @@
 <?php
 
 use App\Enums\AcademicStatus;
+use App\Enums\AccountType;
 use App\Enums\AnswerDepthLevel;
 use App\Enums\BillingPeriod;
+use App\Enums\CheckInSessionStatus;
 use App\Enums\ContentSubmissionStatus;
 use App\Enums\ContentSubmissionType;
 use App\Enums\ContributionBadge;
@@ -16,6 +18,9 @@ use App\Enums\QuestionStatus;
 use App\Enums\QuestionType;
 use App\Enums\Semester;
 use App\Enums\SpacedRepetitionStatus;
+use App\Enums\Term;
+use App\Enums\TopicCoverageSource;
+use App\Enums\TopicCoverageStatus;
 use App\Enums\TopicDifficulty;
 use App\Enums\TopicWeight;
 use App\Enums\UserRole;
@@ -40,6 +45,11 @@ dataset('enums', [
     'ContributionBadge' => [ContributionBadge::class, 4],
     'BillingPeriod' => [BillingPeriod::class, 3],
     'AcademicStatus' => [AcademicStatus::class, 3],
+    'AccountType' => [AccountType::class, 2],
+    'TopicCoverageStatus' => [TopicCoverageStatus::class, 3],
+    'TopicCoverageSource' => [TopicCoverageSource::class, 3],
+    'Term' => [Term::class, 3],
+    'CheckInSessionStatus' => [CheckInSessionStatus::class, 3],
 ]);
 
 test('enum has correct case count and labels', function (string $enumClass, int $expectedCount) {

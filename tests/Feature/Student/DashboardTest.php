@@ -12,6 +12,7 @@ use App\Models\LevelSubject;
 use App\Models\SchemeOfWorkItem;
 use App\Models\StudentProfile;
 use App\Models\User;
+use App\Models\UserLevel;
 use Illuminate\Support\Carbon;
 
 beforeEach(function () {
@@ -73,6 +74,14 @@ test('dashboard shows secondary student data with subjects', function () {
 test('dashboard returns parent invitation for secondary student', function () {
     $profile = StudentProfile::factory()->secondary()->create([
         'user_id' => $this->student->id,
+    ]);
+
+    UserLevel::query()->create([
+        'user_id' => $this->student->id,
+        'current_xp' => 0,
+        'current_level' => 1,
+        'streak_days' => 3,
+        'longest_streak' => 3,
     ]);
 
     $this->get(route('dashboard'))
@@ -145,6 +154,14 @@ test('dashboard re-shows parent invitation for early-level student after 7 days'
         'parent_invite_dismissed_at' => now()->subDays(8),
     ]);
 
+    UserLevel::query()->create([
+        'user_id' => $this->student->id,
+        'current_xp' => 0,
+        'current_level' => 1,
+        'streak_days' => 3,
+        'longest_streak' => 3,
+    ]);
+
     $this->get(route('dashboard'))
         ->assertOk()
         ->assertInertia(fn ($page) => $page
@@ -185,6 +202,14 @@ test('dashboard returns is_early_level true for JSS students', function () {
         'education_level_id' => $level->id,
     ]);
 
+    UserLevel::query()->create([
+        'user_id' => $this->student->id,
+        'current_xp' => 0,
+        'current_level' => 1,
+        'streak_days' => 3,
+        'longest_streak' => 3,
+    ]);
+
     $this->get(route('dashboard'))
         ->assertOk()
         ->assertInertia(fn ($page) => $page
@@ -202,6 +227,14 @@ test('dashboard returns is_early_level false for SS students', function () {
         'user_id' => $this->student->id,
         'education_system_id' => $system->id,
         'education_level_id' => $level->id,
+    ]);
+
+    UserLevel::query()->create([
+        'user_id' => $this->student->id,
+        'current_xp' => 0,
+        'current_level' => 1,
+        'streak_days' => 3,
+        'longest_streak' => 3,
     ]);
 
     $this->get(route('dashboard'))

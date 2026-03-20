@@ -13,6 +13,7 @@ export type * from './notes';
 export type * from './study-planner';
 export type * from './ui';
 export type * from './cgpa';
+export type * from './parent';
 
 import type { Appearance } from '@/hooks/use-appearance';
 import type { Auth } from './auth';

@@ -2,6 +2,7 @@
 
 namespace App\Http\Middleware;
 
+use App\Enums\AccountType;
 use App\Enums\UserRole;
 use Closure;
 use Illuminate\Http\Request;
@@ -13,7 +14,23 @@ class EnsureOnboardingComplete
     {
         $user = $request->user();
 
-        if (! $user || $user->role !== UserRole::Student) {
+        if (! $user) {
+            return $next($request);
+        }
+
+        if ($user->account_type === AccountType::Parent) {
+            if (! $user->parentProfile) {
+                return redirect()->route('parent.onboarding');
+            }
+
+            if (! str_starts_with($request->path(), 'parent/')) {
+                return redirect()->route('parent.dashboard');
+            }
+
+            return $next($request);
+        }
+
+        if ($user->role !== UserRole::Student) {
             return $next($request);
         }
 

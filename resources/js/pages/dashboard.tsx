@@ -11,7 +11,7 @@ import { dismiss as studyPlanDismiss } from '@/actions/App/Http/Controllers/Stud
 import CourseCard from '@/components/skoolpad/course-card';
 import GuidedStudyCard from '@/components/skoolpad/guided-study-card';
 import LevelProgressionModal from '@/components/skoolpad/level-progression-modal';
-import ParentInvitationBanner from '@/components/skoolpad/parent-invitation-banner';
+import { ParentInvitationBanner } from '@/components/skoolpad/parent-invitation-banner';
 import StatCard from '@/components/skoolpad/stat-card';
 import StreakWidget from '@/components/skoolpad/streak-widget';
 import { Badge } from '@/components/ui/badge';
@@ -22,6 +22,7 @@ import { dashboard } from '@/routes';
 import type { BreadcrumbItem } from '@/types';
 import type { StudentType } from '@/types/enums';
 import type { GuidedStudyPlan } from '@/types/guided-study';
+import type { ParentInviteTrigger } from '@/types/parent';
 import type { ExamSummary } from '@/types/study-planner';
 
 interface DashboardCourse {
@@ -74,6 +75,7 @@ interface Props {
         show: boolean;
         style: 'prominent' | 'subtle';
         is_early_level: boolean;
+        trigger?: ParentInviteTrigger;
     } | null;
     guided_study?: GuidedStudyPlan | null;
     study_plan_dismissed?: boolean;
@@ -144,6 +146,7 @@ export default function Dashboard({ student, courses, subjects, stats, suggested
                 {parent_invitation?.show && parent_invitation.style === 'prominent' && (
                     <ParentInvitationBanner
                         style="prominent"
+                        trigger={parent_invitation.trigger}
                         dismissUrl={ParentInvitationController.dismiss.url()}
                     />
                 )}
@@ -473,6 +476,7 @@ export default function Dashboard({ student, courses, subjects, stats, suggested
                 {parent_invitation?.show && parent_invitation.style === 'subtle' && (
                     <ParentInvitationBanner
                         style="subtle"
+                        trigger={parent_invitation.trigger}
                         dismissUrl={ParentInvitationController.dismiss.url()}
                     />
                 )}

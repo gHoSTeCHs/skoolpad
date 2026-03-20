@@ -24,7 +24,7 @@ class PracticeService
         $topicIds = $config['topic_ids'] ?? [];
         $singleTopicId = count($topicIds) === 1 ? $topicIds[0] : ($config['canonical_topic_id'] ?? null);
 
-        return PracticeSession::create([
+        return PracticeSession::query()->create([
             'user_id' => $user->id,
             'institution_course_id' => $config['institution_course_id'] ?? null,
             'level_subject_id' => $config['level_subject_id'] ?? null,
@@ -38,12 +38,29 @@ class PracticeService
             'is_resumable' => true,
             'last_activity_at' => now(),
             'question_ids' => $questions->pluck('id')->values()->toArray(),
+            'administered_by' => $config['administered_by'] ?? null,
+        ]);
+    }
+
+    /** @param array{question_ids: array, canonical_topic_id?: string, administered_by?: string} $config */
+    public function createAdministeredSession(User $user, array $config): PracticeSession
+    {
+        return PracticeSession::query()->create([
+            'user_id' => $user->id,
+            'canonical_topic_id' => $config['canonical_topic_id'] ?? null,
+            'mode' => PracticeMode::Untimed,
+            'question_count' => count($config['question_ids']),
+            'correct_count' => 0,
+            'question_ids' => $config['question_ids'],
+            'administered_by' => $config['administered_by'] ?? null,
+            'is_resumable' => false,
+            'last_activity_at' => now(),
         ]);
     }
 
     public function createReviewSession(User $user, array $questionIds, ?string $institutionCourseId = null, ?string $levelSubjectId = null): PracticeSession
     {
-        return PracticeSession::create([
+        return PracticeSession::query()->create([
             'user_id' => $user->id,
             'institution_course_id' => $institutionCourseId,
             'level_subject_id' => $levelSubjectId,
@@ -59,7 +76,7 @@ class PracticeService
     public function selectQuestions(array $config): Collection
     {
         if (! empty($config['question_id'])) {
-            return Question::where('id', $config['question_id'])->get();
+            return Question::query()->where('id', $config['question_id'])->get();
         }
 
         $query = Question::query()->published();
@@ -142,7 +159,7 @@ class PracticeService
             return collect();
         }
 
-        $questions = Question::whereIn('id', $session->question_ids)
+        $questions = Question::query()->whereIn('id', $session->question_ids)
             ->with([
                 'topicLinks.canonicalTopic:id,title',
                 'contexts',
@@ -161,7 +178,7 @@ class PracticeService
         $gradeData = array_merge($answerData['response_data'] ?? [], $answerData);
         $isCorrect = ! empty($answerData['was_skipped']) ? null : $this->gradeAnswer($question, $gradeData);
 
-        $answer = PracticeAnswer::create([
+        $answer = PracticeAnswer::query()->create([
             'practice_session_id' => $session->id,
             'question_id' => $question->id,
             'selected_option_label' => $answerData['selected_label'] ?? null,
@@ -181,7 +198,7 @@ class PracticeService
         if ($session->mode === PracticeMode::Review && $isCorrect !== null) {
             $this->spacedRepService->processReviewAnswer($session->user, $question, $isCorrect);
         } elseif ($isCorrect) {
-            $existingItem = SpacedRepetitionItem::where('user_id', $session->user_id)
+            $existingItem = SpacedRepetitionItem::query()->where('user_id', $session->user_id)
                 ->where('question_id', $question->id)
                 ->where('status', SpacedRepetitionStatus::Active)
                 ->exists();

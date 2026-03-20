@@ -11,6 +11,7 @@ use App\Models\PracticeSession;
 use App\Models\StudentProfile;
 use App\Models\User;
 use App\Services\GuidedStudyService;
+use App\Services\ParentEngagementService;
 use App\Services\SpacedRepetitionService;
 use App\Services\StudyPlannerService;
 use Illuminate\Http\Request;
@@ -19,6 +20,10 @@ use Inertia\Response;
 
 class DashboardController extends Controller
 {
+    public function __construct(
+        private readonly ParentEngagementService $engagementService,
+    ) {}
+
     public function index(Request $request): Response
     {
         $user = $request->user();
@@ -89,7 +94,7 @@ class DashboardController extends Controller
             ],
             'suggested_topics' => $suggestedTopics,
             'guided_study' => null,
-            'parent_invitation' => $this->getParentInvitation($profile),
+            'parent_invitation' => null,
             'level_progression' => null,
             'review_queue_count' => $reviewQueueCount,
             'continue_studying' => $continueStudying,
@@ -157,7 +162,7 @@ class DashboardController extends Controller
             'suggested_topics' => [],
             'guided_study' => $guidedStudy,
             'study_plan_dismissed' => $profile ? $isDismissedToday : false,
-            'parent_invitation' => $profile ? $this->getParentInvitation($profile) : null,
+            'parent_invitation' => $profile ? $this->engagementService->shouldShowInvitePrompt($user, $profile) : null,
             'level_progression' => $profile ? $this->getLevelProgression($profile) : null,
             'review_queue_count' => $reviewQueueCount,
             'continue_studying' => $continueStudying,
@@ -297,42 +302,4 @@ class DashboardController extends Controller
         ];
     }
 
-    /**
-     * @return array{show: bool, style: string, is_early_level: bool}|null
-     */
-    private function getParentInvitation(StudentProfile $profile): ?array
-    {
-        if (! $profile->isSecondary()) {
-            return null;
-        }
-
-        $level = $profile->educationLevel;
-        if (! $level) {
-            return null;
-        }
-
-        $tier = $level->curriculumTier;
-        if (! $tier) {
-            return null;
-        }
-
-        $sortOrder = $level->sort_order;
-        $isEarlyLevel = $sortOrder <= 2;
-
-        if ($profile->parent_invite_dismissed_at) {
-            if (! $isEarlyLevel) {
-                return null;
-            }
-
-            if ($profile->parent_invite_dismissed_at->diffInDays(now()) < 7) {
-                return null;
-            }
-        }
-
-        return [
-            'show' => true,
-            'style' => $isEarlyLevel ? 'prominent' : 'subtle',
-            'is_early_level' => $isEarlyLevel,
-        ];
-    }
 }

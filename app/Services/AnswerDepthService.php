@@ -11,7 +11,7 @@ class AnswerDepthService
     public function getAvailableDepths(User $user): array
     {
         if (! $this->isMonetizationEnabled()) {
-            return [AnswerDepthLevel::Quick];
+            return AnswerDepthLevel::cases();
         }
 
         $plan = $user->activeSubscription?->plan?->name ?? 'free';

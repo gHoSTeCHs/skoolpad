@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Middleware\EnsureOnboardingComplete;
+use App\Http\Middleware\EnsureParentAccess;
 use App\Http\Middleware\EnsureUserHasPermission;
 use App\Http\Middleware\EnsureUserIsStaff;
 use App\Http\Middleware\HandleAppearance;
@@ -27,6 +28,7 @@ return Application::configure(basePath: dirname(__DIR__))
 
         $middleware->alias([
             'onboarded' => EnsureOnboardingComplete::class,
+            'parent' => EnsureParentAccess::class,
             'staff' => EnsureUserIsStaff::class,
             'permission' => EnsureUserHasPermission::class,
         ]);

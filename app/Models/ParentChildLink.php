@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use App\Enums\ParentChildLinkStatus;
+use App\Enums\Term;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
@@ -23,6 +24,9 @@ class ParentChildLink extends Model
         'linked_at',
         'data_consent_granted_at',
         'study_goal_minutes',
+        'current_term',
+        'term_start_date',
+        'grace_period_ends_at',
     ];
 
     /** @return array<string, string> */
@@ -34,6 +38,9 @@ class ParentChildLink extends Model
             'data_consent_granted_at' => 'datetime',
             'study_goal_minutes' => 'integer',
             'created_at' => 'datetime',
+            'current_term' => Term::class,
+            'term_start_date' => 'date',
+            'grace_period_ends_at' => 'datetime',
         ];
     }
 
@@ -57,5 +64,15 @@ class ParentChildLink extends Model
     public function verificationAttempts(): HasMany
     {
         return $this->hasMany(VerificationAttempt::class);
+    }
+
+    public function topicCoverages(): HasMany
+    {
+        return $this->hasMany(TopicCoverage::class);
+    }
+
+    public function checkInSessions(): HasMany
+    {
+        return $this->hasMany(ParentCheckInSession::class);
     }
 }

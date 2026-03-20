@@ -4,3 +4,4 @@ export type CourseScope = 'department' | 'faculty' | 'institution_wide';
 export type EducationSystemType = 'national' | 'state' | 'international' | 'exam_board';
 export type ScaleType = 'cgpa' | 'gpa' | 'percentage' | 'letter' | 'points' | 'classification';
 export type StudentType = 'tertiary' | 'secondary';
+export type AccountType = 'student' | 'parent';

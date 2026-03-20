@@ -1,5 +1,12 @@
 <?php
 
+use App\Http\Controllers\ParentDashboard\CheckInController;
+use App\Http\Controllers\ParentDashboard\ChildLinkController;
+use App\Http\Controllers\ParentDashboard\ParentDashboardController;
+use App\Http\Controllers\ParentDashboard\ParentOnboardingController;
+use App\Http\Controllers\ParentDashboard\ParentSettingsController;
+use App\Http\Controllers\ParentDashboard\TopicCoverageController;
+use App\Http\Controllers\ParentDashboard\VerificationController;
 use App\Http\Controllers\Student\CgpaSimulatorController;
 use App\Http\Controllers\Student\CourseController as StudentCourseController;
 use App\Http\Controllers\Student\DashboardController as StudentDashboardController;
@@ -8,6 +15,7 @@ use App\Http\Controllers\Student\LevelProgressionController;
 use App\Http\Controllers\Student\NoteController;
 use App\Http\Controllers\Student\OnboardingController;
 use App\Http\Controllers\Student\ParentInvitationController;
+use App\Http\Controllers\Student\ParentLinkController;
 use App\Http\Controllers\Student\PracticeController;
 use App\Http\Controllers\Student\QuestionController as StudentQuestionController;
 use App\Http\Controllers\Student\QuestionPaperController as StudentQuestionPaperController;
@@ -109,11 +117,41 @@ Route::middleware(['auth', 'verified', 'onboarded'])->group(function () {
     Route::delete('cgpa-simulator/{simulation}', [CgpaSimulatorController::class, 'destroy'])->name('cgpa-simulator.destroy');
     Route::post('cgpa-simulator/calculate', [CgpaSimulatorController::class, 'calculate'])->name('cgpa-simulator.calculate');
     Route::post('cgpa-simulator/reverse-calculate', [CgpaSimulatorController::class, 'reverseCalculate'])->name('cgpa-simulator.reverse-calculate');
+    Route::post('secondary/parent-link/approve', [ParentLinkController::class, 'approve'])->name('secondary.parent-link.approve');
+    Route::post('secondary/parent-link/revoke', [ParentLinkController::class, 'revoke'])->name('secondary.parent-link.revoke');
     Route::get('upload', fn () => Inertia::render('upload/index'))->name('upload.index');
     Route::get('contributions', fn () => Inertia::render('contributions/index'))->name('contributions.index');
     Route::get('profile', fn () => Inertia::render('profile/index'))->name('profile.index');
     Route::get('progress', fn () => Inertia::render('progress/index'))->name('progress.index');
 });
+
+Route::middleware(['auth', 'verified'])->group(function () {
+    Route::get('parent/onboarding', [ParentOnboardingController::class, 'show'])->name('parent.onboarding');
+    Route::post('parent/onboarding', [ParentOnboardingController::class, 'store'])->name('parent.onboarding.store');
+});
+
+Route::middleware(['auth', 'verified', 'onboarded', 'parent'])
+    ->prefix('parent')
+    ->name('parent.')
+    ->group(function () {
+        Route::get('dashboard', [ParentDashboardController::class, 'index'])->name('dashboard');
+        Route::get('children/add', [ChildLinkController::class, 'create'])->name('children.add');
+        Route::post('children/add', [ChildLinkController::class, 'storeChild'])->name('children.add.store');
+        Route::get('children/link', [ChildLinkController::class, 'showLinkForm'])->name('children.link.show');
+        Route::post('children/link', [ChildLinkController::class, 'linkChild'])->name('children.link');
+        Route::get('children/{studentProfile}/dashboard', [ChildLinkController::class, 'childDashboard'])->name('children.dashboard');
+        Route::post('children/{studentProfile}/coverage/{topic}', [TopicCoverageController::class, 'store'])->name('children.coverage.store');
+        Route::get('children/{studentProfile}/verification', [VerificationController::class, 'index'])->name('verification.index');
+        Route::get('children/{studentProfile}/verification/{topic}', [VerificationController::class, 'show'])->name('verification.show');
+        Route::post('children/{studentProfile}/verification/{topic}', [VerificationController::class, 'store'])->name('verification.store');
+        Route::get('children/{studentProfile}/check-in', [CheckInController::class, 'show'])->name('checkin.show');
+        Route::post('children/{studentProfile}/check-in', [CheckInController::class, 'complete'])->name('checkin.complete');
+        Route::get('children/{studentProfile}/read-together/{topic}', [CheckInController::class, 'readTogether'])->name('checkin.read-together');
+        Route::get('children/{studentProfile}/study', [CheckInController::class, 'studyAsChild'])->name('study-as-child');
+        Route::get('settings', [ParentSettingsController::class, 'index'])->name('settings');
+        Route::put('settings/notifications', [ParentSettingsController::class, 'updateNotifications'])->name('settings.notifications');
+        Route::put('settings/study-duration/{link}', [ParentSettingsController::class, 'updateStudyDuration'])->name('settings.study-duration');
+    });
 
 require __DIR__.'/settings.php';
 require __DIR__.'/staff.php';

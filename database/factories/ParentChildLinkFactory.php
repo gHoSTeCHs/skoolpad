@@ -3,6 +3,7 @@
 namespace Database\Factories;
 
 use App\Enums\ParentChildLinkStatus;
+use App\Enums\Term;
 use App\Models\ParentProfile;
 use App\Models\StudentProfile;
 use Illuminate\Database\Eloquent\Factories\Factory;
@@ -38,6 +39,14 @@ class ParentChildLinkFactory extends Factory
     {
         return $this->state(fn (array $attributes) => [
             'study_goal_minutes' => $minutes,
+        ]);
+    }
+
+    public function withTermConfig(Term $term = Term::First, ?string $termStartDate = null): static
+    {
+        return $this->state(fn (array $attributes) => [
+            'current_term' => $term,
+            'term_start_date' => $termStartDate ?? now()->startOfMonth()->toDateString(),
         ]);
     }
 }

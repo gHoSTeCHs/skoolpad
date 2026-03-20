@@ -6,15 +6,17 @@ use App\Services\AnswerDepthService;
 
 uses(Tests\TestCase::class);
 
-test('returns only quick when monetization is disabled', function () {
+test('returns all depths when monetization is disabled', function () {
     config(['skoolpad.monetization_enabled' => false]);
     $service = new AnswerDepthService;
     $user = User::factory()->make();
 
     $depths = $service->getAvailableDepths($user);
 
-    expect($depths)->toHaveCount(1)
-        ->and($depths[0])->toBe(AnswerDepthLevel::Quick);
+    expect($depths)->toHaveCount(3)
+        ->and($depths)->toContain(AnswerDepthLevel::Quick)
+        ->and($depths)->toContain(AnswerDepthLevel::Standard)
+        ->and($depths)->toContain(AnswerDepthLevel::DeepDive);
 });
 
 test('returns only quick for free tier when monetization enabled', function () {
@@ -34,8 +36,18 @@ test('monetization is disabled by default', function () {
     expect($service->isMonetizationEnabled())->toBeFalse();
 });
 
-test('canAccessDepth returns correct value', function () {
+test('canAccessDepth allows all depths when monetization disabled', function () {
     config(['skoolpad.monetization_enabled' => false]);
+    $service = new AnswerDepthService;
+    $user = User::factory()->make();
+
+    expect($service->canAccessDepth($user, AnswerDepthLevel::Quick))->toBeTrue()
+        ->and($service->canAccessDepth($user, AnswerDepthLevel::Standard))->toBeTrue()
+        ->and($service->canAccessDepth($user, AnswerDepthLevel::DeepDive))->toBeTrue();
+});
+
+test('canAccessDepth restricts depths when monetization enabled', function () {
+    config(['skoolpad.monetization_enabled' => true]);
     $service = new AnswerDepthService;
     $user = User::factory()->make();
 

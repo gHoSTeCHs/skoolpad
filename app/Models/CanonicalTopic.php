@@ -123,6 +123,11 @@ class CanonicalTopic extends Model
         return $this->hasMany(VerificationAttempt::class);
     }
 
+    public function topicCoverages(): HasMany
+    {
+        return $this->hasMany(TopicCoverage::class);
+    }
+
     public function scopePublished(Builder $query): Builder
     {
         return $query->where('is_published', true);

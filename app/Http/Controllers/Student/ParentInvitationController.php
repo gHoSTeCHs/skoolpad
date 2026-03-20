@@ -2,34 +2,33 @@
 
 namespace App\Http\Controllers\Student;
 
-use App\Enums\ParentChildLinkStatus;
 use App\Http\Controllers\Controller;
-use App\Models\ParentChildLink;
+use App\Http\Requests\Student\SendParentInviteRequest;
+use App\Services\ParentAccountService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 
 class ParentInvitationController extends Controller
 {
+    public function __construct(
+        private readonly ParentAccountService $parentAccountService,
+    ) {}
+
     public function dismiss(Request $request): RedirectResponse
     {
-        $profile = $request->user()->studentProfile;
-        $profile->update(['parent_invite_dismissed_at' => now()]);
+        $request->user()->studentProfile->update(['parent_invite_dismissed_at' => now()]);
 
         return redirect()->back();
     }
 
-    public function send(Request $request): RedirectResponse
+    public function send(SendParentInviteRequest $request): RedirectResponse
     {
-        $request->validate([
-            'parent_email' => ['required', 'email', 'max:255'],
-        ]);
+        $validated = $request->validated();
 
-        $profile = $request->user()->studentProfile;
-
-        ParentChildLink::create([
-            'student_profile_id' => $profile->id,
-            'status' => ParentChildLinkStatus::Pending,
-        ]);
+        $this->parentAccountService->sendParentInvite(
+            studentProfile: $request->user()->studentProfile,
+            parentEmail: $validated['parent_email'],
+        );
 
         return redirect()->back();
     }
