@@ -25,6 +25,9 @@ class ChildLinkController extends Controller
     public function storeChild(CreateChildAccountRequest $request): RedirectResponse
     {
         $parentProfile = $request->user()->parentProfile;
+
+        abort_unless($parentProfile, 403);
+
         $validated = $request->validated();
 
         $this->parentAccountService->createChildAccount(
@@ -33,7 +36,6 @@ class ChildLinkController extends Controller
             childEmail: $validated['child_email'],
             childPassword: $validated['child_password'],
             educationLevelId: $validated['education_level_id'],
-            subjects: $validated['subjects'] ?? [],
         );
 
         return redirect()->route('parent.dashboard');

@@ -10,6 +10,7 @@ use App\Models\ParentProfile;
 use App\Models\StudentProfile;
 use App\Models\User;
 use App\Services\ParentAccountService;
+use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Validation\ValidationException;
 
 beforeEach(function () {
@@ -150,7 +151,7 @@ test('revokeLinkRequest rejects unauthorized user', function () {
     $randomUser = User::factory()->create();
 
     expect(fn () => $this->service->revokeLinkRequest($randomUser, $link->id))
-        ->toThrow(\Illuminate\Database\Eloquent\ModelNotFoundException::class);
+        ->toThrow(AuthorizationException::class);
 });
 
 test('getLinkedChildren returns only active links', function () {
@@ -174,7 +175,7 @@ test('getParentDashboardSummary returns children and subscription status', funct
     expect($summary['subscription_status'])->toBe('free');
 });
 
-test('sendParentInvite creates pending link without parent profile', function () {
+test('sendParentInvite creates pending link with email stored', function () {
     $studentProfile = StudentProfile::factory()->secondary()->create();
 
     $link = $this->service->sendParentInvite(
@@ -184,5 +185,17 @@ test('sendParentInvite creates pending link without parent profile', function ()
 
     expect($link->student_profile_id)->toBe($studentProfile->id);
     expect($link->parent_profile_id)->toBeNull();
+    expect($link->parent_email)->toBe('parent@example.com');
     expect($link->status)->toBe(ParentChildLinkStatus::Pending);
+});
+
+test('sendParentInvite returns existing pending link and updates email', function () {
+    $studentProfile = StudentProfile::factory()->secondary()->create();
+
+    $first = $this->service->sendParentInvite($studentProfile, 'old@example.com');
+    $second = $this->service->sendParentInvite($studentProfile, 'new@example.com');
+
+    expect($second->id)->toBe($first->id);
+    expect($second->fresh()->parent_email)->toBe('new@example.com');
+    expect(ParentChildLink::query()->where('student_profile_id', $studentProfile->id)->count())->toBe(1);
 });

@@ -78,7 +78,7 @@ test('student cannot revoke a link belonging to another student', function () {
 
     $this->post(route('secondary.parent-link.revoke'), [
         'link_id' => $link->id,
-    ])->assertNotFound();
+    ])->assertForbidden();
 });
 
 test('revoking an already revoked link is idempotent', function () {

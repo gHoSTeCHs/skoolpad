@@ -12,6 +12,7 @@ use App\Models\ParentCheckInSession;
 use App\Models\ParentChildLink;
 use App\Models\PracticeSession;
 use App\Models\QuestionTopicLink;
+use App\Models\ReadinessScoreHistory;
 use App\Models\SchemeOfWorkItem;
 use App\Models\SpacedRepetitionItem;
 use App\Models\TopicCompletion;
@@ -29,6 +30,14 @@ class ExamReadinessService
 
     private const REDISTRIBUTION_MIN_TOPICS = 3;
 
+    private const MAX_WEEKLY_DELTA = 8.0;
+
+    private const MIN_WEEKLY_DELTA = -5.0;
+
+    private const DECAY_RATE = 0.85;
+
+    private const PROJECTION_HISTORY_WEEKS = 4;
+
     private const FULL_WEIGHTS = [
         'syllabus_coverage' => 25,
         'practice_performance' => 35,
@@ -44,28 +53,30 @@ class ExamReadinessService
 
     public function calculateForSubject(User $user, string $levelSubjectId): ExamReadinessCache
     {
-        $mode = $this->detectFormulaMode($user);
+        $sessionCount = $this->getCompletedSessionCount($user);
+        $mode = $this->detectFormulaMode($sessionCount);
         $topicIds = $this->getTopicIdsForSubject($levelSubjectId);
+        $parentLink = $this->getActiveParentChildLink($user);
 
         if ($mode === 'full') {
-            $components = $this->calculateFullComponents($user, $levelSubjectId, $topicIds);
+            $components = $this->calculateFullComponents($user, $levelSubjectId, $topicIds, $parentLink);
             $score = $this->computeWeightedScore($components, self::FULL_WEIGHTS);
         } elseif ($mode === 'deviceless') {
-            $components = $this->calculateDevicelessComponents($user, $topicIds);
+            $components = $this->calculateDevicelessComponents($user, $topicIds, $parentLink);
             $score = $this->computeWeightedScore($components, self::DEVICELESS_WEIGHTS);
         } else {
-            $fullComponents = $this->calculateFullComponents($user, $levelSubjectId, $topicIds);
+            $fullComponents = $this->calculateFullComponents($user, $levelSubjectId, $topicIds, $parentLink);
             $fullScore = $this->computeWeightedScore($fullComponents, self::FULL_WEIGHTS);
 
-            $devicelessComponents = $this->calculateDevicelessComponents($user, $topicIds);
+            $devicelessComponents = $this->calculateDevicelessComponents($user, $topicIds, $parentLink);
             $devicelessScore = $this->computeWeightedScore($devicelessComponents, self::DEVICELESS_WEIGHTS);
 
-            $blendFactor = $this->getBlendFactor($user);
+            $blendFactor = $this->getBlendFactor($sessionCount);
             $score = ($devicelessScore * (1 - $blendFactor)) + ($fullScore * $blendFactor);
             $components = $fullComponents;
         }
 
-        return ExamReadinessCache::query()->updateOrCreate(
+        $cache = ExamReadinessCache::query()->updateOrCreate(
             [
                 'user_id' => $user->id,
                 'curriculum_subject_level_id' => $levelSubjectId,
@@ -79,6 +90,15 @@ class ExamReadinessService
                 'calculated_at' => now(),
             ]
         );
+
+        ReadinessScoreHistory::query()->create([
+            'user_id' => $user->id,
+            'curriculum_subject_level_id' => $levelSubjectId,
+            'composite_score' => round($score, 2),
+            'recorded_at' => now(),
+        ]);
+
+        return $cache;
     }
 
     public function recalculateAll(User $user): void
@@ -101,21 +121,35 @@ class ExamReadinessService
         }
 
         $currentScore = (float) $cached->composite_score;
-        $weeksUntilExam = max(1, now()->diffInWeeks($examDate));
-        $weeklyDelta = $currentScore / max(1, 4);
+        $weeksUntilExam = max(1, (int) now()->diffInWeeks($examDate));
 
-        return min(100, round($currentScore + ($weeklyDelta * $weeksUntilExam), 2));
+        $history = ReadinessScoreHistory::query()
+            ->forSubject($user->id, $levelSubjectId)
+            ->recent(self::PROJECTION_HISTORY_WEEKS * 7)
+            ->orderBy('recorded_at')
+            ->get(['composite_score', 'recorded_at']);
+
+        if ($history->count() >= 2) {
+            return $this->projectFromHistory($history, $currentScore, $weeksUntilExam);
+        }
+
+        return $this->projectWithDecayCurve($currentScore, $weeksUntilExam);
     }
 
-    /**
-     * Returns readiness score history for trend display.
-     * Stub: no historical data storage exists yet.
-     *
-     * @return array<int, array{date: string, score: float}>
-     */
+    /** @return array<int, array{date: string, score: float}> */
     public function getExamReadinessTrend(User $user, string $levelSubjectId, int $days = 28): array
     {
-        return [];
+        return ReadinessScoreHistory::query()
+            ->forSubject($user->id, $levelSubjectId)
+            ->recent($days)
+            ->orderBy('recorded_at')
+            ->get(['composite_score', 'recorded_at'])
+            ->map(fn (ReadinessScoreHistory $row) => [
+                'date' => $row->recorded_at->toDateString(),
+                'score' => (float) $row->composite_score,
+            ])
+            ->values()
+            ->all();
     }
 
     /** @return Collection<int, ExamReadinessCache>|ExamReadinessCache|null */
@@ -133,13 +167,38 @@ class ExamReadinessService
             ->get();
     }
 
-    private function detectFormulaMode(User $user): string
+    private function projectFromHistory(Collection $history, float $currentScore, int $weeksUntilExam): float
     {
-        $sessionCount = PracticeSession::query()
+        $first = $history->first();
+        $last = $history->last();
+        $weeksCovered = max(1, (int) $first->recorded_at->diffInWeeks($last->recorded_at));
+
+        $weeklyDelta = ((float) $last->composite_score - (float) $first->composite_score) / $weeksCovered;
+        $weeklyDelta = min(self::MAX_WEEKLY_DELTA, max(self::MIN_WEEKLY_DELTA, $weeklyDelta));
+
+        $projected = $currentScore + ($weeklyDelta * $weeksUntilExam);
+
+        return round(min(100, max(0, $projected)), 2);
+    }
+
+    private function projectWithDecayCurve(float $currentScore, int $weeksUntilExam): float
+    {
+        $gap = 100 - $currentScore;
+        $projectedGap = $gap * pow(self::DECAY_RATE, $weeksUntilExam);
+
+        return round(100 - $projectedGap, 2);
+    }
+
+    private function getCompletedSessionCount(User $user): int
+    {
+        return PracticeSession::query()
             ->where('user_id', $user->id)
             ->whereNotNull('completed_at')
             ->count();
+    }
 
+    private function detectFormulaMode(int $sessionCount): string
+    {
         if ($sessionCount < self::DEVICELESS_THRESHOLD) {
             return 'deviceless';
         }
@@ -151,20 +210,15 @@ class ExamReadinessService
         return 'blend';
     }
 
-    private function getBlendFactor(User $user): float
+    private function getBlendFactor(int $sessionCount): float
     {
-        $sessionCount = PracticeSession::query()
-            ->where('user_id', $user->id)
-            ->whereNotNull('completed_at')
-            ->count();
-
         return ($sessionCount - self::DEVICELESS_THRESHOLD) / (self::FULL_THRESHOLD - self::DEVICELESS_THRESHOLD);
     }
 
     /** @return array{syllabus_coverage: float, practice_performance: float, spaced_retention: float, parent_verification: float} */
-    private function calculateFullComponents(User $user, string $levelSubjectId, Collection $topicIds): array
+    private function calculateFullComponents(User $user, string $levelSubjectId, Collection $topicIds, ?ParentChildLink $parentLink): array
     {
-        $pvResult = $this->calculateParentVerification($user, $topicIds, 'full');
+        $pvResult = $this->calculateParentVerification($user, $topicIds, 'full', $parentLink);
 
         return [
             'syllabus_coverage' => $this->calculateSyllabusCoverage($user, $topicIds),
@@ -176,14 +230,14 @@ class ExamReadinessService
     }
 
     /** @return array{parent_verification: float, curriculum_progress: float, verification_consistency: float, _eligible_topic_count: int} */
-    private function calculateDevicelessComponents(User $user, Collection $topicIds): array
+    private function calculateDevicelessComponents(User $user, Collection $topicIds, ?ParentChildLink $parentLink): array
     {
-        $pvResult = $this->calculateParentVerification($user, $topicIds, 'deviceless');
+        $pvResult = $this->calculateParentVerification($user, $topicIds, 'deviceless', $parentLink);
 
         return [
             'parent_verification' => $pvResult['score'],
-            'curriculum_progress' => $this->calculateCurriculumProgress($user, $topicIds),
-            'verification_consistency' => $this->calculateVerificationConsistency($user),
+            'curriculum_progress' => $this->calculateCurriculumProgress($topicIds, $parentLink),
+            'verification_consistency' => $this->calculateVerificationConsistency($parentLink),
             '_eligible_topic_count' => $pvResult['eligible_topic_count'],
         ];
     }
@@ -191,7 +245,6 @@ class ExamReadinessService
     private function computeWeightedScore(array $components, array $weights): float
     {
         $pvWeight = $weights['parent_verification'] ?? 0;
-        $pvScore = $components['parent_verification'] ?? 0;
         $eligibleCount = $components['_eligible_topic_count'] ?? self::REDISTRIBUTION_MIN_TOPICS;
 
         if ($eligibleCount < self::REDISTRIBUTION_MIN_TOPICS && $pvWeight > 0) {
@@ -287,17 +340,16 @@ class ExamReadinessService
     }
 
     /** @return array{score: float, eligible_topic_count: int} */
-    private function calculateParentVerification(User $user, Collection $topicIds, string $mode): array
+    private function calculateParentVerification(User $user, Collection $topicIds, string $mode, ?ParentChildLink $parentLink): array
     {
         if ($topicIds->isEmpty()) {
             return ['score' => 0, 'eligible_topic_count' => 0];
         }
 
         if ($mode === 'deviceless') {
-            $link = $this->getActiveParentChildLink($user);
-            $eligibleTopicIds = $link
+            $eligibleTopicIds = $parentLink
                 ? TopicCoverage::query()
-                    ->where('parent_child_link_id', $link->id)
+                    ->where('parent_child_link_id', $parentLink->id)
                     ->where('status', TopicCoverageStatusEnum::Covered)
                     ->whereIn('canonical_topic_id', $topicIds)
                     ->pluck('canonical_topic_id')
@@ -318,19 +370,17 @@ class ExamReadinessService
         ];
     }
 
-    private function calculateCurriculumProgress(User $user, Collection $topicIds): float
+    private function calculateCurriculumProgress(Collection $topicIds, ?ParentChildLink $parentLink): float
     {
-        $link = $this->getActiveParentChildLink($user);
-
-        if (! $link || ! $link->current_term || ! $link->term_start_date) {
+        if (! $parentLink || ! $parentLink->current_term || ! $parentLink->term_start_date) {
             return 0;
         }
 
-        $currentWeek = $this->getCurrentSchemeWeek($link);
+        $currentWeek = $this->getCurrentSchemeWeek($parentLink);
 
         $expectedCount = SchemeOfWorkItem::query()
             ->whereIn('canonical_topic_id', $topicIds)
-            ->where('term', $link->current_term->toInt())
+            ->where('term', $parentLink->current_term->toInt())
             ->where('week_number', '<=', $currentWeek)
             ->count();
 
@@ -339,7 +389,7 @@ class ExamReadinessService
         }
 
         $coveredCount = TopicCoverage::query()
-            ->where('parent_child_link_id', $link->id)
+            ->where('parent_child_link_id', $parentLink->id)
             ->where('status', TopicCoverageStatusEnum::Covered)
             ->whereIn('canonical_topic_id', $topicIds)
             ->count();
@@ -347,25 +397,22 @@ class ExamReadinessService
         return min(100, round(($coveredCount / $expectedCount) * 100, 2));
     }
 
-    private function calculateVerificationConsistency(User $user): float
+    private function calculateVerificationConsistency(?ParentChildLink $parentLink): float
     {
-        $link = $this->getActiveParentChildLink($user);
-
-        if (! $link) {
+        if (! $parentLink) {
             return 0;
         }
 
-        $startOfMonth = now()->startOfMonth()->toDateString();
-        $daysInMonth = now()->daysInMonth;
+        $thirtyDaysAgo = now()->subDays(30)->toDateString();
 
         $checkInDays = ParentCheckInSession::query()
-            ->where('parent_child_link_id', $link->id)
+            ->where('parent_child_link_id', $parentLink->id)
             ->where('status', CheckInSessionStatus::Completed)
-            ->where('session_date', '>=', $startOfMonth)
+            ->where('session_date', '>=', $thirtyDaysAgo)
             ->distinct('session_date')
             ->count('session_date');
 
-        return min(100, round(($checkInDays / $daysInMonth) * 100, 2));
+        return min(100, round(($checkInDays / 30) * 100, 2));
     }
 
     private function getTopicIdsForSubject(string $levelSubjectId): Collection

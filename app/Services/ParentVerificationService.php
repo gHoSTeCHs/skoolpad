@@ -71,7 +71,8 @@ class ParentVerificationService
         VerificationResult $overallResult,
         ?string $notes = null,
     ): VerificationAttempt {
-        $responses = $this->recomputeCorrectness($canonicalTopicId, $responses);
+        $topic = CanonicalTopic::query()->findOrFail($canonicalTopicId);
+        $responses = $this->recomputeCorrectness($topic, $responses);
 
         $attempt = VerificationAttempt::query()->create([
             'parent_child_link_id' => $link->id,
@@ -99,16 +100,51 @@ class ParentVerificationService
     /** @return array{total: int, understood: int, partially_understood: int, needs_review: int} */
     public function getVerificationStats(ParentChildLink $link): array
     {
-        $attempts = VerificationAttempt::query()
-            ->where('parent_child_link_id', $link->id)
-            ->get();
+        $base = VerificationAttempt::query()->where('parent_child_link_id', $link->id);
 
         return [
-            'total' => $attempts->count(),
-            'understood' => $attempts->where('overall_result', VerificationResult::Understood)->count(),
-            'partially_understood' => $attempts->where('overall_result', VerificationResult::PartiallyUnderstood)->count(),
-            'needs_review' => $attempts->where('overall_result', VerificationResult::NeedsReview)->count(),
+            'total' => (clone $base)->count(),
+            'understood' => (clone $base)->where('overall_result', VerificationResult::Understood)->count(),
+            'partially_understood' => (clone $base)->where('overall_result', VerificationResult::PartiallyUnderstood)->count(),
+            'needs_review' => (clone $base)->where('overall_result', VerificationResult::NeedsReview)->count(),
         ];
+    }
+
+    /**
+     * Validates that verification responses are consistent and not suspiciously fast.
+     * IMPORTANT: Call this AFTER recomputeCorrectness() — the $responses must contain
+     * server-recomputed `correct` fields, not raw client-submitted values.
+     */
+    public function validateVerificationIntegrity(
+        array $responses,
+        VerificationResult $overallResult,
+        int $timeOnScreenSeconds
+    ): array {
+        $warnings = [];
+
+        $estimatedMinSeconds = count($responses['true_false'] ?? []) * 30
+            + count($responses['explain_checklist'] ?? []) * 60;
+
+        if ($estimatedMinSeconds > 0 && $timeOnScreenSeconds < max(15, (int) round($estimatedMinSeconds * 0.2))) {
+            $warnings[] = 'verification_too_fast';
+        }
+
+        if ($overallResult === VerificationResult::Understood) {
+            $trueFalseItems = $responses['true_false'] ?? [];
+            $trueFalseTotal = count($trueFalseItems);
+
+            if ($trueFalseTotal > 0) {
+                $trueFalseCorrect = collect($trueFalseItems)
+                    ->filter(fn ($item) => ($item['correct'] ?? false) === true)
+                    ->count();
+
+                if (($trueFalseCorrect / $trueFalseTotal) < 0.5) {
+                    $warnings[] = 'result_mismatch';
+                }
+            }
+        }
+
+        return $warnings;
     }
 
     private function getAppDrivenEligible(User $childUser, StudentProfile $profile): Collection
@@ -121,31 +157,40 @@ class ParentVerificationService
             return collect();
         }
 
+        $topicToQuestionIds = QuestionTopicLink::query()
+            ->whereIn('canonical_topic_id', $completedTopicIds)
+            ->get(['canonical_topic_id', 'question_id'])
+            ->groupBy('canonical_topic_id')
+            ->map(fn ($rows) => $rows->pluck('question_id'));
+
+        $allQuestionIds = $topicToQuestionIds->flatten()->unique()->values()->all();
+
+        if (empty($allQuestionIds)) {
+            return collect();
+        }
+
+        $answersByQuestion = PracticeAnswer::query()
+            ->whereHas('practiceSession', fn ($q) => $q->where('user_id', $childUser->id))
+            ->whereIn('question_id', $allQuestionIds)
+            ->get(['question_id', 'is_correct'])
+            ->groupBy('question_id');
+
         return CanonicalTopic::query()
             ->whereIn('id', $completedTopicIds)
             ->whereNotNull('parent_verification_kit')
             ->get()
-            ->filter(function (CanonicalTopic $topic) use ($childUser) {
-                $questionIds = QuestionTopicLink::query()
-                    ->where('canonical_topic_id', $topic->id)
-                    ->pluck('question_id');
-
-                if ($questionIds->isEmpty()) {
+            ->filter(function (CanonicalTopic $topic) use ($topicToQuestionIds, $answersByQuestion) {
+                $qIds = $topicToQuestionIds->get($topic->id, collect());
+                if ($qIds->isEmpty()) {
                     return false;
                 }
 
-                $answers = PracticeAnswer::query()
-                    ->whereHas('practiceSession', fn ($q) => $q->where('user_id', $childUser->id))
-                    ->whereIn('question_id', $questionIds)
-                    ->get();
-
+                $answers = $qIds->flatMap(fn ($id) => $answersByQuestion->get($id, collect()));
                 if ($answers->isEmpty()) {
                     return false;
                 }
 
-                $accuracy = $answers->where('is_correct', true)->count() / $answers->count();
-
-                return $accuracy >= 0.85;
+                return $answers->where('is_correct', true)->count() / $answers->count() >= 0.85;
             });
     }
 
@@ -170,14 +215,14 @@ class ParentVerificationService
             return collect();
         }
 
-        $notCoveredTopicIds = TopicCoverage::query()
+        $coveredOrSkippedIds = TopicCoverage::query()
             ->where('parent_child_link_id', $link->id)
-            ->where('status', TopicCoverageStatus::NotYetCovered)
+            ->whereIn('status', [TopicCoverageStatus::Covered, TopicCoverageStatus::Skipped])
             ->pluck('canonical_topic_id');
 
         return CanonicalTopic::query()
             ->whereIn('id', $schemeTopicIds)
-            ->whereNotIn('id', $notCoveredTopicIds)
+            ->whereNotIn('id', $coveredOrSkippedIds)
             ->whereNotNull('parent_verification_kit')
             ->get();
     }
@@ -193,10 +238,9 @@ class ParentVerificationService
         return (int) floor($daysDiff / 7) + 1;
     }
 
-    private function recomputeCorrectness(string $canonicalTopicId, array $responses): array
+    private function recomputeCorrectness(CanonicalTopic $topic, array $responses): array
     {
-        $topic = CanonicalTopic::query()->find($canonicalTopicId);
-        $kit = $topic?->parent_verification_kit;
+        $kit = $topic->parent_verification_kit;
 
         if (isset($responses['true_false']) && isset($kit['true_false'])) {
             foreach ($responses['true_false'] as $i => &$item) {
@@ -268,37 +312,5 @@ class ParentVerificationService
                     'next_review_at' => now()->addDay(),
                 ]);
         }
-    }
-
-    public function validateVerificationIntegrity(
-        array $responses,
-        string $overallResult,
-        int $timeOnScreenSeconds
-    ): array {
-        $warnings = [];
-
-        $estimatedMinSeconds = count($responses['true_false'] ?? []) * 30
-            + count($responses['explain_checklist'] ?? []) * 60;
-
-        if ($estimatedMinSeconds > 0 && $timeOnScreenSeconds < max(15, (int) round($estimatedMinSeconds * 0.2))) {
-            $warnings[] = 'verification_too_fast';
-        }
-
-        if ($overallResult === 'understood') {
-            $trueFalseItems = $responses['true_false'] ?? [];
-            $trueFalseTotal = count($trueFalseItems);
-
-            if ($trueFalseTotal > 0) {
-                $trueFalseCorrect = collect($trueFalseItems)
-                    ->filter(fn ($item) => ($item['correct'] ?? false) === true)
-                    ->count();
-
-                if (($trueFalseCorrect / $trueFalseTotal) < 0.5) {
-                    $warnings[] = 'result_mismatch';
-                }
-            }
-        }
-
-        return $warnings;
     }
 }

@@ -1,20 +1,9 @@
 import { Head, router } from '@inertiajs/react';
 import { BookOpen, CheckCircle2, Eye, MessageSquare, XCircle } from 'lucide-react';
 import { useState } from 'react';
+import { store as verificationStore } from '@/actions/App/Http/Controllers/ParentDashboard/VerificationController';
 import ParentLayout from '@/layouts/parent-layout';
-
-interface TrueFalseItem {
-    statement: string;
-    answer: boolean;
-    explanation: string;
-}
-
-interface VerificationKitShape {
-    key_concepts?: string[];
-    true_false?: TrueFalseItem[];
-    explain_prompt?: string | null;
-    parent_briefing?: string | null;
-}
+import type { VerificationKit, VerificationTrueFalseItem } from '@/types/parent';
 
 interface ReadTogetherProps {
     child: { id: string; name: string };
@@ -22,7 +11,7 @@ interface ReadTogetherProps {
         topic_id: string;
         topic_title: string;
         content: Record<string, unknown> | null;
-        verification_kit: VerificationKitShape | null;
+        verification_kit: VerificationKit | null;
     };
 }
 
@@ -38,7 +27,7 @@ const steps: { key: Step; label: string }[] = [
 export default function ReadTogether({ child, content }: ReadTogetherProps) {
     const [currentStep, setCurrentStep] = useState<Step>('read');
     const kit = content.verification_kit;
-    const trueFalseItems = kit?.true_false ?? [];
+    const trueFalseItems: VerificationTrueFalseItem[] = kit?.true_false ?? [];
 
     const [trueFalseAnswers, setTrueFalseAnswers] = useState<(boolean | null)[]>(
         new Array(trueFalseItems.length).fill(null),
@@ -46,6 +35,7 @@ export default function ReadTogether({ child, content }: ReadTogetherProps) {
     const [revealedItems, setRevealedItems] = useState<Set<number>>(new Set());
     const [overallResult, setOverallResult] = useState<string | null>(null);
     const [submitting, setSubmitting] = useState(false);
+    const [submitError, setSubmitError] = useState<string | null>(null);
 
     const currentStepIndex = steps.findIndex((s) => s.key === currentStep);
     const childFirstName = child.name.split(' ')[0];
@@ -69,15 +59,12 @@ export default function ReadTogether({ child, content }: ReadTogetherProps) {
     function handleSubmit() {
         if (!overallResult) return;
         setSubmitting(true);
+        setSubmitError(null);
 
         router.post(
-            `/parent/children/${child.id}/verification/${content.topic_id}`,
+            verificationStore.url({ studentProfile: child.id, topic: content.topic_id }),
             {
                 responses: {
-                    explain_checklist: {
-                        concepts_checked: [],
-                        concepts_total: kit?.key_concepts?.length ?? 0,
-                    },
                     true_false: trueFalseAnswers.map((answer) => ({
                         child_answer: answer ?? false,
                     })),
@@ -85,7 +72,10 @@ export default function ReadTogether({ child, content }: ReadTogetherProps) {
                 overall_result: overallResult,
                 notes: 'Read Together session',
             },
-            { onFinish: () => setSubmitting(false) },
+            {
+                onFinish: () => setSubmitting(false),
+                onError: () => setSubmitError('Something went wrong. Please try again.'),
+            },
         );
     }
 
@@ -103,16 +93,19 @@ export default function ReadTogether({ child, content }: ReadTogetherProps) {
             <Head title={`Read Together — ${content.topic_title}`} />
 
             <div className="mx-auto max-w-2xl space-y-6 p-4 sm:p-6">
-                {/* Progress dots */}
-                <div className="flex items-center justify-center gap-2">
+                <nav aria-label="Progress steps" className="flex items-center justify-center gap-2">
                     {steps.map((step, i) => (
                         <div key={step.key} className="flex items-center gap-2">
-                            <div className={`flex size-8 items-center justify-center rounded-full text-xs font-bold transition-colors ${
-                                i <= currentStepIndex
-                                    ? 'bg-[var(--canopy-600)] text-white'
-                                    : 'bg-muted text-muted-foreground'
-                            }`}>
-                                {i + 1}
+                            <div
+                                aria-label={`Step ${i + 1}: ${step.label}${i === currentStepIndex ? ' (current)' : ''}`}
+                                aria-current={i === currentStepIndex ? 'step' : undefined}
+                                className={`flex size-8 items-center justify-center rounded-full text-xs font-bold transition-colors ${
+                                    i <= currentStepIndex
+                                        ? 'bg-[var(--canopy-600)] text-white'
+                                        : 'bg-muted text-muted-foreground'
+                                }`}
+                            >
+                                <span aria-hidden="true">{i + 1}</span>
                             </div>
                             {i < steps.length - 1 && (
                                 <div className={`h-0.5 w-6 rounded ${
@@ -121,13 +114,12 @@ export default function ReadTogether({ child, content }: ReadTogetherProps) {
                             )}
                         </div>
                     ))}
-                </div>
+                </nav>
 
-                {/* Step 1: Read */}
                 {currentStep === 'read' && (
                     <div className="space-y-4">
                         <div className="text-center">
-                            <BookOpen className="mx-auto size-8 text-[var(--canopy-600)]" />
+                            <BookOpen className="mx-auto size-8 text-[var(--canopy-600)]" aria-hidden="true" />
                             <h1 className="mt-3 font-display text-2xl font-bold text-foreground">
                                 {content.topic_title}
                             </h1>
@@ -140,7 +132,7 @@ export default function ReadTogether({ child, content }: ReadTogetherProps) {
                             {content.content ? (
                                 <div className="space-y-3">
                                     <div className="flex items-center gap-2 text-sm font-medium text-[var(--canopy-600)]">
-                                        <BookOpen className="size-4" />
+                                        <BookOpen className="size-4" aria-hidden="true" />
                                         Topic content available
                                     </div>
                                     <p className="text-sm leading-relaxed text-muted-foreground">
@@ -172,11 +164,10 @@ export default function ReadTogether({ child, content }: ReadTogetherProps) {
                     </div>
                 )}
 
-                {/* Step 2: Explain */}
                 {currentStep === 'explain' && (
                     <div className="space-y-4">
                         <div className="text-center">
-                            <MessageSquare className="mx-auto size-8 text-[var(--canopy-600)]" />
+                            <MessageSquare className="mx-auto size-8 text-[var(--canopy-600)]" aria-hidden="true" />
                             <h2 className="mt-3 font-display text-xl font-bold text-foreground">
                                 Ask {childFirstName} to Explain
                             </h2>
@@ -186,7 +177,7 @@ export default function ReadTogether({ child, content }: ReadTogetherProps) {
                         </div>
 
                         {kit?.explain_prompt ? (
-                            <div className="rounded-xl border-l-4 border-l-[var(--canopy-400)] border-y border-r border-border bg-card p-5">
+                            <div className="rounded-xl border-y border-r border-l-4 border-border border-l-[var(--canopy-400)] bg-card p-5">
                                 <p className="text-sm font-medium leading-relaxed text-foreground">
                                     &ldquo;{kit.explain_prompt}&rdquo;
                                 </p>
@@ -218,11 +209,10 @@ export default function ReadTogether({ child, content }: ReadTogetherProps) {
                     </div>
                 )}
 
-                {/* Step 3: Verify (True/False) */}
                 {currentStep === 'verify' && (
                     <div className="space-y-4">
                         <div className="text-center">
-                            <Eye className="mx-auto size-8 text-[var(--canopy-600)]" />
+                            <Eye className="mx-auto size-8 text-[var(--canopy-600)]" aria-hidden="true" />
                             <h2 className="mt-3 font-display text-xl font-bold text-foreground">Quick Check</h2>
                             <p className="mt-2 text-sm text-muted-foreground">
                                 Read each statement aloud. {childFirstName} answers True or False.
@@ -236,13 +226,14 @@ export default function ReadTogether({ child, content }: ReadTogetherProps) {
                                 const isCorrect = answered && trueFalseAnswers[i] === item.answer;
 
                                 return (
-                                    <div key={item.statement} className="rounded-lg border border-border bg-card p-4">
+                                    <div key={i} className="rounded-lg border border-border bg-card p-4">
                                         <p className="text-sm font-medium text-foreground">
                                             &ldquo;{item.statement}&rdquo;
                                         </p>
                                         <div className="mt-3 flex items-center gap-2">
                                             <button
                                                 type="button"
+                                                aria-pressed={trueFalseAnswers[i] === true}
                                                 onClick={() => setAnswer(i, true)}
                                                 className={`rounded-md border px-3 py-1.5 text-xs font-semibold transition-colors ${
                                                     trueFalseAnswers[i] === true
@@ -254,6 +245,7 @@ export default function ReadTogether({ child, content }: ReadTogetherProps) {
                                             </button>
                                             <button
                                                 type="button"
+                                                aria-pressed={trueFalseAnswers[i] === false}
                                                 onClick={() => setAnswer(i, false)}
                                                 className={`rounded-md border px-3 py-1.5 text-xs font-semibold transition-colors ${
                                                     trueFalseAnswers[i] === false
@@ -280,8 +272,8 @@ export default function ReadTogether({ child, content }: ReadTogetherProps) {
                                                     : 'bg-red-50 text-red-800 dark:bg-red-950 dark:text-red-200'
                                             }`}>
                                                 {isCorrect
-                                                    ? <CheckCircle2 className="mt-0.5 size-3.5 shrink-0" />
-                                                    : <XCircle className="mt-0.5 size-3.5 shrink-0" />
+                                                    ? <CheckCircle2 className="mt-0.5 size-3.5 shrink-0" aria-hidden="true" />
+                                                    : <XCircle className="mt-0.5 size-3.5 shrink-0" aria-hidden="true" />
                                                 }
                                                 <div>
                                                     <p className="font-semibold">
@@ -315,7 +307,6 @@ export default function ReadTogether({ child, content }: ReadTogetherProps) {
                     </div>
                 )}
 
-                {/* Step 4: Result */}
                 {currentStep === 'result' && (
                     <div className="space-y-4">
                         <div className="text-center">
@@ -332,6 +323,7 @@ export default function ReadTogether({ child, content }: ReadTogetherProps) {
                                 <button
                                     key={opt.value}
                                     type="button"
+                                    aria-pressed={overallResult === opt.value}
                                     onClick={() => setOverallResult(opt.value)}
                                     className={`rounded-lg border-2 px-3 py-4 text-center text-sm font-semibold transition-colors ${
                                         overallResult === opt.value ? opt.activeColor : opt.color
@@ -341,6 +333,10 @@ export default function ReadTogether({ child, content }: ReadTogetherProps) {
                                 </button>
                             ))}
                         </div>
+
+                        {submitError && (
+                            <p className="text-center text-sm text-red-600 dark:text-red-400">{submitError}</p>
+                        )}
 
                         <div className="flex gap-3 pt-2">
                             <button

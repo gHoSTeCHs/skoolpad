@@ -1,5 +1,6 @@
 <?php
 
+use App\Enums\VerificationResult;
 use App\Models\ParentChildLink;
 use App\Models\ParentProfile;
 use App\Services\ParentCheckInService;
@@ -92,7 +93,7 @@ it('flags verification completed too quickly', function () {
 
     $result = $service->validateVerificationIntegrity(
         responses: $responses,
-        overallResult: 'understood',
+        overallResult: VerificationResult::Understood,
         timeOnScreenSeconds: 5,
     );
 
@@ -113,7 +114,7 @@ it('flags result mismatch when marked understood but scored poorly', function ()
 
     $result = $service->validateVerificationIntegrity(
         responses: $responses,
-        overallResult: 'understood',
+        overallResult: VerificationResult::Understood,
         timeOnScreenSeconds: 300,
     );
 
@@ -136,7 +137,7 @@ it('returns no warnings for legitimate verification', function () {
 
     $result = $service->validateVerificationIntegrity(
         responses: $responses,
-        overallResult: 'understood',
+        overallResult: VerificationResult::Understood,
         timeOnScreenSeconds: 300,
     );
 

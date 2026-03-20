@@ -12,14 +12,20 @@ use App\Models\LevelSubject;
 use App\Models\ParentCheckInSession;
 use App\Models\ParentChildLink;
 use App\Models\ParentProfile;
+use App\Models\QuestionTopicLink;
 use App\Models\SchemeOfWorkItem;
 use App\Models\SpacedRepetitionItem;
 use App\Models\StudentProfile;
 use App\Models\TopicCoverage;
+use Illuminate\Database\UniqueConstraintViolationException;
 use Illuminate\Support\Collection;
 
 class ParentCheckInService
 {
+    public function __construct(
+        private readonly ParentVerificationService $verificationService,
+    ) {}
+
     public function reportTopicCoverage(
         string $parentChildLinkId,
         string $canonicalTopicId,
@@ -45,15 +51,6 @@ class ParentCheckInService
      */
     public function getSchemeOffset(string $parentChildLinkId): int
     {
-        $coveredCount = TopicCoverage::query()
-            ->where('parent_child_link_id', $parentChildLinkId)
-            ->where('status', TopicCoverageStatus::Covered)
-            ->count();
-
-        if ($coveredCount < 5) {
-            return 0;
-        }
-
         return 0;
     }
 
@@ -112,22 +109,41 @@ class ParentCheckInService
 
     public function getOrCreateTonightsCheckIn(ParentChildLink $link): ParentCheckInSession
     {
+        $today = now()->toDateString();
+
         $existing = ParentCheckInSession::query()
             ->where('parent_child_link_id', $link->id)
-            ->forDate(now()->toDateString())
+            ->forDate($today)
             ->first();
 
         if ($existing) {
             return $existing;
         }
 
-        return $this->generateCheckIn($link);
+        try {
+            return $this->generateCheckIn($link);
+        } catch (UniqueConstraintViolationException) {
+            return ParentCheckInSession::query()
+                ->where('parent_child_link_id', $link->id)
+                ->forDate($today)
+                ->firstOrFail();
+        }
     }
 
     public function completeCheckIn(ParentCheckInSession $checkIn, array $completedItems): ParentCheckInSession
     {
+        if ($checkIn->status === CheckInSessionStatus::Completed) {
+            return $checkIn;
+        }
+
+        $validTopicIds = collect($checkIn->items)->pluck('canonical_topic_id')->all();
+        $filteredItems = array_values(array_filter(
+            $completedItems,
+            fn ($item) => in_array($item['canonical_topic_id'] ?? $item, $validTopicIds, true),
+        ));
+
         $checkIn->update([
-            'completed_items' => $completedItems,
+            'completed_items' => $filteredItems,
             'status' => CheckInSessionStatus::Completed,
             'completed_at' => now(),
             'started_at' => $checkIn->started_at ?? now(),
@@ -236,9 +252,7 @@ class ParentCheckInService
 
     private function getVerificationItemsForCheckIn(ParentChildLink $link): array
     {
-        /** @var ParentVerificationService $verificationService */
-        $verificationService = app(ParentVerificationService::class);
-        $queue = $verificationService->getVerificationQueue($link);
+        $queue = $this->verificationService->getVerificationQueue($link);
 
         return $queue->take(3)->map(fn (CanonicalTopic $topic) => [
             'type' => 'verification',
@@ -252,14 +266,14 @@ class ParentCheckInService
     {
         $childUser = $profile->user;
 
-        $weakTopicIds = SpacedRepetitionItem::query()
-            ->where('user_id', $childUser->id)
-            ->where('status', SpacedRepetitionStatus::Active)
-            ->where('interval_days', '<=', 1)
-            ->with('question.topicLinks.canonicalTopic')
-            ->get()
-            ->pluck('question.topicLinks')
-            ->flatten()
+        $weakTopicIds = QuestionTopicLink::query()
+            ->whereIn('question_id', function ($query) use ($childUser) {
+                $query->select('question_id')
+                    ->from('spaced_repetition_items')
+                    ->where('user_id', $childUser->id)
+                    ->where('status', SpacedRepetitionStatus::Active)
+                    ->where('interval_days', '<=', 1);
+            })
             ->pluck('canonical_topic_id')
             ->unique();
 
@@ -333,10 +347,12 @@ class ParentCheckInService
             ->with('studentProfile.user')
             ->get();
 
-        if ($links->count() <= 2) {
+        $linkCount = $links->count();
+
+        if ($linkCount <= 2) {
             return $links->map(fn ($link) => [
                 'link_id' => $link->id,
-                'child_name' => $link->studentProfile->user->name,
+                'child_name' => $link->studentProfile?->user?->name ?? 'Unknown',
                 'scheduled_today' => true,
             ])->toArray();
         }
@@ -345,14 +361,14 @@ class ParentCheckInService
         $plan = [];
 
         foreach ($links->values() as $index => $link) {
-            $schedule = match ($links->count()) {
+            $schedule = match ($linkCount) {
                 3 => $index === 0 ? [1, 3, 5] : ($index === 1 ? [2, 4, 6] : [1, 4, 0]),
                 default => array_map(fn ($d) => ($index + $d * 2) % 7, range(0, 2)),
             };
 
             $plan[] = [
                 'link_id' => $link->id,
-                'child_name' => $link->studentProfile->user->name,
+                'child_name' => $link->studentProfile?->user?->name ?? 'Unknown',
                 'scheduled_today' => in_array($dayOfWeek, $schedule, true),
             ];
         }

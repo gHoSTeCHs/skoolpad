@@ -19,6 +19,7 @@ class ParentChildLink extends Model
 
     protected $fillable = [
         'parent_profile_id',
+        'parent_email',
         'student_profile_id',
         'status',
         'linked_at',

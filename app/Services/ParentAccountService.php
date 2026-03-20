@@ -11,9 +11,10 @@ use App\Models\ParentChildLink;
 use App\Models\ParentProfile;
 use App\Models\StudentProfile;
 use App\Models\User;
-use Illuminate\Database\Eloquent\ModelNotFoundException;
+use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Hash;
 use Illuminate\Validation\ValidationException;
 
 class ParentAccountService
@@ -31,23 +32,19 @@ class ParentAccountService
         ]);
     }
 
-    /**
-     * @param  array<string>  $subjects
-     * @return array{user: User, profile: StudentProfile, link: ParentChildLink}
-     */
+    /** @return array{user: User, profile: StudentProfile, link: ParentChildLink} */
     public function createChildAccount(
         ParentProfile $parentProfile,
         string $childName,
         string $childEmail,
         string $childPassword,
         string $educationLevelId,
-        array $subjects = [],
     ): array {
         return DB::transaction(function () use ($parentProfile, $childName, $childEmail, $childPassword, $educationLevelId) {
             $childUser = User::query()->create([
                 'name' => $childName,
                 'email' => $childEmail,
-                'password' => $childPassword,
+                'password' => Hash::make($childPassword),
                 'account_type' => AccountType::Student,
                 'role' => UserRole::Student,
                 'is_active' => true,
@@ -59,9 +56,6 @@ class ParentAccountService
                 'student_type' => StudentType::Secondary,
                 'education_level_id' => $educationLevelId,
             ]);
-
-            // TODO: Enroll child in subjects when subject enrollment service is built
-            // foreach ($subjects as $subjectId) { ... }
 
             $link = ParentChildLink::query()->create([
                 'parent_profile_id' => $parentProfile->id,
@@ -131,7 +125,7 @@ class ParentAccountService
             && $link->student_profile_id === $requestingUser->studentProfile->id;
 
         if (! $isParentOwner && ! $isStudentOwner) {
-            throw new ModelNotFoundException;
+            throw new AuthorizationException;
         }
 
         if ($link->status === ParentChildLinkStatus::Revoked) {
@@ -158,6 +152,7 @@ class ParentAccountService
     /** @return array{children: Collection, subscription_status: string} */
     public function getParentDashboardSummary(ParentProfile $parentProfile): array
     {
+        $parentProfile->loadMissing('user.activeSubscription.plan');
         $children = $this->getLinkedChildren($parentProfile);
 
         $subscriptionStatus = $parentProfile->user->activeSubscription?->plan?->name ?? 'free';
@@ -172,16 +167,18 @@ class ParentAccountService
     {
         $existingPendingLink = ParentChildLink::query()
             ->where('student_profile_id', $studentProfile->id)
-            ->whereNull('parent_profile_id')
             ->where('status', ParentChildLinkStatus::Pending)
             ->first();
 
         if ($existingPendingLink) {
+            $existingPendingLink->update(['parent_email' => $parentEmail]);
+
             return $existingPendingLink;
         }
 
         return ParentChildLink::query()->create([
             'student_profile_id' => $studentProfile->id,
+            'parent_email' => $parentEmail,
             'status' => ParentChildLinkStatus::Pending,
         ]);
     }
