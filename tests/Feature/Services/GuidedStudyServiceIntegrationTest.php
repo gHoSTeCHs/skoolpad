@@ -9,7 +9,7 @@ use App\Models\ExamTimetableEntry;
 use App\Models\LevelSubject;
 use App\Models\SchemeOfWorkItem;
 use App\Models\StudentProfile;
-use App\Services\GuidedStudyService;
+use App\Services\Student\GuidedStudyService;
 use Illuminate\Support\Carbon;
 
 beforeEach(function () {

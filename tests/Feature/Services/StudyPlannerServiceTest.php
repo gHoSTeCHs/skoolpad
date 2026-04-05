@@ -21,7 +21,7 @@ use App\Models\SchemeOfWorkItem;
 use App\Models\SpacedRepetitionItem;
 use App\Models\StudentCourse;
 use App\Models\StudentProfile;
-use App\Services\StudyPlannerService;
+use App\Services\Student\StudyPlannerService;
 
 beforeEach(function () {
     $this->service = app(StudyPlannerService::class);

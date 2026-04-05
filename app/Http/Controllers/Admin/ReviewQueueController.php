@@ -8,9 +8,11 @@ use App\Enums\ContentSubmissionType;
 use App\Enums\QuestionDifficulty;
 use App\Enums\QuestionType;
 use App\Http\Controllers\Controller;
+use App\Http\Requests\Admin\RejectSubmissionRequest;
+use App\Http\Requests\Admin\TranscribeUploadRequest;
 use App\Models\ContentSubmission;
 use App\Models\Institution;
-use App\Services\ContentReviewService;
+use App\Services\Admin\ContentReviewService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
@@ -125,15 +127,11 @@ class ReviewQueueController extends Controller
         return back()->with('success', 'Submission approved.');
     }
 
-    public function reject(Request $request, ContentSubmission $submission, ContentReviewService $service): RedirectResponse
+    public function reject(RejectSubmissionRequest $request, ContentSubmission $submission, ContentReviewService $service): RedirectResponse
     {
         abort_unless($request->user()->role->hasPermission('review_submissions'), 403);
 
-        $request->validate([
-            'reviewer_notes' => ['required', 'string', 'max:1000'],
-        ]);
-
-        $service->rejectSubmission($submission, $request->user(), $request->string('reviewer_notes'));
+        $service->rejectSubmission($submission, $request->user(), $request->validated('reviewer_notes'));
 
         return back()->with('success', 'Submission rejected.');
     }
@@ -191,25 +189,11 @@ class ReviewQueueController extends Controller
         ]);
     }
 
-    public function transcribe(Request $request, ContentSubmission $submission, ContentReviewService $service): RedirectResponse
+    public function transcribe(TranscribeUploadRequest $request, ContentSubmission $submission, ContentReviewService $service): RedirectResponse
     {
         abort_unless($request->user()->role->hasPermission('review_submissions'), 403);
 
-        $request->validate([
-            'questions' => ['required', 'array', 'min:1'],
-            'questions.*.institution_course_id' => ['required', 'uuid', 'exists:institution_courses,id'],
-            'questions.*.question_type' => ['required', 'string', 'in:mcq,theory,fill_in_blank'],
-            'questions.*.content' => ['required', 'string'],
-            'questions.*.year' => ['nullable', 'integer', 'min:1990', 'max:'.date('Y')],
-            'questions.*.semester' => ['nullable', 'string', 'in:first,second'],
-            'questions.*.difficulty_level' => ['nullable', 'string', 'in:easy,medium,hard'],
-            'questions.*.topic_id' => ['required', 'uuid', 'exists:canonical_topics,id'],
-            'questions.*.options' => ['nullable', 'array'],
-            'questions.*.options.*.content' => ['required_with:questions.*.options', 'string'],
-            'questions.*.options.*.is_correct' => ['required_with:questions.*.options', 'boolean'],
-        ]);
-
-        $service->transcribeUpload($submission, $request->input('questions'), $request->user());
+        $service->transcribeUpload($submission, $request->validated('questions'), $request->user());
 
         return to_route('admin.review-queue.uploads')->with('success', 'Questions transcribed successfully.');
     }

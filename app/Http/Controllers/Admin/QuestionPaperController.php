@@ -74,7 +74,7 @@ class QuestionPaperController extends Controller
 
     public function store(StoreQuestionPaperRequest $request): RedirectResponse
     {
-        $paper = QuestionPaper::create($request->validated());
+        $paper = QuestionPaper::query()->create($request->validated());
 
         return to_route('admin.question-papers.build', $paper)->with('success', 'Paper created. Start building!');
     }

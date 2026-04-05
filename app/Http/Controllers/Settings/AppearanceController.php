@@ -3,8 +3,7 @@
 namespace App\Http\Controllers\Settings;
 
 use App\Http\Controllers\Controller;
-use Illuminate\Http\Request;
-use Illuminate\Validation\Rule;
+use App\Http\Requests\Settings\UpdateAppearanceRequest;
 use Inertia\Inertia;
 use Inertia\Response;
 
@@ -15,11 +14,9 @@ class AppearanceController extends Controller
         return Inertia::render('settings/appearance');
     }
 
-    public function update(Request $request)
+    public function update(UpdateAppearanceRequest $request)
     {
-        $validated = $request->validate([
-            'appearance' => ['required', Rule::in(['light', 'dark', 'reader', 'system'])],
-        ]);
+        $validated = $request->validated();
 
         $request->user()->preference()->updateOrCreate(
             ['user_id' => $request->user()->id],

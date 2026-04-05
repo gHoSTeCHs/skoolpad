@@ -2,8 +2,11 @@
 
 namespace App\Enums;
 
+use App\Concerns\HasSelectOptions;
+
 enum QuestionStatus: string
 {
+    use HasSelectOptions;
     case Draft = 'draft';
     case InReview = 'in_review';
     case Published = 'published';

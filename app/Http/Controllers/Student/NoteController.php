@@ -11,6 +11,7 @@ use App\Models\InstitutionCourse;
 use App\Models\StudentNote;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Gate;
 use Inertia\Inertia;
 use Inertia\Response;
 
@@ -137,9 +138,7 @@ class NoteController extends Controller
 
     public function show(StudentNote $note, Request $request): Response
     {
-        if ($note->user_id !== $request->user()->id) {
-            abort(403);
-        }
+        Gate::authorize('view', $note);
 
         $note->load(['canonicalTopic:id,title', 'institutionCourse:id,course_code,course_title']);
 
@@ -169,9 +168,7 @@ class NoteController extends Controller
 
     public function update(UpdateNoteRequest $request, StudentNote $note): RedirectResponse
     {
-        if ($note->user_id !== $request->user()->id) {
-            abort(403);
-        }
+        Gate::authorize('update', $note);
 
         $note->update($request->validated());
 
@@ -180,9 +177,7 @@ class NoteController extends Controller
 
     public function destroy(StudentNote $note, Request $request): RedirectResponse
     {
-        if ($note->user_id !== $request->user()->id) {
-            abort(403);
-        }
+        Gate::authorize('delete', $note);
 
         $note->delete();
 

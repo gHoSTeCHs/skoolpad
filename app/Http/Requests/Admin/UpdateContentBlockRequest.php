@@ -60,7 +60,7 @@ class UpdateContentBlockRequest extends FormRequest
 
                 $prerequisiteIds = collect($prerequisites)->pluck('id')->filter()->all();
                 if (! empty($prerequisiteIds)) {
-                    $crossTopicCount = ContentBlock::whereIn('id', $prerequisiteIds)
+                    $crossTopicCount = ContentBlock::query()->whereIn('id', $prerequisiteIds)
                         ->where('canonical_topic_id', '!=', $block->canonical_topic_id)
                         ->count();
 

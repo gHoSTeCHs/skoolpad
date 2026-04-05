@@ -14,7 +14,7 @@ use App\Models\QuestionAssessmentLink;
 use App\Models\QuestionTopicLink;
 use App\Models\StudentCourse;
 use App\Models\StudentProfile;
-use App\Services\PracticeService;
+use App\Services\Student\PracticeService;
 
 beforeEach(function () {
     $this->service = app(PracticeService::class);

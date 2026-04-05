@@ -37,8 +37,8 @@ class InstitutionTypeController extends Controller
     public function create(): Response
     {
         return Inertia::render('admin/institution-types/create', [
-            'countries' => Country::orderBy('name')->get(['id', 'name']),
-            'gradingScales' => GradingScale::orderBy('name')->get(['id', 'name']),
+            'countries' => Country::query()->orderBy('name')->get(['id', 'name']),
+            'gradingScales' => GradingScale::query()->orderBy('name')->get(['id', 'name']),
         ]);
     }
 
@@ -49,7 +49,7 @@ class InstitutionTypeController extends Controller
             $data['slug'] = Str::slug($data['name']);
         }
 
-        InstitutionType::create($data);
+        InstitutionType::query()->create($data);
 
         return to_route('admin.institution-types.index')->with('success', 'Institution type created successfully.');
     }
@@ -60,8 +60,8 @@ class InstitutionTypeController extends Controller
 
         return Inertia::render('admin/institution-types/edit', [
             'institutionType' => $institutionType,
-            'countries' => Country::orderBy('name')->get(['id', 'name']),
-            'gradingScales' => GradingScale::orderBy('name')->get(['id', 'name']),
+            'countries' => Country::query()->orderBy('name')->get(['id', 'name']),
+            'gradingScales' => GradingScale::query()->orderBy('name')->get(['id', 'name']),
         ]);
     }
 

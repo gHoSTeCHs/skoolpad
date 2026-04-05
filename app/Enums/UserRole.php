@@ -5,6 +5,7 @@ namespace App\Enums;
 enum UserRole: string
 {
     use \App\Concerns\HasSelectOptions;
+
     case SuperAdmin = 'super_admin';
     case ContentManager = 'content_manager';
     case InstitutionModerator = 'institution_moderator';

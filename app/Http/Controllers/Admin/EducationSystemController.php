@@ -50,7 +50,7 @@ class EducationSystemController extends Controller
     {
         return Inertia::render('admin/education-systems/create', [
             'systemTypes' => EducationSystemType::toSelectOptions(),
-            'countries' => Country::orderBy('name')->get(['id', 'name', 'code']),
+            'countries' => Country::query()->orderBy('name')->get(['id', 'name', 'code']),
         ]);
     }
 
@@ -61,7 +61,7 @@ class EducationSystemController extends Controller
             $data['slug'] = Str::slug($data['name']);
         }
 
-        EducationSystem::create($data);
+        EducationSystem::query()->create($data);
 
         return to_route('admin.education-systems.index')->with('success', 'Education system created successfully.');
     }
@@ -83,8 +83,8 @@ class EducationSystemController extends Controller
 
         return Inertia::render('admin/education-systems/show', [
             'educationSystem' => $educationSystem,
-            'disciplines' => Discipline::orderBy('name')->get(['id', 'name']),
-            'gradingScales' => GradingScale::orderBy('name')->get(['id', 'name']),
+            'disciplines' => Discipline::query()->orderBy('name')->get(['id', 'name']),
+            'gradingScales' => GradingScale::query()->orderBy('name')->get(['id', 'name']),
         ]);
     }
 
@@ -93,7 +93,7 @@ class EducationSystemController extends Controller
         return Inertia::render('admin/education-systems/edit', [
             'educationSystem' => $educationSystem,
             'systemTypes' => EducationSystemType::toSelectOptions(),
-            'countries' => Country::orderBy('name')->get(['id', 'name', 'code']),
+            'countries' => Country::query()->orderBy('name')->get(['id', 'name', 'code']),
         ]);
     }
 

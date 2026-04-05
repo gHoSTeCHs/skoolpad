@@ -2,7 +2,7 @@
 
 use App\Models\ParentChildLink;
 use App\Models\ParentProfile;
-use App\Services\ParentSettingsService;
+use App\Services\ParentDashboard\ParentSettingsService;
 
 beforeEach(function () {
     $this->service = new ParentSettingsService;

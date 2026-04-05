@@ -6,18 +6,22 @@ use App\Concerns\Paginates;
 use App\Enums\ImportStatus;
 use App\Enums\ImportType;
 use App\Http\Controllers\Controller;
-use App\Jobs\ProcessCsvImport;
+use App\Http\Requests\Admin\ImportCsvRequest;
+use App\Http\Requests\Admin\ImportQuestionsRequest;
 use App\Models\ImportLog;
-use App\Services\ContentImportService;
+use App\Services\Admin\ContentImportService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
-use Illuminate\Http\UploadedFile;
 use Inertia\Inertia;
 use Inertia\Response;
 
 class BulkImportController extends Controller
 {
     use Paginates;
+
+    public function __construct(
+        private readonly ContentImportService $importService,
+    ) {}
 
     public function index(): Response
     {
@@ -26,41 +30,30 @@ class BulkImportController extends Controller
         ]);
     }
 
-    public function importTopics(Request $request): RedirectResponse
+    public function importTopics(ImportCsvRequest $request): RedirectResponse
     {
-        $request->validate(['file' => 'required|file|mimes:csv,txt|max:5120']);
-
-        return $this->processImport($request, ImportType::Topics, 'topics');
+        return $this->handleImport($request, ImportType::Topics, 'topics');
     }
 
-    public function importCourseMappings(Request $request): RedirectResponse
+    public function importCourseMappings(ImportCsvRequest $request): RedirectResponse
     {
-        $request->validate(['file' => 'required|file|mimes:csv,txt|max:5120']);
-
-        return $this->processImport($request, ImportType::CourseMappings, 'course_mappings');
+        return $this->handleImport($request, ImportType::CourseMappings, 'course_mappings');
     }
 
-    public function importCourseOfferings(Request $request): RedirectResponse
+    public function importCourseOfferings(ImportCsvRequest $request): RedirectResponse
     {
-        $request->validate(['file' => 'required|file|mimes:csv,txt|max:5120']);
-
-        return $this->processImport($request, ImportType::CourseOfferings, 'course_offerings');
+        return $this->handleImport($request, ImportType::CourseOfferings, 'course_offerings');
     }
 
-    public function importQuestions(Request $request): RedirectResponse
+    public function importQuestions(ImportQuestionsRequest $request): RedirectResponse
     {
-        $request->validate([
-            'file' => 'required|file|mimes:csv,txt|max:5120',
-            'default_status' => 'nullable|string|in:draft,published',
-        ]);
-
         $defaultStatus = $request->input('default_status', 'draft');
 
         if ($defaultStatus === 'published' && ! $request->user()->role->hasPermission('publish_content')) {
             abort(403, 'You do not have permission to publish questions directly.');
         }
 
-        return $this->processImport($request, ImportType::Questions, 'questions', $defaultStatus);
+        return $this->handleImport($request, ImportType::Questions, 'questions', $defaultStatus);
     }
 
     public function history(Request $request): Response
@@ -102,49 +95,20 @@ class BulkImportController extends Controller
         ]);
     }
 
-    private function processImport(Request $request, ImportType $importType, string $validationType, string $defaultStatus = 'draft'): RedirectResponse
+    private function handleImport(Request $request, ImportType $importType, string $validationType, string $defaultStatus = 'draft'): RedirectResponse
     {
-        $rows = $this->parseCsv($request->file('file'));
-        $log = ImportLog::create([
-            'import_type' => $importType,
-            'original_filename' => $request->file('file')->getClientOriginalName(),
-            'status' => ImportStatus::Pending,
-            'total_rows' => count($rows),
-            'processed_by' => $request->user()->id,
-        ]);
+        $log = $this->importService->processImport(
+            $request->file('file'),
+            $importType,
+            $validationType,
+            $defaultStatus,
+            $request->user(),
+        );
 
-        $service = new ContentImportService;
-        $validation = $service->validateCsv($rows, $validationType);
-
-        if (! $validation->isValid) {
-            $log->update([
-                'status' => ImportStatus::Failed,
-                'errors' => $validation->errors,
-            ]);
-
-            return back()->with('importErrors', $validation->errors);
+        if ($log->status === ImportStatus::Failed) {
+            return back()->with('importErrors', $log->errors);
         }
-
-        ProcessCsvImport::dispatch($log->id, $rows, $validationType, $defaultStatus);
 
         return back()->with('success', 'Import queued successfully.');
-    }
-
-    /** @return array<int, array<string, string>> */
-    private function parseCsv(UploadedFile $file): array
-    {
-        $handle = fopen($file->getRealPath(), 'r');
-        $header = fgetcsv($handle);
-        $rows = [];
-
-        while (($data = fgetcsv($handle)) !== false) {
-            if (count($data) === count($header)) {
-                $rows[] = array_combine($header, $data);
-            }
-        }
-
-        fclose($handle);
-
-        return $rows;
     }
 }

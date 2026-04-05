@@ -4,24 +4,27 @@ namespace App\Http\Controllers\Admin;
 
 use App\Enums\TeachingDepth;
 use App\Http\Controllers\Controller;
+use App\Http\Requests\Admin\LoadLevelSubjectRequest;
+use App\Http\Requests\Admin\UpdateCurriculumMappingRequest;
 use App\Models\CanonicalTopic;
 use App\Models\ContentBlock;
 use App\Models\CourseBlockMapping;
 use App\Models\EducationSystem;
-use App\Models\LevelSubject;
+use App\Services\Admin\CourseMappingService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
-use Illuminate\Http\Request;
-use Illuminate\Support\Str;
-use Illuminate\Validation\Rules\Enum;
 use Inertia\Inertia;
 use Inertia\Response;
 
 class CurriculumMappingController extends Controller
 {
+    public function __construct(
+        private readonly CourseMappingService $courseMappingService,
+    ) {}
+
     public function index(): Response
     {
-        $educationSystems = EducationSystem::with([
+        $educationSystems = EducationSystem::query()->with([
             'curriculumTiers' => fn ($q) => $q->orderBy('sort_order'),
             'curriculumTiers.educationLevels' => fn ($q) => $q->orderBy('sort_order'),
             'curriculumSubjects' => fn ($q) => $q->with('discipline:id,name')->orderBy('name'),
@@ -34,24 +37,13 @@ class CurriculumMappingController extends Controller
         ]);
     }
 
-    public function load(Request $request): JsonResponse
+    public function load(LoadLevelSubjectRequest $request): JsonResponse
     {
-        $validated = $request->validate([
-            'education_level_id' => ['required', 'uuid', 'exists:education_levels,id'],
-            'curriculum_subject_id' => ['required', 'uuid', 'exists:curriculum_subjects,id'],
-            'stream_id' => ['nullable', 'uuid', 'exists:streams,id'],
-        ]);
+        $validated = $request->validated();
 
-        $levelSubject = LevelSubject::firstOrCreate(
-            [
-                'education_level_id' => $validated['education_level_id'],
-                'curriculum_subject_id' => $validated['curriculum_subject_id'],
-                'stream_id' => $validated['stream_id'] ?? null,
-            ],
-            ['is_compulsory' => true]
-        );
+        $levelSubject = $this->courseMappingService->findOrCreateLevelSubject($validated);
 
-        $mappings = CourseBlockMapping::where('curriculum_subject_level_id', $levelSubject->id)
+        $mappings = CourseBlockMapping::query()->where('curriculum_subject_level_id', $levelSubject->id)
             ->with('contentBlock:id,title,path,block_type,is_container')
             ->get()
             ->map(fn (CourseBlockMapping $m) => [
@@ -97,38 +89,14 @@ class CurriculumMappingController extends Controller
         ]);
     }
 
-    public function update(Request $request): RedirectResponse
+    public function update(UpdateCurriculumMappingRequest $request): RedirectResponse
     {
-        $validated = $request->validate([
-            'curriculum_subject_level_id' => ['required', 'uuid', 'exists:level_subjects,id'],
-            'mappings' => ['present', 'array'],
-            'mappings.*.content_block_id' => ['required', 'uuid', 'exists:content_blocks,id'],
-            'mappings.*.teaching_depth' => ['required', new Enum(TeachingDepth::class)],
-            'mappings.*.is_core_block' => ['required', 'boolean'],
-        ]);
+        $validated = $request->validated();
 
-        CourseBlockMapping::where('curriculum_subject_level_id', $validated['curriculum_subject_level_id'])
-            ->delete();
-
-        $now = now();
-        $rows = collect($validated['mappings'])->map(fn (array $m) => [
-            'id' => Str::uuid()->toString(),
-            'institution_course_id' => null,
-            'curriculum_subject_level_id' => $validated['curriculum_subject_level_id'],
-            'content_block_id' => $m['content_block_id'],
-            'teaching_depth' => $m['teaching_depth'],
-            'is_core_block' => $m['is_core_block'],
-            'week_start' => null,
-            'week_end' => null,
-            'lecture_hours' => null,
-            'lab_hours' => null,
-            'created_at' => $now,
-            'updated_at' => $now,
-        ])->all();
-
-        if (! empty($rows)) {
-            CourseBlockMapping::insert($rows);
-        }
+        $this->courseMappingService->saveCurriculumBlockMappings(
+            $validated['curriculum_subject_level_id'],
+            $validated['mappings']
+        );
 
         return back()->with('success', 'Curriculum block mappings updated.');
     }

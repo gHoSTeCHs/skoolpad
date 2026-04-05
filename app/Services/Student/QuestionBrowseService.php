@@ -1,6 +1,6 @@
 <?php
 
-namespace App\Services;
+namespace App\Services\Student;
 
 use App\Models\InstitutionCourse;
 use App\Models\Question;
@@ -118,7 +118,7 @@ class QuestionBrowseService
             $topicsQuery->whereHas('question', fn ($q) => $q->forCourse($courseId));
         }
         $topicIds = $topicsQuery->distinct()->pluck('canonical_topic_id');
-        $topics = \App\Models\CanonicalTopic::whereIn('id', $topicIds)
+        $topics = \App\Models\CanonicalTopic::query()->whereIn('id', $topicIds)
             ->orderBy('title')
             ->get(['id', 'title'])
             ->map(fn ($t) => ['id' => $t->id, 'title' => $t->title])

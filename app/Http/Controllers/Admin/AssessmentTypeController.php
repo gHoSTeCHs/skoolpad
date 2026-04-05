@@ -20,7 +20,7 @@ class AssessmentTypeController extends Controller
             $data['slug'] = Str::slug($data['name']);
         }
 
-        AssessmentType::create($data);
+        AssessmentType::query()->create($data);
 
         return to_route('admin.education-systems.show', $educationSystem)->with('success', 'Assessment type created.');
     }

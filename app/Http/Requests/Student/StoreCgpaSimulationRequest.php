@@ -2,7 +2,7 @@
 
 namespace App\Http\Requests\Student;
 
-use App\Services\CgpaSimulatorService;
+use App\Services\Student\CgpaSimulatorService;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
 

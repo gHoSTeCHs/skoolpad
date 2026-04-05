@@ -64,7 +64,7 @@ class CompleteOnboardingRequest extends FormRequest
     private function validateTertiaryRelationships(Validator $validator): void
     {
         if ($this->faculty_id && $this->institution_id) {
-            $faculty = Faculty::find($this->faculty_id);
+            $faculty = Faculty::query()->find($this->faculty_id);
 
             if ($faculty && $faculty->institution_id !== $this->institution_id) {
                 $validator->errors()->add(
@@ -75,7 +75,7 @@ class CompleteOnboardingRequest extends FormRequest
         }
 
         if ($this->department_id && $this->faculty_id) {
-            $department = Department::find($this->department_id);
+            $department = Department::query()->find($this->department_id);
 
             if ($department && $department->faculty_id !== $this->faculty_id) {
                 $validator->errors()->add(
@@ -89,7 +89,7 @@ class CompleteOnboardingRequest extends FormRequest
     private function validateSecondaryRelationships(Validator $validator): void
     {
         if ($this->education_level_id && $this->education_system_id) {
-            $level = EducationLevel::with('curriculumTier')->find($this->education_level_id);
+            $level = EducationLevel::query()->with('curriculumTier')->find($this->education_level_id);
 
             if ($level) {
                 $tier = $level->curriculumTier;
@@ -103,7 +103,7 @@ class CompleteOnboardingRequest extends FormRequest
         }
 
         if ($this->stream_id && $this->education_system_id) {
-            $stream = Stream::find($this->stream_id);
+            $stream = Stream::query()->find($this->stream_id);
 
             if ($stream && $stream->education_system_id !== $this->education_system_id) {
                 $validator->errors()->add(

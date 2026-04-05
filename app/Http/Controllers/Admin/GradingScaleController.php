@@ -50,7 +50,7 @@ class GradingScaleController extends Controller
 
     public function store(StoreGradingScaleRequest $request): RedirectResponse
     {
-        GradingScale::create($request->validated());
+        GradingScale::query()->create($request->validated());
 
         return to_route('admin.grading-scales.index')->with('success', 'Grading scale created successfully.');
     }

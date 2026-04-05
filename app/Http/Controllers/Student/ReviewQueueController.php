@@ -5,8 +5,8 @@ namespace App\Http\Controllers\Student;
 use App\Http\Controllers\Controller;
 use App\Models\InstitutionCourse;
 use App\Models\LevelSubject;
-use App\Services\PracticeService;
 use App\Services\SpacedRepetitionService;
+use App\Services\Student\PracticeService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -60,9 +60,9 @@ class ReviewQueueController extends Controller
         $levelSubject = null;
 
         if ($isSecondary && $selectedSubjectId) {
-            $levelSubject = LevelSubject::find($selectedSubjectId);
+            $levelSubject = LevelSubject::query()->find($selectedSubjectId);
         } elseif ($selectedCourseId) {
-            $course = InstitutionCourse::find($selectedCourseId);
+            $course = InstitutionCourse::query()->find($selectedCourseId);
         }
 
         $dueItems = $this->spacedRepService->getDueItems($user, $course, null, $levelSubject);
@@ -97,7 +97,7 @@ class ReviewQueueController extends Controller
         $selectedCourseId = $request->input('course_id');
         $levelSubjectId = $request->input('level_subject_id');
         $course = $selectedCourseId
-            ? InstitutionCourse::find($selectedCourseId)
+            ? InstitutionCourse::query()->find($selectedCourseId)
             : null;
 
         if ($course) {
@@ -112,7 +112,7 @@ class ReviewQueueController extends Controller
 
         $levelSubject = null;
         if ($levelSubjectId) {
-            $levelSubject = LevelSubject::findOrFail($levelSubjectId);
+            $levelSubject = LevelSubject::query()->findOrFail($levelSubjectId);
             if ($levelSubject->education_level_id !== $profile->education_level_id) {
                 abort(403, 'This subject is not available for your education level.');
             }

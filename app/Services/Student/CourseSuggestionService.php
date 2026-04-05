@@ -1,6 +1,6 @@
 <?php
 
-namespace App\Services;
+namespace App\Services\Student;
 
 use App\Enums\CourseScope;
 use App\Models\InstitutionCourse;

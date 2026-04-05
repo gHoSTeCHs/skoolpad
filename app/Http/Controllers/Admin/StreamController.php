@@ -16,7 +16,7 @@ class StreamController extends Controller
         $data = $request->validated();
         $data['education_system_id'] = $educationSystem->id;
 
-        Stream::create($data);
+        Stream::query()->create($data);
 
         return to_route('admin.education-systems.show', $educationSystem)->with('success', 'Stream created.');
     }

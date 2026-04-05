@@ -1,6 +1,6 @@
 <?php
 
-namespace App\Services;
+namespace App\Services\Admin;
 
 use App\Enums\QuestionStatus;
 use App\Enums\UserRole;
@@ -20,12 +20,12 @@ class AnalyticsService
         $now = Carbon::now();
 
         return [
-            'total_users' => User::count(),
-            'total_students' => User::where('role', UserRole::Student)->count(),
-            'total_staff' => User::where('role', '!=', UserRole::Student)->count(),
-            'new_today' => User::whereDate('created_at', $now->toDateString())->count(),
-            'new_this_week' => User::where('created_at', '>=', $now->startOfWeek())->count(),
-            'new_this_month' => User::where('created_at', '>=', $now->startOfMonth())->count(),
+            'total_users' => User::query()->count(),
+            'total_students' => User::query()->where('role', UserRole::Student)->count(),
+            'total_staff' => User::query()->where('role', '!=', UserRole::Student)->count(),
+            'new_today' => User::query()->whereDate('created_at', $now->toDateString())->count(),
+            'new_this_week' => User::query()->where('created_at', '>=', $now->startOfWeek())->count(),
+            'new_this_month' => User::query()->where('created_at', '>=', $now->startOfMonth())->count(),
             'registrations_trend' => $this->getRegistrationsTrend(14),
             'users_by_institution' => $this->getUsersByInstitution(5),
         ];
@@ -35,14 +35,14 @@ class AnalyticsService
     public function getContentMetrics(): array
     {
         return [
-            'total_questions' => Question::count(),
-            'published_questions' => Question::where('status', QuestionStatus::Published)->count(),
-            'draft_questions' => Question::where('status', QuestionStatus::Draft)->count(),
-            'in_review_questions' => Question::where('status', QuestionStatus::InReview)->count(),
-            'total_topics' => CanonicalTopic::count(),
-            'published_topics' => CanonicalTopic::where('is_published', true)->count(),
-            'total_courses' => InstitutionCourse::count(),
-            'courses_with_questions' => InstitutionCourse::whereHas('questions')->count(),
+            'total_questions' => Question::query()->count(),
+            'published_questions' => Question::query()->where('status', QuestionStatus::Published)->count(),
+            'draft_questions' => Question::query()->where('status', QuestionStatus::Draft)->count(),
+            'in_review_questions' => Question::query()->where('status', QuestionStatus::InReview)->count(),
+            'total_topics' => CanonicalTopic::query()->count(),
+            'published_topics' => CanonicalTopic::query()->where('is_published', true)->count(),
+            'total_courses' => InstitutionCourse::query()->count(),
+            'courses_with_questions' => InstitutionCourse::query()->whereHas('questions')->count(),
             'questions_by_institution' => $this->getQuestionsByInstitution(5),
         ];
     }
@@ -53,9 +53,9 @@ class AnalyticsService
         $now = Carbon::now();
 
         return [
-            'dau' => User::where('last_login_at', '>=', $now->copy()->startOfDay())->count(),
-            'wau' => User::where('last_login_at', '>=', $now->copy()->subDays(7))->count(),
-            'mau' => User::where('last_login_at', '>=', $now->copy()->subDays(30))->count(),
+            'dau' => User::query()->where('last_login_at', '>=', $now->copy()->startOfDay())->count(),
+            'wau' => User::query()->where('last_login_at', '>=', $now->copy()->subDays(7))->count(),
+            'mau' => User::query()->where('last_login_at', '>=', $now->copy()->subDays(30))->count(),
         ];
     }
 

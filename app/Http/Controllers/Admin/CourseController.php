@@ -58,7 +58,7 @@ class CourseController extends Controller
 
         return Inertia::render('admin/courses/index', [
             'courses' => $this->paginated($courses),
-            'institutions' => Institution::orderBy('name')->get(['id', 'name', 'abbreviation']),
+            'institutions' => Institution::query()->orderBy('name')->get(['id', 'name', 'abbreviation']),
             'course_scopes' => CourseScope::toSelectOptions(),
             'filters' => $request->only(['search', 'institution_id', 'level', 'semester', 'course_scope', 'sort', 'direction']),
         ]);
@@ -67,8 +67,8 @@ class CourseController extends Controller
     public function create(): Response
     {
         return Inertia::render('admin/courses/create', [
-            'institutions' => Institution::orderBy('name')->get(['id', 'name', 'abbreviation']),
-            'disciplines' => Discipline::orderBy('name')->get(['id', 'name']),
+            'institutions' => Institution::query()->orderBy('name')->get(['id', 'name', 'abbreviation']),
+            'disciplines' => Discipline::query()->orderBy('name')->get(['id', 'name']),
             'levels' => [100, 200, 300, 400, 500],
             'course_scopes' => CourseScope::toSelectOptions(),
             'semesters' => array_map(fn ($case) => [
@@ -80,7 +80,7 @@ class CourseController extends Controller
 
     public function store(StoreInstitutionCourseRequest $request): RedirectResponse
     {
-        $course = InstitutionCourse::create($request->validated());
+        $course = InstitutionCourse::query()->create($request->validated());
 
         return to_route('admin.courses.edit', $course)->with('success', 'Course created.');
     }
@@ -104,18 +104,18 @@ class CourseController extends Controller
                 'course_scope' => $course->course_scope->value,
                 'description' => $course->description,
             ],
-            'institutions' => Institution::orderBy('name')->get(['id', 'name', 'abbreviation']),
-            'disciplines' => Discipline::orderBy('name')->get(['id', 'name']),
+            'institutions' => Institution::query()->orderBy('name')->get(['id', 'name', 'abbreviation']),
+            'disciplines' => Discipline::query()->orderBy('name')->get(['id', 'name']),
             'levels' => [100, 200, 300, 400, 500],
             'course_scopes' => CourseScope::toSelectOptions(),
             'semesters' => array_map(fn ($case) => [
                 'value' => $case->value,
                 'label' => $case->label(),
             ], Semester::cases()),
-            'faculties' => Faculty::where('institution_id', $course->institution_id)
+            'faculties' => Faculty::query()->where('institution_id', $course->institution_id)
                 ->orderBy('name')
                 ->get(['id', 'name']),
-            'departments' => Department::whereHas('faculty', fn ($q) => $q->where('institution_id', $course->institution_id))
+            'departments' => Department::query()->whereHas('faculty', fn ($q) => $q->where('institution_id', $course->institution_id))
                 ->orderBy('name')
                 ->get(['id', 'name', 'abbreviation', 'faculty_id']),
         ]);

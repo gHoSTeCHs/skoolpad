@@ -61,9 +61,9 @@ class InstitutionController extends Controller
     {
         return Inertia::render('admin/institutions/create', [
             'institutionTypes' => InstitutionType::toSelectOptions(),
-            'institutionTypeModels' => InstitutionTypeModel::orderBy('name')->get(['id', 'name']),
+            'institutionTypeModels' => InstitutionTypeModel::query()->orderBy('name')->get(['id', 'name']),
             'ownershipTypes' => OwnershipType::toSelectOptions(),
-            'countries' => Country::all(),
+            'countries' => Country::query()->get(),
             'gradingScales' => GradingScale::query()->orderBy('name')->get(['id', 'name']),
         ]);
     }
@@ -77,7 +77,7 @@ class InstitutionController extends Controller
         }
         unset($data['logo']);
 
-        Institution::create($data);
+        Institution::query()->create($data);
 
         return to_route('admin.institutions.index')->with('success', 'Institution created successfully.');
     }
@@ -93,14 +93,13 @@ class InstitutionController extends Controller
 
         return Inertia::render('admin/institutions/show', [
             'institution' => $institution,
-            'educationSystems' => EducationSystem::orderBy('name')->get(['id', 'name']),
+            'educationSystems' => EducationSystem::query()->orderBy('name')->get(['id', 'name']),
         ]);
     }
 
-    public function attachEducationSystem(Request $request, Institution $institution): RedirectResponse
+    public function attachEducationSystem(\App\Http\Requests\Admin\AttachEducationSystemRequest $request, Institution $institution): RedirectResponse
     {
-        $request->validate(['education_system_id' => ['required', 'exists:education_systems,id']]);
-        $institution->educationSystems()->syncWithoutDetaching([$request->input('education_system_id')]);
+        $institution->educationSystems()->syncWithoutDetaching([$request->validated('education_system_id')]);
 
         return back()->with('success', 'Education system attached.');
     }
@@ -117,9 +116,9 @@ class InstitutionController extends Controller
         return Inertia::render('admin/institutions/edit', [
             'institution' => $institution,
             'institutionTypes' => InstitutionType::toSelectOptions(),
-            'institutionTypeModels' => InstitutionTypeModel::orderBy('name')->get(['id', 'name']),
+            'institutionTypeModels' => InstitutionTypeModel::query()->orderBy('name')->get(['id', 'name']),
             'ownershipTypes' => OwnershipType::toSelectOptions(),
-            'countries' => Country::all(),
+            'countries' => Country::query()->get(),
             'gradingScales' => GradingScale::query()->orderBy('name')->get(['id', 'name']),
         ]);
     }

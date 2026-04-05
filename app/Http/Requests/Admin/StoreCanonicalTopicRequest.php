@@ -46,7 +46,7 @@ class StoreCanonicalTopicRequest extends FormRequest
         return [
             function (Validator $validator) {
                 if ($this->parent_topic_id) {
-                    $parent = CanonicalTopic::find($this->parent_topic_id);
+                    $parent = CanonicalTopic::query()->find($this->parent_topic_id);
 
                     if ($parent && $parent->discipline_id !== $this->discipline_id) {
                         $validator->errors()->add(

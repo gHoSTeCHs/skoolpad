@@ -19,7 +19,7 @@ use App\Models\SpacedRepetitionItem;
 use App\Models\Stream;
 use App\Models\StudentCourse;
 use App\Models\StudentProfile;
-use App\Services\PracticeService;
+use App\Services\Student\PracticeService;
 
 beforeEach(function () {
     $this->profile = StudentProfile::factory()->create();

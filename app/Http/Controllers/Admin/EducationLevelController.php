@@ -16,7 +16,7 @@ class EducationLevelController extends Controller
         $data = $request->validated();
         $data['curriculum_tier_id'] = $curriculumTier->id;
 
-        EducationLevel::create($data);
+        EducationLevel::query()->create($data);
 
         return to_route('admin.education-systems.show', $curriculumTier->education_system_id)->with('success', 'Education level created.');
     }

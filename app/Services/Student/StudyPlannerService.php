@@ -1,6 +1,6 @@
 <?php
 
-namespace App\Services;
+namespace App\Services\Student;
 
 use App\Enums\PracticeMode;
 use App\Models\BlockCompletion;
@@ -14,6 +14,7 @@ use App\Models\QuestionPaper;
 use App\Models\SchemeOfWorkItem;
 use App\Models\StudentProfile;
 use App\Models\User;
+use App\Services\SpacedRepetitionService;
 use Illuminate\Support\Collection;
 
 class StudyPlannerService

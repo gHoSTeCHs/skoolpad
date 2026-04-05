@@ -7,7 +7,7 @@ use App\Models\Department;
 use App\Models\Faculty;
 use App\Models\Institution;
 use App\Models\InstitutionCourse;
-use App\Services\CourseSuggestionService;
+use App\Services\Student\CourseSuggestionService;
 
 beforeEach(function () {
     $this->service = new CourseSuggestionService;

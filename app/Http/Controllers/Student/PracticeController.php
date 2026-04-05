@@ -14,11 +14,12 @@ use App\Models\LevelSubject;
 use App\Models\PracticeSession;
 use App\Models\Question;
 use App\Models\SpacedRepetitionItem;
-use App\Services\PracticeService;
-use App\Services\StudyPlannerService;
+use App\Services\Student\PracticeService;
+use App\Services\Student\StudyPlannerService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Gate;
 use Inertia\Inertia;
 use Inertia\Response;
 
@@ -131,7 +132,7 @@ class PracticeController extends Controller
             ->pluck('institution_course_id');
 
         if (! empty($validated['question_id'])) {
-            $question = Question::findOrFail($validated['question_id']);
+            $question = Question::query()->findOrFail($validated['question_id']);
 
             if (! $enrolledCourseIds->contains($question->institution_course_id)) {
                 abort(403, 'You are not enrolled in this course.');
@@ -174,7 +175,7 @@ class PracticeController extends Controller
 
     private function startSecondary(\App\Models\User $user, \App\Models\StudentProfile $profile, array $validated): RedirectResponse
     {
-        $levelSubject = LevelSubject::findOrFail($validated['level_subject_id']);
+        $levelSubject = LevelSubject::query()->findOrFail($validated['level_subject_id']);
 
         if ($levelSubject->education_level_id !== $profile->education_level_id) {
             abort(403, 'This subject is not available for your education level.');
@@ -185,7 +186,7 @@ class PracticeController extends Controller
         }
 
         if (! empty($validated['question_id'])) {
-            $question = Question::findOrFail($validated['question_id']);
+            $question = Question::query()->findOrFail($validated['question_id']);
 
             $config = [
                 'level_subject_id' => $levelSubject->id,
@@ -235,11 +236,8 @@ class PracticeController extends Controller
 
     public function show(PracticeSession $session, Request $request): Response|RedirectResponse
     {
+        Gate::authorize('view', $session);
         $user = $request->user();
-
-        if ($session->user_id !== $user->id) {
-            abort(403);
-        }
 
         if ($session->is_resumable
             && ! $session->completed_at
@@ -329,11 +327,7 @@ class PracticeController extends Controller
 
     public function answer(PracticeSession $session, SubmitAnswerRequest $request): JsonResponse
     {
-        $user = $request->user();
-
-        if ($session->user_id !== $user->id) {
-            abort(403);
-        }
+        Gate::authorize('update', $session);
 
         if ($session->completed_at) {
             abort(422, 'Session is already completed.');
@@ -356,7 +350,7 @@ class PracticeController extends Controller
             abort(422, 'Question has already been answered.');
         }
 
-        $question = Question::with('children')->findOrFail($questionId);
+        $question = Question::query()->with('children')->findOrFail($questionId);
 
         $answerData = array_merge($validated, [
             'selected_label' => $validated['selected_label'] ?? ($validated['response_data']['selected_label'] ?? null),
@@ -384,11 +378,7 @@ class PracticeController extends Controller
 
     public function complete(PracticeSession $session, Request $request): RedirectResponse
     {
-        $user = $request->user();
-
-        if ($session->user_id !== $user->id) {
-            abort(403);
-        }
+        Gate::authorize('update', $session);
 
         if ($session->completed_at) {
             return redirect()->route('practice.results', $session);
@@ -401,11 +391,8 @@ class PracticeController extends Controller
 
     public function results(PracticeSession $session, Request $request): Response|RedirectResponse
     {
+        Gate::authorize('view', $session);
         $user = $request->user();
-
-        if ($session->user_id !== $user->id) {
-            abort(403);
-        }
 
         if (! $session->completed_at) {
             return redirect()->route('practice.show', $session);

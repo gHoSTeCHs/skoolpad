@@ -20,7 +20,7 @@ class CurriculumSubjectController extends Controller
             $data['slug'] = Str::slug($data['name']);
         }
 
-        CurriculumSubject::create($data);
+        CurriculumSubject::query()->create($data);
 
         return to_route('admin.education-systems.show', $educationSystem)->with('success', 'Curriculum subject created.');
     }

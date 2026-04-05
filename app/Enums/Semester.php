@@ -2,8 +2,11 @@
 
 namespace App\Enums;
 
+use App\Concerns\HasSelectOptions;
+
 enum Semester: string
 {
+    use HasSelectOptions;
     case First = 'first';
     case Second = 'second';
     case Both = 'both';

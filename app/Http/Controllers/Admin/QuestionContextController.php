@@ -10,7 +10,6 @@ use App\Models\QuestionContext;
 use App\Models\QuestionPaper;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
-use Illuminate\Http\Request;
 
 class QuestionContextController extends Controller
 {
@@ -19,7 +18,7 @@ class QuestionContextController extends Controller
         $data = $request->validated();
         $data['question_paper_id'] = $questionPaper->id;
 
-        QuestionContext::create($data);
+        QuestionContext::query()->create($data);
 
         return back()->with('success', 'Context added.');
     }
@@ -38,18 +37,14 @@ class QuestionContextController extends Controller
         return back()->with('success', 'Context deleted.');
     }
 
-    public function link(Request $request, Question $question): JsonResponse
+    public function link(\App\Http\Requests\Admin\LinkQuestionContextRequest $request, Question $question): JsonResponse
     {
-        $request->validate([
-            'context_id' => ['required', 'uuid', 'exists:question_contexts,id'],
-            'sort_order' => ['nullable', 'integer', 'min:0'],
-            'label' => ['nullable', 'string', 'max:100'],
-        ]);
+        $validated = $request->validated();
 
         $question->contexts()->syncWithoutDetaching([
-            $request->input('context_id') => [
-                'sort_order' => $request->input('sort_order', 0),
-                'label' => $request->input('label'),
+            $validated['context_id'] => [
+                'sort_order' => $validated['sort_order'] ?? 0,
+                'label' => $validated['label'] ?? null,
             ],
         ]);
 

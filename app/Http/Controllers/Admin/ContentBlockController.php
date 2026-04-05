@@ -6,18 +6,22 @@ use App\Enums\BlockDifficultyLevel;
 use App\Enums\BlockType;
 use App\Enums\BloomLevel;
 use App\Http\Controllers\Controller;
+use App\Http\Requests\Admin\ReorderContentBlocksRequest;
 use App\Http\Requests\Admin\StoreContentBlockRequest;
 use App\Http\Requests\Admin\UpdateContentBlockRequest;
 use App\Models\CanonicalTopic;
 use App\Models\ContentBlock;
+use App\Services\Admin\ContentBlockService;
 use Illuminate\Http\RedirectResponse;
-use Illuminate\Http\Request;
-use Illuminate\Support\Facades\DB;
 use Inertia\Inertia;
 use Inertia\Response;
 
 class ContentBlockController extends Controller
 {
+    public function __construct(
+        private readonly ContentBlockService $contentBlockService,
+    ) {}
+
     public function index(CanonicalTopic $topic): Response
     {
         $blocks = $topic->contentBlocks()
@@ -50,29 +54,7 @@ class ContentBlockController extends Controller
 
     public function store(StoreContentBlockRequest $request, CanonicalTopic $topic): RedirectResponse
     {
-        $data = $request->validated();
-        $data['canonical_topic_id'] = $topic->id;
-
-        $parentId = $data['parent_block_id'] ?? null;
-
-        if ($parentId) {
-            $parent = ContentBlock::findOrFail($parentId);
-            $siblingCount = ContentBlock::where('parent_block_id', $parentId)->count();
-            $data['depth_level'] = $parent->depth_level + 1;
-            $data['path'] = $parent->path.'.'.($siblingCount + 1);
-            $data['sort_order'] = $siblingCount + 1;
-
-            if (! $parent->is_container) {
-                $parent->update(['is_container' => true, 'content' => null, 'estimated_read_time' => null]);
-            }
-        } else {
-            $siblingCount = $topic->contentBlocks()->whereNull('parent_block_id')->count();
-            $data['depth_level'] = 0;
-            $data['path'] = (string) ($siblingCount + 1);
-            $data['sort_order'] = $siblingCount + 1;
-        }
-
-        ContentBlock::create($data);
+        $this->contentBlockService->createBlock($topic, $request->validated());
 
         return back()->with('success', 'Block created.');
     }
@@ -91,47 +73,14 @@ class ContentBlockController extends Controller
 
     public function destroy(ContentBlock $block): RedirectResponse
     {
-        $topicId = $block->canonical_topic_id;
-        $parentId = $block->parent_block_id;
-
-        $block->delete();
-
-        if ($parentId) {
-            $remainingChildren = ContentBlock::where('parent_block_id', $parentId)->count();
-            if ($remainingChildren === 0) {
-                ContentBlock::where('id', $parentId)->update(['is_container' => false]);
-            }
-        }
-
-        DB::transaction(function () use ($topicId, $parentId) {
-            ContentBlock::where('canonical_topic_id', $topicId)
-                ->where('parent_block_id', $parentId)
-                ->get()
-                ->each(fn (ContentBlock $b) => $b->updateQuietly(['path' => "tmp_{$b->id}"]));
-
-            $this->recalculatePaths($topicId, $parentId);
-        });
+        $this->contentBlockService->deleteBlock($block);
 
         return back()->with('success', 'Block deleted.');
     }
 
-    public function reorder(Request $request, CanonicalTopic $topic): RedirectResponse
+    public function reorder(ReorderContentBlocksRequest $request, CanonicalTopic $topic): RedirectResponse
     {
-        $validated = $request->validate([
-            'items' => ['required', 'array'],
-            'items.*.id' => ['required', 'uuid', 'exists:content_blocks,id'],
-            'items.*.parent_block_id' => ['nullable', 'uuid', 'exists:content_blocks,id'],
-            'items.*.sort_order' => ['required', 'integer', 'min:1'],
-        ]);
-
-        foreach ($validated['items'] as $item) {
-            ContentBlock::where('id', $item['id'])->update([
-                'parent_block_id' => $item['parent_block_id'],
-                'sort_order' => $item['sort_order'],
-            ]);
-        }
-
-        $this->recalculateAllPaths($topic);
+        $this->contentBlockService->reorderBlocks($topic, $request->validated('items'));
 
         return back()->with('success', 'Blocks reordered.');
     }
@@ -178,48 +127,5 @@ class ContentBlockController extends Controller
                 'children' => $block->children->isNotEmpty() ? $this->buildTree($block->children->sortBy('sort_order')->values()) : [],
             ];
         })->values()->all();
-    }
-
-    private function recalculatePaths(string $topicId, ?string $parentId): void
-    {
-        $siblings = ContentBlock::where('canonical_topic_id', $topicId)
-            ->where('parent_block_id', $parentId)
-            ->orderBy('sort_order')
-            ->get();
-
-        $parentPath = $parentId ? ContentBlock::find($parentId)?->path : null;
-
-        foreach ($siblings as $index => $sibling) {
-            $newOrder = $index + 1;
-            $newPath = $parentPath ? "{$parentPath}.{$newOrder}" : (string) $newOrder;
-            $sibling->update(['sort_order' => $newOrder, 'path' => $newPath]);
-            $this->recalculateChildPaths($sibling);
-        }
-    }
-
-    private function recalculateChildPaths(ContentBlock $block): void
-    {
-        $children = $block->children()->orderBy('sort_order')->get();
-        foreach ($children as $index => $child) {
-            $newOrder = $index + 1;
-            $newPath = "{$block->path}.{$newOrder}";
-            $child->update([
-                'sort_order' => $newOrder,
-                'path' => $newPath,
-                'depth_level' => $block->depth_level + 1,
-            ]);
-            $this->recalculateChildPaths($child);
-        }
-    }
-
-    private function recalculateAllPaths(CanonicalTopic $topic): void
-    {
-        DB::transaction(function () use ($topic) {
-            ContentBlock::where('canonical_topic_id', $topic->id)
-                ->get()
-                ->each(fn (ContentBlock $block) => $block->updateQuietly(['path' => "tmp_{$block->id}"]));
-
-            $this->recalculatePaths($topic->id, null);
-        });
     }
 }

@@ -1,6 +1,6 @@
 <?php
 
-namespace App\Services;
+namespace App\Services\ParentDashboard;
 
 use App\Enums\SpacedRepetitionStatus;
 use App\Enums\TopicCoverageStatus;
@@ -16,6 +16,7 @@ use App\Models\TopicCompletion;
 use App\Models\TopicCoverage;
 use App\Models\User;
 use App\Models\VerificationAttempt;
+use App\Services\Student\PracticeService;
 use Illuminate\Support\Collection;
 
 class ParentVerificationService
@@ -64,6 +65,13 @@ class ParentVerificationService
         ];
     }
 
+    /**
+     * @param array{
+     *     true_false?: array<int, array{statement: string, answer: bool, correct?: bool}>,
+     *     explain_checklist?: array<int, array{criterion: string, checked: bool}>,
+     *     mcq_answers?: array<int, array{question_id: string, selected_label: string, is_correct?: bool}>,
+     * } $responses
+     */
     public function submitVerification(
         ParentChildLink $link,
         string $canonicalTopicId,
@@ -114,6 +122,13 @@ class ParentVerificationService
      * Validates that verification responses are consistent and not suspiciously fast.
      * IMPORTANT: Call this AFTER recomputeCorrectness() — the $responses must contain
      * server-recomputed `correct` fields, not raw client-submitted values.
+     *
+     * @param array{
+     *     true_false?: array<int, array{statement: string, answer: bool, correct?: bool}>,
+     *     explain_checklist?: array<int, array{criterion: string, checked: bool}>,
+     *     mcq_answers?: array<int, array{question_id: string, selected_label: string, is_correct?: bool}>,
+     * } $responses
+     * @return array<int, string>
      */
     public function validateVerificationIntegrity(
         array $responses,

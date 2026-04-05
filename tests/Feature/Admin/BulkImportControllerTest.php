@@ -13,7 +13,7 @@ use App\Models\Question;
 use App\Models\QuestionAnswer;
 use App\Models\QuestionTopicLink;
 use App\Models\User;
-use App\Services\ContentImportService;
+use App\Services\Admin\ContentImportService;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Queue;
 

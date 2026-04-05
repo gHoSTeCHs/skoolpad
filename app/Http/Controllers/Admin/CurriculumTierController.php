@@ -20,7 +20,7 @@ class CurriculumTierController extends Controller
             $data['slug'] = Str::slug($data['name']);
         }
 
-        CurriculumTier::create($data);
+        CurriculumTier::query()->create($data);
 
         return to_route('admin.education-systems.show', $educationSystem)->with('success', 'Curriculum tier created.');
     }

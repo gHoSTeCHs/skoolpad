@@ -1,6 +1,6 @@
 <?php
 
-namespace App\Services;
+namespace App\Services\Admin;
 
 use App\DataTransferObjects\ImportResult;
 use App\DataTransferObjects\ValidationResult;
@@ -23,10 +23,57 @@ use App\Models\InstitutionCourse;
 use App\Models\Question;
 use App\Models\QuestionAnswer;
 use App\Models\QuestionTopicLink;
+use App\Models\User;
+use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Str;
 
 class ContentImportService
 {
+    public function processImport(UploadedFile $file, \App\Enums\ImportType $importType, string $validationType, string $defaultStatus, User $user): ImportLog
+    {
+        $rows = $this->parseCsv($file);
+        $log = ImportLog::query()->create([
+            'import_type' => $importType,
+            'original_filename' => $file->getClientOriginalName(),
+            'status' => \App\Enums\ImportStatus::Pending,
+            'total_rows' => count($rows),
+            'processed_by' => $user->id,
+        ]);
+
+        $validation = $this->validateCsv($rows, $validationType);
+
+        if (! $validation->isValid) {
+            $log->update([
+                'status' => \App\Enums\ImportStatus::Failed,
+                'errors' => $validation->errors,
+            ]);
+
+            return $log;
+        }
+
+        \App\Jobs\ProcessCsvImport::dispatch($log->id, $rows, $validationType, $defaultStatus);
+
+        return $log;
+    }
+
+    /** @return array<int, array<string, string>> */
+    public function parseCsv(UploadedFile $file): array
+    {
+        $handle = fopen($file->getRealPath(), 'r');
+        $header = fgetcsv($handle);
+        $rows = [];
+
+        while (($data = fgetcsv($handle)) !== false) {
+            if (count($data) === count($header)) {
+                $rows[] = array_combine($header, $data);
+            }
+        }
+
+        fclose($handle);
+
+        return $rows;
+    }
+
     /** @param array<int, array<string, string>> $rows */
     public function validateCsv(array $rows, string $importType): ValidationResult
     {
@@ -55,9 +102,9 @@ class ContentImportService
         foreach ($rows as $index => $row) {
             $rowNumber = $index + 2;
             try {
-                $disciplineId = Discipline::where('slug', $row['discipline_slug'])->value('id');
+                $disciplineId = Discipline::query()->where('slug', $row['discipline_slug'])->value('id');
 
-                CanonicalTopic::updateOrCreate(
+                CanonicalTopic::query()->updateOrCreate(
                     [
                         'discipline_id' => $disciplineId,
                         'slug' => Str::slug($row['title']),
@@ -97,17 +144,17 @@ class ContentImportService
         foreach ($rows as $index => $row) {
             $rowNumber = $index + 2;
             try {
-                $institutionId = Institution::where('abbreviation', $row['institution_abbreviation'])->value('id');
-                $institutionCourseId = InstitutionCourse::where('institution_id', $institutionId)
+                $institutionId = Institution::query()->where('abbreviation', $row['institution_abbreviation'])->value('id');
+                $institutionCourseId = InstitutionCourse::query()->where('institution_id', $institutionId)
                     ->where('course_code', $row['course_code'])
                     ->value('id');
-                $disciplineId = Discipline::where('slug', $row['discipline_slug'])->value('id');
-                $canonicalTopicId = CanonicalTopic::where('discipline_id', $disciplineId)
+                $disciplineId = Discipline::query()->where('slug', $row['discipline_slug'])->value('id');
+                $canonicalTopicId = CanonicalTopic::query()->where('discipline_id', $disciplineId)
                     ->where('slug', $row['topic_slug'])
                     ->where('is_published', true)
                     ->value('id');
 
-                CourseTopicMapping::updateOrCreate(
+                CourseTopicMapping::query()->updateOrCreate(
                     [
                         'institution_course_id' => $institutionCourseId,
                         'canonical_topic_id' => $canonicalTopicId,
@@ -144,15 +191,15 @@ class ContentImportService
         foreach ($rows as $index => $row) {
             $rowNumber = $index + 2;
             try {
-                $institutionId = Institution::where('abbreviation', $row['institution_abbreviation'])->value('id');
-                $institutionCourseId = InstitutionCourse::where('institution_id', $institutionId)
+                $institutionId = Institution::query()->where('abbreviation', $row['institution_abbreviation'])->value('id');
+                $institutionCourseId = InstitutionCourse::query()->where('institution_id', $institutionId)
                     ->where('course_code', $row['course_code'])
                     ->value('id');
-                $departmentId = Department::where('abbreviation', $row['department_abbreviation'])
+                $departmentId = Department::query()->where('abbreviation', $row['department_abbreviation'])
                     ->whereHas('faculty', fn ($q) => $q->where('institution_id', $institutionId))
                     ->value('id');
 
-                CourseDepartmentOffering::updateOrCreate(
+                CourseDepartmentOffering::query()->updateOrCreate(
                     [
                         'institution_course_id' => $institutionCourseId,
                         'department_id' => $departmentId,
@@ -197,7 +244,7 @@ class ContentImportService
                 }
             }
 
-            if (! empty($row['discipline_slug']) && ! Discipline::where('slug', $row['discipline_slug'])->value('id')) {
+            if (! empty($row['discipline_slug']) && ! Discipline::query()->where('slug', $row['discipline_slug'])->value('id')) {
                 $errors[] = "Row {$rowNumber}: Discipline '{$row['discipline_slug']}' not found.";
             }
 
@@ -229,11 +276,11 @@ class ContentImportService
             }
 
             if (! empty($row['institution_abbreviation'])) {
-                $institutionId = Institution::where('abbreviation', $row['institution_abbreviation'])->value('id');
+                $institutionId = Institution::query()->where('abbreviation', $row['institution_abbreviation'])->value('id');
                 if (! $institutionId) {
                     $errors[] = "Row {$rowNumber}: Institution '{$row['institution_abbreviation']}' not found.";
                 } elseif (! empty($row['course_code'])) {
-                    $courseId = InstitutionCourse::where('institution_id', $institutionId)
+                    $courseId = InstitutionCourse::query()->where('institution_id', $institutionId)
                         ->where('course_code', $row['course_code'])
                         ->value('id');
                     if (! $courseId) {
@@ -243,11 +290,11 @@ class ContentImportService
             }
 
             if (! empty($row['discipline_slug'])) {
-                $disciplineId = Discipline::where('slug', $row['discipline_slug'])->value('id');
+                $disciplineId = Discipline::query()->where('slug', $row['discipline_slug'])->value('id');
                 if (! $disciplineId) {
                     $errors[] = "Row {$rowNumber}: Discipline '{$row['discipline_slug']}' not found.";
                 } elseif (! empty($row['topic_slug'])) {
-                    $topicId = CanonicalTopic::where('discipline_id', $disciplineId)
+                    $topicId = CanonicalTopic::query()->where('discipline_id', $disciplineId)
                         ->where('slug', $row['topic_slug'])
                         ->where('is_published', true)
                         ->value('id');
@@ -288,12 +335,12 @@ class ContentImportService
             }
 
             if (! empty($row['institution_abbreviation'])) {
-                $institutionId = Institution::where('abbreviation', $row['institution_abbreviation'])->value('id');
+                $institutionId = Institution::query()->where('abbreviation', $row['institution_abbreviation'])->value('id');
                 if (! $institutionId) {
                     $errors[] = "Row {$rowNumber}: Institution '{$row['institution_abbreviation']}' not found.";
                 } else {
                     if (! empty($row['course_code'])) {
-                        $course = InstitutionCourse::where('institution_id', $institutionId)
+                        $course = InstitutionCourse::query()->where('institution_id', $institutionId)
                             ->where('course_code', $row['course_code'])
                             ->first(['id', 'course_scope']);
                         if (! $course) {
@@ -304,7 +351,7 @@ class ContentImportService
                     }
 
                     if (! empty($row['department_abbreviation'])) {
-                        $departmentId = Department::where('abbreviation', $row['department_abbreviation'])
+                        $departmentId = Department::query()->where('abbreviation', $row['department_abbreviation'])
                             ->whereHas('faculty', fn ($q) => $q->where('institution_id', $institutionId))
                             ->value('id');
                         if (! $departmentId) {
@@ -334,15 +381,15 @@ class ContentImportService
         foreach ($rows as $index => $row) {
             $rowNumber = $index + 2;
             try {
-                $institutionId = Institution::where('abbreviation', $row['institution_abbreviation'])->value('id');
-                $institutionCourseId = InstitutionCourse::where('institution_id', $institutionId)
+                $institutionId = Institution::query()->where('abbreviation', $row['institution_abbreviation'])->value('id');
+                $institutionCourseId = InstitutionCourse::query()->where('institution_id', $institutionId)
                     ->where('course_code', $row['course_code'])
                     ->value('id');
-                $topicId = CanonicalTopic::where('slug', $row['topic_slug'])
+                $topicId = CanonicalTopic::query()->where('slug', $row['topic_slug'])
                     ->where('is_published', true)
                     ->value('id');
 
-                $question = Question::create([
+                $question = Question::query()->create([
                     'institution_course_id' => $institutionCourseId,
                     'question_type' => $row['question_type'],
                     'content' => $row['content'],
@@ -359,14 +406,14 @@ class ContentImportService
                     $question->update(['response_config' => $this->buildMcqResponseConfig($row)]);
                 }
 
-                QuestionTopicLink::create([
+                QuestionTopicLink::query()->create([
                     'question_id' => $question->id,
                     'canonical_topic_id' => $topicId,
                     'is_primary' => true,
                 ]);
 
                 if (! empty($row['quick_answer'])) {
-                    QuestionAnswer::create([
+                    QuestionAnswer::query()->create([
                         'question_id' => $question->id,
                         'depth_level' => AnswerDepthLevel::Quick,
                         'content' => $this->markdownToTiptap($row['quick_answer']),
@@ -377,7 +424,7 @@ class ContentImportService
                 }
 
                 if (! empty($row['standard_answer'])) {
-                    QuestionAnswer::create([
+                    QuestionAnswer::query()->create([
                         'question_id' => $question->id,
                         'depth_level' => AnswerDepthLevel::Standard,
                         'content' => $this->markdownToTiptap($row['standard_answer']),
@@ -452,11 +499,11 @@ class ContentImportService
             }
 
             if (! empty($row['institution_abbreviation'])) {
-                $institutionId = Institution::where('abbreviation', $row['institution_abbreviation'])->value('id');
+                $institutionId = Institution::query()->where('abbreviation', $row['institution_abbreviation'])->value('id');
                 if (! $institutionId) {
                     $errors[] = "Row {$rowNumber}: Institution '{$row['institution_abbreviation']}' not found.";
                 } elseif (! empty($row['course_code'])) {
-                    $courseId = InstitutionCourse::where('institution_id', $institutionId)
+                    $courseId = InstitutionCourse::query()->where('institution_id', $institutionId)
                         ->where('course_code', $row['course_code'])
                         ->value('id');
                     if (! $courseId) {
@@ -466,7 +513,7 @@ class ContentImportService
             }
 
             if (! empty($row['topic_slug'])) {
-                $topicId = CanonicalTopic::where('slug', $row['topic_slug'])
+                $topicId = CanonicalTopic::query()->where('slug', $row['topic_slug'])
                     ->where('is_published', true)
                     ->value('id');
                 if (! $topicId) {

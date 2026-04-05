@@ -1,6 +1,6 @@
 <?php
 
-namespace App\Services;
+namespace App\Services\ParentDashboard;
 
 use App\Enums\ParentChildLinkStatus;
 use App\Models\ParentChildLink;

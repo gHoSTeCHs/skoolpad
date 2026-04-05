@@ -6,7 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Http\Requests\ParentDashboard\UpdateChildStudyDurationRequest;
 use App\Http\Requests\ParentDashboard\UpdateNotificationPreferencesRequest;
 use App\Models\ParentChildLink;
-use App\Services\ParentSettingsService;
+use App\Services\ParentDashboard\ParentSettingsService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Inertia\Inertia;

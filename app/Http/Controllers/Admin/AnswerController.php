@@ -49,7 +49,7 @@ class AnswerController extends Controller
         $data['question_id'] = $question->id;
         $data['created_by'] = $request->user()->id;
 
-        QuestionAnswer::create($data);
+        QuestionAnswer::query()->create($data);
 
         return back()->with('success', 'Answer saved.');
     }

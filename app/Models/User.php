@@ -137,7 +137,7 @@ class User extends Authenticatable
 
     public function activeSubscription(): HasOne
     {
-        return $this->hasOne(UserSubscription::class)->where('status', 'active');
+        return $this->hasOne(UserSubscription::class)->where('status', \App\Enums\SubscriptionStatus::Active);
     }
 
     public function cgpaSimulations(): HasMany

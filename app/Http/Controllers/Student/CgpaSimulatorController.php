@@ -4,13 +4,16 @@ namespace App\Http\Controllers\Student;
 
 use App\Concerns\Paginates;
 use App\Http\Controllers\Controller;
+use App\Http\Requests\Student\CalculateCgpaRequest;
+use App\Http\Requests\Student\ReverseCalculateCgpaRequest;
 use App\Http\Requests\Student\StoreCgpaSimulationRequest;
 use App\Http\Requests\Student\UpdateCgpaSimulationRequest;
 use App\Models\CgpaSimulation;
-use App\Services\CgpaSimulatorService;
+use App\Services\Student\CgpaSimulatorService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Gate;
 use Inertia\Inertia;
 use Inertia\Response;
 
@@ -118,9 +121,7 @@ class CgpaSimulatorController extends Controller
 
     public function update(UpdateCgpaSimulationRequest $request, CgpaSimulation $simulation): RedirectResponse
     {
-        if ($simulation->user_id !== $request->user()->id) {
-            abort(403);
-        }
+        Gate::authorize('update', $simulation);
 
         $gradingScale = $this->service->getGradingScale($request->user());
 
@@ -149,9 +150,7 @@ class CgpaSimulatorController extends Controller
 
     public function destroy(CgpaSimulation $simulation, Request $request): RedirectResponse
     {
-        if ($simulation->user_id !== $request->user()->id) {
-            abort(403);
-        }
+        Gate::authorize('delete', $simulation);
 
         $simulation->delete();
 
@@ -159,15 +158,9 @@ class CgpaSimulatorController extends Controller
             ->with('success', 'Simulation deleted.');
     }
 
-    public function calculate(Request $request): JsonResponse
+    public function calculate(CalculateCgpaRequest $request): JsonResponse
     {
-        $validated = $request->validate([
-            'current_cgpa' => ['required', 'numeric', 'min:0'],
-            'current_credit_hours' => ['required', 'integer', 'min:0'],
-            'projected_grades' => ['required', 'array', 'min:1'],
-            'projected_grades.*.credit_units' => ['required', 'integer', 'min:1'],
-            'projected_grades.*.grade' => ['required', 'string'],
-        ]);
+        $validated = $request->validated();
 
         $gradingScale = $this->service->getGradingScale($request->user());
 
@@ -185,14 +178,9 @@ class CgpaSimulatorController extends Controller
         return response()->json($result);
     }
 
-    public function reverseCalculate(Request $request): JsonResponse
+    public function reverseCalculate(ReverseCalculateCgpaRequest $request): JsonResponse
     {
-        $validated = $request->validate([
-            'current_cgpa' => ['required', 'numeric', 'min:0'],
-            'current_credit_hours' => ['required', 'integer', 'min:0'],
-            'target_cgpa' => ['required', 'numeric', 'min:0'],
-            'remaining_credits' => ['required', 'integer', 'min:0'],
-        ]);
+        $validated = $request->validated();
 
         $gradingScale = $this->service->getGradingScale($request->user());
 

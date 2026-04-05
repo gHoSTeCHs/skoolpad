@@ -10,7 +10,7 @@ use App\Models\QuestionTopicLink;
 use App\Models\SpacedRepetitionItem;
 use App\Models\TopicCompletion;
 use App\Models\VerificationAttempt;
-use App\Services\ParentVerificationService;
+use App\Services\ParentDashboard\ParentVerificationService;
 
 beforeEach(function () {
     $this->service = app(ParentVerificationService::class);

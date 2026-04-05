@@ -2,34 +2,34 @@
 
 namespace App\Http\Controllers\Student;
 
-use App\Enums\AcademicStatus;
-use App\Enums\Semester;
-use App\Enums\StudentType;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Student\CompleteOnboardingRequest;
+use App\Http\Requests\Student\CourseSuggestionsRequest;
+use App\Http\Requests\Student\SearchCoursesRequest;
 use App\Models\AssessmentType;
 use App\Models\Country;
 use App\Models\CurriculumTier;
 use App\Models\EducationLevel;
 use App\Models\EducationSystem;
-use App\Models\ExamGoal;
 use App\Models\Faculty;
 use App\Models\Institution;
 use App\Models\InstitutionCourse;
 use App\Models\LevelSubject;
 use App\Models\Stream;
-use App\Models\StudentCourse;
-use App\Models\StudentProfile;
-use App\Services\CourseSuggestionService;
+use App\Services\Student\CourseSuggestionService;
+use App\Services\Student\OnboardingService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\DB;
 use Inertia\Inertia;
 use Inertia\Response;
 
 class OnboardingController extends Controller
 {
+    public function __construct(
+        private readonly OnboardingService $onboardingService,
+    ) {}
+
     public function show(Request $request): Response|RedirectResponse
     {
         if ($request->user()->studentProfile) {
@@ -42,8 +42,8 @@ class OnboardingController extends Controller
             ->get(['id', 'name', 'code']);
 
         return Inertia::render('onboarding/index', [
-            'semester' => $this->currentSemester(),
-            'academic_year' => $this->currentAcademicYear(),
+            'semester' => $this->onboardingService->currentSemester(),
+            'academic_year' => $this->onboardingService->currentAcademicYear(),
             'countries' => $countries,
         ]);
     }
@@ -53,81 +53,12 @@ class OnboardingController extends Controller
         $validated = $request->validated();
 
         if ($validated['student_type'] === 'tertiary') {
-            $this->storeTertiary($request, $validated);
+            $this->onboardingService->createTertiaryProfile($request->user(), $validated);
         } else {
-            $this->storeSecondary($request, $validated);
+            $this->onboardingService->createSecondaryProfile($request->user(), $validated);
         }
 
         return redirect()->route('dashboard');
-    }
-
-    /** @param array<string, mixed> $validated */
-    private function storeTertiary(CompleteOnboardingRequest $request, array $validated): void
-    {
-        DB::transaction(function () use ($request, $validated) {
-            $profile = StudentProfile::create([
-                'user_id' => $request->user()->id,
-                'student_type' => StudentType::Tertiary,
-                'institution_id' => $validated['institution_id'],
-                'faculty_id' => $validated['faculty_id'],
-                'department_id' => $validated['department_id'],
-                'level' => $validated['level'],
-                'matric_number' => $validated['matric_number'] ?? null,
-                'admission_year' => $validated['admission_year'] ?? null,
-                'study_preferences' => ['daily_goal_minutes' => 30],
-                'academic_status' => AcademicStatus::Active,
-                'invite_code' => $this->generateInviteCode(),
-            ]);
-
-            $semester = $this->currentSemester();
-            $academicYear = $this->currentAcademicYear();
-
-            foreach ($validated['course_ids'] as $courseId) {
-                StudentCourse::create([
-                    'student_profile_id' => $profile->id,
-                    'institution_course_id' => $courseId,
-                    'semester' => $semester,
-                    'academic_year' => $academicYear,
-                ]);
-            }
-        });
-    }
-
-    /** @param array<string, mixed> $validated */
-    private function storeSecondary(CompleteOnboardingRequest $request, array $validated): void
-    {
-        $profile = StudentProfile::create([
-            'user_id' => $request->user()->id,
-            'student_type' => StudentType::Secondary,
-            'education_system_id' => $validated['education_system_id'],
-            'education_level_id' => $validated['education_level_id'],
-            'stream_id' => $validated['stream_id'] ?? null,
-            'school_name' => $validated['school_name'] ?? null,
-            'state_or_region' => $validated['state_or_region'] ?? null,
-            'exam_goals' => $validated['exam_goals'] ?? null,
-            'study_preferences' => ['daily_goal_minutes' => 30],
-            'academic_status' => AcademicStatus::Active,
-            'invite_code' => $this->generateInviteCode(),
-        ]);
-
-        if (! empty($validated['exam_goals'])) {
-            foreach ($validated['exam_goals'] as $assessmentTypeId) {
-                ExamGoal::create([
-                    'user_id' => $request->user()->id,
-                    'assessment_type_id' => $assessmentTypeId,
-                    'is_active' => true,
-                ]);
-            }
-        }
-    }
-
-    private function generateInviteCode(): string
-    {
-        do {
-            $code = strtoupper(substr(str_replace(['0', 'O', 'I', 'L'], '', bin2hex(random_bytes(4))), 0, 6));
-        } while (StudentProfile::where('invite_code', $code)->exists());
-
-        return $code;
     }
 
     public function searchInstitutions(Request $request): JsonResponse
@@ -160,19 +91,15 @@ class OnboardingController extends Controller
         );
     }
 
-    public function courseSuggestions(Request $request, CourseSuggestionService $service): JsonResponse
+    public function courseSuggestions(CourseSuggestionsRequest $request, CourseSuggestionService $service): JsonResponse
     {
-        $request->validate([
-            'institution_id' => ['required', 'string', 'exists:institutions,id'],
-            'department_id' => ['required', 'string', 'exists:departments,id'],
-            'level' => ['required', 'string'],
-        ]);
+        $validated = $request->validated();
 
         $courses = $service->getCoursesForStudent(
-            $request->input('institution_id'),
-            $request->input('department_id'),
-            $request->input('level'),
-            $this->currentSemester(),
+            $validated['institution_id'],
+            $validated['department_id'],
+            $validated['level'],
+            $this->onboardingService->currentSemester(),
         );
 
         return response()->json($courses->map(fn ($c) => [
@@ -185,16 +112,13 @@ class OnboardingController extends Controller
         ])->values());
     }
 
-    public function searchCourses(Request $request): JsonResponse
+    public function searchCourses(SearchCoursesRequest $request): JsonResponse
     {
-        $request->validate([
-            'institution_id' => ['required', 'string', 'exists:institutions,id'],
-            'q' => ['required', 'string', 'min:2'],
-        ]);
+        $validated = $request->validated();
 
         $courses = InstitutionCourse::query()
-            ->where('institution_id', $request->input('institution_id'))
-            ->search($request->input('q'))
+            ->where('institution_id', $validated['institution_id'])
+            ->search($validated['q'])
             ->orderBy('course_code')
             ->limit(20)
             ->get(['id', 'course_code', 'course_title', 'credit_units', 'semester', 'is_elective']);
@@ -278,24 +202,5 @@ class OnboardingController extends Controller
         return response()->json([
             'level_progression' => $institutionType?->level_progression ?? [],
         ]);
-    }
-
-    private function currentSemester(): string
-    {
-        $month = (int) now()->format('n');
-
-        return $month >= 9 ? Semester::First->value : Semester::Second->value;
-    }
-
-    private function currentAcademicYear(): string
-    {
-        $month = (int) now()->format('n');
-        $year = (int) now()->format('Y');
-
-        if ($month >= 9) {
-            return $year.'/'.($year + 1);
-        }
-
-        return ($year - 1).'/'.$year;
     }
 }

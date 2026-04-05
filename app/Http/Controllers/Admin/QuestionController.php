@@ -9,10 +9,12 @@ use App\Enums\QuestionSource;
 use App\Enums\QuestionStatus;
 use App\Enums\QuestionType;
 use App\Http\Controllers\Controller;
+use App\Http\Requests\Admin\ReorderQuestionsRequest;
 use App\Http\Requests\Admin\StoreQuestionRequest;
 use App\Http\Requests\Admin\UpdateQuestionRequest;
 use App\Models\Institution;
 use App\Models\Question;
+use App\Services\Admin\QuestionService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -22,6 +24,10 @@ use Inertia\Response;
 class QuestionController extends Controller
 {
     use Paginates;
+
+    public function __construct(
+        private readonly QuestionService $questionService,
+    ) {}
 
     public function index(Request $request): Response
     {
@@ -108,26 +114,18 @@ class QuestionController extends Controller
         ]);
 
         $data['created_by'] = $request->user()->id;
+        $data = $this->questionService->prepareQuestionData($data);
 
-        if (! empty($data['parent_question_id'])) {
-            $parent = Question::find($data['parent_question_id']);
-            $data['depth_level'] = $parent ? ($parent->depth_level ?? 0) + 1 : 0;
-        }
-
-        $data['sort_order'] = Question::where('question_section_id', $data['question_section_id'] ?? null)
-            ->where('parent_question_id', $data['parent_question_id'] ?? null)
-            ->count();
-
-        $question = Question::create($data);
+        $question = Question::query()->create($data);
 
         $topicIds = $request->validated('topic_ids');
         $primaryTopicId = $request->validated('primary_topic_id');
         if (! empty($topicIds)) {
-            $this->syncTopicLinks($question, $topicIds, $primaryTopicId);
+            $this->questionService->syncTopicLinks($question, $topicIds, $primaryTopicId);
         }
 
         if ($request->has('block_links')) {
-            $this->syncBlockLinks($question, $request->validated('block_links') ?? []);
+            $this->questionService->syncBlockLinks($question, $request->validated('block_links') ?? []);
         }
 
         return to_route('admin.questions.edit', $question)->with('success', 'Question created.');
@@ -192,64 +190,26 @@ class QuestionController extends Controller
             'bloom_level', 'source', 'status', 'response_config',
         ]);
 
-        if (isset($data['status']) && $data['status'] === QuestionStatus::Published->value && $question->published_at === null) {
-            $data['published_at'] = now();
-            $data['reviewed_by'] = $request->user()->id;
-        }
-
+        $data = $this->questionService->markPublishedIfNeeded($question, $data, $request->user());
         $question->update($data);
 
         $topicIds = $request->validated('topic_ids');
         $primaryTopicId = $request->validated('primary_topic_id');
         if (! empty($topicIds)) {
-            $this->syncTopicLinks($question, $topicIds, $primaryTopicId);
+            $this->questionService->syncTopicLinks($question, $topicIds, $primaryTopicId);
         }
 
         if ($request->has('block_links')) {
-            $this->syncBlockLinks($question, $request->validated('block_links') ?? []);
+            $this->questionService->syncBlockLinks($question, $request->validated('block_links') ?? []);
         }
 
         return to_route('admin.questions.edit', $question)->with('success', 'Question updated.');
     }
 
-    public function reorder(Request $request): JsonResponse
+    public function reorder(ReorderQuestionsRequest $request): JsonResponse
     {
-        $request->validate([
-            'questions' => ['required', 'array'],
-            'questions.*.id' => ['required', 'uuid', 'exists:questions,id'],
-            'questions.*.sort_order' => ['required', 'integer', 'min:0'],
-        ]);
-
-        foreach ($request->input('questions') as $item) {
-            Question::where('id', $item['id'])->update(['sort_order' => $item['sort_order']]);
-        }
+        $this->questionService->reorderQuestions($request->validated('questions'));
 
         return response()->json(['message' => 'Questions reordered.']);
-    }
-
-    /** @param array<int, string> $topicIds */
-    private function syncTopicLinks(Question $question, array $topicIds, ?string $primaryTopicId): void
-    {
-        $question->topicLinks()->delete();
-
-        foreach ($topicIds as $topicId) {
-            $question->topicLinks()->create([
-                'canonical_topic_id' => $topicId,
-                'is_primary' => $topicId === $primaryTopicId,
-            ]);
-        }
-    }
-
-    /** @param array<int, array{content_block_id: string, relevance: string}> $blockLinks */
-    private function syncBlockLinks(Question $question, array $blockLinks): void
-    {
-        $question->questionBlockLinks()->delete();
-
-        foreach ($blockLinks as $link) {
-            $question->questionBlockLinks()->create([
-                'content_block_id' => $link['content_block_id'],
-                'relevance' => $link['relevance'],
-            ]);
-        }
     }
 }

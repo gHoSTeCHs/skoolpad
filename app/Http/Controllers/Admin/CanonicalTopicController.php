@@ -52,7 +52,7 @@ class CanonicalTopicController extends Controller
 
         return Inertia::render('admin/topics/index', [
             'topics' => $this->paginated($topics),
-            'disciplines' => Discipline::all(['id', 'name']),
+            'disciplines' => Discipline::query()->get(['id', 'name']),
             'filters' => $request->only(['search', 'discipline_id', 'difficulty_level', 'is_published', 'sort', 'direction']),
         ]);
     }
@@ -60,7 +60,7 @@ class CanonicalTopicController extends Controller
     public function create(): Response
     {
         return Inertia::render('admin/topics/create', [
-            'disciplines' => Discipline::all(['id', 'name']),
+            'disciplines' => Discipline::query()->get(['id', 'name']),
             'difficulty_levels' => TopicDifficulty::toSelectOptions(),
         ]);
     }
@@ -75,7 +75,7 @@ class CanonicalTopicController extends Controller
             $data['published_at'] = now();
         }
 
-        $topic = CanonicalTopic::create($data);
+        $topic = CanonicalTopic::query()->create($data);
 
         if ($prerequisites) {
             $topic->syncPrerequisites($prerequisites);
@@ -109,7 +109,7 @@ class CanonicalTopicController extends Controller
                     'is_hard_prerequisite' => (bool) $prereq->pivot->is_hard_prerequisite,
                 ]),
             ],
-            'disciplines' => Discipline::all(['id', 'name']),
+            'disciplines' => Discipline::query()->get(['id', 'name']),
             'difficulty_levels' => TopicDifficulty::toSelectOptions(),
             'available_topics' => CanonicalTopic::query()
                 ->where('discipline_id', $topic->discipline_id)

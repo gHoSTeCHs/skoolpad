@@ -530,7 +530,7 @@ class DatabaseSeeder extends Seeder
         SubscriptionPlan::create([
             'name' => 'free',
             'display_name' => 'Free',
-            'plan_type' => 'student',
+            'plan_type' => \App\Enums\PlanType::Student,
             'price_ngn' => 0,
             'billing_period' => BillingPeriod::Monthly,
             'features' => [
@@ -545,7 +545,7 @@ class DatabaseSeeder extends Seeder
         SubscriptionPlan::create([
             'name' => 'scholar',
             'display_name' => 'Scholar',
-            'plan_type' => 'student',
+            'plan_type' => \App\Enums\PlanType::Student,
             'price_ngn' => 200000,
             'billing_period' => BillingPeriod::Monthly,
             'features' => [
@@ -560,7 +560,7 @@ class DatabaseSeeder extends Seeder
         SubscriptionPlan::create([
             'name' => 'scholar-pro',
             'display_name' => 'Scholar Pro',
-            'plan_type' => 'student',
+            'plan_type' => \App\Enums\PlanType::Student,
             'price_ngn' => 500000,
             'billing_period' => BillingPeriod::Monthly,
             'features' => [
