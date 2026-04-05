@@ -1,6 +1,6 @@
 <?php
 
-namespace App\Services;
+namespace App\Services\Student;
 
 use App\Models\BlockCompletion;
 use App\Models\CalendarTerm;
@@ -11,6 +11,7 @@ use App\Models\SchemeOfWorkItem;
 use App\Models\StudentProfile;
 use App\Models\TopicCompletion;
 use App\Models\User;
+use App\Services\SpacedRepetitionService;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Collection;
 
@@ -235,12 +236,12 @@ class GuidedStudyService
             ])
             ->get();
 
-        $completedTopicIds = TopicCompletion::where('user_id', $user->id)
+        $completedTopicIds = TopicCompletion::query()->where('user_id', $user->id)
             ->whereIn('canonical_topic_id', $schemeItems->pluck('canonical_topic_id')->filter())
             ->pluck('canonical_topic_id')
             ->toArray();
 
-        $completedBlockIds = BlockCompletion::where('user_id', $user->id)
+        $completedBlockIds = BlockCompletion::query()->where('user_id', $user->id)
             ->whereIn('content_block_id', $schemeItems->pluck('content_block_id')->filter())
             ->pluck('content_block_id')
             ->toArray();
@@ -354,7 +355,7 @@ class GuidedStudyService
             return;
         }
 
-        $completedBlockIds = BlockCompletion::where('user_id', $user->id)
+        $completedBlockIds = BlockCompletion::query()->where('user_id', $user->id)
             ->pluck('content_block_id')
             ->toArray();
 

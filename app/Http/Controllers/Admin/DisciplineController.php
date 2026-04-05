@@ -44,7 +44,7 @@ class DisciplineController extends Controller
             $data['slug'] = Str::slug($data['name']);
         }
 
-        Discipline::create($data);
+        Discipline::query()->create($data);
 
         return to_route('admin.disciplines.index')->with('success', 'Discipline created successfully.');
     }

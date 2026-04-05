@@ -6,7 +6,7 @@ use App\Concerns\Paginates;
 use App\Http\Controllers\Controller;
 use App\Models\InstitutionCourse;
 use App\Models\Question;
-use App\Services\QuestionBrowseService;
+use App\Services\Student\QuestionBrowseService;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
 use Inertia\Response;
@@ -27,7 +27,7 @@ class QuestionController extends Controller
         $browseAll = $request->boolean('browse_all');
 
         $courseIds = $browseAll
-            ? InstitutionCourse::where('institution_id', $profile->institution_id)->pluck('id')
+            ? InstitutionCourse::query()->where('institution_id', $profile->institution_id)->pluck('id')
             : $profile->studentCourses()->where('is_archived', false)->pluck('institution_course_id');
 
         $filters = [

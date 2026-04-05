@@ -38,7 +38,7 @@ class CourseController extends Controller
             ->get()
             ->map(function (InstitutionCourse $course) use ($user) {
                 $topicIds = $course->topicMappings()->pluck('canonical_topic_id');
-                $completedCount = TopicCompletion::where('user_id', $user->id)
+                $completedCount = TopicCompletion::query()->where('user_id', $user->id)
                     ->whereIn('canonical_topic_id', $topicIds)
                     ->count();
 
@@ -114,7 +114,7 @@ class CourseController extends Controller
             ->get();
 
         $topicIds = $mappings->pluck('canonical_topic_id');
-        $completedTopicIds = TopicCompletion::where('user_id', $user->id)
+        $completedTopicIds = TopicCompletion::query()->where('user_id', $user->id)
             ->whereIn('canonical_topic_id', $topicIds)
             ->pluck('canonical_topic_id')
             ->toArray();

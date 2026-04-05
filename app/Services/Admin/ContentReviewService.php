@@ -1,6 +1,6 @@
 <?php
 
-namespace App\Services;
+namespace App\Services\Admin;
 
 use App\Enums\ContentSubmissionStatus;
 use App\Enums\ContentSubmissionType;
@@ -76,7 +76,7 @@ class ContentReviewService
                     $responseConfig = $this->buildMcqResponseConfig($qData['options']);
                 }
 
-                $question = Question::create([
+                $question = Question::query()->create([
                     'institution_course_id' => $qData['institution_course_id'],
                     'question_type' => $qData['question_type'],
                     'content' => $qData['content'],
@@ -124,7 +124,7 @@ class ContentReviewService
             $responseConfig = $this->buildMcqResponseConfig($content['options']);
         }
 
-        $question = Question::create([
+        $question = Question::query()->create([
             'institution_course_id' => $submission->institution_course_id,
             'question_type' => $content['question_type'],
             'content' => $content['content'],

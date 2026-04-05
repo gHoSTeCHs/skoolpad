@@ -39,7 +39,7 @@ class ExamTypeController extends Controller
     public function create(): Response
     {
         return Inertia::render('admin/exam-types/create', [
-            'countries' => Country::all(),
+            'countries' => Country::query()->get(),
         ]);
     }
 
@@ -50,7 +50,7 @@ class ExamTypeController extends Controller
             $data['slug'] = Str::slug($data['name']);
         }
 
-        ExamType::create($data);
+        ExamType::query()->create($data);
 
         return to_route('admin.exam-types.index')->with('success', 'Exam type created successfully.');
     }
@@ -59,7 +59,7 @@ class ExamTypeController extends Controller
     {
         return Inertia::render('admin/exam-types/edit', [
             'examType' => $examType,
-            'countries' => Country::all(),
+            'countries' => Country::query()->get(),
         ]);
     }
 

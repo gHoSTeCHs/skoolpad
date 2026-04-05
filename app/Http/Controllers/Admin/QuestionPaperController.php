@@ -12,9 +12,11 @@ use App\Http\Requests\Admin\StoreQuestionPaperRequest;
 use App\Http\Requests\Admin\UpdateQuestionPaperRequest;
 use App\Models\AssessmentType;
 use App\Models\Institution;
+use App\Models\Question;
 use App\Models\QuestionPaper;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Gate;
 use Inertia\Inertia;
 use Inertia\Response;
 
@@ -24,6 +26,8 @@ class QuestionPaperController extends Controller
 
     public function index(Request $request): Response
     {
+        Gate::authorize('managePapers', Question::class);
+
         $papers = QuestionPaper::query()
             ->with([
                 'institutionCourse:id,institution_id,course_code,course_title',
@@ -66,6 +70,8 @@ class QuestionPaperController extends Controller
 
     public function create(): Response
     {
+        Gate::authorize('managePapers', Question::class);
+
         return Inertia::render('admin/question-papers/create', [
             'institutions' => Institution::query()->where('is_active', true)->orderBy('abbreviation')->get(['id', 'name', 'abbreviation']),
             'assessment_types' => AssessmentType::query()->orderBy('name')->get(['id', 'name']),
@@ -74,13 +80,17 @@ class QuestionPaperController extends Controller
 
     public function store(StoreQuestionPaperRequest $request): RedirectResponse
     {
-        $paper = QuestionPaper::create($request->validated());
+        Gate::authorize('managePapers', Question::class);
+
+        $paper = QuestionPaper::query()->create($request->validated());
 
         return to_route('admin.question-papers.build', $paper)->with('success', 'Paper created. Start building!');
     }
 
     public function build(QuestionPaper $questionPaper): Response
     {
+        Gate::authorize('managePapers', Question::class);
+
         $questionPaper->load([
             'institutionCourse:id,institution_id,course_code,course_title',
             'institutionCourse.institution:id,name,abbreviation',
@@ -107,6 +117,8 @@ class QuestionPaperController extends Controller
 
     public function update(UpdateQuestionPaperRequest $request, QuestionPaper $questionPaper): RedirectResponse
     {
+        Gate::authorize('managePapers', Question::class);
+
         $questionPaper->update($request->validated());
 
         return back()->with('success', 'Paper updated.');
@@ -114,6 +126,8 @@ class QuestionPaperController extends Controller
 
     public function destroy(QuestionPaper $questionPaper): RedirectResponse
     {
+        Gate::authorize('managePapers', Question::class);
+
         $questionPaper->delete();
 
         return to_route('admin.question-papers.index')->with('success', 'Paper deleted.');

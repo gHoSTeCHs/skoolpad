@@ -72,3 +72,15 @@ test('destroy deletes a tier', function () {
 
     $this->assertDatabaseMissing('curriculum_tiers', ['id' => $tier->id]);
 });
+
+test('staff without manage_institutions permission get 403', function () {
+    $staff = User::factory()->contentManager()->create();
+
+    $this->actingAs($staff)
+        ->post(route('admin.curriculum-tiers.store', $this->system), [
+            'name' => 'Blocked Tier',
+            'sort_order' => 1,
+            'is_tertiary' => false,
+        ])
+        ->assertForbidden();
+});

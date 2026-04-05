@@ -2,8 +2,11 @@
 
 namespace App\Enums;
 
+use App\Concerns\HasSelectOptions;
+
 enum ContributionBadge: string
 {
+    use HasSelectOptions;
     case None = 'none';
     case Contributor = 'contributor';
     case VerifiedContributor = 'verified_contributor';

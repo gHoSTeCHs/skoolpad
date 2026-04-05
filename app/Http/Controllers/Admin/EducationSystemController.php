@@ -11,8 +11,10 @@ use App\Models\Country;
 use App\Models\Discipline;
 use App\Models\EducationSystem;
 use App\Models\GradingScale;
+use App\Models\Institution;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Str;
 use Inertia\Inertia;
 use Inertia\Response;
@@ -23,6 +25,8 @@ class EducationSystemController extends Controller
 
     public function index(Request $request): Response
     {
+        Gate::authorize('viewAny', Institution::class);
+
         $systems = EducationSystem::query()
             ->with('country:id,name,code')
             ->withCount(['curriculumTiers', 'streams', 'curriculumSubjects', 'assessmentTypes'])
@@ -48,26 +52,32 @@ class EducationSystemController extends Controller
 
     public function create(): Response
     {
+        Gate::authorize('create', Institution::class);
+
         return Inertia::render('admin/education-systems/create', [
             'systemTypes' => EducationSystemType::toSelectOptions(),
-            'countries' => Country::orderBy('name')->get(['id', 'name', 'code']),
+            'countries' => Country::query()->orderBy('name')->get(['id', 'name', 'code']),
         ]);
     }
 
     public function store(StoreEducationSystemRequest $request): RedirectResponse
     {
+        Gate::authorize('create', Institution::class);
+
         $data = $request->validated();
         if (empty($data['slug'])) {
             $data['slug'] = Str::slug($data['name']);
         }
 
-        EducationSystem::create($data);
+        EducationSystem::query()->create($data);
 
         return to_route('admin.education-systems.index')->with('success', 'Education system created successfully.');
     }
 
     public function show(EducationSystem $educationSystem): Response
     {
+        Gate::authorize('viewAny', Institution::class);
+
         $educationSystem->load([
             'country:id,name,code',
             'curriculumTiers' => fn ($q) => $q->orderBy('sort_order')->withCount('educationLevels'),
@@ -83,22 +93,26 @@ class EducationSystemController extends Controller
 
         return Inertia::render('admin/education-systems/show', [
             'educationSystem' => $educationSystem,
-            'disciplines' => Discipline::orderBy('name')->get(['id', 'name']),
-            'gradingScales' => GradingScale::orderBy('name')->get(['id', 'name']),
+            'disciplines' => Discipline::query()->orderBy('name')->get(['id', 'name']),
+            'gradingScales' => GradingScale::query()->orderBy('name')->get(['id', 'name']),
         ]);
     }
 
     public function edit(EducationSystem $educationSystem): Response
     {
+        Gate::authorize('update', Institution::class);
+
         return Inertia::render('admin/education-systems/edit', [
             'educationSystem' => $educationSystem,
             'systemTypes' => EducationSystemType::toSelectOptions(),
-            'countries' => Country::orderBy('name')->get(['id', 'name', 'code']),
+            'countries' => Country::query()->orderBy('name')->get(['id', 'name', 'code']),
         ]);
     }
 
     public function update(UpdateEducationSystemRequest $request, EducationSystem $educationSystem): RedirectResponse
     {
+        Gate::authorize('update', Institution::class);
+
         $educationSystem->update($request->validated());
 
         return to_route('admin.education-systems.show', $educationSystem)->with('success', 'Education system updated successfully.');

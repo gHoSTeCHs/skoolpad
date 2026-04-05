@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Student;
 
 use App\Http\Controllers\Controller;
+use App\Http\Requests\Student\UpdateLevelProgressionRequest;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -42,15 +43,11 @@ class LevelProgressionController extends Controller
         ]);
     }
 
-    public function update(Request $request): RedirectResponse
+    public function update(UpdateLevelProgressionRequest $request): RedirectResponse
     {
-        $request->validate([
-            'education_level_id' => ['required', 'uuid', 'exists:education_levels,id'],
-        ]);
-
         $profile = $request->user()->studentProfile;
         $profile->update([
-            'education_level_id' => $request->input('education_level_id'),
+            'education_level_id' => $request->validated('education_level_id'),
         ]);
 
         return redirect()->route('dashboard');

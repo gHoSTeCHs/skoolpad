@@ -3,7 +3,7 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
-use App\Services\AnalyticsService;
+use App\Services\Admin\AnalyticsService;
 use Inertia\Inertia;
 use Inertia\Response;
 

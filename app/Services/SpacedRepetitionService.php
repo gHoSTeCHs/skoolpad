@@ -91,7 +91,7 @@ class SpacedRepetitionService
     /** @return array<int, string> */
     private function getTopicIdsForLevelSubject(LevelSubject $levelSubject): array
     {
-        return SchemeOfWorkItem::where('curriculum_subject_level_id', $levelSubject->id)
+        return SchemeOfWorkItem::query()->where('curriculum_subject_level_id', $levelSubject->id)
             ->whereNotNull('canonical_topic_id')
             ->pluck('canonical_topic_id')
             ->toArray();

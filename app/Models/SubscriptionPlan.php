@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use App\Enums\BillingPeriod;
+use App\Enums\PlanType;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
@@ -34,6 +35,7 @@ class SubscriptionPlan extends Model
     protected function casts(): array
     {
         return [
+            'plan_type' => PlanType::class,
             'billing_period' => BillingPeriod::class,
             'features' => 'array',
             'is_active' => 'boolean',

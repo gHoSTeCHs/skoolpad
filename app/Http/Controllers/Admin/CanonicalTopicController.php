@@ -11,6 +11,7 @@ use App\Models\CanonicalTopic;
 use App\Models\Discipline;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Gate;
 use Inertia\Inertia;
 use Inertia\Response;
 
@@ -20,6 +21,8 @@ class CanonicalTopicController extends Controller
 
     public function index(Request $request): Response
     {
+        Gate::authorize('viewAny', CanonicalTopic::class);
+
         $topics = CanonicalTopic::query()
             ->with(['discipline:id,name', 'parent:id,title'])
             ->when($request->filled('discipline_id'), fn ($q) => $q->where('discipline_id', $request->string('discipline_id')))
@@ -52,21 +55,25 @@ class CanonicalTopicController extends Controller
 
         return Inertia::render('admin/topics/index', [
             'topics' => $this->paginated($topics),
-            'disciplines' => Discipline::all(['id', 'name']),
+            'disciplines' => Discipline::query()->get(['id', 'name']),
             'filters' => $request->only(['search', 'discipline_id', 'difficulty_level', 'is_published', 'sort', 'direction']),
         ]);
     }
 
     public function create(): Response
     {
+        Gate::authorize('create', CanonicalTopic::class);
+
         return Inertia::render('admin/topics/create', [
-            'disciplines' => Discipline::all(['id', 'name']),
+            'disciplines' => Discipline::query()->get(['id', 'name']),
             'difficulty_levels' => TopicDifficulty::toSelectOptions(),
         ]);
     }
 
     public function store(StoreCanonicalTopicRequest $request): RedirectResponse
     {
+        Gate::authorize('create', CanonicalTopic::class);
+
         $data = $request->validated();
         $prerequisites = $data['prerequisites'] ?? null;
         unset($data['prerequisites']);
@@ -75,7 +82,7 @@ class CanonicalTopicController extends Controller
             $data['published_at'] = now();
         }
 
-        $topic = CanonicalTopic::create($data);
+        $topic = CanonicalTopic::query()->create($data);
 
         if ($prerequisites) {
             $topic->syncPrerequisites($prerequisites);
@@ -86,6 +93,8 @@ class CanonicalTopicController extends Controller
 
     public function edit(CanonicalTopic $topic): Response
     {
+        Gate::authorize('update', $topic);
+
         $topic->load(['discipline', 'prerequisites', 'parent']);
 
         return Inertia::render('admin/topics/edit', [
@@ -109,7 +118,7 @@ class CanonicalTopicController extends Controller
                     'is_hard_prerequisite' => (bool) $prereq->pivot->is_hard_prerequisite,
                 ]),
             ],
-            'disciplines' => Discipline::all(['id', 'name']),
+            'disciplines' => Discipline::query()->get(['id', 'name']),
             'difficulty_levels' => TopicDifficulty::toSelectOptions(),
             'available_topics' => CanonicalTopic::query()
                 ->where('discipline_id', $topic->discipline_id)
@@ -120,6 +129,8 @@ class CanonicalTopicController extends Controller
 
     public function update(UpdateCanonicalTopicRequest $request, CanonicalTopic $topic): RedirectResponse
     {
+        Gate::authorize('update', $topic);
+
         $data = $request->validated();
         $prerequisites = $data['prerequisites'] ?? [];
         unset($data['prerequisites']);
@@ -136,6 +147,8 @@ class CanonicalTopicController extends Controller
 
     public function preview(CanonicalTopic $topic): Response
     {
+        Gate::authorize('viewAny', CanonicalTopic::class);
+
         return Inertia::render('admin/topics/preview', [
             'topic' => [
                 'title' => $topic->title,
@@ -151,6 +164,8 @@ class CanonicalTopicController extends Controller
 
     public function togglePublish(CanonicalTopic $topic): RedirectResponse
     {
+        Gate::authorize('publish', $topic);
+
         $topic->is_published = ! $topic->is_published;
 
         if ($topic->is_published && $topic->published_at === null) {

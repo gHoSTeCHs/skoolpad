@@ -8,8 +8,10 @@ use App\Http\Controllers\Controller;
 use App\Http\Requests\Admin\StoreGradingScaleRequest;
 use App\Http\Requests\Admin\UpdateGradingScaleRequest;
 use App\Models\GradingScale;
+use App\Models\Institution;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Gate;
 use Inertia\Inertia;
 use Inertia\Response;
 
@@ -19,6 +21,8 @@ class GradingScaleController extends Controller
 
     public function index(Request $request): Response
     {
+        Gate::authorize('viewAny', Institution::class);
+
         $scales = GradingScale::query()
             ->withCount('assessmentTypes')
             ->when($request->filled('search'), fn ($q) => $q->search($request->string('search')))
@@ -43,6 +47,8 @@ class GradingScaleController extends Controller
 
     public function create(): Response
     {
+        Gate::authorize('create', Institution::class);
+
         return Inertia::render('admin/grading-scales/create', [
             'scaleTypes' => ScaleType::toSelectOptions(),
         ]);
@@ -50,13 +56,17 @@ class GradingScaleController extends Controller
 
     public function store(StoreGradingScaleRequest $request): RedirectResponse
     {
-        GradingScale::create($request->validated());
+        Gate::authorize('create', Institution::class);
+
+        GradingScale::query()->create($request->validated());
 
         return to_route('admin.grading-scales.index')->with('success', 'Grading scale created successfully.');
     }
 
     public function edit(GradingScale $gradingScale): Response
     {
+        Gate::authorize('update', Institution::class);
+
         return Inertia::render('admin/grading-scales/edit', [
             'gradingScale' => $gradingScale,
             'scaleTypes' => ScaleType::toSelectOptions(),
@@ -65,6 +75,8 @@ class GradingScaleController extends Controller
 
     public function update(UpdateGradingScaleRequest $request, GradingScale $gradingScale): RedirectResponse
     {
+        Gate::authorize('update', Institution::class);
+
         $gradingScale->update($request->validated());
 
         return to_route('admin.grading-scales.index')->with('success', 'Grading scale updated successfully.');

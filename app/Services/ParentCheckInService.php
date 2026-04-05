@@ -14,7 +14,6 @@ use App\Models\ParentChildLink;
 use App\Models\ParentProfile;
 use App\Models\QuestionTopicLink;
 use App\Models\SchemeOfWorkItem;
-use App\Models\SpacedRepetitionItem;
 use App\Models\StudentProfile;
 use App\Models\TopicCoverage;
 use Illuminate\Database\UniqueConstraintViolationException;
@@ -23,7 +22,7 @@ use Illuminate\Support\Collection;
 class ParentCheckInService
 {
     public function __construct(
-        private readonly ParentVerificationService $verificationService,
+        private readonly \App\Services\ParentDashboard\ParentVerificationService $verificationService,
     ) {}
 
     public function reportTopicCoverage(

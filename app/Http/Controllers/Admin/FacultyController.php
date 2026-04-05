@@ -10,6 +10,7 @@ use App\Models\Faculty;
 use App\Models\Institution;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Gate;
 use Inertia\Inertia;
 use Inertia\Response;
 
@@ -19,6 +20,8 @@ class FacultyController extends Controller
 
     public function index(Request $request, Institution $institution): Response
     {
+        Gate::authorize('viewAny', Institution::class);
+
         $faculties = Faculty::query()
             ->where('institution_id', $institution->id)
             ->withCount('departments')
@@ -36,6 +39,8 @@ class FacultyController extends Controller
 
     public function create(Institution $institution): Response
     {
+        Gate::authorize('create', Institution::class);
+
         return Inertia::render('admin/faculties/create', [
             'institution' => $institution->only('id', 'name', 'abbreviation'),
         ]);
@@ -43,6 +48,8 @@ class FacultyController extends Controller
 
     public function store(StoreFacultyRequest $request, Institution $institution): RedirectResponse
     {
+        Gate::authorize('create', Institution::class);
+
         $institution->faculties()->create($request->validated());
 
         return to_route('admin.faculties.index', $institution)->with('success', 'Faculty created successfully.');
@@ -50,6 +57,8 @@ class FacultyController extends Controller
 
     public function edit(Faculty $faculty): Response
     {
+        Gate::authorize('update', Institution::class);
+
         $faculty->load('institution:id,name,abbreviation');
 
         return Inertia::render('admin/faculties/edit', [
@@ -59,6 +68,8 @@ class FacultyController extends Controller
 
     public function update(UpdateFacultyRequest $request, Faculty $faculty): RedirectResponse
     {
+        Gate::authorize('update', Institution::class);
+
         $faculty->update($request->validated());
 
         return to_route('admin.faculties.index', $faculty->institution_id)->with('success', 'Faculty updated successfully.');

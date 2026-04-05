@@ -4,20 +4,25 @@ namespace App\Http\Controllers\Admin;
 
 use App\Enums\TopicWeight;
 use App\Http\Controllers\Controller;
+use App\Http\Requests\Admin\UpdateCourseMappingRequest;
 use App\Models\CanonicalTopic;
 use App\Models\CourseTopicMapping;
 use App\Models\InstitutionCourse;
+use App\Services\Admin\CourseMappingService;
 use Illuminate\Http\RedirectResponse;
-use Illuminate\Http\Request;
-use Illuminate\Support\Str;
-use Illuminate\Validation\Rule;
+use Illuminate\Support\Facades\Gate;
 use Inertia\Inertia;
 use Inertia\Response;
 
 class CourseMappingController extends Controller
 {
+    public function __construct(
+        private readonly CourseMappingService $courseMappingService,
+    ) {}
+
     public function index(InstitutionCourse $course): Response
     {
+        Gate::authorize('manageMappings', InstitutionCourse::class);
         $course->load(['discipline', 'institution']);
 
         $mappedTopics = $course->topicMappings()
@@ -76,31 +81,11 @@ class CourseMappingController extends Controller
         ]);
     }
 
-    public function update(Request $request, InstitutionCourse $course): RedirectResponse
+    public function update(UpdateCourseMappingRequest $request, InstitutionCourse $course): RedirectResponse
     {
-        $validated = $request->validate([
-            'mappings' => ['present', 'array'],
-            'mappings.*.canonical_topic_id' => ['required', 'string', 'exists:canonical_topics,id'],
-            'mappings.*.sequence_order' => ['required', 'integer', 'min:1'],
-            'mappings.*.weight' => ['required', 'string', Rule::in(TopicWeight::values())],
-        ]);
+        Gate::authorize('manageMappings', InstitutionCourse::class);
 
-        $course->topicMappings()->delete();
-
-        $now = now();
-        $rows = collect($validated['mappings'])->map(fn (array $mapping) => [
-            'id' => Str::uuid()->toString(),
-            'institution_course_id' => $course->id,
-            'canonical_topic_id' => $mapping['canonical_topic_id'],
-            'sequence_order' => $mapping['sequence_order'],
-            'weight' => $mapping['weight'],
-            'created_at' => $now,
-            'updated_at' => $now,
-        ])->all();
-
-        if (! empty($rows)) {
-            CourseTopicMapping::insert($rows);
-        }
+        $this->courseMappingService->saveTopicMappings($course, $request->validated('mappings'));
 
         return back()->with('success', 'Topic mappings updated.');
     }

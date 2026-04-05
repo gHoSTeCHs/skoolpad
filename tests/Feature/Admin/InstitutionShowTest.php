@@ -102,3 +102,17 @@ test('calendar term store validates required fields', function () {
         ->post(route('admin.calendar-terms.store', $this->institution), [])
         ->assertSessionHasErrors(['academic_year', 'name', 'start_date', 'end_date', 'sort_order']);
 });
+
+test('staff without manage_institutions permission get 403', function () {
+    $staff = User::factory()->contentManager()->create();
+
+    $this->actingAs($staff)
+        ->post(route('admin.calendar-terms.store', $this->institution), [
+            'academic_year' => '2025/2026',
+            'name' => 'Blocked Term',
+            'start_date' => '2025-09-01',
+            'end_date' => '2026-01-31',
+            'sort_order' => 1,
+        ])
+        ->assertForbidden();
+});

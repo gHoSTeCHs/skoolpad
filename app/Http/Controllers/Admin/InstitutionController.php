@@ -15,6 +15,7 @@ use App\Models\Institution;
 use App\Models\InstitutionType as InstitutionTypeModel;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Facades\Storage;
 use Inertia\Inertia;
 use Inertia\Response;
@@ -25,6 +26,8 @@ class InstitutionController extends Controller
 
     public function index(Request $request): Response
     {
+        Gate::authorize('viewAny', Institution::class);
+
         $institutions = Institution::query()
             ->withCount('faculties')
             ->when($request->filled('search'), fn ($q) => $q->search($request->string('search')))
@@ -59,17 +62,21 @@ class InstitutionController extends Controller
 
     public function create(): Response
     {
+        Gate::authorize('create', Institution::class);
+
         return Inertia::render('admin/institutions/create', [
             'institutionTypes' => InstitutionType::toSelectOptions(),
-            'institutionTypeModels' => InstitutionTypeModel::orderBy('name')->get(['id', 'name']),
+            'institutionTypeModels' => InstitutionTypeModel::query()->orderBy('name')->get(['id', 'name']),
             'ownershipTypes' => OwnershipType::toSelectOptions(),
-            'countries' => Country::all(),
+            'countries' => Country::query()->get(),
             'gradingScales' => GradingScale::query()->orderBy('name')->get(['id', 'name']),
         ]);
     }
 
     public function store(StoreInstitutionRequest $request): RedirectResponse
     {
+        Gate::authorize('create', Institution::class);
+
         $data = $request->validated();
 
         if ($request->hasFile('logo')) {
@@ -77,13 +84,15 @@ class InstitutionController extends Controller
         }
         unset($data['logo']);
 
-        Institution::create($data);
+        Institution::query()->create($data);
 
         return to_route('admin.institutions.index')->with('success', 'Institution created successfully.');
     }
 
     public function show(Institution $institution): Response
     {
+        Gate::authorize('viewAny', Institution::class);
+
         $institution->load([
             'country:id,name',
             'institutionTypeModel:id,name',
@@ -93,20 +102,23 @@ class InstitutionController extends Controller
 
         return Inertia::render('admin/institutions/show', [
             'institution' => $institution,
-            'educationSystems' => EducationSystem::orderBy('name')->get(['id', 'name']),
+            'educationSystems' => EducationSystem::query()->orderBy('name')->get(['id', 'name']),
         ]);
     }
 
-    public function attachEducationSystem(Request $request, Institution $institution): RedirectResponse
+    public function attachEducationSystem(\App\Http\Requests\Admin\AttachEducationSystemRequest $request, Institution $institution): RedirectResponse
     {
-        $request->validate(['education_system_id' => ['required', 'exists:education_systems,id']]);
-        $institution->educationSystems()->syncWithoutDetaching([$request->input('education_system_id')]);
+        Gate::authorize('update', Institution::class);
+
+        $institution->educationSystems()->syncWithoutDetaching([$request->validated('education_system_id')]);
 
         return back()->with('success', 'Education system attached.');
     }
 
     public function detachEducationSystem(Institution $institution, EducationSystem $educationSystem): RedirectResponse
     {
+        Gate::authorize('update', Institution::class);
+
         $institution->educationSystems()->detach($educationSystem->id);
 
         return back()->with('success', 'Education system detached.');
@@ -114,18 +126,22 @@ class InstitutionController extends Controller
 
     public function edit(Institution $institution): Response
     {
+        Gate::authorize('update', Institution::class);
+
         return Inertia::render('admin/institutions/edit', [
             'institution' => $institution,
             'institutionTypes' => InstitutionType::toSelectOptions(),
-            'institutionTypeModels' => InstitutionTypeModel::orderBy('name')->get(['id', 'name']),
+            'institutionTypeModels' => InstitutionTypeModel::query()->orderBy('name')->get(['id', 'name']),
             'ownershipTypes' => OwnershipType::toSelectOptions(),
-            'countries' => Country::all(),
+            'countries' => Country::query()->get(),
             'gradingScales' => GradingScale::query()->orderBy('name')->get(['id', 'name']),
         ]);
     }
 
     public function update(UpdateInstitutionRequest $request, Institution $institution): RedirectResponse
     {
+        Gate::authorize('update', Institution::class);
+
         $data = $request->validated();
 
         if ($request->hasFile('logo')) {

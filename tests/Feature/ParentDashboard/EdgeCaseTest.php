@@ -4,7 +4,7 @@ use App\Enums\VerificationResult;
 use App\Models\ParentChildLink;
 use App\Models\ParentProfile;
 use App\Services\ParentCheckInService;
-use App\Services\ParentVerificationService;
+use App\Services\ParentDashboard\ParentVerificationService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 
 uses(RefreshDatabase::class);

@@ -1,6 +1,6 @@
 <?php
 
-namespace App\Services;
+namespace App\Services\Student;
 
 use App\Models\BlockCompletion;
 use App\Models\CanonicalTopic;
@@ -23,7 +23,7 @@ class PrerequisiteGapService
             return ['banner' => 'none', 'prerequisites' => []];
         }
 
-        $completedTopicIds = TopicCompletion::where('user_id', $user->id)
+        $completedTopicIds = TopicCompletion::query()->where('user_id', $user->id)
             ->whereIn('canonical_topic_id', $prerequisites->pluck('id'))
             ->pluck('canonical_topic_id')
             ->toArray();
@@ -85,7 +85,7 @@ class PrerequisiteGapService
     /** @return array<int, string> */
     public function getLockedBlockIds(User $user, CanonicalTopic $topic): array
     {
-        $blocksWithHardPrereqs = ContentBlock::where('canonical_topic_id', $topic->id)
+        $blocksWithHardPrereqs = ContentBlock::query()->where('canonical_topic_id', $topic->id)
             ->whereHas('prerequisites', fn ($q) => $q->where('block_prerequisites.is_hard_prerequisite', true))
             ->with(['prerequisites' => fn ($q) => $q->where('block_prerequisites.is_hard_prerequisite', true)])
             ->get();
@@ -98,7 +98,7 @@ class PrerequisiteGapService
             fn ($block) => $block->prerequisites->pluck('id')
         )->unique()->values()->all();
 
-        $completedBlockIds = BlockCompletion::where('user_id', $user->id)
+        $completedBlockIds = BlockCompletion::query()->where('user_id', $user->id)
             ->whereIn('content_block_id', $allPrereqIds)
             ->pluck('content_block_id')
             ->toArray();

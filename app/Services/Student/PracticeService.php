@@ -1,6 +1,6 @@
 <?php
 
-namespace App\Services;
+namespace App\Services\Student;
 
 use App\Enums\AnswerDepthLevel;
 use App\Enums\PracticeMode;
@@ -11,12 +11,30 @@ use App\Models\PracticeSession;
 use App\Models\Question;
 use App\Models\SpacedRepetitionItem;
 use App\Models\User;
+use App\Services\SpacedRepetitionService;
 use Illuminate\Support\Collection;
 
 class PracticeService
 {
     public function __construct(private SpacedRepetitionService $spacedRepService) {}
 
+    /**
+     * @param array{
+     *     institution_course_id?: string,
+     *     level_subject_id?: string,
+     *     canonical_topic_id?: string,
+     *     topic_ids?: array<int, string>,
+     *     assessment_type_id?: string,
+     *     mode: string,
+     *     question_count?: int,
+     *     time_limit_seconds?: int,
+     *     difficulty?: string,
+     *     question_types?: array<int, string>,
+     *     question_id?: string,
+     *     exclude_user_id?: string,
+     *     administered_by?: string,
+     * } $config
+     */
     public function createSession(User $user, array $config): PracticeSession
     {
         $questions = $this->selectQuestions($config);
@@ -73,6 +91,19 @@ class PracticeService
         ]);
     }
 
+    /**
+     * @param array{
+     *     institution_course_id?: string,
+     *     topic_ids?: array<int, string>,
+     *     difficulty?: string,
+     *     question_types?: array<int, string>,
+     *     assessment_type_id?: string,
+     *     exclude_user_id?: string,
+     *     question_count?: int,
+     *     question_id?: string,
+     *     mode?: string,
+     * } $config
+     */
     public function selectQuestions(array $config): Collection
     {
         if (! empty($config['question_id'])) {
@@ -126,6 +157,15 @@ class PracticeService
         return $query->inRandomOrder()->limit($limit)->get();
     }
 
+    /**
+     * @param array{
+     *     institution_course_id?: string,
+     *     topic_ids?: array<int, string>,
+     *     difficulty?: string,
+     *     question_types?: array<int, string>,
+     *     assessment_type_id?: string,
+     * } $config
+     */
     public function getAvailableQuestionCount(array $config): int
     {
         $query = Question::query()->published();
@@ -173,6 +213,16 @@ class PracticeService
         return $questions->sortBy(fn ($q) => $idOrder[$q->id] ?? PHP_INT_MAX)->values();
     }
 
+    /**
+     * @param array{
+     *     selected_label?: string,
+     *     text?: string,
+     *     response_data?: array<string, mixed>,
+     *     time_spent_seconds?: int,
+     *     was_skipped?: bool,
+     *     sequence_order?: int,
+     * } $answerData
+     */
     public function submitAnswer(PracticeSession $session, Question $question, array $answerData): PracticeAnswer
     {
         $gradeData = array_merge($answerData['response_data'] ?? [], $answerData);

@@ -2,8 +2,11 @@
 
 namespace App\Enums;
 
+use App\Concerns\HasSelectOptions;
+
 enum PracticeMode: string
 {
+    use HasSelectOptions;
     case Timed = 'timed';
     case Untimed = 'untimed';
     case Review = 'review';

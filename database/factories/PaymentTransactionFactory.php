@@ -2,6 +2,7 @@
 
 namespace Database\Factories;
 
+use App\Enums\PaymentStatus;
 use App\Models\User;
 use App\Models\UserSubscription;
 use Illuminate\Database\Eloquent\Factories\Factory;
@@ -23,7 +24,7 @@ class PaymentTransactionFactory extends Factory
             'paystack_reference' => 'PAY_'.Str::random(16),
             'amount_kobo' => fake()->randomElement([200000, 500000, 1000000]),
             'currency' => 'NGN',
-            'status' => 'success',
+            'status' => PaymentStatus::Success,
             'paystack_response' => null,
         ];
     }
@@ -31,7 +32,7 @@ class PaymentTransactionFactory extends Factory
     public function failed(): static
     {
         return $this->state(fn (array $attributes) => [
-            'status' => 'failed',
+            'status' => PaymentStatus::Failed,
         ]);
     }
 }

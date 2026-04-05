@@ -68,3 +68,14 @@ test('destroy deletes a stream', function () {
 
     $this->assertDatabaseMissing('streams', ['id' => $stream->id]);
 });
+
+test('staff without manage_institutions permission get 403', function () {
+    $staff = User::factory()->contentManager()->create();
+
+    $this->actingAs($staff)
+        ->post(route('admin.streams.store', $this->system), [
+            'name' => 'Blocked Stream',
+            'applies_from_tier_id' => $this->tier->id,
+        ])
+        ->assertForbidden();
+});

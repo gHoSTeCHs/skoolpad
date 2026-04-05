@@ -10,7 +10,7 @@ use App\Http\Resources\VerificationQueueResource;
 use App\Models\CanonicalTopic;
 use App\Models\ParentChildLink;
 use App\Models\StudentProfile;
-use App\Services\ParentVerificationService;
+use App\Services\ParentDashboard\ParentVerificationService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Inertia\Inertia;

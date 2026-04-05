@@ -44,7 +44,7 @@ class StoreInstitutionCourseRequest extends FormRequest
         return [
             function (Validator $validator) {
                 if ($this->owning_department_id && $this->institution_id) {
-                    $dept = Department::with('faculty')->find($this->owning_department_id);
+                    $dept = Department::query()->with('faculty')->find($this->owning_department_id);
 
                     if ($dept && $dept->faculty && $dept->faculty->institution_id !== $this->institution_id) {
                         $validator->errors()->add(

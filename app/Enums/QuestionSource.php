@@ -2,8 +2,11 @@
 
 namespace App\Enums;
 
+use App\Concerns\HasSelectOptions;
+
 enum QuestionSource: string
 {
+    use HasSelectOptions;
     case Manual = 'manual';
     case Crowdsourced = 'crowdsourced';
     case AiGenerated = 'ai_generated';

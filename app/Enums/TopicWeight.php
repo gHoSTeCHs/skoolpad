@@ -2,8 +2,11 @@
 
 namespace App\Enums;
 
+use App\Concerns\HasSelectOptions;
+
 enum TopicWeight: string
 {
+    use HasSelectOptions;
     case Core = 'core';
     case Supplementary = 'supplementary';
     case Optional = 'optional';

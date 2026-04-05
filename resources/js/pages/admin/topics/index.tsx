@@ -20,7 +20,10 @@ import {
     SelectTrigger,
     SelectValue,
 } from '@/components/ui/select';
-import { useFilterHandlers, type BaseFilters } from '@/hooks/use-filter-handlers';
+import {
+    useFilterHandlers,
+    type BaseFilters,
+} from '@/hooks/use-filter-handlers';
 import AdminLayout from '@/layouts/admin-layout';
 import { formatDate } from '@/lib/utils';
 import type { PaginatedData } from '@/types/models';
@@ -115,10 +118,11 @@ const columns: ColumnDef<TopicListItem>[] = [
 ];
 
 export default function AdminTopics({ topics, disciplines, filters }: Props) {
-    const { handleFilterChange, clearFilters, hasActiveFilters } = useFilterHandlers({
-        indexUrl: CanonicalTopicController.index.url(),
-        filters,
-    });
+    const { handleFilterChange, clearFilters, hasActiveFilters } =
+        useFilterHandlers({
+            indexUrl: CanonicalTopicController.index.url(),
+            filters,
+        });
 
     function handleTogglePublish(topicId: string) {
         router.post(

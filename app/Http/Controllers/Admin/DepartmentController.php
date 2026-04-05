@@ -8,8 +8,10 @@ use App\Http\Requests\Admin\StoreDepartmentRequest;
 use App\Http\Requests\Admin\UpdateDepartmentRequest;
 use App\Models\Department;
 use App\Models\Faculty;
+use App\Models\Institution;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Gate;
 use Inertia\Inertia;
 use Inertia\Response;
 
@@ -19,6 +21,8 @@ class DepartmentController extends Controller
 
     public function index(Request $request, Faculty $faculty): Response
     {
+        Gate::authorize('viewAny', Institution::class);
+
         $faculty->load('institution:id,name,abbreviation');
 
         $departments = Department::query()
@@ -42,6 +46,8 @@ class DepartmentController extends Controller
 
     public function create(Faculty $faculty): Response
     {
+        Gate::authorize('create', Institution::class);
+
         $faculty->load('institution:id,name,abbreviation');
 
         return Inertia::render('admin/departments/create', [
@@ -56,6 +62,8 @@ class DepartmentController extends Controller
 
     public function store(StoreDepartmentRequest $request, Faculty $faculty): RedirectResponse
     {
+        Gate::authorize('create', Institution::class);
+
         $faculty->departments()->create($request->validated());
 
         return to_route('admin.departments.index', $faculty)->with('success', 'Department created successfully.');
@@ -63,6 +71,8 @@ class DepartmentController extends Controller
 
     public function edit(Department $department): Response
     {
+        Gate::authorize('update', Institution::class);
+
         $department->load('faculty:id,name,institution_id', 'faculty.institution:id,name,abbreviation');
 
         return Inertia::render('admin/departments/edit', [
@@ -72,6 +82,8 @@ class DepartmentController extends Controller
 
     public function update(UpdateDepartmentRequest $request, Department $department): RedirectResponse
     {
+        Gate::authorize('update', Institution::class);
+
         $department->update($request->validated());
 
         return to_route('admin.departments.index', $department->faculty_id)->with('success', 'Department updated successfully.');

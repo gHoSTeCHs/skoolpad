@@ -4,7 +4,7 @@ namespace App\Jobs;
 
 use App\Enums\ImportStatus;
 use App\Models\ImportLog;
-use App\Services\ContentImportService;
+use App\Services\Admin\ContentImportService;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Queue\Queueable;
 
@@ -30,7 +30,7 @@ class ProcessCsvImport implements ShouldQueue
 
     public function handle(ContentImportService $service): void
     {
-        $log = ImportLog::findOrFail($this->importLogId);
+        $log = ImportLog::query()->findOrFail($this->importLogId);
         $log->update(['status' => ImportStatus::Processing]);
 
         $result = match ($this->importType) {

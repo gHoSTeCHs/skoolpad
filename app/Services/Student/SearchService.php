@@ -1,6 +1,6 @@
 <?php
 
-namespace App\Services;
+namespace App\Services\Student;
 
 use App\Models\CanonicalTopic;
 use App\Models\InstitutionCourse;

@@ -8,16 +8,15 @@ use App\Http\Requests\Student\StartMockRequest;
 use App\Http\Requests\Student\StartStudyingRequest;
 use App\Http\Requests\Student\StoreExamTimetableRequest;
 use App\Http\Requests\Student\UpdateExamTimetableRequest;
-use App\Models\ExamGoal;
 use App\Models\ExamTimetableEntry;
 use App\Models\LevelSubject;
-use App\Models\StudentProfile;
-use App\Models\User;
-use App\Services\PracticeService;
-use App\Services\StudyPlannerService;
+use App\Services\Student\ExamTimetableService;
+use App\Services\Student\PracticeService;
+use App\Services\Student\StudyPlannerService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Gate;
 use Inertia\Inertia;
 use Inertia\Response;
 
@@ -26,6 +25,7 @@ class ExamTimetableController extends Controller
     public function __construct(
         private readonly StudyPlannerService $studyPlannerService,
         private readonly PracticeService $practiceService,
+        private readonly ExamTimetableService $examTimetableService,
     ) {}
 
     public function index(Request $request): Response
@@ -34,7 +34,7 @@ class ExamTimetableController extends Controller
         $profile = $user->studentProfile;
 
         if ($profile && ! ($profile->study_preferences['exam_goals_migrated'] ?? false)) {
-            $this->migrateExamGoals($user, $profile);
+            $this->examTimetableService->migrateExamGoals($user, $profile);
         }
 
         $isSecondary = $profile?->isSecondary() ?? false;
@@ -181,8 +181,8 @@ class ExamTimetableController extends Controller
         $profile = $user->studentProfile;
         $validated = $request->validated();
 
-        $this->validateOwnership($profile, $validated);
-        $this->validateAocTopics($validated);
+        $this->examTimetableService->validateOwnership($profile, $validated);
+        $this->examTimetableService->validateAocTopics($validated);
 
         $duplicate = $user->examTimetableEntries()
             ->where('institution_course_id', $validated['institution_course_id'] ?? null)
@@ -205,15 +205,13 @@ class ExamTimetableController extends Controller
 
     public function update(UpdateExamTimetableRequest $request, ExamTimetableEntry $entry): RedirectResponse
     {
-        if ($entry->user_id !== $request->user()->id) {
-            abort(403);
-        }
+        Gate::authorize('update', $entry);
 
         $profile = $request->user()->studentProfile;
         $validated = $request->validated();
 
-        $this->validateOwnership($profile, $validated);
-        $this->validateAocTopics($validated);
+        $this->examTimetableService->validateOwnership($profile, $validated);
+        $this->examTimetableService->validateAocTopics($validated);
 
         $entry->update(collect($validated)->except('aoc_topic_ids')->toArray());
         $entry->aocTopics()->sync($validated['aoc_topic_ids'] ?? []);
@@ -223,9 +221,7 @@ class ExamTimetableController extends Controller
 
     public function complete(ExamTimetableEntry $entry, Request $request): RedirectResponse
     {
-        if ($entry->user_id !== $request->user()->id) {
-            abort(403);
-        }
+        Gate::authorize('update', $entry);
 
         $entry->update([
             'is_completed' => true,
@@ -237,9 +233,7 @@ class ExamTimetableController extends Controller
 
     public function destroy(ExamTimetableEntry $entry, Request $request): RedirectResponse
     {
-        if ($entry->user_id !== $request->user()->id) {
-            abort(403);
-        }
+        Gate::authorize('delete', $entry);
 
         $entry->delete();
 
@@ -248,9 +242,7 @@ class ExamTimetableController extends Controller
 
     public function startMock(StartMockRequest $request, ExamTimetableEntry $entry): RedirectResponse
     {
-        if ($entry->user_id !== $request->user()->id) {
-            abort(403);
-        }
+        Gate::authorize('view', $entry);
 
         $paper = \App\Models\QuestionPaper::query()->findOrFail($request->validated('question_paper_id'));
 
@@ -278,10 +270,8 @@ class ExamTimetableController extends Controller
 
         $entryId = $request->validated('entry_id');
         if ($entryId) {
-            $entry = ExamTimetableEntry::query()->find($entryId);
-            if (! $entry || $entry->user_id !== $user->id) {
-                abort(403);
-            }
+            $entry = ExamTimetableEntry::query()->findOrFail($entryId);
+            Gate::authorize('view', $entry);
         }
 
         $dailyPlan = $this->studyPlannerService->buildDailyPlan($user, $profile);
@@ -369,94 +359,5 @@ class ExamTimetableController extends Controller
             ]));
 
         return response()->json(['entries' => $entries]);
-    }
-
-    private function validateOwnership(StudentProfile $profile, array $validated): void
-    {
-        if (! empty($validated['institution_course_id'])) {
-            $enrolledCourseIds = $profile->studentCourses()
-                ->where('is_archived', false)
-                ->pluck('institution_course_id');
-
-            if (! $enrolledCourseIds->contains($validated['institution_course_id'])) {
-                abort(403, 'You are not enrolled in this course.');
-            }
-        }
-
-        if (! empty($validated['level_subject_id'])) {
-            $levelSubject = LevelSubject::query()->findOrFail($validated['level_subject_id']);
-
-            if ($levelSubject->education_level_id !== $profile->education_level_id) {
-                abort(403, 'This subject is not available for your education level.');
-            }
-
-            if ($profile->stream_id && $levelSubject->stream_id && $levelSubject->stream_id !== $profile->stream_id) {
-                abort(403, 'This subject is not available for your stream.');
-            }
-        }
-    }
-
-    private function validateAocTopics(array $validated): void
-    {
-        if (empty($validated['aoc_topic_ids'])) {
-            return;
-        }
-
-        $validTopicIds = collect();
-
-        if (! empty($validated['institution_course_id'])) {
-            $validTopicIds = \App\Models\InstitutionCourse::query()->findOrFail($validated['institution_course_id'])
-                ->topics()
-                ->pluck('canonical_topics.id');
-        } elseif (! empty($validated['level_subject_id'])) {
-            $validTopicIds = \App\Models\SchemeOfWorkItem::query()
-                ->where('curriculum_subject_level_id', $validated['level_subject_id'])
-                ->whereNotNull('canonical_topic_id')
-                ->pluck('canonical_topic_id');
-        }
-
-        $invalidTopics = collect($validated['aoc_topic_ids'])->diff($validTopicIds);
-        if ($invalidTopics->isNotEmpty()) {
-            abort(422, 'Some AOC topics do not belong to the selected course or subject.');
-        }
-    }
-
-    private function migrateExamGoals(User $user, StudentProfile $profile): void
-    {
-        $goals = ExamGoal::query()
-            ->where('user_id', $user->id)
-            ->where('is_active', true)
-            ->whereNotNull('exam_date')
-            ->whereNotNull('institution_course_id')
-            ->with(['assessmentType:id,name', 'institutionCourse:id,course_title'])
-            ->get();
-
-        foreach ($goals as $goal) {
-            $exists = $user->examTimetableEntries()
-                ->where('institution_course_id', $goal->institution_course_id)
-                ->where('exam_date', $goal->exam_date)
-                ->exists();
-
-            if ($exists) {
-                continue;
-            }
-
-            $label = ($goal->institutionCourse?->course_title ?? 'Exam')
-                .($goal->assessmentType ? ' — '.$goal->assessmentType->name : '');
-
-            $user->examTimetableEntries()->create([
-                'institution_course_id' => $goal->institution_course_id,
-                'assessment_type_id' => $goal->assessment_type_id,
-                'label' => $label,
-                'exam_date' => $goal->exam_date,
-            ]);
-        }
-
-        $profile->update([
-            'study_preferences' => array_merge(
-                $profile->study_preferences ?? [],
-                ['exam_goals_migrated' => true]
-            ),
-        ]);
     }
 }

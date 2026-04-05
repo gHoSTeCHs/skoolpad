@@ -3,16 +3,14 @@
 namespace App\Http\Controllers\Student;
 
 use App\Http\Controllers\Controller;
+use App\Http\Requests\Student\UpdateStudyPreferenceRequest;
 use Illuminate\Http\RedirectResponse;
-use Illuminate\Http\Request;
 
 class StudyPreferenceController extends Controller
 {
-    public function __invoke(Request $request): RedirectResponse
+    public function __invoke(UpdateStudyPreferenceRequest $request): RedirectResponse
     {
-        $validated = $request->validate([
-            'daily_goal_minutes' => ['required', 'integer', 'in:15,30,45,60'],
-        ]);
+        $validated = $request->validated();
 
         $profile = $request->user()->studentProfile;
 

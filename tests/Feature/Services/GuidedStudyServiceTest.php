@@ -14,7 +14,7 @@ use App\Models\SchemeOfWorkItem;
 use App\Models\StudentProfile;
 use App\Models\TopicCompletion;
 use App\Models\User;
-use App\Services\GuidedStudyService;
+use App\Services\Student\GuidedStudyService;
 use Illuminate\Support\Carbon;
 
 beforeEach(function () {

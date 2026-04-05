@@ -7,26 +7,32 @@ use App\Http\Requests\Admin\StoreCurriculumTierRequest;
 use App\Http\Requests\Admin\UpdateCurriculumTierRequest;
 use App\Models\CurriculumTier;
 use App\Models\EducationSystem;
+use App\Models\Institution;
 use Illuminate\Http\RedirectResponse;
+use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Str;
 
 class CurriculumTierController extends Controller
 {
     public function store(StoreCurriculumTierRequest $request, EducationSystem $educationSystem): RedirectResponse
     {
+        Gate::authorize('create', Institution::class);
+
         $data = $request->validated();
         $data['education_system_id'] = $educationSystem->id;
         if (empty($data['slug'])) {
             $data['slug'] = Str::slug($data['name']);
         }
 
-        CurriculumTier::create($data);
+        CurriculumTier::query()->create($data);
 
         return to_route('admin.education-systems.show', $educationSystem)->with('success', 'Curriculum tier created.');
     }
 
     public function update(UpdateCurriculumTierRequest $request, CurriculumTier $curriculumTier): RedirectResponse
     {
+        Gate::authorize('update', Institution::class);
+
         $curriculumTier->update($request->validated());
 
         return to_route('admin.education-systems.show', $curriculumTier->education_system_id)->with('success', 'Curriculum tier updated.');
@@ -34,6 +40,8 @@ class CurriculumTierController extends Controller
 
     public function destroy(CurriculumTier $curriculumTier): RedirectResponse
     {
+        Gate::authorize('delete', Institution::class);
+
         $systemId = $curriculumTier->education_system_id;
         $curriculumTier->delete();
 

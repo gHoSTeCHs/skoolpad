@@ -15,6 +15,7 @@ use App\Models\Institution;
 use App\Models\InstitutionCourse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Gate;
 use Inertia\Inertia;
 use Inertia\Response;
 
@@ -24,6 +25,8 @@ class CourseController extends Controller
 
     public function index(Request $request): Response
     {
+        Gate::authorize('viewAny', InstitutionCourse::class);
+
         $courses = InstitutionCourse::query()
             ->with(['institution:id,name,abbreviation', 'owningDepartment:id,name', 'discipline:id,name'])
             ->withCount('topicMappings')
@@ -58,7 +61,7 @@ class CourseController extends Controller
 
         return Inertia::render('admin/courses/index', [
             'courses' => $this->paginated($courses),
-            'institutions' => Institution::orderBy('name')->get(['id', 'name', 'abbreviation']),
+            'institutions' => Institution::query()->orderBy('name')->get(['id', 'name', 'abbreviation']),
             'course_scopes' => CourseScope::toSelectOptions(),
             'filters' => $request->only(['search', 'institution_id', 'level', 'semester', 'course_scope', 'sort', 'direction']),
         ]);
@@ -66,9 +69,11 @@ class CourseController extends Controller
 
     public function create(): Response
     {
+        Gate::authorize('create', InstitutionCourse::class);
+
         return Inertia::render('admin/courses/create', [
-            'institutions' => Institution::orderBy('name')->get(['id', 'name', 'abbreviation']),
-            'disciplines' => Discipline::orderBy('name')->get(['id', 'name']),
+            'institutions' => Institution::query()->orderBy('name')->get(['id', 'name', 'abbreviation']),
+            'disciplines' => Discipline::query()->orderBy('name')->get(['id', 'name']),
             'levels' => [100, 200, 300, 400, 500],
             'course_scopes' => CourseScope::toSelectOptions(),
             'semesters' => array_map(fn ($case) => [
@@ -80,13 +85,17 @@ class CourseController extends Controller
 
     public function store(StoreInstitutionCourseRequest $request): RedirectResponse
     {
-        $course = InstitutionCourse::create($request->validated());
+        Gate::authorize('create', InstitutionCourse::class);
+
+        $course = InstitutionCourse::query()->create($request->validated());
 
         return to_route('admin.courses.edit', $course)->with('success', 'Course created.');
     }
 
     public function edit(InstitutionCourse $course): Response
     {
+        Gate::authorize('update', $course);
+
         $course->load(['institution', 'owningDepartment.faculty', 'discipline']);
 
         return Inertia::render('admin/courses/edit', [
@@ -104,18 +113,18 @@ class CourseController extends Controller
                 'course_scope' => $course->course_scope->value,
                 'description' => $course->description,
             ],
-            'institutions' => Institution::orderBy('name')->get(['id', 'name', 'abbreviation']),
-            'disciplines' => Discipline::orderBy('name')->get(['id', 'name']),
+            'institutions' => Institution::query()->orderBy('name')->get(['id', 'name', 'abbreviation']),
+            'disciplines' => Discipline::query()->orderBy('name')->get(['id', 'name']),
             'levels' => [100, 200, 300, 400, 500],
             'course_scopes' => CourseScope::toSelectOptions(),
             'semesters' => array_map(fn ($case) => [
                 'value' => $case->value,
                 'label' => $case->label(),
             ], Semester::cases()),
-            'faculties' => Faculty::where('institution_id', $course->institution_id)
+            'faculties' => Faculty::query()->where('institution_id', $course->institution_id)
                 ->orderBy('name')
                 ->get(['id', 'name']),
-            'departments' => Department::whereHas('faculty', fn ($q) => $q->where('institution_id', $course->institution_id))
+            'departments' => Department::query()->whereHas('faculty', fn ($q) => $q->where('institution_id', $course->institution_id))
                 ->orderBy('name')
                 ->get(['id', 'name', 'abbreviation', 'faculty_id']),
         ]);
@@ -123,6 +132,8 @@ class CourseController extends Controller
 
     public function update(UpdateInstitutionCourseRequest $request, InstitutionCourse $course): RedirectResponse
     {
+        Gate::authorize('update', $course);
+
         $course->update($request->validated());
 
         return to_route('admin.courses.edit', $course)->with('success', 'Course updated.');

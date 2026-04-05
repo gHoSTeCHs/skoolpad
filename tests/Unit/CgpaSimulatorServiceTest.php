@@ -2,7 +2,7 @@
 
 use App\Enums\ScaleType;
 use App\Models\GradingScale;
-use App\Services\CgpaSimulatorService;
+use App\Services\Student\CgpaSimulatorService;
 
 beforeEach(function () {
     $this->service = new CgpaSimulatorService;

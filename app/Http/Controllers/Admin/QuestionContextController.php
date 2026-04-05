@@ -10,22 +10,26 @@ use App\Models\QuestionContext;
 use App\Models\QuestionPaper;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
-use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Gate;
 
 class QuestionContextController extends Controller
 {
     public function store(StoreQuestionContextRequest $request, QuestionPaper $questionPaper): RedirectResponse
     {
+        Gate::authorize('manageContexts', Question::class);
+
         $data = $request->validated();
         $data['question_paper_id'] = $questionPaper->id;
 
-        QuestionContext::create($data);
+        QuestionContext::query()->create($data);
 
         return back()->with('success', 'Context added.');
     }
 
     public function update(UpdateQuestionContextRequest $request, QuestionPaper $questionPaper, QuestionContext $questionContext): RedirectResponse
     {
+        Gate::authorize('manageContexts', Question::class);
+
         $questionContext->update($request->validated());
 
         return back()->with('success', 'Context updated.');
@@ -33,23 +37,23 @@ class QuestionContextController extends Controller
 
     public function destroy(QuestionPaper $questionPaper, QuestionContext $questionContext): RedirectResponse
     {
+        Gate::authorize('manageContexts', Question::class);
+
         $questionContext->delete();
 
         return back()->with('success', 'Context deleted.');
     }
 
-    public function link(Request $request, Question $question): JsonResponse
+    public function link(\App\Http\Requests\Admin\LinkQuestionContextRequest $request, Question $question): JsonResponse
     {
-        $request->validate([
-            'context_id' => ['required', 'uuid', 'exists:question_contexts,id'],
-            'sort_order' => ['nullable', 'integer', 'min:0'],
-            'label' => ['nullable', 'string', 'max:100'],
-        ]);
+        Gate::authorize('manageContexts', $question);
+
+        $validated = $request->validated();
 
         $question->contexts()->syncWithoutDetaching([
-            $request->input('context_id') => [
-                'sort_order' => $request->input('sort_order', 0),
-                'label' => $request->input('label'),
+            $validated['context_id'] => [
+                'sort_order' => $validated['sort_order'] ?? 0,
+                'label' => $validated['label'] ?? null,
             ],
         ]);
 
@@ -58,6 +62,8 @@ class QuestionContextController extends Controller
 
     public function unlink(Question $question, QuestionContext $questionContext): JsonResponse
     {
+        Gate::authorize('manageContexts', $question);
+
         $question->contexts()->detach($questionContext->id);
 
         return response()->json(['message' => 'Context unlinked.']);

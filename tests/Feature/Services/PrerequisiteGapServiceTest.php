@@ -8,7 +8,7 @@ use App\Models\PracticeSession;
 use App\Models\Question;
 use App\Models\TopicCompletion;
 use App\Models\User;
-use App\Services\PrerequisiteGapService;
+use App\Services\Student\PrerequisiteGapService;
 
 beforeEach(function () {
     $this->service = new PrerequisiteGapService;

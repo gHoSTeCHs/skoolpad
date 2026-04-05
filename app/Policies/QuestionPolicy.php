@@ -23,7 +23,7 @@ class QuestionPolicy
             || $user->role->hasPermission('submit_questions');
     }
 
-    public function update(User $user, Question $question): bool
+    public function update(User $user, ?Question $question = null): bool
     {
         return $user->role->hasPermission('manage_questions')
             || $user->role->hasPermission('manage_scoped_questions');
@@ -32,5 +32,20 @@ class QuestionPolicy
     public function publish(User $user): bool
     {
         return $user->role->hasPermission('publish_content');
+    }
+
+    public function managePapers(User $user): bool
+    {
+        return $user->role->hasPermission('manage_questions');
+    }
+
+    public function manageContexts(User $user): bool
+    {
+        return $user->role->hasPermission('manage_questions');
+    }
+
+    public function manageAnswers(User $user): bool
+    {
+        return $user->role->hasPermission('manage_answers');
     }
 }

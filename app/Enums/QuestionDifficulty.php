@@ -2,8 +2,11 @@
 
 namespace App\Enums;
 
+use App\Concerns\HasSelectOptions;
+
 enum QuestionDifficulty: string
 {
+    use HasSelectOptions;
     case Easy = 'easy';
     case Medium = 'medium';
     case Hard = 'hard';
