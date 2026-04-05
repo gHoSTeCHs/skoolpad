@@ -11,7 +11,6 @@ use App\Models\ParentChildLink;
 use App\Models\ParentProfile;
 use App\Models\StudentProfile;
 use App\Models\User;
-use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
@@ -114,20 +113,8 @@ class ParentAccountService
         return $link->fresh();
     }
 
-    public function revokeLinkRequest(User $requestingUser, string $linkId): ParentChildLink
+    public function revokeLinkRequest(ParentChildLink $link): ParentChildLink
     {
-        $link = ParentChildLink::query()->findOrFail($linkId);
-
-        $isParentOwner = $requestingUser->parentProfile
-            && $link->parent_profile_id === $requestingUser->parentProfile->id;
-
-        $isStudentOwner = $requestingUser->studentProfile
-            && $link->student_profile_id === $requestingUser->studentProfile->id;
-
-        if (! $isParentOwner && ! $isStudentOwner) {
-            throw new AuthorizationException;
-        }
-
         if ($link->status === ParentChildLinkStatus::Revoked) {
             return $link;
         }
