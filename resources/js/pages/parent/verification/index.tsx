@@ -1,19 +1,9 @@
 import { Head, Link } from '@inertiajs/react';
 import { ChevronRight, ShieldCheck } from 'lucide-react';
+import { index as dashboardIndex } from '@/actions/App/Http/Controllers/ParentDashboard/ParentDashboardController';
+import { show as verificationShow } from '@/actions/App/Http/Controllers/ParentDashboard/VerificationController';
 import ParentLayout from '@/layouts/parent-layout';
-
-interface VerificationQueueItem {
-    id: string;
-    title: string;
-    education_level: string;
-}
-
-interface VerificationStats {
-    total: number;
-    understood: number;
-    partially_understood: number;
-    needs_review: number;
-}
+import type { VerificationQueueItem, VerificationStats } from '@/types/parent';
 
 interface VerificationIndexProps {
     child: { id: string; user: { name: string } };
@@ -26,7 +16,7 @@ export default function VerificationIndex({ child, queue, stats }: VerificationI
 
     return (
         <ParentLayout breadcrumbs={[
-            { title: 'Dashboard', href: '/parent/dashboard' },
+            { title: 'Dashboard', href: dashboardIndex.url() },
             { title: 'Verification', href: '#' },
         ]}>
             <Head title={`Verification — ${childName}`} />
@@ -75,7 +65,7 @@ export default function VerificationIndex({ child, queue, stats }: VerificationI
                         {queue.map((item) => (
                             <Link
                                 key={item.id}
-                                href={`/parent/children/${child.id}/verification/${item.id}`}
+                                href={verificationShow.url({ studentProfile: child.id, topic: item.id })}
                                 className="flex items-center gap-3 rounded-lg border border-border bg-card p-4 transition-colors hover:bg-muted"
                             >
                                 <div className="flex size-9 shrink-0 items-center justify-center rounded-md bg-[var(--canopy-50)] dark:bg-[var(--canopy-950)]">

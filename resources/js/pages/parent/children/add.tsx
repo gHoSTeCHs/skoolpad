@@ -1,5 +1,7 @@
 import { Head, router, usePage } from '@inertiajs/react';
 import { useState } from 'react';
+import { storeChild } from '@/actions/App/Http/Controllers/ParentDashboard/ChildLinkController';
+import { index as dashboardIndex } from '@/actions/App/Http/Controllers/ParentDashboard/ParentDashboardController';
 import ParentLayout from '@/layouts/parent-layout';
 
 export default function AddChild() {
@@ -21,7 +23,7 @@ export default function AddChild() {
     function handleSubmit(e: React.FormEvent) {
         e.preventDefault();
         setSubmitting(true);
-        router.post('/parent/children/add', form, {
+        router.post(storeChild.url(), form, {
             onFinish: () => setSubmitting(false),
         });
     }
@@ -36,7 +38,7 @@ export default function AddChild() {
 
     return (
         <ParentLayout breadcrumbs={[
-            { title: 'Dashboard', href: '/parent/dashboard' },
+            { title: 'Dashboard', href: dashboardIndex.url() },
             { title: 'Add Child', href: '#' },
         ]}>
             <Head title="Add Child" />

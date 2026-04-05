@@ -43,12 +43,11 @@ export type LinkedChild = {
     student_profile_id: string;
     status: ParentChildLinkStatus;
     study_goal_minutes: number | null;
-    student_profile: {
+    student_profile?: {
         id: string;
         user: {
-            id: number;
+            id: string;
             name: string;
-            email: string;
         };
     };
 };
@@ -105,7 +104,6 @@ export type VerificationQueueItem = {
     id: string;
     title: string;
     education_level: string;
-    parent_verification_kit: VerificationKit | null;
 };
 
 export type VerificationStats = {

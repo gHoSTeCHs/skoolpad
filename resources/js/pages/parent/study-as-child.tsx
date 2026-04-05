@@ -1,5 +1,6 @@
 import { Head, Link } from '@inertiajs/react';
 import { ArrowLeft, BookOpen, Clock, Info } from 'lucide-react';
+import { index as dashboardIndex } from '@/actions/App/Http/Controllers/ParentDashboard/ParentDashboardController';
 import ParentLayout from '@/layouts/parent-layout';
 import type { StudyAsChildContext } from '@/types/parent';
 
@@ -13,7 +14,7 @@ export default function StudyAsChild({ context }: StudyAsChildProps) {
 
     return (
         <ParentLayout breadcrumbs={[
-            { title: 'Dashboard', href: '/parent/dashboard' },
+            { title: 'Dashboard', href: dashboardIndex.url() },
             { title: `Study as ${firstName}`, href: '#' },
         ]}>
             <Head title={`Study as ${firstName}`} />
@@ -30,7 +31,7 @@ export default function StudyAsChild({ context }: StudyAsChildProps) {
                         </p>
                     </div>
                     <Link
-                        href="/parent/dashboard"
+                        href={dashboardIndex.url()}
                         className="flex items-center gap-1 text-xs font-medium text-[var(--canopy-600)] hover:text-[var(--canopy-800)] dark:hover:text-[var(--canopy-400)]"
                     >
                         <ArrowLeft className="size-3" />

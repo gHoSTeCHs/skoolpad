@@ -1,5 +1,6 @@
 import { Head, router, usePage } from '@inertiajs/react';
 import { useState } from 'react';
+import { store } from '@/actions/App/Http/Controllers/ParentDashboard/ParentOnboardingController';
 
 export default function ParentOnboarding() {
     const { errors } = usePage<{ errors: Record<string, string> }>().props;
@@ -10,7 +11,7 @@ export default function ParentOnboarding() {
     function handleSubmit(e: React.FormEvent) {
         e.preventDefault();
         setSubmitting(true);
-        router.post('/parent/onboarding', {
+        router.post(store.url(), {
             relationship,
             phone_number: phoneNumber || null,
         }, { onFinish: () => setSubmitting(false) });

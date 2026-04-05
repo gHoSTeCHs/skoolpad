@@ -1,6 +1,7 @@
 import { Head, router } from '@inertiajs/react';
 import { BookOpen, CheckCircle2, Eye, MessageSquare, XCircle } from 'lucide-react';
 import { useState } from 'react';
+import { index as dashboardIndex } from '@/actions/App/Http/Controllers/ParentDashboard/ParentDashboardController';
 import { store as verificationStore } from '@/actions/App/Http/Controllers/ParentDashboard/VerificationController';
 import ParentLayout from '@/layouts/parent-layout';
 import type { VerificationKit, VerificationTrueFalseItem } from '@/types/parent';
@@ -87,7 +88,7 @@ export default function ReadTogether({ child, content }: ReadTogetherProps) {
 
     return (
         <ParentLayout breadcrumbs={[
-            { title: 'Dashboard', href: '/parent/dashboard' },
+            { title: 'Dashboard', href: dashboardIndex.url() },
             { title: 'Read Together', href: '#' },
         ]}>
             <Head title={`Read Together — ${content.topic_title}`} />

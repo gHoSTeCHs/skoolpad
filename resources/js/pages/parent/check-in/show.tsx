@@ -1,6 +1,8 @@
 import { Head, router } from '@inertiajs/react';
 import { CheckCircle2, ClipboardCheck, Clock } from 'lucide-react';
 import { useState } from 'react';
+import { complete } from '@/actions/App/Http/Controllers/ParentDashboard/CheckInController';
+import { index as dashboardIndex } from '@/actions/App/Http/Controllers/ParentDashboard/ParentDashboardController';
 import { CheckInTopicItem } from '@/components/parent/check-in-topic-item';
 import { CoverageQuestion } from '@/components/parent/coverage-question';
 import ParentLayout from '@/layouts/parent-layout';
@@ -31,7 +33,7 @@ export default function CheckInShow({ child, checkIn }: CheckInShowProps) {
     function handleComplete() {
         setCompleting(true);
         router.post(
-            `/parent/children/${child.id}/check-in`,
+            complete.url(child.id),
             {
                 completed_items: checkIn.items.map((item) => ({
                     canonical_topic_id: item.canonical_topic_id,
@@ -49,7 +51,7 @@ export default function CheckInShow({ child, checkIn }: CheckInShowProps) {
 
     return (
         <ParentLayout breadcrumbs={[
-            { title: 'Dashboard', href: '/parent/dashboard' },
+            { title: 'Dashboard', href: dashboardIndex.url() },
             { title: 'Check-in', href: '#' },
         ]}>
             <Head title={`Check-in — ${child.name}`} />

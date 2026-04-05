@@ -1,6 +1,8 @@
 import { Head, Link, router, usePage } from '@inertiajs/react';
 import { LinkIcon } from 'lucide-react';
 import { useState } from 'react';
+import { create, linkChild } from '@/actions/App/Http/Controllers/ParentDashboard/ChildLinkController';
+import { index as dashboardIndex } from '@/actions/App/Http/Controllers/ParentDashboard/ParentDashboardController';
 import ParentLayout from '@/layouts/parent-layout';
 
 export default function LinkChild() {
@@ -11,14 +13,14 @@ export default function LinkChild() {
     function handleSubmit(e: React.FormEvent) {
         e.preventDefault();
         setSubmitting(true);
-        router.post('/parent/children/link', {
+        router.post(linkChild.url(), {
             invite_code: inviteCode.toUpperCase(),
         }, { onFinish: () => setSubmitting(false) });
     }
 
     return (
         <ParentLayout breadcrumbs={[
-            { title: 'Dashboard', href: '/parent/dashboard' },
+            { title: 'Dashboard', href: dashboardIndex.url() },
             { title: 'Link Child', href: '#' },
         ]}>
             <Head title="Link to Existing Student" />
@@ -68,7 +70,7 @@ export default function LinkChild() {
 
                     <p className="mt-4 text-center text-xs text-muted-foreground">
                         Don&apos;t have a code?{' '}
-                        <Link href="/parent/children/add" className="font-medium text-[var(--canopy-600)] hover:underline">
+                        <Link href={create.url()} className="font-medium text-[var(--canopy-600)] hover:underline">
                             Create a new account instead
                         </Link>
                     </p>

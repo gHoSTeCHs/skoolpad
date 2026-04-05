@@ -1,6 +1,8 @@
 import { Head, Link, router } from '@inertiajs/react';
 import { ArrowLeft, CheckCircle2, Eye, MessageSquare, XCircle } from 'lucide-react';
 import { useState } from 'react';
+import { index as dashboardIndex } from '@/actions/App/Http/Controllers/ParentDashboard/ParentDashboardController';
+import { index as verificationIndex, store } from '@/actions/App/Http/Controllers/ParentDashboard/VerificationController';
 import ParentLayout from '@/layouts/parent-layout';
 
 interface TrueFalseItem {
@@ -76,7 +78,7 @@ export default function VerificationShow({ child, kit }: VerificationShowProps) 
             .filter((i) => i !== -1);
 
         router.post(
-            `/parent/children/${child.id}/verification/${kit.topic_id}`,
+            store.url({ studentProfile: child.id, topic: kit.topic_id }),
             {
                 responses: {
                     explain_checklist: {
@@ -104,8 +106,8 @@ export default function VerificationShow({ child, kit }: VerificationShowProps) 
 
     return (
         <ParentLayout breadcrumbs={[
-            { title: 'Dashboard', href: '/parent/dashboard' },
-            { title: 'Verification', href: `/parent/children/${child.id}/verification` },
+            { title: 'Dashboard', href: dashboardIndex.url() },
+            { title: 'Verification', href: verificationIndex.url(child.id) },
             { title: kit.topic_title, href: '#' },
         ]}>
             <Head title={`Verify — ${kit.topic_title}`} />
@@ -114,7 +116,7 @@ export default function VerificationShow({ child, kit }: VerificationShowProps) 
                 {/* Back link + header */}
                 <div>
                     <Link
-                        href={`/parent/children/${child.id}/verification`}
+                        href={verificationIndex.url(child.id)}
                         className="mb-3 inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground"
                     >
                         <ArrowLeft className="size-3.5" />

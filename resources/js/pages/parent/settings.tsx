@@ -1,6 +1,8 @@
 import { Head, router } from '@inertiajs/react';
 import { Bell, Clock, Settings } from 'lucide-react';
 import { useState } from 'react';
+import { index as dashboardIndex } from '@/actions/App/Http/Controllers/ParentDashboard/ParentDashboardController';
+import { updateNotifications, updateStudyDuration } from '@/actions/App/Http/Controllers/ParentDashboard/ParentSettingsController';
 import ParentLayout from '@/layouts/parent-layout';
 import type { ChildSettingConfig, NotificationPreferences } from '@/types/parent';
 
@@ -30,7 +32,7 @@ export default function ParentSettings({ notification_preferences, children_sett
 
     function saveNotifications() {
         setSavingNotifications(true);
-        router.put('/parent/settings/notifications', { alert_channels: channels }, {
+        router.put(updateNotifications.url(), { alert_channels: channels }, {
             preserveScroll: true,
             onFinish: () => setSavingNotifications(false),
         });
@@ -38,7 +40,7 @@ export default function ParentSettings({ notification_preferences, children_sett
 
     function saveChildDuration(linkId: string) {
         setSavingChild(linkId);
-        router.put(`/parent/settings/study-duration/${linkId}`, {
+        router.put(updateStudyDuration.url(linkId), {
             study_goal_minutes: childDurations[linkId],
         }, {
             preserveScroll: true,
@@ -48,7 +50,7 @@ export default function ParentSettings({ notification_preferences, children_sett
 
     return (
         <ParentLayout breadcrumbs={[
-            { title: 'Dashboard', href: '/parent/dashboard' },
+            { title: 'Dashboard', href: dashboardIndex.url() },
             { title: 'Settings', href: '#' },
         ]}>
             <Head title="Parent Settings" />
