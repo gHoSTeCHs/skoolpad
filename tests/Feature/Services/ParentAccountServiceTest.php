@@ -10,7 +10,6 @@ use App\Models\ParentProfile;
 use App\Models\StudentProfile;
 use App\Models\User;
 use App\Services\ParentAccountService;
-use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Validation\ValidationException;
 
 beforeEach(function () {
@@ -124,34 +123,18 @@ test('approveLinkRequest rejects link belonging to different student', function 
 
 test('revokeLinkRequest works for parent owner', function () {
     $link = ParentChildLink::factory()->active()->create();
-    $parentUser = $link->parentProfile->user;
 
-    $revokedLink = $this->service->revokeLinkRequest(
-        requestingUser: $parentUser,
-        linkId: $link->id,
-    );
+    $revokedLink = $this->service->revokeLinkRequest($link);
 
     expect($revokedLink->status)->toBe(ParentChildLinkStatus::Revoked);
 });
 
 test('revokeLinkRequest works for student owner', function () {
     $link = ParentChildLink::factory()->active()->create();
-    $studentUser = $link->studentProfile->user;
 
-    $revokedLink = $this->service->revokeLinkRequest(
-        requestingUser: $studentUser,
-        linkId: $link->id,
-    );
+    $revokedLink = $this->service->revokeLinkRequest($link);
 
     expect($revokedLink->status)->toBe(ParentChildLinkStatus::Revoked);
-});
-
-test('revokeLinkRequest rejects unauthorized user', function () {
-    $link = ParentChildLink::factory()->active()->create();
-    $randomUser = User::factory()->create();
-
-    expect(fn () => $this->service->revokeLinkRequest($randomUser, $link->id))
-        ->toThrow(AuthorizationException::class);
 });
 
 test('getLinkedChildren returns only active links', function () {

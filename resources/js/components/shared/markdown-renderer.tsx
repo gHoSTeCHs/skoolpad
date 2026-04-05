@@ -13,7 +13,10 @@ interface MarkdownRendererProps {
     className?: string;
 }
 
-export function MarkdownRenderer({ content, className }: MarkdownRendererProps) {
+export function MarkdownRenderer({
+    content,
+    className,
+}: MarkdownRendererProps) {
     if (!content) return null;
 
     return (

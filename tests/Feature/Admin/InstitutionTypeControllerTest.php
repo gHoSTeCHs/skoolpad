@@ -115,3 +115,11 @@ test('update modifies institution type', function () {
     expect($type->fresh()->name)->toBe('Updated Type')
         ->and($type->fresh()->credit_system)->toBe('Updated System');
 });
+
+test('staff without manage_institutions permission get 403', function () {
+    $staff = User::factory()->contentManager()->create();
+
+    $this->actingAs($staff)
+        ->get(route('admin.institution-types.index'))
+        ->assertForbidden();
+});

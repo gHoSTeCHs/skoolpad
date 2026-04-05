@@ -9,6 +9,7 @@ use App\Http\Requests\Admin\UpdateSubscriptionPlanRequest;
 use App\Models\PlatformSetting;
 use App\Models\SubscriptionPlan;
 use Illuminate\Http\RedirectResponse;
+use Illuminate\Support\Facades\Gate;
 use Inertia\Inertia;
 use Inertia\Response;
 
@@ -16,6 +17,8 @@ class SubscriptionPlanController extends Controller
 {
     public function index(): Response
     {
+        Gate::authorize('viewPlans', SubscriptionPlan::class);
+
         $plans = SubscriptionPlan::query()
             ->orderBy('price_ngn')
             ->get()
@@ -37,6 +40,8 @@ class SubscriptionPlanController extends Controller
 
     public function edit(SubscriptionPlan $plan): Response
     {
+        Gate::authorize('updatePlan', $plan);
+
         return Inertia::render('admin/settings/plans/edit', [
             'plan' => $plan,
             'billingPeriods' => BillingPeriod::toSelectOptions(),
@@ -46,9 +51,7 @@ class SubscriptionPlanController extends Controller
 
     public function update(UpdateSubscriptionPlanRequest $request, SubscriptionPlan $plan): RedirectResponse
     {
-        if (! $request->user()->role->hasPermission('manage_subscriptions')) {
-            abort(403, 'You do not have permission to manage subscriptions.');
-        }
+        Gate::authorize('updatePlan', $plan);
 
         $plan->update($request->validated());
 

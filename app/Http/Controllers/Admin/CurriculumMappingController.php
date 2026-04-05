@@ -10,9 +10,11 @@ use App\Models\CanonicalTopic;
 use App\Models\ContentBlock;
 use App\Models\CourseBlockMapping;
 use App\Models\EducationSystem;
+use App\Models\InstitutionCourse;
 use App\Services\Admin\CourseMappingService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
+use Illuminate\Support\Facades\Gate;
 use Inertia\Inertia;
 use Inertia\Response;
 
@@ -24,6 +26,8 @@ class CurriculumMappingController extends Controller
 
     public function index(): Response
     {
+        Gate::authorize('manageMappings', InstitutionCourse::class);
+
         $educationSystems = EducationSystem::query()->with([
             'curriculumTiers' => fn ($q) => $q->orderBy('sort_order'),
             'curriculumTiers.educationLevels' => fn ($q) => $q->orderBy('sort_order'),
@@ -39,6 +43,8 @@ class CurriculumMappingController extends Controller
 
     public function load(LoadLevelSubjectRequest $request): JsonResponse
     {
+        Gate::authorize('manageMappings', InstitutionCourse::class);
+
         $validated = $request->validated();
 
         $levelSubject = $this->courseMappingService->findOrCreateLevelSubject($validated);
@@ -91,6 +97,8 @@ class CurriculumMappingController extends Controller
 
     public function update(UpdateCurriculumMappingRequest $request): RedirectResponse
     {
+        Gate::authorize('manageMappings', InstitutionCourse::class);
+
         $validated = $request->validated();
 
         $this->courseMappingService->saveCurriculumBlockMappings(

@@ -256,6 +256,14 @@ test('store uploads a logo', function () {
     Storage::disk('s3')->assertExists($institution->logo_path);
 });
 
+test('staff without manage_institutions permission get 403', function () {
+    $staff = User::factory()->contentManager()->create();
+
+    $this->actingAs($staff)
+        ->get(route('admin.institutions.index'))
+        ->assertForbidden();
+});
+
 test('guests cannot access institution routes', function () {
     $this->get(route('admin.institutions.index'))->assertRedirect(route('login'));
     $this->get(route('admin.institutions.create'))->assertRedirect(route('login'));

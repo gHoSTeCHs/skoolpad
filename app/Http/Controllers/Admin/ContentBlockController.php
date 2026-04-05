@@ -13,6 +13,7 @@ use App\Models\CanonicalTopic;
 use App\Models\ContentBlock;
 use App\Services\Admin\ContentBlockService;
 use Illuminate\Http\RedirectResponse;
+use Illuminate\Support\Facades\Gate;
 use Inertia\Inertia;
 use Inertia\Response;
 
@@ -24,6 +25,8 @@ class ContentBlockController extends Controller
 
     public function index(CanonicalTopic $topic): Response
     {
+        Gate::authorize('viewAny', CanonicalTopic::class);
+
         $blocks = $topic->contentBlocks()
             ->whereNull('parent_block_id')
             ->with($this->blockTreeWith())
@@ -54,6 +57,8 @@ class ContentBlockController extends Controller
 
     public function store(StoreContentBlockRequest $request, CanonicalTopic $topic): RedirectResponse
     {
+        Gate::authorize('create', CanonicalTopic::class);
+
         $this->contentBlockService->createBlock($topic, $request->validated());
 
         return back()->with('success', 'Block created.');
@@ -61,6 +66,8 @@ class ContentBlockController extends Controller
 
     public function update(UpdateContentBlockRequest $request, ContentBlock $block): RedirectResponse
     {
+        Gate::authorize('update', $block);
+
         $data = $request->validated();
         $prerequisites = $data['prerequisites'] ?? [];
         unset($data['prerequisites']);
@@ -73,6 +80,8 @@ class ContentBlockController extends Controller
 
     public function destroy(ContentBlock $block): RedirectResponse
     {
+        Gate::authorize('delete', $block);
+
         $this->contentBlockService->deleteBlock($block);
 
         return back()->with('success', 'Block deleted.');
@@ -80,6 +89,8 @@ class ContentBlockController extends Controller
 
     public function reorder(ReorderContentBlocksRequest $request, CanonicalTopic $topic): RedirectResponse
     {
+        Gate::authorize('update', $topic);
+
         $this->contentBlockService->reorderBlocks($topic, $request->validated('items'));
 
         return back()->with('success', 'Blocks reordered.');

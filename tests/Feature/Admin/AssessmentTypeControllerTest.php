@@ -81,3 +81,16 @@ test('destroy deletes an assessment type', function () {
 
     $this->assertDatabaseMissing('assessment_types', ['id' => $assessment->id]);
 });
+
+test('staff without manage_institutions permission get 403', function () {
+    $staff = User::factory()->contentManager()->create();
+
+    $this->actingAs($staff)
+        ->post(route('admin.assessment-types.store', $this->system), [
+            'name' => 'Blocked Type',
+            'is_exit_exam' => false,
+            'is_entrance_exam' => false,
+            'grading_scale_id' => $this->gradingScale->id,
+        ])
+        ->assertForbidden();
+});

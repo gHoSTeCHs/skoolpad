@@ -169,7 +169,7 @@ test('update requires manage_roles for role change', function () {
         ->assertForbidden();
 });
 
-test('update allows is_active change without manage_roles', function () {
+test('update is forbidden for non-superadmin staff', function () {
     $contentManager = User::factory()->contentManager()->create();
     $user = User::factory()->create(['role' => UserRole::Student, 'is_active' => true]);
 
@@ -178,10 +178,7 @@ test('update allows is_active change without manage_roles', function () {
             'role' => 'student',
             'is_active' => false,
         ])
-        ->assertRedirect(route('admin.users.index'));
-
-    $user->refresh();
-    expect($user->is_active)->toBeFalse();
+        ->assertForbidden();
 });
 
 test('guests cannot access user routes', function () {

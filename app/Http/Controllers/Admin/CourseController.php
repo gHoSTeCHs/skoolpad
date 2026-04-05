@@ -15,6 +15,7 @@ use App\Models\Institution;
 use App\Models\InstitutionCourse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Gate;
 use Inertia\Inertia;
 use Inertia\Response;
 
@@ -24,6 +25,8 @@ class CourseController extends Controller
 
     public function index(Request $request): Response
     {
+        Gate::authorize('viewAny', InstitutionCourse::class);
+
         $courses = InstitutionCourse::query()
             ->with(['institution:id,name,abbreviation', 'owningDepartment:id,name', 'discipline:id,name'])
             ->withCount('topicMappings')
@@ -66,6 +69,8 @@ class CourseController extends Controller
 
     public function create(): Response
     {
+        Gate::authorize('create', InstitutionCourse::class);
+
         return Inertia::render('admin/courses/create', [
             'institutions' => Institution::query()->orderBy('name')->get(['id', 'name', 'abbreviation']),
             'disciplines' => Discipline::query()->orderBy('name')->get(['id', 'name']),
@@ -80,6 +85,8 @@ class CourseController extends Controller
 
     public function store(StoreInstitutionCourseRequest $request): RedirectResponse
     {
+        Gate::authorize('create', InstitutionCourse::class);
+
         $course = InstitutionCourse::query()->create($request->validated());
 
         return to_route('admin.courses.edit', $course)->with('success', 'Course created.');
@@ -87,6 +94,8 @@ class CourseController extends Controller
 
     public function edit(InstitutionCourse $course): Response
     {
+        Gate::authorize('update', $course);
+
         $course->load(['institution', 'owningDepartment.faculty', 'discipline']);
 
         return Inertia::render('admin/courses/edit', [
@@ -123,6 +132,8 @@ class CourseController extends Controller
 
     public function update(UpdateInstitutionCourseRequest $request, InstitutionCourse $course): RedirectResponse
     {
+        Gate::authorize('update', $course);
+
         $course->update($request->validated());
 
         return to_route('admin.courses.edit', $course)->with('success', 'Course updated.');

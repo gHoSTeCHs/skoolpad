@@ -56,3 +56,14 @@ test('destroy deletes a level', function () {
 
     $this->assertDatabaseMissing('education_levels', ['id' => $level->id]);
 });
+
+test('staff without manage_institutions permission get 403', function () {
+    $staff = User::factory()->contentManager()->create();
+
+    $this->actingAs($staff)
+        ->post(route('admin.education-levels.store', $this->tier), [
+            'name' => 'Blocked Level',
+            'sort_order' => 1,
+        ])
+        ->assertForbidden();
+});

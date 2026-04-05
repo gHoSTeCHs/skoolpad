@@ -11,6 +11,7 @@ use App\Models\CourseBlockMapping;
 use App\Models\InstitutionCourse;
 use App\Services\Admin\CourseMappingService;
 use Illuminate\Http\RedirectResponse;
+use Illuminate\Support\Facades\Gate;
 use Inertia\Inertia;
 use Inertia\Response;
 
@@ -22,6 +23,8 @@ class CourseBlockMappingController extends Controller
 
     public function index(InstitutionCourse $course): Response
     {
+        Gate::authorize('manageMappings', InstitutionCourse::class);
+
         $course->load(['discipline', 'institution']);
 
         $mappings = $course->courseBlockMappings()
@@ -80,6 +83,8 @@ class CourseBlockMappingController extends Controller
 
     public function update(UpdateCourseBlockMappingRequest $request, InstitutionCourse $course): RedirectResponse
     {
+        Gate::authorize('manageMappings', InstitutionCourse::class);
+
         $this->courseMappingService->saveCourseBlockMappings($course, $request->validated('mappings'));
 
         return back()->with('success', 'Block mappings updated.');

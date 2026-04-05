@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Http\Requests\Admin\UpdatePlatformSettingRequest;
 use App\Models\PlatformSetting;
 use Illuminate\Http\RedirectResponse;
+use Illuminate\Support\Facades\Gate;
 use Inertia\Inertia;
 use Inertia\Response;
 
@@ -13,6 +14,8 @@ class SettingsController extends Controller
 {
     public function index(): Response
     {
+        Gate::authorize('viewSettings', PlatformSetting::class);
+
         $settings = PlatformSetting::query()->get()
             ->mapWithKeys(fn (PlatformSetting $s) => [$s->key => $s->value]);
 
@@ -23,11 +26,9 @@ class SettingsController extends Controller
 
     public function update(UpdatePlatformSettingRequest $request): RedirectResponse
     {
-        $validated = $request->validated();
+        Gate::authorize('updateSettings', PlatformSetting::class);
 
-        if (! $request->user()->role->hasPermission('manage_platform_settings')) {
-            abort(403, 'You do not have permission to manage platform settings.');
-        }
+        $validated = $request->validated();
 
         if ($validated['key'] === 'monetization_enabled' && ! $request->user()->role->hasPermission('toggle_monetization')) {
             abort(403, 'You do not have permission to toggle monetization.');

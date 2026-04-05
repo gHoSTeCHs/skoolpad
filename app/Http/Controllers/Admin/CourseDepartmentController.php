@@ -10,6 +10,7 @@ use App\Models\Faculty;
 use App\Models\InstitutionCourse;
 use App\Services\Admin\CourseMappingService;
 use Illuminate\Http\RedirectResponse;
+use Illuminate\Support\Facades\Gate;
 use Inertia\Inertia;
 use Inertia\Response;
 
@@ -21,6 +22,8 @@ class CourseDepartmentController extends Controller
 
     public function index(InstitutionCourse $course): Response
     {
+        Gate::authorize('manageMappings', InstitutionCourse::class);
+
         $course->load(['institution', 'owningDepartment', 'departmentOfferings']);
 
         $scopeType = match ($course->course_scope) {
@@ -67,6 +70,8 @@ class CourseDepartmentController extends Controller
 
     public function update(UpdateCourseDepartmentOfferingsRequest $request, InstitutionCourse $course): RedirectResponse
     {
+        Gate::authorize('manageMappings', InstitutionCourse::class);
+
         if ($course->course_scope !== CourseScope::Faculty) {
             return back()->with('error', 'Department offerings can only be configured for faculty-scoped courses.');
         }

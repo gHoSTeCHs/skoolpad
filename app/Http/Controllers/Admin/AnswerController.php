@@ -8,6 +8,7 @@ use App\Http\Requests\Admin\StoreQuestionAnswerRequest;
 use App\Models\Question;
 use App\Models\QuestionAnswer;
 use Illuminate\Http\RedirectResponse;
+use Illuminate\Support\Facades\Gate;
 use Inertia\Inertia;
 use Inertia\Response;
 
@@ -15,6 +16,8 @@ class AnswerController extends Controller
 {
     public function index(Question $question): Response
     {
+        Gate::authorize('manageAnswers', Question::class);
+
         $question->load([
             'institutionCourse:id,course_code',
             'answers',
@@ -45,6 +48,8 @@ class AnswerController extends Controller
 
     public function store(StoreQuestionAnswerRequest $request, Question $question): RedirectResponse
     {
+        Gate::authorize('manageAnswers', Question::class);
+
         $data = $request->validated();
         $data['question_id'] = $question->id;
         $data['created_by'] = $request->user()->id;
@@ -56,6 +61,8 @@ class AnswerController extends Controller
 
     public function update(StoreQuestionAnswerRequest $request, Question $question, QuestionAnswer $answer): RedirectResponse
     {
+        Gate::authorize('manageAnswers', Question::class);
+
         $answer->update($request->validated());
 
         return back()->with('success', 'Answer updated.');

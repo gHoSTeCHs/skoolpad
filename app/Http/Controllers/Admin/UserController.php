@@ -9,6 +9,7 @@ use App\Http\Requests\Admin\UpdateUserRequest;
 use App\Models\User;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Gate;
 use Inertia\Inertia;
 use Inertia\Response;
 
@@ -18,6 +19,8 @@ class UserController extends Controller
 
     public function index(Request $request): Response
     {
+        Gate::authorize('viewAny', User::class);
+
         $users = User::query()
             ->with('studentProfile.institution:id,name,abbreviation')
             ->when($request->filled('search'), fn ($q) => $q->search($request->string('search')))
@@ -48,6 +51,8 @@ class UserController extends Controller
 
     public function show(User $user): Response
     {
+        Gate::authorize('view', $user);
+
         $user->load([
             'studentProfile.institution:id,name,abbreviation',
             'studentProfile.faculty:id,name',
@@ -70,6 +75,8 @@ class UserController extends Controller
 
     public function edit(User $user): Response
     {
+        Gate::authorize('update', $user);
+
         return Inertia::render('admin/users/edit', [
             'user' => $user->only('id', 'name', 'email', 'role', 'is_active'),
             'roles' => UserRole::toSelectOptions(),
@@ -78,6 +85,8 @@ class UserController extends Controller
 
     public function update(UpdateUserRequest $request, User $user): RedirectResponse
     {
+        Gate::authorize('update', $user);
+
         $data = $request->validated();
         $isRoleChanging = $data['role'] !== $user->role->value;
 

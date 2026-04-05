@@ -76,3 +76,14 @@ test('destroy deletes a subject', function () {
 
     $this->assertDatabaseMissing('curriculum_subjects', ['id' => $subject->id]);
 });
+
+test('staff without manage_institutions permission get 403', function () {
+    $staff = User::factory()->contentManager()->create();
+
+    $this->actingAs($staff)
+        ->post(route('admin.curriculum-subjects.store', $this->system), [
+            'name' => 'Blocked Subject',
+            'discipline_id' => $this->discipline->id,
+        ])
+        ->assertForbidden();
+});

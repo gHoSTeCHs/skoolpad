@@ -15,6 +15,7 @@ use App\Models\Institution;
 use App\Models\InstitutionType as InstitutionTypeModel;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Facades\Storage;
 use Inertia\Inertia;
 use Inertia\Response;
@@ -25,6 +26,8 @@ class InstitutionController extends Controller
 
     public function index(Request $request): Response
     {
+        Gate::authorize('viewAny', Institution::class);
+
         $institutions = Institution::query()
             ->withCount('faculties')
             ->when($request->filled('search'), fn ($q) => $q->search($request->string('search')))
@@ -59,6 +62,8 @@ class InstitutionController extends Controller
 
     public function create(): Response
     {
+        Gate::authorize('create', Institution::class);
+
         return Inertia::render('admin/institutions/create', [
             'institutionTypes' => InstitutionType::toSelectOptions(),
             'institutionTypeModels' => InstitutionTypeModel::query()->orderBy('name')->get(['id', 'name']),
@@ -70,6 +75,8 @@ class InstitutionController extends Controller
 
     public function store(StoreInstitutionRequest $request): RedirectResponse
     {
+        Gate::authorize('create', Institution::class);
+
         $data = $request->validated();
 
         if ($request->hasFile('logo')) {
@@ -84,6 +91,8 @@ class InstitutionController extends Controller
 
     public function show(Institution $institution): Response
     {
+        Gate::authorize('viewAny', Institution::class);
+
         $institution->load([
             'country:id,name',
             'institutionTypeModel:id,name',
@@ -99,6 +108,8 @@ class InstitutionController extends Controller
 
     public function attachEducationSystem(\App\Http\Requests\Admin\AttachEducationSystemRequest $request, Institution $institution): RedirectResponse
     {
+        Gate::authorize('update', Institution::class);
+
         $institution->educationSystems()->syncWithoutDetaching([$request->validated('education_system_id')]);
 
         return back()->with('success', 'Education system attached.');
@@ -106,6 +117,8 @@ class InstitutionController extends Controller
 
     public function detachEducationSystem(Institution $institution, EducationSystem $educationSystem): RedirectResponse
     {
+        Gate::authorize('update', Institution::class);
+
         $institution->educationSystems()->detach($educationSystem->id);
 
         return back()->with('success', 'Education system detached.');
@@ -113,6 +126,8 @@ class InstitutionController extends Controller
 
     public function edit(Institution $institution): Response
     {
+        Gate::authorize('update', Institution::class);
+
         return Inertia::render('admin/institutions/edit', [
             'institution' => $institution,
             'institutionTypes' => InstitutionType::toSelectOptions(),
@@ -125,6 +140,8 @@ class InstitutionController extends Controller
 
     public function update(UpdateInstitutionRequest $request, Institution $institution): RedirectResponse
     {
+        Gate::authorize('update', Institution::class);
+
         $data = $request->validated();
 
         if ($request->hasFile('logo')) {

@@ -18,6 +18,7 @@ use App\Services\Admin\QuestionService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Gate;
 use Inertia\Inertia;
 use Inertia\Response;
 
@@ -31,6 +32,8 @@ class QuestionController extends Controller
 
     public function index(Request $request): Response
     {
+        Gate::authorize('viewAny', Question::class);
+
         $questions = Question::query()
             ->with([
                 'institutionCourse:id,institution_id,course_code',
@@ -89,6 +92,8 @@ class QuestionController extends Controller
 
     public function create(): Response
     {
+        Gate::authorize('create', Question::class);
+
         return Inertia::render('admin/questions/create', [
             'institutions' => Institution::query()->where('is_active', true)->orderBy('abbreviation')->get(['id', 'name', 'abbreviation']),
             'enum_options' => [
@@ -106,6 +111,8 @@ class QuestionController extends Controller
 
     public function store(StoreQuestionRequest $request): RedirectResponse
     {
+        Gate::authorize('create', Question::class);
+
         $data = $request->safe()->only([
             'institution_course_id', 'exam_subject_id', 'question_paper_id',
             'question_section_id', 'parent_question_id', 'question_type',
@@ -133,6 +140,8 @@ class QuestionController extends Controller
 
     public function edit(Question $question): Response
     {
+        Gate::authorize('view', $question);
+
         $question->load([
             'institutionCourse:id,institution_id,course_code',
             'institutionCourse.institution:id,name,abbreviation',
@@ -183,6 +192,8 @@ class QuestionController extends Controller
 
     public function update(UpdateQuestionRequest $request, Question $question): RedirectResponse
     {
+        Gate::authorize('update', $question);
+
         $data = $request->safe()->only([
             'institution_course_id', 'exam_subject_id', 'question_paper_id',
             'question_section_id', 'parent_question_id', 'question_type',
@@ -208,6 +219,8 @@ class QuestionController extends Controller
 
     public function reorder(ReorderQuestionsRequest $request): JsonResponse
     {
+        Gate::authorize('update', Question::class);
+
         $this->questionService->reorderQuestions($request->validated('questions'));
 
         return response()->json(['message' => 'Questions reordered.']);

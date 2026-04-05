@@ -129,6 +129,14 @@ test('non-staff users get 403', function () {
         ->assertForbidden();
 });
 
+test('staff without manage_institutions permission get 403', function () {
+    $staff = User::factory()->contentManager()->create();
+
+    $this->actingAs($staff)
+        ->get(route('admin.departments.index', $this->faculty))
+        ->assertForbidden();
+});
+
 test('guests cannot access department routes', function () {
     $faculty = Faculty::factory()->create();
     $this->get(route('admin.departments.index', $faculty))->assertRedirect(route('login'));

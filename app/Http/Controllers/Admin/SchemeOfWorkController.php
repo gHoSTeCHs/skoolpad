@@ -7,10 +7,12 @@ use App\Http\Requests\Admin\LoadSchemeOfWorkRequest;
 use App\Http\Requests\Admin\UpdateSchemeOfWorkRequest;
 use App\Models\CanonicalTopic;
 use App\Models\EducationSystem;
+use App\Models\InstitutionCourse;
 use App\Models\SchemeOfWorkItem;
 use App\Services\Admin\CourseMappingService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
+use Illuminate\Support\Facades\Gate;
 use Inertia\Inertia;
 use Inertia\Response;
 
@@ -22,6 +24,8 @@ class SchemeOfWorkController extends Controller
 
     public function index(): Response
     {
+        Gate::authorize('manageMappings', InstitutionCourse::class);
+
         $educationSystems = EducationSystem::query()->with([
             'curriculumTiers' => fn ($q) => $q->orderBy('sort_order'),
             'curriculumTiers.educationLevels' => fn ($q) => $q->orderBy('sort_order'),
@@ -39,6 +43,8 @@ class SchemeOfWorkController extends Controller
 
     public function load(LoadSchemeOfWorkRequest $request): JsonResponse
     {
+        Gate::authorize('manageMappings', InstitutionCourse::class);
+
         $validated = $request->validated();
 
         $levelSubject = $this->courseMappingService->findOrCreateLevelSubject($validated);
@@ -75,6 +81,8 @@ class SchemeOfWorkController extends Controller
 
     public function update(UpdateSchemeOfWorkRequest $request): RedirectResponse
     {
+        Gate::authorize('manageMappings', InstitutionCourse::class);
+
         $validated = $request->validated();
 
         $this->courseMappingService->saveSchemeOfWork(

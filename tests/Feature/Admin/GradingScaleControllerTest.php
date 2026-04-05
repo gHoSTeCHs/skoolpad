@@ -168,3 +168,11 @@ test('update allows keeping the same name', function () {
         ])
         ->assertRedirect(route('admin.grading-scales.index'));
 });
+
+test('staff without manage_institutions permission get 403', function () {
+    $staff = User::factory()->contentManager()->create();
+
+    $this->actingAs($staff)
+        ->get(route('admin.grading-scales.index'))
+        ->assertForbidden();
+});

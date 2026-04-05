@@ -12,6 +12,7 @@ use App\Models\ImportLog;
 use App\Services\Admin\ContentImportService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Gate;
 use Inertia\Inertia;
 use Inertia\Response;
 
@@ -25,6 +26,8 @@ class BulkImportController extends Controller
 
     public function index(): Response
     {
+        Gate::authorize('viewAny', ImportLog::class);
+
         return Inertia::render('admin/import/index', [
             'import_types' => ImportType::toSelectOptions(),
         ]);
@@ -32,21 +35,29 @@ class BulkImportController extends Controller
 
     public function importTopics(ImportCsvRequest $request): RedirectResponse
     {
+        Gate::authorize('import', ImportLog::class);
+
         return $this->handleImport($request, ImportType::Topics, 'topics');
     }
 
     public function importCourseMappings(ImportCsvRequest $request): RedirectResponse
     {
+        Gate::authorize('import', ImportLog::class);
+
         return $this->handleImport($request, ImportType::CourseMappings, 'course_mappings');
     }
 
     public function importCourseOfferings(ImportCsvRequest $request): RedirectResponse
     {
+        Gate::authorize('import', ImportLog::class);
+
         return $this->handleImport($request, ImportType::CourseOfferings, 'course_offerings');
     }
 
     public function importQuestions(ImportQuestionsRequest $request): RedirectResponse
     {
+        Gate::authorize('import', ImportLog::class);
+
         $defaultStatus = $request->input('default_status', 'draft');
 
         if ($defaultStatus === 'published' && ! $request->user()->role->hasPermission('publish_content')) {
@@ -58,6 +69,8 @@ class BulkImportController extends Controller
 
     public function history(Request $request): Response
     {
+        Gate::authorize('viewAny', ImportLog::class);
+
         $logs = ImportLog::query()
             ->with('processor:id,name')
             ->when($request->filled('import_type'), function ($query) use ($request) {

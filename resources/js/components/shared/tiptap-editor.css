@@ -89,7 +89,8 @@
     background: var(--bg-raised);
     border-radius: 0.25rem;
     padding: 0.15em 0.35em;
-    font-family: ui-monospace, SFMono-Regular, 'SF Mono', Menlo, Consolas, monospace;
+    font-family:
+        ui-monospace, SFMono-Regular, 'SF Mono', Menlo, Consolas, monospace;
     font-size: 0.875em;
 }
 
@@ -192,12 +193,15 @@
 }
 
 .tiptap-editor .tiptap .Tiptap-mathematics-editor {
-    font-family: ui-monospace, SFMono-Regular, 'SF Mono', Menlo, Consolas, monospace;
+    font-family:
+        ui-monospace, SFMono-Regular, 'SF Mono', Menlo, Consolas, monospace;
     font-size: 0.875em;
     background: var(--bg-raised);
     border: 1px solid var(--border);
 }
 
-.tiptap-editor .tiptap .Tiptap-mathematics-render.Tiptap-mathematics-render--selected {
+.tiptap-editor
+    .tiptap
+    .Tiptap-mathematics-render.Tiptap-mathematics-render--selected {
     background: var(--input-focus);
 }

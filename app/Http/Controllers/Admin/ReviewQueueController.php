@@ -15,6 +15,7 @@ use App\Models\Institution;
 use App\Services\Admin\ContentReviewService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Gate;
 use Inertia\Inertia;
 use Inertia\Response;
 
@@ -24,6 +25,8 @@ class ReviewQueueController extends Controller
 
     public function index(Request $request): Response
     {
+        Gate::authorize('viewAny', ContentSubmission::class);
+
         $submissions = ContentSubmission::query()
             ->with([
                 'submittedBy:id,name,email',
@@ -66,6 +69,8 @@ class ReviewQueueController extends Controller
 
     public function show(ContentSubmission $submission): Response
     {
+        Gate::authorize('review', $submission);
+
         $submission->load([
             'submittedBy:id,name,email',
             'reviewer:id,name',
@@ -120,7 +125,7 @@ class ReviewQueueController extends Controller
 
     public function approve(Request $request, ContentSubmission $submission, ContentReviewService $service): RedirectResponse
     {
-        abort_unless($request->user()->role->hasPermission('review_submissions'), 403);
+        Gate::authorize('review', $submission);
 
         $service->approveSubmission($submission, $request->user());
 
@@ -129,7 +134,7 @@ class ReviewQueueController extends Controller
 
     public function reject(RejectSubmissionRequest $request, ContentSubmission $submission, ContentReviewService $service): RedirectResponse
     {
-        abort_unless($request->user()->role->hasPermission('review_submissions'), 403);
+        Gate::authorize('review', $submission);
 
         $service->rejectSubmission($submission, $request->user(), $request->validated('reviewer_notes'));
 
@@ -138,6 +143,8 @@ class ReviewQueueController extends Controller
 
     public function uploads(Request $request): Response
     {
+        Gate::authorize('viewAny', ContentSubmission::class);
+
         $submissions = ContentSubmission::query()
             ->with([
                 'submittedBy:id,name,email',
@@ -191,7 +198,7 @@ class ReviewQueueController extends Controller
 
     public function transcribe(TranscribeUploadRequest $request, ContentSubmission $submission, ContentReviewService $service): RedirectResponse
     {
-        abort_unless($request->user()->role->hasPermission('review_submissions'), 403);
+        Gate::authorize('review', $submission);
 
         $service->transcribeUpload($submission, $request->validated('questions'), $request->user());
 

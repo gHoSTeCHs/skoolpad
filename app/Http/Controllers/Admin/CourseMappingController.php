@@ -10,6 +10,7 @@ use App\Models\CourseTopicMapping;
 use App\Models\InstitutionCourse;
 use App\Services\Admin\CourseMappingService;
 use Illuminate\Http\RedirectResponse;
+use Illuminate\Support\Facades\Gate;
 use Inertia\Inertia;
 use Inertia\Response;
 
@@ -21,6 +22,7 @@ class CourseMappingController extends Controller
 
     public function index(InstitutionCourse $course): Response
     {
+        Gate::authorize('manageMappings', InstitutionCourse::class);
         $course->load(['discipline', 'institution']);
 
         $mappedTopics = $course->topicMappings()
@@ -81,6 +83,8 @@ class CourseMappingController extends Controller
 
     public function update(UpdateCourseMappingRequest $request, InstitutionCourse $course): RedirectResponse
     {
+        Gate::authorize('manageMappings', InstitutionCourse::class);
+
         $this->courseMappingService->saveTopicMappings($course, $request->validated('mappings'));
 
         return back()->with('success', 'Topic mappings updated.');

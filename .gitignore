@@ -27,10 +27,11 @@ yarn-error.log
 /.vscode
 /.zed
 /.worktrees
-#phpunit.xml
-#.claude/
-#.mcp.json
-#CLAUDE.md
-#nul
-#boost.json
+phpunit.xml
+.claude
+.mcp.json
+CLAUDE.md
 nul
+boost.json
+nul
+.playwright-mcp
