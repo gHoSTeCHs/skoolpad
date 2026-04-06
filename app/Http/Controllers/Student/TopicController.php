@@ -55,7 +55,7 @@ class TopicController extends Controller
             $browseAll,
         );
 
-        $allTopicIds = (clone $query)->pluck('id');
+        $totalCount = (clone $query)->count();
         $paginator = $query->paginate(self::DEFAULT_PER_PAGE);
 
         $paginatedTopicIds = collect($paginator->items())->pluck('id');
@@ -84,13 +84,15 @@ class TopicController extends Controller
             'appliedFilters' => array_merge($filters, [
                 'browse_all' => $browseAll ? 'true' : null,
             ]),
-            'totalCount' => $allTopicIds->count(),
+            'totalCount' => $totalCount,
             'completedCount' => $completedTopicIds->count(),
         ]);
     }
 
     public function show(CanonicalTopic $topic, Request $request): Response
     {
+        abort_unless($topic->is_published, 404);
+
         $user = $request->user();
         $courseId = $request->string('course')->value() ?: null;
 
@@ -101,7 +103,9 @@ class TopicController extends Controller
         $nextTopic = null;
 
         if ($courseId) {
-            $course = InstitutionCourse::query()->find($courseId);
+            $profile = $user->studentProfile;
+            $isEnrolled = $profile?->studentCourses()->where('institution_course_id', $courseId)->exists();
+            $course = $isEnrolled ? InstitutionCourse::query()->find($courseId) : null;
             if ($course) {
                 $courseContext = [
                     'id' => $course->id,
@@ -156,10 +160,12 @@ class TopicController extends Controller
 
         $prerequisiteStatus = $this->prerequisiteService->getPrerequisiteStatus($user, $topic);
 
-        $relatedQuestions = \App\Models\Question::query()
+        $baseQuestionQuery = \App\Models\Question::query()
             ->published()
             ->whereNull('parent_question_id')
-            ->whereHas('topicLinks', fn ($q) => $q->where('canonical_topic_id', $topic->id))
+            ->whereHas('topicLinks', fn ($q) => $q->where('canonical_topic_id', $topic->id));
+
+        $relatedQuestions = (clone $baseQuestionQuery)
             ->when($courseId, fn ($q) => $q->where('institution_course_id', $courseId))
             ->with([
                 'topicLinks.canonicalTopic:id,title',
@@ -174,10 +180,7 @@ class TopicController extends Controller
             ->limit(10)
             ->get();
 
-        $crossInstitutionCount = \App\Models\Question::query()
-            ->published()
-            ->whereHas('topicLinks', fn ($q) => $q->where('canonical_topic_id', $topic->id))
-            ->count();
+        $crossInstitutionCount = (clone $baseQuestionQuery)->count();
 
         $isTopicCompleted = TopicCompletion::query()->where('user_id', $user->id)
             ->where('canonical_topic_id', $topic->id)
@@ -236,6 +239,8 @@ class TopicController extends Controller
 
     public function read(CanonicalTopic $topic, Request $request): Response
     {
+        abort_unless($topic->is_published, 404);
+
         $user = $request->user();
         $courseId = $request->string('course')->value() ?: null;
 
@@ -244,7 +249,9 @@ class TopicController extends Controller
         $courseContext = null;
 
         if ($courseId) {
-            $course = InstitutionCourse::query()->find($courseId);
+            $profile = $user->studentProfile;
+            $isEnrolled = $profile?->studentCourses()->where('institution_course_id', $courseId)->exists();
+            $course = $isEnrolled ? InstitutionCourse::query()->find($courseId) : null;
             if ($course) {
                 $courseContext = [
                     'id' => $course->id,
@@ -295,6 +302,8 @@ class TopicController extends Controller
 
     public function toggleComplete(CanonicalTopic $topic, Request $request): RedirectResponse
     {
+        abort_unless($topic->is_published, 404);
+
         $user = $request->user();
 
         $existing = TopicCompletion::query()->where('user_id', $user->id)

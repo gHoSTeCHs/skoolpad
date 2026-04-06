@@ -9,6 +9,7 @@ use App\Http\Requests\Admin\UpdateDisciplineRequest;
 use App\Models\Discipline;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Str;
 use Inertia\Inertia;
 use Inertia\Response;
@@ -19,6 +20,8 @@ class DisciplineController extends Controller
 
     public function index(Request $request): Response
     {
+        Gate::authorize('viewAny', Discipline::class);
+
         $disciplines = Discipline::query()
             ->withCount('canonicalTopics')
             ->when($request->filled('search'), fn ($q) => $q->search($request->string('search')))
@@ -34,23 +37,30 @@ class DisciplineController extends Controller
 
     public function create(): Response
     {
+        Gate::authorize('create', Discipline::class);
+
         return Inertia::render('admin/disciplines/create');
     }
 
     public function store(StoreDisciplineRequest $request): RedirectResponse
     {
+        Gate::authorize('create', Discipline::class);
+
         $data = $request->validated();
         if (empty($data['slug'])) {
             $data['slug'] = Str::slug($data['name']);
         }
 
         Discipline::query()->create($data);
+        cache()->forget('ref.disciplines');
 
         return to_route('admin.disciplines.index')->with('success', 'Discipline created successfully.');
     }
 
     public function edit(Discipline $discipline): Response
     {
+        Gate::authorize('update', $discipline);
+
         return Inertia::render('admin/disciplines/edit', [
             'discipline' => $discipline,
         ]);
@@ -58,7 +68,10 @@ class DisciplineController extends Controller
 
     public function update(UpdateDisciplineRequest $request, Discipline $discipline): RedirectResponse
     {
+        Gate::authorize('update', $discipline);
+
         $discipline->update($request->validated());
+        cache()->forget('ref.disciplines');
 
         return to_route('admin.disciplines.index')->with('success', 'Discipline updated successfully.');
     }

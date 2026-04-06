@@ -368,6 +368,7 @@ class GuidedStudyService
             ->whereNotIn('id', array_merge($completedBlockIds, $alreadyAddedBlockIds))
             ->with('canonicalTopic:id,title')
             ->orderBy('sort_order')
+            ->limit(50)
             ->get();
 
         $levelSubjectMap = SchemeOfWorkItem::query()

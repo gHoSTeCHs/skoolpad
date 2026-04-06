@@ -149,10 +149,10 @@ Route::middleware(['auth', 'verified', 'staff'])->prefix('admin')->name('admin.'
     Route::get('users/{user}/edit', [UserController::class, 'edit'])->name('users.edit');
     Route::put('users/{user}', [UserController::class, 'update'])->name('users.update');
     Route::get('import', [BulkImportController::class, 'index'])->name('import.index');
-    Route::post('import/topics', [BulkImportController::class, 'importTopics'])->name('import.topics');
-    Route::post('import/course-mappings', [BulkImportController::class, 'importCourseMappings'])->name('import.courseMappings');
-    Route::post('import/course-offerings', [BulkImportController::class, 'importCourseOfferings'])->name('import.courseOfferings');
-    Route::post('import/questions', [BulkImportController::class, 'importQuestions'])->name('import.questions');
+    Route::post('import/topics', [BulkImportController::class, 'importTopics'])->name('import.topics')->middleware('throttle:10,1');
+    Route::post('import/course-mappings', [BulkImportController::class, 'importCourseMappings'])->name('import.courseMappings')->middleware('throttle:10,1');
+    Route::post('import/course-offerings', [BulkImportController::class, 'importCourseOfferings'])->name('import.courseOfferings')->middleware('throttle:10,1');
+    Route::post('import/questions', [BulkImportController::class, 'importQuestions'])->name('import.questions')->middleware('throttle:10,1');
     Route::get('import/history', [BulkImportController::class, 'history'])->name('import.history');
     Route::get('settings', [SettingsController::class, 'index'])->name('settings.index');
     Route::put('settings', [SettingsController::class, 'update'])->name('settings.update');

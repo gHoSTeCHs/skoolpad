@@ -16,6 +16,7 @@ use App\Models\VerificationAttempt;
 use App\Notifications\ParentExamAlert;
 use Carbon\CarbonInterface;
 use Illuminate\Support\Collection;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Mail;
 
 class ParentNotificationService
@@ -102,7 +103,7 @@ class ParentNotificationService
     }
 
     /** @return array{child_name: string, exam_name: string, exam_date: string, days_remaining: int, urgency: string, readiness_score: ?float, study_time_today_minutes: int, questions_today: int, accuracy_today: float, unverified_topic_count: int} */
-    public function compileExamAlertData(ParentChildLink $link, ExamCountdown $countdown): array
+    public function compileExamAlertData(ParentChildLink $link, ExamCountdown $countdown, array $preloaded = []): array
     {
         $childUser = $link->studentProfile->user;
         $daysRemaining = max(0, (int) now()->diffInDays($countdown->exam_date, false));
@@ -114,17 +115,17 @@ class ParentNotificationService
             default => 'informational',
         };
 
-        $todaySessions = PracticeSession::query()
+        $todaySessions = $preloaded['today_sessions'] ?? PracticeSession::query()
             ->where('user_id', $childUser->id)
             ->whereNotNull('completed_at')
             ->whereDate('completed_at', now()->toDateString())
             ->get();
 
-        $readinessCache = ExamReadinessCache::query()
-            ->where('user_id', $childUser->id)
-            ->first();
+        $readinessCache = array_key_exists('readiness_cache', $preloaded)
+            ? $preloaded['readiness_cache']
+            : ExamReadinessCache::query()->where('user_id', $childUser->id)->first();
 
-        $unverifiedCount = $link->topicCoverages()
+        $unverifiedCount = $preloaded['unverified_count'] ?? $link->topicCoverages()
             ->where('status', TopicCoverageStatus::Covered)
             ->whereDoesntHave('canonicalTopic.verificationAttempts', fn ($q) => $q
                 ->where('parent_child_link_id', $link->id)
@@ -146,12 +147,124 @@ class ParentNotificationService
         ];
     }
 
+    /** @return array{sent: int, skipped: int} */
+    public function sendBatchExamAlerts(Collection $eligibleExams, ParentFeatureGateService $featureGate): array
+    {
+        $studentProfileIds = $eligibleExams
+            ->map(fn (ExamCountdown $e) => $e->user?->studentProfile?->id)
+            ->filter()
+            ->unique()
+            ->values()
+            ->all();
+
+        $linksByStudentProfile = ParentChildLink::query()
+            ->whereIn('student_profile_id', $studentProfileIds)
+            ->where('status', ParentChildLinkStatus::Active)
+            ->with('parentProfile.user')
+            ->get()
+            ->groupBy('student_profile_id');
+
+        $childUserIds = $eligibleExams
+            ->map(fn (ExamCountdown $e) => $e->user?->id)
+            ->filter()
+            ->unique()
+            ->values()
+            ->all();
+
+        $todaySessionsByUser = PracticeSession::query()
+            ->whereIn('user_id', $childUserIds)
+            ->whereNotNull('completed_at')
+            ->whereDate('completed_at', now()->toDateString())
+            ->get()
+            ->groupBy('user_id');
+
+        $readinessCacheByUser = ExamReadinessCache::query()
+            ->whereIn('user_id', $childUserIds)
+            ->get()
+            ->keyBy('user_id');
+
+        $allLinkIds = $linksByStudentProfile->flatten(1)->pluck('id')->all();
+        $unverifiedCountsByLink = $this->batchUnverifiedTopicCounts($allLinkIds);
+
+        $sent = 0;
+        $skipped = 0;
+
+        foreach ($eligibleExams as $exam) {
+            $childUser = $exam->user;
+            $studentProfile = $childUser?->studentProfile;
+
+            if (! $studentProfile) {
+                $skipped++;
+
+                continue;
+            }
+
+            $links = $linksByStudentProfile->get($studentProfile->id, collect());
+
+            foreach ($links as $link) {
+                $parentUser = $link->parentProfile?->user;
+
+                if (! $parentUser) {
+                    $skipped++;
+
+                    continue;
+                }
+
+                if (! $featureGate->canAccessExamAlerts($parentUser)) {
+                    $skipped++;
+
+                    continue;
+                }
+
+                try {
+                    $preloaded = [
+                        'today_sessions' => $todaySessionsByUser->get($childUser->id, collect()),
+                        'readiness_cache' => $readinessCacheByUser->get($childUser->id),
+                        'unverified_count' => $unverifiedCountsByLink[$link->id] ?? 0,
+                    ];
+
+                    $alertData = $this->compileExamAlertData($link, $exam, $preloaded);
+                    $link->parentProfile->user->notify(new ParentExamAlert($alertData));
+                    $sent++;
+                } catch (\Throwable $e) {
+                    $skipped++;
+                    report($e);
+                }
+            }
+        }
+
+        return ['sent' => $sent, 'skipped' => $skipped];
+    }
+
+    /** @param array<int, string> $linkIds */
+    private function batchUnverifiedTopicCounts(array $linkIds): array
+    {
+        if (empty($linkIds)) {
+            return [];
+        }
+
+        return DB::table('topic_coverage_status as tc')
+            ->selectRaw('tc.parent_child_link_id, COUNT(*) as unverified_count')
+            ->whereIn('tc.parent_child_link_id', $linkIds)
+            ->where('tc.status', TopicCoverageStatus::Covered->value)
+            ->whereNotExists(function ($q) {
+                $q->from('verification_attempts as va')
+                    ->whereColumn('va.parent_child_link_id', 'tc.parent_child_link_id')
+                    ->whereColumn('va.canonical_topic_id', 'tc.canonical_topic_id')
+                    ->where('va.overall_result', VerificationResult::Understood->value);
+            })
+            ->groupBy('tc.parent_child_link_id')
+            ->pluck('unverified_count', 'parent_child_link_id')
+            ->all();
+    }
+
     /** @return Collection<int, ExamCountdown> */
     public function getAlertEligibleExams(): Collection
     {
         return ExamCountdown::query()
             ->where('is_active', true)
             ->where('exam_date', '>=', now()->toDateString())
+            ->with(['user.studentProfile'])
             ->get()
             ->filter(fn (ExamCountdown $countdown) => $this->shouldSendAlertToday($countdown));
     }

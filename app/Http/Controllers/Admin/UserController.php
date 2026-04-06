@@ -34,13 +34,17 @@ class UserController extends Controller
             ->paginate(self::DEFAULT_PER_PAGE)
             ->withQueryString();
 
-        $usersWithLabels = $users->through(fn ($user) => array_merge(
-            $user->toArray(),
-            [
-                'role_label' => $user->role->label(),
-                'institution_abbreviation' => $user->studentProfile?->institution?->abbreviation,
-            ]
-        ));
+        $usersWithLabels = $users->through(fn ($user) => [
+            'id' => $user->id,
+            'name' => $user->name,
+            'email' => $user->email,
+            'role' => $user->role->value,
+            'role_label' => $user->role->label(),
+            'is_active' => $user->is_active,
+            'institution_abbreviation' => $user->studentProfile?->institution?->abbreviation,
+            'last_login_at' => $user->last_login_at?->toISOString(),
+            'created_at' => $user->created_at->toISOString(),
+        ]);
 
         return Inertia::render('admin/users/index', [
             'users' => $this->paginated($usersWithLabels),
@@ -62,14 +66,43 @@ class UserController extends Controller
 
         $user->loadCount(['practiceSessions', 'studentNotes', 'contentSubmissions']);
 
+        $profile = $user->studentProfile;
+
         return Inertia::render('admin/users/show', [
-            'user' => array_merge(
-                $user->toArray(),
-                [
-                    'role_label' => $user->role->label(),
-                    'role_description' => $user->role->description(),
-                ]
-            ),
+            'user' => [
+                'id' => $user->id,
+                'name' => $user->name,
+                'email' => $user->email,
+                'role' => $user->role->value,
+                'role_label' => $user->role->label(),
+                'role_description' => $user->role->description(),
+                'is_active' => $user->is_active,
+                'last_login_at' => $user->last_login_at?->toISOString(),
+                'created_at' => $user->created_at->toISOString(),
+                'updated_at' => $user->updated_at->toISOString(),
+                'practice_sessions_count' => $user->practice_sessions_count,
+                'student_notes_count' => $user->student_notes_count,
+                'content_submissions_count' => $user->content_submissions_count,
+                'student_profile' => $profile ? [
+                    'id' => $profile->id,
+                    'level' => $profile->level,
+                    'matric_number' => $profile->matric_number,
+                    'institution' => $profile->institution ? [
+                        'id' => $profile->institution->id,
+                        'name' => $profile->institution->name,
+                        'abbreviation' => $profile->institution->abbreviation,
+                    ] : null,
+                    'faculty' => $profile->faculty ? [
+                        'id' => $profile->faculty->id,
+                        'name' => $profile->faculty->name,
+                    ] : null,
+                    'department' => $profile->department ? [
+                        'id' => $profile->department->id,
+                        'name' => $profile->department->name,
+                    ] : null,
+                    'student_courses' => $profile->studentCourses->map(fn ($sc) => ['id' => $sc->id]),
+                ] : null,
+            ],
         ]);
     }
 

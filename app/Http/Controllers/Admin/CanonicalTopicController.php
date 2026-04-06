@@ -55,7 +55,7 @@ class CanonicalTopicController extends Controller
 
         return Inertia::render('admin/topics/index', [
             'topics' => $this->paginated($topics),
-            'disciplines' => Discipline::query()->get(['id', 'name']),
+            'disciplines' => cache()->remember('ref.disciplines', now()->addHour(), fn () => Discipline::query()->orderBy('name')->get(['id', 'name'])),
             'filters' => $request->only(['search', 'discipline_id', 'difficulty_level', 'is_published', 'sort', 'direction']),
         ]);
     }
@@ -65,7 +65,7 @@ class CanonicalTopicController extends Controller
         Gate::authorize('create', CanonicalTopic::class);
 
         return Inertia::render('admin/topics/create', [
-            'disciplines' => Discipline::query()->get(['id', 'name']),
+            'disciplines' => cache()->remember('ref.disciplines', now()->addHour(), fn () => Discipline::query()->orderBy('name')->get(['id', 'name'])),
             'difficulty_levels' => TopicDifficulty::toSelectOptions(),
         ]);
     }
@@ -118,7 +118,7 @@ class CanonicalTopicController extends Controller
                     'is_hard_prerequisite' => (bool) $prereq->pivot->is_hard_prerequisite,
                 ]),
             ],
-            'disciplines' => Discipline::query()->get(['id', 'name']),
+            'disciplines' => cache()->remember('ref.disciplines', now()->addHour(), fn () => Discipline::query()->orderBy('name')->get(['id', 'name'])),
             'difficulty_levels' => TopicDifficulty::toSelectOptions(),
             'available_topics' => CanonicalTopic::query()
                 ->where('discipline_id', $topic->discipline_id)

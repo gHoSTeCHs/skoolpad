@@ -1,5 +1,7 @@
 import './tiptap-editor.css';
 
+import DOMPurify from 'dompurify';
+
 import { cn } from '@/lib/utils';
 import { isTiptapJSON, type RenderableContent } from '@/types/tiptap';
 
@@ -25,7 +27,7 @@ export function ContentRenderer({ content, className }: ContentRendererProps) {
             return (
                 <div
                     className={cn('content-renderer', className)}
-                    dangerouslySetInnerHTML={{ __html: content }}
+                    dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(content) }}
                 />
             );
         }

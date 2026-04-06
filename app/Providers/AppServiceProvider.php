@@ -4,6 +4,7 @@ namespace App\Providers;
 
 use App\Models\CanonicalTopic;
 use App\Models\ContentBlock;
+use App\Models\Discipline;
 use App\Models\ImportLog;
 use App\Models\InstitutionCourse;
 use App\Models\PlatformSetting;
@@ -11,6 +12,7 @@ use App\Models\SubscriptionPlan;
 use App\Models\User;
 use App\Policies\AdminCoursePolicy;
 use App\Policies\ContentPolicy;
+use App\Policies\DisciplinePolicy;
 use App\Policies\ImportPolicy;
 use App\Policies\SubscriptionPolicy;
 use App\Policies\UserManagementPolicy;
@@ -49,6 +51,7 @@ class AppServiceProvider extends ServiceProvider
         Gate::policy(CanonicalTopic::class, ContentPolicy::class);
         Gate::policy(ContentBlock::class, ContentPolicy::class);
         Gate::policy(InstitutionCourse::class, AdminCoursePolicy::class);
+        Gate::policy(Discipline::class, DisciplinePolicy::class);
     }
 
     /**

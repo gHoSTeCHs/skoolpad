@@ -7,6 +7,7 @@ use App\Models\ImportLog;
 use App\Services\Admin\ContentImportService;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Queue\Queueable;
+use Illuminate\Support\Facades\Storage;
 
 class ProcessCsvImport implements ShouldQueue
 {
@@ -16,12 +17,9 @@ class ProcessCsvImport implements ShouldQueue
 
     public int $timeout = 300;
 
-    /**
-     * @param  array<int, array<string, string>>  $rows
-     */
     public function __construct(
         public string $importLogId,
-        public array $rows,
+        public string $csvPath,
         public string $importType,
         public string $defaultStatus = 'draft',
     ) {
@@ -33,11 +31,13 @@ class ProcessCsvImport implements ShouldQueue
         $log = ImportLog::query()->findOrFail($this->importLogId);
         $log->update(['status' => ImportStatus::Processing]);
 
+        $rows = $service->parseCsvFromPath($this->csvPath);
+
         $result = match ($this->importType) {
-            'topics' => $service->importTopics($this->rows, $log),
-            'course_mappings' => $service->importCourseMappings($this->rows, $log),
-            'course_offerings' => $service->importCourseOfferings($this->rows, $log),
-            'questions' => $service->importQuestions($this->rows, $log, $this->defaultStatus),
+            'topics' => $service->importTopics($rows, $log),
+            'course_mappings' => $service->importCourseMappings($rows, $log),
+            'course_offerings' => $service->importCourseOfferings($rows, $log),
+            'questions' => $service->importQuestions($rows, $log, $this->defaultStatus),
         };
 
         $log->update([
@@ -47,5 +47,20 @@ class ProcessCsvImport implements ShouldQueue
             'error_count' => $result->errorCount,
             'errors' => $result->errors,
         ]);
+
+        Storage::delete($this->csvPath);
+    }
+
+    public function failed(\Throwable $exception): void
+    {
+        Storage::delete($this->csvPath);
+
+        ImportLog::query()
+            ->where('id', $this->importLogId)
+            ->where('status', ImportStatus::Processing)
+            ->update([
+                'status' => ImportStatus::Failed,
+                'errors' => [$exception->getMessage()],
+            ]);
     }
 }

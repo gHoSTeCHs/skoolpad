@@ -38,7 +38,7 @@ class QuestionPaperController extends Controller
             ->when($request->filled('institution_id'), fn ($q) => $q->whereHas('institutionCourse', fn ($sub) => $sub->where('institution_id', $request->string('institution_id'))))
             ->when($request->filled('assessment_type_id'), fn ($q) => $q->where('assessment_type_id', $request->string('assessment_type_id')))
             ->when($request->filled('year'), fn ($q) => $q->where('year', (int) $request->string('year')->value()))
-            ->when($request->filled('search'), fn ($q) => $q->where('title', 'ilike', '%'.$request->string('search').'%'))
+            ->when($request->filled('search'), fn ($q) => $q->search($request->string('search')))
             ->tap(fn ($q) => $this->applySorting($q, $request, ['title', 'year', 'total_marks', 'created_at'], 'created_at', 'desc'))
             ->paginate(self::DEFAULT_PER_PAGE)
             ->withQueryString();
@@ -62,7 +62,7 @@ class QuestionPaperController extends Controller
 
         return Inertia::render('admin/question-papers/index', [
             'papers' => $this->paginated($papers),
-            'institutions' => Institution::query()->where('is_active', true)->orderBy('abbreviation')->get(['id', 'name', 'abbreviation']),
+            'institutions' => cache()->remember('ref.institutions.active', now()->addHour(), fn () => Institution::query()->where('is_active', true)->orderBy('abbreviation')->get(['id', 'name', 'abbreviation'])),
             'assessment_types' => AssessmentType::query()->orderBy('name')->get(['id', 'name']),
             'filters' => $request->only(['search', 'institution_id', 'assessment_type_id', 'year', 'sort', 'direction']),
         ]);
@@ -73,7 +73,7 @@ class QuestionPaperController extends Controller
         Gate::authorize('managePapers', Question::class);
 
         return Inertia::render('admin/question-papers/create', [
-            'institutions' => Institution::query()->where('is_active', true)->orderBy('abbreviation')->get(['id', 'name', 'abbreviation']),
+            'institutions' => cache()->remember('ref.institutions.active', now()->addHour(), fn () => Institution::query()->where('is_active', true)->orderBy('abbreviation')->get(['id', 'name', 'abbreviation'])),
             'assessment_types' => AssessmentType::query()->orderBy('name')->get(['id', 'name']),
         ]);
     }

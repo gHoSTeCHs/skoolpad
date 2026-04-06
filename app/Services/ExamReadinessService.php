@@ -24,6 +24,9 @@ use Illuminate\Support\Collection;
 
 class ExamReadinessService
 {
+    /** @var array<string, Collection> */
+    private array $linkIdsCache = [];
+
     private const DEVICELESS_THRESHOLD = 3;
 
     private const FULL_THRESHOLD = 10;
@@ -424,12 +427,17 @@ class ExamReadinessService
             ->unique();
     }
 
-    private function getParentVerifiedTopicIds(User $user, Collection $topicIds): Collection
+    private function getParentLinkIds(User $user): Collection
     {
-        $linkIds = ParentChildLink::query()
+        return $this->linkIdsCache[$user->id] ??= ParentChildLink::query()
             ->whereHas('studentProfile', fn ($q) => $q->where('user_id', $user->id))
             ->where('status', ParentChildLinkStatus::Active)
             ->pluck('id');
+    }
+
+    private function getParentVerifiedTopicIds(User $user, Collection $topicIds): Collection
+    {
+        $linkIds = $this->getParentLinkIds($user);
 
         if ($linkIds->isEmpty()) {
             return collect();

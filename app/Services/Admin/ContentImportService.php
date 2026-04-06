@@ -51,7 +51,8 @@ class ContentImportService
             return $log;
         }
 
-        \App\Jobs\ProcessCsvImport::dispatch($log->id, $rows, $validationType, $defaultStatus);
+        $csvPath = $file->storeAs('imports/pending', $log->id.'.csv');
+        \App\Jobs\ProcessCsvImport::dispatch($log->id, $csvPath, $validationType, $defaultStatus);
 
         return $log;
     }
@@ -59,7 +60,23 @@ class ContentImportService
     /** @return array<int, array<string, string>> */
     public function parseCsv(UploadedFile $file): array
     {
-        $handle = fopen($file->getRealPath(), 'r');
+        return $this->parseCsvHandle(fopen($file->getRealPath(), 'r'));
+    }
+
+    /** @return array<int, array<string, string>> */
+    public function parseCsvFromPath(string $storagePath): array
+    {
+        $fullPath = \Illuminate\Support\Facades\Storage::path($storagePath);
+
+        return $this->parseCsvHandle(fopen($fullPath, 'r'));
+    }
+
+    /**
+     * @param  resource  $handle
+     * @return array<int, array<string, string>>
+     */
+    private function parseCsvHandle($handle): array
+    {
         $header = fgetcsv($handle);
         $rows = [];
 
@@ -99,10 +116,13 @@ class ContentImportService
         $errorCount = 0;
         $errors = [];
 
+        $disciplineSlugs = collect($rows)->pluck('discipline_slug')->filter()->unique()->values()->all();
+        $disciplines = Discipline::query()->whereIn('slug', $disciplineSlugs)->pluck('id', 'slug')->all();
+
         foreach ($rows as $index => $row) {
             $rowNumber = $index + 2;
             try {
-                $disciplineId = Discipline::query()->where('slug', $row['discipline_slug'])->value('id');
+                $disciplineId = $disciplines[$row['discipline_slug']] ?? null;
 
                 CanonicalTopic::query()->updateOrCreate(
                     [
@@ -141,18 +161,18 @@ class ContentImportService
         $errorCount = 0;
         $errors = [];
 
+        $institutions = $this->fetchInstitutionsByAbbreviation($rows);
+        $disciplines = $this->fetchDisciplinesBySlug($rows);
+        $courses = $this->fetchCoursesByInstitutionAndCode($rows, $institutions);
+        $topics = $this->fetchTopicsByDisciplineAndSlug($rows, $disciplines);
+
         foreach ($rows as $index => $row) {
             $rowNumber = $index + 2;
             try {
-                $institutionId = Institution::query()->where('abbreviation', $row['institution_abbreviation'])->value('id');
-                $institutionCourseId = InstitutionCourse::query()->where('institution_id', $institutionId)
-                    ->where('course_code', $row['course_code'])
-                    ->value('id');
-                $disciplineId = Discipline::query()->where('slug', $row['discipline_slug'])->value('id');
-                $canonicalTopicId = CanonicalTopic::query()->where('discipline_id', $disciplineId)
-                    ->where('slug', $row['topic_slug'])
-                    ->where('is_published', true)
-                    ->value('id');
+                $institutionId = $institutions[$row['institution_abbreviation']] ?? null;
+                $institutionCourseId = $courses[$institutionId.'|'.$row['course_code']] ?? null;
+                $disciplineId = $disciplines[$row['discipline_slug']] ?? null;
+                $canonicalTopicId = $topics[$disciplineId.'|'.$row['topic_slug']] ?? null;
 
                 CourseTopicMapping::query()->updateOrCreate(
                     [
@@ -188,16 +208,16 @@ class ContentImportService
         $errorCount = 0;
         $errors = [];
 
+        $institutions = $this->fetchInstitutionsByAbbreviation($rows);
+        $courses = $this->fetchCoursesByInstitutionAndCode($rows, $institutions);
+        $departments = $this->fetchDepartmentsByInstitutionAndAbbreviation($rows, $institutions);
+
         foreach ($rows as $index => $row) {
             $rowNumber = $index + 2;
             try {
-                $institutionId = Institution::query()->where('abbreviation', $row['institution_abbreviation'])->value('id');
-                $institutionCourseId = InstitutionCourse::query()->where('institution_id', $institutionId)
-                    ->where('course_code', $row['course_code'])
-                    ->value('id');
-                $departmentId = Department::query()->where('abbreviation', $row['department_abbreviation'])
-                    ->whereHas('faculty', fn ($q) => $q->where('institution_id', $institutionId))
-                    ->value('id');
+                $institutionId = $institutions[$row['institution_abbreviation']] ?? null;
+                $institutionCourseId = $courses[$institutionId.'|'.$row['course_code']] ?? null;
+                $departmentId = $departments[$institutionId.'|'.$row['department_abbreviation']] ?? null;
 
                 CourseDepartmentOffering::query()->updateOrCreate(
                     [
@@ -235,6 +255,9 @@ class ContentImportService
         $required = ['discipline_slug', 'title', 'difficulty_level', 'content_markdown'];
         $validDifficulties = TopicDifficulty::values();
 
+        $disciplineSlugs = collect($rows)->pluck('discipline_slug')->filter()->unique()->values()->all();
+        $disciplines = Discipline::query()->whereIn('slug', $disciplineSlugs)->pluck('id', 'slug')->all();
+
         foreach ($rows as $index => $row) {
             $rowNumber = $index + 2;
 
@@ -244,7 +267,7 @@ class ContentImportService
                 }
             }
 
-            if (! empty($row['discipline_slug']) && ! Discipline::query()->where('slug', $row['discipline_slug'])->value('id')) {
+            if (! empty($row['discipline_slug']) && ! isset($disciplines[$row['discipline_slug']])) {
                 $errors[] = "Row {$rowNumber}: Discipline '{$row['discipline_slug']}' not found.";
             }
 
@@ -266,6 +289,11 @@ class ContentImportService
         $required = ['institution_abbreviation', 'course_code', 'discipline_slug', 'topic_slug', 'sequence_order', 'weight'];
         $validWeights = TopicWeight::values();
 
+        $institutions = $this->fetchInstitutionsByAbbreviation($rows);
+        $disciplines = $this->fetchDisciplinesBySlug($rows);
+        $courses = $this->fetchCoursesByInstitutionAndCode($rows, $institutions);
+        $topics = $this->fetchTopicsByDisciplineAndSlug($rows, $disciplines);
+
         foreach ($rows as $index => $row) {
             $rowNumber = $index + 2;
 
@@ -276,29 +304,22 @@ class ContentImportService
             }
 
             if (! empty($row['institution_abbreviation'])) {
-                $institutionId = Institution::query()->where('abbreviation', $row['institution_abbreviation'])->value('id');
+                $institutionId = $institutions[$row['institution_abbreviation']] ?? null;
                 if (! $institutionId) {
                     $errors[] = "Row {$rowNumber}: Institution '{$row['institution_abbreviation']}' not found.";
                 } elseif (! empty($row['course_code'])) {
-                    $courseId = InstitutionCourse::query()->where('institution_id', $institutionId)
-                        ->where('course_code', $row['course_code'])
-                        ->value('id');
-                    if (! $courseId) {
+                    if (! isset($courses[$institutionId.'|'.$row['course_code']])) {
                         $errors[] = "Row {$rowNumber}: Course '{$row['course_code']}' not found at institution '{$row['institution_abbreviation']}'.";
                     }
                 }
             }
 
             if (! empty($row['discipline_slug'])) {
-                $disciplineId = Discipline::query()->where('slug', $row['discipline_slug'])->value('id');
+                $disciplineId = $disciplines[$row['discipline_slug']] ?? null;
                 if (! $disciplineId) {
                     $errors[] = "Row {$rowNumber}: Discipline '{$row['discipline_slug']}' not found.";
                 } elseif (! empty($row['topic_slug'])) {
-                    $topicId = CanonicalTopic::query()->where('discipline_id', $disciplineId)
-                        ->where('slug', $row['topic_slug'])
-                        ->where('is_published', true)
-                        ->value('id');
-                    if (! $topicId) {
+                    if (! isset($topics[$disciplineId.'|'.$row['topic_slug']])) {
                         $errors[] = "Row {$rowNumber}: Topic '{$row['topic_slug']}' not found in discipline '{$row['discipline_slug']}'.";
                     }
                 }
@@ -325,6 +346,10 @@ class ContentImportService
         $errors = [];
         $required = ['institution_abbreviation', 'course_code', 'department_abbreviation', 'is_compulsory'];
 
+        $institutions = $this->fetchInstitutionsByAbbreviation($rows);
+        $coursesWithScope = $this->fetchCoursesWithScopeByInstitutionAndCode($rows, $institutions);
+        $departments = $this->fetchDepartmentsByInstitutionAndAbbreviation($rows, $institutions);
+
         foreach ($rows as $index => $row) {
             $rowNumber = $index + 2;
 
@@ -335,14 +360,12 @@ class ContentImportService
             }
 
             if (! empty($row['institution_abbreviation'])) {
-                $institutionId = Institution::query()->where('abbreviation', $row['institution_abbreviation'])->value('id');
+                $institutionId = $institutions[$row['institution_abbreviation']] ?? null;
                 if (! $institutionId) {
                     $errors[] = "Row {$rowNumber}: Institution '{$row['institution_abbreviation']}' not found.";
                 } else {
                     if (! empty($row['course_code'])) {
-                        $course = InstitutionCourse::query()->where('institution_id', $institutionId)
-                            ->where('course_code', $row['course_code'])
-                            ->first(['id', 'course_scope']);
+                        $course = $coursesWithScope[$institutionId.'|'.$row['course_code']] ?? null;
                         if (! $course) {
                             $errors[] = "Row {$rowNumber}: Course '{$row['course_code']}' not found at institution '{$row['institution_abbreviation']}'.";
                         } elseif ($course->course_scope !== CourseScope::Faculty) {
@@ -351,10 +374,7 @@ class ContentImportService
                     }
 
                     if (! empty($row['department_abbreviation'])) {
-                        $departmentId = Department::query()->where('abbreviation', $row['department_abbreviation'])
-                            ->whereHas('faculty', fn ($q) => $q->where('institution_id', $institutionId))
-                            ->value('id');
-                        if (! $departmentId) {
+                        if (! isset($departments[$institutionId.'|'.$row['department_abbreviation']])) {
                             $errors[] = "Row {$rowNumber}: Department '{$row['department_abbreviation']}' not found at institution '{$row['institution_abbreviation']}'.";
                         }
                     }
@@ -378,16 +398,22 @@ class ContentImportService
 
         $status = $defaultStatus === 'published' ? QuestionStatus::Published : QuestionStatus::Draft;
 
+        $institutions = $this->fetchInstitutionsByAbbreviation($rows);
+        $courses = $this->fetchCoursesByInstitutionAndCode($rows, $institutions);
+
+        $topicSlugs = collect($rows)->pluck('topic_slug')->filter()->unique()->values()->all();
+        $topics = CanonicalTopic::query()
+            ->whereIn('slug', $topicSlugs)
+            ->where('is_published', true)
+            ->pluck('id', 'slug')
+            ->all();
+
         foreach ($rows as $index => $row) {
             $rowNumber = $index + 2;
             try {
-                $institutionId = Institution::query()->where('abbreviation', $row['institution_abbreviation'])->value('id');
-                $institutionCourseId = InstitutionCourse::query()->where('institution_id', $institutionId)
-                    ->where('course_code', $row['course_code'])
-                    ->value('id');
-                $topicId = CanonicalTopic::query()->where('slug', $row['topic_slug'])
-                    ->where('is_published', true)
-                    ->value('id');
+                $institutionId = $institutions[$row['institution_abbreviation']] ?? null;
+                $institutionCourseId = $courses[$institutionId.'|'.$row['course_code']] ?? null;
+                $topicId = $topics[$row['topic_slug']] ?? null;
 
                 $question = Question::query()->create([
                     'institution_course_id' => $institutionCourseId,
@@ -451,33 +477,6 @@ class ContentImportService
     }
 
     /**
-     * @param  array<string, string>  $row
-     * @return array{options: array<int, array{label: string, text: string, is_correct: bool}>}
-     */
-    private function buildMcqResponseConfig(array $row): array
-    {
-        $labels = ['A', 'B', 'C', 'D', 'E'];
-        $columns = ['option_a', 'option_b', 'option_c', 'option_d', 'option_e'];
-        $correctOption = strtoupper($row['correct_option'] ?? '');
-        $options = [];
-
-        foreach ($labels as $i => $label) {
-            $column = $columns[$i];
-            if (empty($row[$column] ?? '')) {
-                continue;
-            }
-
-            $options[] = [
-                'label' => $label,
-                'text' => $row[$column],
-                'is_correct' => $label === $correctOption,
-            ];
-        }
-
-        return ['options' => $options];
-    }
-
-    /**
      * @param  array<int, array<string, string>>  $rows
      * @return array<int, string>
      */
@@ -489,6 +488,16 @@ class ContentImportService
         $validDifficulties = QuestionDifficulty::values();
         $validSemesters = ['first', 'second'];
 
+        $institutions = $this->fetchInstitutionsByAbbreviation($rows);
+        $courses = $this->fetchCoursesByInstitutionAndCode($rows, $institutions);
+
+        $topicSlugs = collect($rows)->pluck('topic_slug')->filter()->unique()->values()->all();
+        $topics = CanonicalTopic::query()
+            ->whereIn('slug', $topicSlugs)
+            ->where('is_published', true)
+            ->pluck('id', 'slug')
+            ->all();
+
         foreach ($rows as $index => $row) {
             $rowNumber = $index + 2;
 
@@ -499,26 +508,18 @@ class ContentImportService
             }
 
             if (! empty($row['institution_abbreviation'])) {
-                $institutionId = Institution::query()->where('abbreviation', $row['institution_abbreviation'])->value('id');
+                $institutionId = $institutions[$row['institution_abbreviation']] ?? null;
                 if (! $institutionId) {
                     $errors[] = "Row {$rowNumber}: Institution '{$row['institution_abbreviation']}' not found.";
                 } elseif (! empty($row['course_code'])) {
-                    $courseId = InstitutionCourse::query()->where('institution_id', $institutionId)
-                        ->where('course_code', $row['course_code'])
-                        ->value('id');
-                    if (! $courseId) {
+                    if (! isset($courses[$institutionId.'|'.$row['course_code']])) {
                         $errors[] = "Row {$rowNumber}: Course '{$row['course_code']}' not found at institution '{$row['institution_abbreviation']}'.";
                     }
                 }
             }
 
-            if (! empty($row['topic_slug'])) {
-                $topicId = CanonicalTopic::query()->where('slug', $row['topic_slug'])
-                    ->where('is_published', true)
-                    ->value('id');
-                if (! $topicId) {
-                    $errors[] = "Row {$rowNumber}: Topic '{$row['topic_slug']}' not found or not published.";
-                }
+            if (! empty($row['topic_slug']) && ! isset($topics[$row['topic_slug']])) {
+                $errors[] = "Row {$rowNumber}: Topic '{$row['topic_slug']}' not found or not published.";
             }
 
             if (! empty($row['question_type']) && ! in_array($row['question_type'], $validTypes, true)) {
@@ -554,6 +555,147 @@ class ContentImportService
         }
 
         return $errors;
+    }
+
+    /**
+     * @param  array<int, array<string, string>>  $rows
+     * @return array<string, string>
+     */
+    private function fetchInstitutionsByAbbreviation(array $rows): array
+    {
+        $abbreviations = collect($rows)->pluck('institution_abbreviation')->filter()->unique()->values()->all();
+
+        return Institution::query()
+            ->whereIn('abbreviation', $abbreviations)
+            ->pluck('id', 'abbreviation')
+            ->all();
+    }
+
+    /**
+     * @param  array<int, array<string, string>>  $rows
+     * @return array<string, string>
+     */
+    private function fetchDisciplinesBySlug(array $rows): array
+    {
+        $slugs = collect($rows)->pluck('discipline_slug')->filter()->unique()->values()->all();
+
+        return Discipline::query()
+            ->whereIn('slug', $slugs)
+            ->pluck('id', 'slug')
+            ->all();
+    }
+
+    /**
+     * Keyed as "{institution_id}|{course_code}" => course_id.
+     *
+     * @param  array<int, array<string, string>>  $rows
+     * @param  array<string, string>  $institutions  abbreviation => id
+     * @return array<string, string>
+     */
+    private function fetchCoursesByInstitutionAndCode(array $rows, array $institutions): array
+    {
+        $institutionIds = array_values($institutions);
+        $courseCodes = collect($rows)->pluck('course_code')->filter()->unique()->values()->all();
+
+        return InstitutionCourse::query()
+            ->whereIn('institution_id', $institutionIds)
+            ->whereIn('course_code', $courseCodes)
+            ->get(['id', 'institution_id', 'course_code'])
+            ->keyBy(fn ($c) => $c->institution_id.'|'.$c->course_code)
+            ->map(fn ($c) => $c->id)
+            ->all();
+    }
+
+    /**
+     * Keyed as "{institution_id}|{course_code}" => InstitutionCourse model (with course_scope).
+     * Used when the course_scope value is needed for validation.
+     *
+     * @param  array<int, array<string, string>>  $rows
+     * @param  array<string, string>  $institutions  abbreviation => id
+     * @return array<string, InstitutionCourse>
+     */
+    private function fetchCoursesWithScopeByInstitutionAndCode(array $rows, array $institutions): array
+    {
+        $institutionIds = array_values($institutions);
+        $courseCodes = collect($rows)->pluck('course_code')->filter()->unique()->values()->all();
+
+        return InstitutionCourse::query()
+            ->whereIn('institution_id', $institutionIds)
+            ->whereIn('course_code', $courseCodes)
+            ->get(['id', 'institution_id', 'course_code', 'course_scope'])
+            ->keyBy(fn ($c) => $c->institution_id.'|'.$c->course_code)
+            ->all();
+    }
+
+    /**
+     * Keyed as "{institution_id}|{topic_slug}" => topic_id.
+     *
+     * @param  array<int, array<string, string>>  $rows
+     * @param  array<string, string>  $disciplines  slug => id
+     * @return array<string, string>
+     */
+    private function fetchTopicsByDisciplineAndSlug(array $rows, array $disciplines): array
+    {
+        $disciplineIds = array_values($disciplines);
+        $topicSlugs = collect($rows)->pluck('topic_slug')->filter()->unique()->values()->all();
+
+        return CanonicalTopic::query()
+            ->whereIn('discipline_id', $disciplineIds)
+            ->whereIn('slug', $topicSlugs)
+            ->where('is_published', true)
+            ->get(['id', 'discipline_id', 'slug'])
+            ->keyBy(fn ($t) => $t->discipline_id.'|'.$t->slug)
+            ->map(fn ($t) => $t->id)
+            ->all();
+    }
+
+    /**
+     * Keyed as "{institution_id}|{department_abbreviation}" => department_id.
+     *
+     * @param  array<int, array<string, string>>  $rows
+     * @param  array<string, string>  $institutions  abbreviation => id
+     * @return array<string, string>
+     */
+    private function fetchDepartmentsByInstitutionAndAbbreviation(array $rows, array $institutions): array
+    {
+        $institutionIds = array_values($institutions);
+        $departmentAbbreviations = collect($rows)->pluck('department_abbreviation')->filter()->unique()->values()->all();
+
+        return Department::query()
+            ->whereIn('abbreviation', $departmentAbbreviations)
+            ->whereHas('faculty', fn ($q) => $q->whereIn('institution_id', $institutionIds))
+            ->with('faculty:id,institution_id')
+            ->get(['id', 'abbreviation', 'faculty_id'])
+            ->keyBy(fn ($d) => $d->faculty->institution_id.'|'.$d->abbreviation)
+            ->map(fn ($d) => $d->id)
+            ->all();
+    }
+
+    /**
+     * @param  array<string, string>  $row
+     * @return array{options: array<int, array{label: string, text: string, is_correct: bool}>}
+     */
+    private function buildMcqResponseConfig(array $row): array
+    {
+        $labels = ['A', 'B', 'C', 'D', 'E'];
+        $columns = ['option_a', 'option_b', 'option_c', 'option_d', 'option_e'];
+        $correctOption = strtoupper($row['correct_option'] ?? '');
+        $options = [];
+
+        foreach ($labels as $i => $label) {
+            $column = $columns[$i];
+            if (empty($row[$column] ?? '')) {
+                continue;
+            }
+
+            $options[] = [
+                'label' => $label,
+                'text' => $row[$column],
+                'is_correct' => $label === $correctOption,
+            ];
+        }
+
+        return ['options' => $options];
     }
 
     /** @return array<string, mixed> */

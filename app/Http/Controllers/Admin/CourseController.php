@@ -61,7 +61,7 @@ class CourseController extends Controller
 
         return Inertia::render('admin/courses/index', [
             'courses' => $this->paginated($courses),
-            'institutions' => Institution::query()->orderBy('name')->get(['id', 'name', 'abbreviation']),
+            'institutions' => cache()->remember('ref.institutions.all', now()->addHour(), fn () => Institution::query()->orderBy('name')->get(['id', 'name', 'abbreviation'])),
             'course_scopes' => CourseScope::toSelectOptions(),
             'filters' => $request->only(['search', 'institution_id', 'level', 'semester', 'course_scope', 'sort', 'direction']),
         ]);
@@ -72,8 +72,8 @@ class CourseController extends Controller
         Gate::authorize('create', InstitutionCourse::class);
 
         return Inertia::render('admin/courses/create', [
-            'institutions' => Institution::query()->orderBy('name')->get(['id', 'name', 'abbreviation']),
-            'disciplines' => Discipline::query()->orderBy('name')->get(['id', 'name']),
+            'institutions' => cache()->remember('ref.institutions.all', now()->addHour(), fn () => Institution::query()->orderBy('name')->get(['id', 'name', 'abbreviation'])),
+            'disciplines' => cache()->remember('ref.disciplines', now()->addHour(), fn () => Discipline::query()->orderBy('name')->get(['id', 'name'])),
             'levels' => [100, 200, 300, 400, 500],
             'course_scopes' => CourseScope::toSelectOptions(),
             'semesters' => array_map(fn ($case) => [
@@ -113,8 +113,8 @@ class CourseController extends Controller
                 'course_scope' => $course->course_scope->value,
                 'description' => $course->description,
             ],
-            'institutions' => Institution::query()->orderBy('name')->get(['id', 'name', 'abbreviation']),
-            'disciplines' => Discipline::query()->orderBy('name')->get(['id', 'name']),
+            'institutions' => cache()->remember('ref.institutions.all', now()->addHour(), fn () => Institution::query()->orderBy('name')->get(['id', 'name', 'abbreviation'])),
+            'disciplines' => cache()->remember('ref.disciplines', now()->addHour(), fn () => Discipline::query()->orderBy('name')->get(['id', 'name'])),
             'levels' => [100, 200, 300, 400, 500],
             'course_scopes' => CourseScope::toSelectOptions(),
             'semesters' => array_map(fn ($case) => [

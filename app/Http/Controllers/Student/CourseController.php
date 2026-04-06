@@ -30,37 +30,50 @@ class CourseController extends Controller
 
         $courses = InstitutionCourse::query()
             ->whereIn('id', $enrolledCourseIds)
-            ->with(['institution:id,name,abbreviation', 'owningDepartment:id,name'])
+            ->with([
+                'institution:id,name,abbreviation',
+                'owningDepartment:id,name',
+                'topicMappings:id,institution_course_id,canonical_topic_id',
+            ])
             ->withCount([
                 'topicMappings as topics_count',
                 'questions as questions_count' => fn ($q) => $q->where('status', QuestionStatus::Published),
             ])
-            ->get()
-            ->map(function (InstitutionCourse $course) use ($user) {
-                $topicIds = $course->topicMappings()->pluck('canonical_topic_id');
-                $completedCount = TopicCompletion::query()->where('user_id', $user->id)
-                    ->whereIn('canonical_topic_id', $topicIds)
-                    ->count();
+            ->get();
 
-                return [
-                    'id' => $course->id,
-                    'course_code' => $course->course_code,
-                    'course_title' => $course->course_title,
-                    'level' => $course->level,
-                    'semester' => $course->semester?->value,
-                    'institution' => $course->institution ? [
-                        'id' => $course->institution->id,
-                        'name' => $course->institution->name,
-                        'abbreviation' => $course->institution->abbreviation,
-                    ] : null,
-                    'topics_count' => $course->topics_count,
-                    'questions_count' => $course->questions_count,
-                    'completed_topics_count' => $completedCount,
-                ];
-            });
+        $allTopicIds = $courses->flatMap(fn ($c) => $c->topicMappings->pluck('canonical_topic_id'))->unique()->values();
+
+        $completedTopicIds = TopicCompletion::query()
+            ->where('user_id', $user->id)
+            ->whereIn('canonical_topic_id', $allTopicIds)
+            ->pluck('canonical_topic_id')
+            ->flip()
+            ->all();
+
+        $mapped = $courses->map(function (InstitutionCourse $course) use ($completedTopicIds) {
+            $completedCount = $course->topicMappings
+                ->filter(fn ($m) => isset($completedTopicIds[$m->canonical_topic_id]))
+                ->count();
+
+            return [
+                'id' => $course->id,
+                'course_code' => $course->course_code,
+                'course_title' => $course->course_title,
+                'level' => $course->level,
+                'semester' => $course->semester?->value,
+                'institution' => $course->institution ? [
+                    'id' => $course->institution->id,
+                    'name' => $course->institution->name,
+                    'abbreviation' => $course->institution->abbreviation,
+                ] : null,
+                'topics_count' => $course->topics_count,
+                'questions_count' => $course->questions_count,
+                'completed_topics_count' => $completedCount,
+            ];
+        });
 
         return Inertia::render('courses/index', [
-            'courses' => $courses,
+            'courses' => $mapped,
         ]);
     }
 

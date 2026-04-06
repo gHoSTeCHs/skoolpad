@@ -1,3 +1,4 @@
+import DOMPurify from 'dompurify';
 import { useMemo, useState } from 'react';
 
 import { cn } from '@/lib/utils';
@@ -15,9 +16,7 @@ interface FillBlankInputProps {
 const BLANK_PATTERN = /_{3,}|\{\{blank\}\}|\{\{(\d+)\}\}/g;
 
 function stripHtmlTags(html: string): string {
-    const div = document.createElement('div');
-    div.innerHTML = html;
-    return div.textContent ?? div.innerText ?? '';
+    return DOMPurify.sanitize(html, { ALLOWED_TAGS: [] });
 }
 
 function extractPlainText(content: string | undefined): string | null {

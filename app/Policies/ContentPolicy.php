@@ -2,6 +2,8 @@
 
 namespace App\Policies;
 
+use App\Models\CanonicalTopic;
+use App\Models\ContentBlock;
 use App\Models\User;
 
 class ContentPolicy
@@ -16,12 +18,12 @@ class ContentPolicy
         return $user->role->hasPermission('manage_canonical_topics');
     }
 
-    public function update(User $user): bool
+    public function update(User $user, CanonicalTopic|ContentBlock|null $model = null): bool
     {
         return $user->role->hasPermission('manage_canonical_topics');
     }
 
-    public function delete(User $user): bool
+    public function delete(User $user, CanonicalTopic|ContentBlock|null $model = null): bool
     {
         return $user->role->hasPermission('manage_canonical_topics');
     }

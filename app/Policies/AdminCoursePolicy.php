@@ -2,6 +2,7 @@
 
 namespace App\Policies;
 
+use App\Models\InstitutionCourse;
 use App\Models\User;
 
 class AdminCoursePolicy
@@ -16,7 +17,7 @@ class AdminCoursePolicy
         return $user->role->hasPermission('manage_courses');
     }
 
-    public function update(User $user): bool
+    public function update(User $user, ?InstitutionCourse $course = null): bool
     {
         return $user->role->hasPermission('manage_courses');
     }

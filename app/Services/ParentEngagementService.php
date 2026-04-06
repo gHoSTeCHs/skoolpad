@@ -7,6 +7,8 @@ use App\Models\PracticeSession;
 use App\Models\StudentProfile;
 use App\Models\User;
 use App\Models\UserLevel;
+use Carbon\Carbon;
+use Illuminate\Support\Facades\DB;
 
 class ParentEngagementService
 {
@@ -71,13 +73,19 @@ class ParentEngagementService
             ->latest('completed_at')
             ->first();
 
+        $stats = null;
+
         if ($recentSession) {
-            $totalCompleted = PracticeSession::query()
+            $stats = DB::table('practice_sessions')
                 ->where('user_id', $user->id)
                 ->whereNotNull('completed_at')
-                ->count();
+                ->selectRaw(
+                    'COUNT(*) as total_count, COUNT(*) FILTER (WHERE completed_at >= ?) as recent_week_count, MIN(completed_at) as first_completed_at',
+                    [now()->subWeek()]
+                )
+                ->first();
 
-            if ($totalCompleted === 1 && $recentSession->score_percentage >= 60) {
+            if ((int) $stats->total_count === 1 && $recentSession->score_percentage >= 60) {
                 return 'first_practice_above_60';
             }
 
@@ -94,20 +102,12 @@ class ParentEngagementService
             return 'three_day_streak';
         }
 
-        $firstSession = PracticeSession::query()
-            ->where('user_id', $user->id)
-            ->whereNotNull('completed_at')
-            ->oldest('completed_at')
-            ->first();
+        if ($stats) {
+            $firstCompletedAt = $stats->first_completed_at
+                ? Carbon::parse($stats->first_completed_at)
+                : null;
 
-        if ($firstSession && $firstSession->completed_at->diffInDays(now()) >= 7) {
-            $recentWeekCount = PracticeSession::query()
-                ->where('user_id', $user->id)
-                ->whereNotNull('completed_at')
-                ->where('completed_at', '>=', now()->subWeek())
-                ->count();
-
-            if ($recentWeekCount >= 3) {
+            if ($firstCompletedAt && $firstCompletedAt->diffInDays(now()) >= 7 && (int) $stats->recent_week_count >= 3) {
                 return 'consistent_first_week';
             }
         }

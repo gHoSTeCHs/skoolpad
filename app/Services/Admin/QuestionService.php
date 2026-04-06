@@ -63,8 +63,22 @@ class QuestionService
     /** @param array<int, array{id: string, sort_order: int}> $items */
     public function reorderQuestions(array $items): void
     {
-        foreach ($items as $item) {
-            Question::query()->where('id', $item['id'])->update(['sort_order' => $item['sort_order']]);
+        if (empty($items)) {
+            return;
         }
+
+        $params = [];
+        $valueSets = [];
+
+        foreach ($items as $item) {
+            $valueSets[] = '(?::uuid, ?::int)';
+            $params[] = $item['id'];
+            $params[] = $item['sort_order'];
+        }
+
+        \Illuminate\Support\Facades\DB::statement(
+            'UPDATE questions AS q SET sort_order = v.sort_order FROM (VALUES '.implode(', ', $valueSets).') AS v(id, sort_order) WHERE q.id = v.id',
+            $params
+        );
     }
 }

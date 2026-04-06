@@ -121,18 +121,23 @@ class CourseMappingService
             ->whereNotIn('department_id', $validDepartmentIds)
             ->delete();
 
-        foreach ($offerings as $offering) {
-            if ($validDepartmentIds->contains($offering['department_id'])) {
-                CourseDepartmentOffering::query()->updateOrCreate(
-                    [
-                        'institution_course_id' => $course->id,
-                        'department_id' => $offering['department_id'],
-                    ],
-                    [
-                        'is_compulsory' => $offering['is_compulsory'],
-                    ]
-                );
-            }
+        $rows = collect($offerings)
+            ->filter(fn ($o) => $validDepartmentIds->contains($o['department_id']))
+            ->map(fn ($o) => [
+                'id' => (string) Str::uuid(),
+                'institution_course_id' => $course->id,
+                'department_id' => $o['department_id'],
+                'is_compulsory' => $o['is_compulsory'],
+            ])
+            ->values()
+            ->all();
+
+        if (! empty($rows)) {
+            CourseDepartmentOffering::query()->upsert(
+                $rows,
+                uniqueBy: ['institution_course_id', 'department_id'],
+                update: ['is_compulsory'],
+            );
         }
     }
 

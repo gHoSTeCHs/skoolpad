@@ -80,6 +80,15 @@ class StudyPlannerService
             ];
         }
 
+        $topicsByEntry = $this->batchResolveTopicsForEntries($entries);
+        $allTopicIds = collect($topicsByEntry)->flatMap(fn ($t) => $t->pluck('topic_id'))->unique()->values()->all();
+
+        [
+            'answerStats' => $answerStats,
+            'blocksByTopic' => $blocksByTopic,
+            'completedBlockIds' => $completedBlockIds,
+        ] = $this->preloadReadinessData($user, $allTopicIds);
+
         $urgencyScores = $this->calculateUrgencyScores($entries);
         $examBreakdown = [];
 
@@ -89,7 +98,7 @@ class StudyPlannerService
                 continue;
             }
 
-            $topics = $this->resolveTopicsForEntry($entry);
+            $topics = $topicsByEntry[$entry->id] ?? collect();
             if ($topics->isEmpty()) {
                 $examBreakdown[] = [
                     'entry_id' => $entry->id,
@@ -104,7 +113,7 @@ class StudyPlannerService
             }
 
             $topicIds = $topics->pluck('topic_id')->toArray();
-            $readiness = $this->buildTopicReadiness($user, $topicIds);
+            $readiness = $this->computeReadinessFromPreloaded($topicIds, $answerStats, $blocksByTopic, $completedBlockIds);
             $aocTopicIds = $entry->aocTopics->pluck('id')->toArray();
 
             $entryItems = $this->allocateItemsForEntry(
@@ -312,17 +321,26 @@ class StudyPlannerService
             ];
         }
 
+        $topicsByEntry = $this->batchResolveTopicsForEntries($entries);
+        $allTopicIds = collect($topicsByEntry)->flatMap(fn ($t) => $t->pluck('topic_id'))->unique()->values()->all();
+
+        [
+            'answerStats' => $answerStats,
+            'blocksByTopic' => $blocksByTopic,
+            'completedBlockIds' => $completedBlockIds,
+        ] = $this->preloadReadinessData($user, $allTopicIds);
+
         $nearest = $entries->first();
         $totalWeakTopics = 0;
 
         foreach ($entries as $entry) {
-            $topics = $this->resolveTopicsForEntry($entry);
+            $topics = $topicsByEntry[$entry->id] ?? collect();
             if ($topics->isEmpty()) {
                 continue;
             }
 
             $topicIds = $topics->pluck('topic_id')->toArray();
-            $readiness = $this->buildTopicReadiness($user, $topicIds);
+            $readiness = $this->computeReadinessFromPreloaded($topicIds, $answerStats, $blocksByTopic, $completedBlockIds);
             $totalWeakTopics += $readiness->filter(fn ($r) => in_array($r['status'], ['not_started', 'weak', 'read_only']))->count();
         }
 
@@ -332,10 +350,10 @@ class StudyPlannerService
         if ($nearestAocTopics->isNotEmpty()) {
             $focusTopics = $nearestAocTopics->pluck('title')->take(3)->values()->all();
         } else {
-            $nearestTopics = $this->resolveTopicsForEntry($nearest);
+            $nearestTopics = $topicsByEntry[$nearest->id] ?? collect();
             if ($nearestTopics->isNotEmpty()) {
                 $nearestTopicIds = $nearestTopics->pluck('topic_id')->toArray();
-                $nearestReadiness = $this->buildTopicReadiness($user, $nearestTopicIds);
+                $nearestReadiness = $this->computeReadinessFromPreloaded($nearestTopicIds, $answerStats, $blocksByTopic, $completedBlockIds);
 
                 $focusTopics = $nearestTopics
                     ->map(fn ($t) => [
@@ -366,6 +384,67 @@ class StudyPlannerService
         ];
     }
 
+    /**
+     * Batch-load topics for all entries in 2 queries (one for course mappings, one for scheme items)
+     * instead of 1 query per entry.
+     *
+     * @return array<string, Collection> keyed by entry ID
+     */
+    private function batchResolveTopicsForEntries(Collection $entries): array
+    {
+        $courseEntries = $entries->filter(fn ($e) => $e->institution_course_id)
+            ->keyBy('id');
+        $schemeEntries = $entries->filter(fn ($e) => ! $e->institution_course_id && $e->level_subject_id)
+            ->keyBy('id');
+
+        $courseMappingsByCourseId = collect();
+        if ($courseEntries->isNotEmpty()) {
+            $courseMappingsByCourseId = CourseTopicMapping::query()
+                ->whereIn('institution_course_id', $courseEntries->pluck('institution_course_id'))
+                ->with('topic:id,title')
+                ->orderBy('sequence_order')
+                ->get()
+                ->groupBy('institution_course_id');
+        }
+
+        $schemeItemsByLevelSubjectId = collect();
+        if ($schemeEntries->isNotEmpty()) {
+            $schemeItemsByLevelSubjectId = SchemeOfWorkItem::query()
+                ->whereIn('curriculum_subject_level_id', $schemeEntries->pluck('level_subject_id'))
+                ->whereNotNull('canonical_topic_id')
+                ->with('canonicalTopic:id,title')
+                ->get()
+                ->groupBy('curriculum_subject_level_id');
+        }
+
+        $result = [];
+
+        foreach ($courseEntries as $entryId => $entry) {
+            $result[$entryId] = ($courseMappingsByCourseId->get($entry->institution_course_id) ?? collect())
+                ->filter(fn ($m) => $m->topic !== null)
+                ->map(fn ($m) => ['topic_id' => $m->canonical_topic_id, 'topic_title' => $m->topic->title])
+                ->unique('topic_id')
+                ->values();
+        }
+
+        foreach ($schemeEntries as $entryId => $entry) {
+            $result[$entryId] = ($schemeItemsByLevelSubjectId->get($entry->level_subject_id) ?? collect())
+                ->filter(fn ($s) => $s->canonicalTopic !== null)
+                ->map(fn ($s) => ['topic_id' => $s->canonical_topic_id, 'topic_title' => $s->canonicalTopic->title])
+                ->unique('topic_id')
+                ->values();
+        }
+
+        foreach ($entries->filter(fn ($e) => ! $e->institution_course_id && ! $e->level_subject_id) as $entry) {
+            $result[$entry->id] = collect();
+        }
+
+        return $result;
+    }
+
+    /**
+     * Single-entry topic resolver — used by getTopicReadiness (public API, single entry context).
+     */
     private function resolveTopicsForEntry(ExamTimetableEntry $entry): Collection
     {
         if ($entry->institution_course_id) {
@@ -399,11 +478,17 @@ class StudyPlannerService
         return collect();
     }
 
-    /** @return Collection<string, array{accuracy: float, attempts: int, is_read: bool, first_unread_block_id: string|null, status: string}> */
-    private function buildTopicReadiness(User $user, array $topicIds): Collection
+    /**
+     * Fire the 3 readiness queries once for the full topic union.
+     * Used by buildDailyPlan and getExamSummary to avoid 3N queries in their loops.
+     *
+     * @param  array<int, string>  $allTopicIds
+     * @return array{answerStats: Collection, blocksByTopic: Collection, completedBlockIds: array<int, string>}
+     */
+    private function preloadReadinessData(User $user, array $allTopicIds): array
     {
-        if (empty($topicIds)) {
-            return collect();
+        if (empty($allTopicIds)) {
+            return ['answerStats' => collect(), 'blocksByTopic' => collect(), 'completedBlockIds' => []];
         }
 
         $answerStats = PracticeAnswer::query()
@@ -411,14 +496,14 @@ class StudyPlannerService
             ->join('question_topic_links', 'practice_answers.question_id', '=', 'question_topic_links.question_id')
             ->where('practice_sessions.user_id', $user->id)
             ->whereNotNull('practice_answers.is_correct')
-            ->whereIn('question_topic_links.canonical_topic_id', $topicIds)
+            ->whereIn('question_topic_links.canonical_topic_id', $allTopicIds)
             ->groupBy('question_topic_links.canonical_topic_id')
             ->selectRaw('question_topic_links.canonical_topic_id as topic_id, COUNT(*) as attempts, AVG(CASE WHEN practice_answers.is_correct THEN 1.0 ELSE 0.0 END) as accuracy')
             ->get()
             ->keyBy('topic_id');
 
         $blocksByTopic = ContentBlock::query()
-            ->whereIn('canonical_topic_id', $topicIds)
+            ->whereIn('canonical_topic_id', $allTopicIds)
             ->where('is_published', true)
             ->where('is_container', false)
             ->select('id', 'canonical_topic_id')
@@ -436,6 +521,22 @@ class StudyPlannerService
                 ->toArray()
             : [];
 
+        return compact('answerStats', 'blocksByTopic', 'completedBlockIds');
+    }
+
+    /**
+     * Pure PHP readiness computation — no DB queries.
+     * Accepts data from preloadReadinessData and slices it for the given topic subset.
+     *
+     * @param  array<int, string>  $topicIds
+     * @return Collection<string, array{accuracy: float, attempts: int, is_read: bool, first_unread_block_id: string|null, status: string}>
+     */
+    private function computeReadinessFromPreloaded(
+        array $topicIds,
+        Collection $answerStats,
+        Collection $blocksByTopic,
+        array $completedBlockIds,
+    ): Collection {
         return collect($topicIds)->mapWithKeys(function ($topicId) use ($answerStats, $completedBlockIds, $blocksByTopic) {
             $stats = $answerStats->get($topicId);
             $accuracy = $stats ? (float) $stats->accuracy : 0.0;
@@ -448,16 +549,30 @@ class StudyPlannerService
                 ? $topicBlocks->first(fn ($b) => ! in_array($b->id, $completedBlockIds))?->id
                 : null;
 
-            $status = $this->classifyReadiness($accuracy, $attempts, $allRead);
-
             return [$topicId => [
                 'accuracy' => $accuracy,
                 'attempts' => $attempts,
                 'is_read' => $allRead,
                 'first_unread_block_id' => $firstUnread,
-                'status' => $status,
+                'status' => $this->classifyReadiness($accuracy, $attempts, $allRead),
             ]];
         });
+    }
+
+    /** @return Collection<string, array{accuracy: float, attempts: int, is_read: bool, first_unread_block_id: string|null, status: string}> */
+    private function buildTopicReadiness(User $user, array $topicIds): Collection
+    {
+        if (empty($topicIds)) {
+            return collect();
+        }
+
+        [
+            'answerStats' => $answerStats,
+            'blocksByTopic' => $blocksByTopic,
+            'completedBlockIds' => $completedBlockIds,
+        ] = $this->preloadReadinessData($user, $topicIds);
+
+        return $this->computeReadinessFromPreloaded($topicIds, $answerStats, $blocksByTopic, $completedBlockIds);
     }
 
     private function classifyReadiness(float $accuracy, int $attempts, bool $isRead): string

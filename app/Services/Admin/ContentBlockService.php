@@ -59,14 +59,26 @@ class ContentBlockService
 
     public function reorderBlocks(CanonicalTopic $topic, array $items): void
     {
-        foreach ($items as $item) {
-            ContentBlock::query()->where('id', $item['id'])->update([
-                'parent_block_id' => $item['parent_block_id'],
-                'sort_order' => $item['sort_order'],
-            ]);
-        }
+        DB::transaction(function () use ($topic, $items) {
+            if (! empty($items)) {
+                $params = [];
+                $valueSets = [];
 
-        $this->recalculateAllPaths($topic);
+                foreach ($items as $item) {
+                    $valueSets[] = '(?::uuid, ?::uuid, ?::int)';
+                    $params[] = $item['id'];
+                    $params[] = $item['parent_block_id'];
+                    $params[] = $item['sort_order'];
+                }
+
+                DB::statement(
+                    'UPDATE content_blocks AS cb SET parent_block_id = v.parent_block_id, sort_order = v.sort_order FROM (VALUES '.implode(', ', $valueSets).') AS v(id, parent_block_id, sort_order) WHERE cb.id = v.id',
+                    $params
+                );
+            }
+
+            $this->recalculateAllPaths($topic);
+        });
     }
 
     private function recalculatePaths(string $topicId, ?string $parentId): void

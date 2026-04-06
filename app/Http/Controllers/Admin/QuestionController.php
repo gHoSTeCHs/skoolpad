@@ -71,7 +71,7 @@ class QuestionController extends Controller
 
         return Inertia::render('admin/questions/index', [
             'questions' => $this->paginated($questions),
-            'institutions' => Institution::query()->where('is_active', true)->orderBy('abbreviation')->get(['id', 'name', 'abbreviation']),
+            'institutions' => cache()->remember('ref.institutions.active', now()->addHour(), fn () => Institution::query()->where('is_active', true)->orderBy('abbreviation')->get(['id', 'name', 'abbreviation'])),
             'filters' => $request->only([
                 'search', 'institution_id', 'institution_course_id',
                 'year', 'semester', 'question_type', 'status',
@@ -95,7 +95,7 @@ class QuestionController extends Controller
         Gate::authorize('create', Question::class);
 
         return Inertia::render('admin/questions/create', [
-            'institutions' => Institution::query()->where('is_active', true)->orderBy('abbreviation')->get(['id', 'name', 'abbreviation']),
+            'institutions' => cache()->remember('ref.institutions.active', now()->addHour(), fn () => Institution::query()->where('is_active', true)->orderBy('abbreviation')->get(['id', 'name', 'abbreviation'])),
             'enum_options' => [
                 'question_types' => array_map(fn ($c) => ['value' => $c->value, 'label' => $c->label()], QuestionType::cases()),
                 'difficulties' => array_map(fn ($c) => ['value' => $c->value, 'label' => $c->label()], QuestionDifficulty::cases()),
@@ -175,7 +175,7 @@ class QuestionController extends Controller
                     'relevance' => $link->relevance,
                 ])->values(),
             ],
-            'institutions' => Institution::query()->where('is_active', true)->orderBy('abbreviation')->get(['id', 'name', 'abbreviation']),
+            'institutions' => cache()->remember('ref.institutions.active', now()->addHour(), fn () => Institution::query()->where('is_active', true)->orderBy('abbreviation')->get(['id', 'name', 'abbreviation'])),
             'enum_options' => [
                 'question_types' => array_map(fn ($c) => ['value' => $c->value, 'label' => $c->label()], QuestionType::cases()),
                 'statuses' => array_map(fn ($c) => ['value' => $c->value, 'label' => $c->label()], QuestionStatus::cases()),

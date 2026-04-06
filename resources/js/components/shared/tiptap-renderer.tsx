@@ -2,6 +2,7 @@ import './tiptap-editor.css';
 
 import { generateHTML } from '@tiptap/core';
 import CodeBlockLowlight from '@tiptap/extension-code-block-lowlight';
+import DOMPurify from 'dompurify';
 import Image from '@tiptap/extension-image';
 import Link from '@tiptap/extension-link';
 import Mathematics from '@tiptap/extension-mathematics';
@@ -29,7 +30,7 @@ lowlight.register({ javascript, typescript, php, python, bash, sql, json, xml, c
 const extensions = [
     StarterKit.configure({ codeBlock: false, link: false, underline: false }),
     Underline,
-    Link.configure({ openOnClick: true, HTMLAttributes: { class: 'tiptap-link' } }),
+    Link.configure({ openOnClick: true, protocols: ['http', 'https', 'mailto'], HTMLAttributes: { class: 'tiptap-link' } }),
     Image.configure({ inline: false, allowBase64: false }),
     Table.configure({ resizable: false }),
     TableRow,
@@ -59,7 +60,7 @@ export function TiptapRenderer({ content, className }: TiptapRendererProps) {
     return (
         <div
             className={cn('tiptap-editor content-renderer', className)}
-            dangerouslySetInnerHTML={{ __html: html }}
+            dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(html) }}
         />
     );
 }

@@ -85,13 +85,15 @@ class InstitutionController extends Controller
         unset($data['logo']);
 
         Institution::query()->create($data);
+        cache()->forget('ref.institutions.all');
+        cache()->forget('ref.institutions.active');
 
         return to_route('admin.institutions.index')->with('success', 'Institution created successfully.');
     }
 
     public function show(Institution $institution): Response
     {
-        Gate::authorize('viewAny', Institution::class);
+        Gate::authorize('view', $institution);
 
         $institution->load([
             'country:id,name',
@@ -108,7 +110,7 @@ class InstitutionController extends Controller
 
     public function attachEducationSystem(\App\Http\Requests\Admin\AttachEducationSystemRequest $request, Institution $institution): RedirectResponse
     {
-        Gate::authorize('update', Institution::class);
+        Gate::authorize('update', $institution);
 
         $institution->educationSystems()->syncWithoutDetaching([$request->validated('education_system_id')]);
 
@@ -117,7 +119,7 @@ class InstitutionController extends Controller
 
     public function detachEducationSystem(Institution $institution, EducationSystem $educationSystem): RedirectResponse
     {
-        Gate::authorize('update', Institution::class);
+        Gate::authorize('update', $institution);
 
         $institution->educationSystems()->detach($educationSystem->id);
 
@@ -126,7 +128,7 @@ class InstitutionController extends Controller
 
     public function edit(Institution $institution): Response
     {
-        Gate::authorize('update', Institution::class);
+        Gate::authorize('update', $institution);
 
         return Inertia::render('admin/institutions/edit', [
             'institution' => $institution,
@@ -140,7 +142,7 @@ class InstitutionController extends Controller
 
     public function update(UpdateInstitutionRequest $request, Institution $institution): RedirectResponse
     {
-        Gate::authorize('update', Institution::class);
+        Gate::authorize('update', $institution);
 
         $data = $request->validated();
 
@@ -153,6 +155,8 @@ class InstitutionController extends Controller
         unset($data['logo']);
 
         $institution->update($data);
+        cache()->forget('ref.institutions.all');
+        cache()->forget('ref.institutions.active');
 
         return to_route('admin.institutions.index')->with('success', 'Institution updated successfully.');
     }
