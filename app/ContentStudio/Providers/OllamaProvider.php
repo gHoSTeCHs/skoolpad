@@ -13,6 +13,17 @@ class OllamaProvider implements ContentAIProvider
     public function generate(ContentPrompt $prompt): ContentResponse
     {
         $config = config('content-studio.providers.ollama');
+
+        if (empty($config['base_url'])) {
+            return new ContentResponse(
+                valid: false,
+                data: [],
+                validation_errors: ['config_error' => 'Ollama base URL not configured. Set OLLAMA_BASE_URL in your .env file.'],
+                raw_response: '',
+                model_used: $config['model'] ?? 'unknown',
+            );
+        }
+
         $startTime = microtime(true);
 
         try {

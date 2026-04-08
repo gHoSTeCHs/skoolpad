@@ -13,6 +13,17 @@ class AnthropicProvider implements ContentAIProvider
     public function generate(ContentPrompt $prompt): ContentResponse
     {
         $config = config('content-studio.providers.anthropic');
+
+        if (empty($config['api_key'])) {
+            return new ContentResponse(
+                valid: false,
+                data: [],
+                validation_errors: ['config_error' => 'Anthropic API key not configured. Set ANTHROPIC_API_KEY in your .env file.'],
+                raw_response: '',
+                model_used: $config['model'] ?? 'unknown',
+            );
+        }
+
         $startTime = microtime(true);
 
         try {
