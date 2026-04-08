@@ -12,5 +12,7 @@ class ContentResponse
         public readonly string $model_used = '',
         public readonly int $tokens_used = 0,
         public readonly float $generation_time_ms = 0,
+        public readonly int $input_tokens = 0,
+        public readonly int $output_tokens = 0,
     ) {}
 }

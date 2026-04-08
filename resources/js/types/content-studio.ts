@@ -39,4 +39,24 @@ export interface DisciplineOption {
     slug: string;
 }
 
+export type AIAdapterType = 'openai_compatible' | 'anthropic';
+
+export interface AIModel {
+    id: string;
+    name: string;
+    slug: string;
+    adapter_type: AIAdapterType;
+    adapter_type_label: string;
+    base_url: string;
+    api_key: string | null;
+    model_id: string;
+    max_tokens: number;
+    input_cost_per_million: number;
+    output_cost_per_million: number;
+    is_active: boolean;
+    sort_order: number;
+    created_at: string;
+    updated_at: string;
+}
+
 export type { EnumOption } from '@/types/questions';

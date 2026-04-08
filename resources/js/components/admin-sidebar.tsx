@@ -17,7 +17,9 @@ import {
     Sparkles,
     Upload,
     Users,
+    Bot,
 } from 'lucide-react';
+import AIModelController from '@/actions/App/Http/Controllers/Admin/AIModelController';
 import BulkImportController from '@/actions/App/Http/Controllers/Admin/BulkImportController';
 import ContentStudioController from '@/actions/App/Http/Controllers/Admin/ContentStudioController';
 import CanonicalTopicController from '@/actions/App/Http/Controllers/Admin/CanonicalTopicController';
@@ -57,6 +59,7 @@ const navGroups: NavGroup[] = [
         label: 'Content Studio',
         items: [
             { title: 'Content Studio', href: ContentStudioController.index.url(), icon: Sparkles },
+            { title: 'AI Models', href: AIModelController.index.url(), icon: Bot },
         ],
     },
     {

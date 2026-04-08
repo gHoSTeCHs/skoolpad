@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\Admin\AIModelController;
 use App\Http\Controllers\Admin\AnswerController;
 use App\Http\Controllers\Admin\AssessmentSubjectController;
 use App\Http\Controllers\Admin\AssessmentTypeController;
@@ -221,4 +222,12 @@ Route::middleware(['auth', 'verified', 'staff'])->prefix('admin')->name('admin.'
     Route::get('content-studio/create', [ContentStudioController::class, 'create'])->name('content-studio.create');
     Route::post('content-studio', [ContentStudioController::class, 'store'])->name('content-studio.store');
     Route::get('content-studio/{contentProject}', [ContentStudioController::class, 'show'])->name('content-studio.show');
+
+    Route::get('ai-models', [AIModelController::class, 'index'])->name('ai-models.index');
+    Route::get('ai-models/create', [AIModelController::class, 'create'])->name('ai-models.create');
+    Route::post('ai-models', [AIModelController::class, 'store'])->name('ai-models.store');
+    Route::get('ai-models/{ai_model}/edit', [AIModelController::class, 'edit'])->name('ai-models.edit');
+    Route::put('ai-models/{ai_model}', [AIModelController::class, 'update'])->name('ai-models.update');
+    Route::delete('ai-models/{ai_model}', [AIModelController::class, 'destroy'])->name('ai-models.destroy');
+    Route::post('ai-models/{ai_model}/test', [AIModelController::class, 'testConnection'])->name('ai-models.test');
 });

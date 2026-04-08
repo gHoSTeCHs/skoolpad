@@ -1,42 +1,43 @@
 <?php
 
-namespace App\ContentStudio\Providers;
+namespace App\ContentStudio\Adapters;
 
 use App\ContentStudio\ContentAIProvider;
 use App\DataTransferObjects\ContentPrompt;
 use App\DataTransferObjects\ContentResponse;
+use App\Models\AIModel;
 use Illuminate\Http\Client\ConnectionException;
 use Illuminate\Support\Facades\Http;
 
-class OllamaProvider implements ContentAIProvider
+class AnthropicAdapter implements ContentAIProvider
 {
+    public function __construct(private readonly AIModel $model) {}
+
     public function generate(ContentPrompt $prompt): ContentResponse
     {
-        $config = config('content-studio.providers.ollama');
-
-        if (empty($config['base_url'])) {
+        if (empty($this->model->api_key)) {
             return new ContentResponse(
                 valid: false,
                 data: [],
-                validation_errors: ['config_error' => 'Ollama base URL not configured. Set OLLAMA_BASE_URL in your .env file.'],
+                validation_errors: ['config_error' => "API key not configured for {$this->model->name}."],
                 raw_response: '',
-                model_used: $config['model'] ?? 'unknown',
+                model_used: $this->model->model_id,
             );
         }
 
         $startTime = microtime(true);
 
         try {
-            $response = Http::timeout(300)->post($config['base_url'] . '/api/chat', [
-                'model' => $config['model'],
+            $response = Http::withHeaders([
+                'x-api-key' => $this->model->api_key,
+                'anthropic-version' => '2023-06-01',
+            ])->timeout(120)->post(rtrim($this->model->base_url, '/') . '/messages', [
+                'model' => $this->model->model_id,
+                'max_tokens' => $prompt->max_tokens,
+                'temperature' => $prompt->temperature,
+                'system' => $prompt->system_prompt,
                 'messages' => [
-                    ['role' => 'system', 'content' => $prompt->system_prompt],
                     ['role' => 'user', 'content' => $prompt->user_prompt],
-                ],
-                'stream' => false,
-                'options' => [
-                    'temperature' => $prompt->temperature,
-                    'num_predict' => $prompt->max_tokens,
                 ],
             ]);
 
@@ -47,32 +48,34 @@ class OllamaProvider implements ContentAIProvider
                 return new ContentResponse(
                     valid: false,
                     data: [],
-                    validation_errors: ['api_error' => $body['error'] ?? 'Unknown Ollama error'],
+                    validation_errors: ['api_error' => $body['error']['message'] ?? 'Unknown API error'],
                     raw_response: $response->body(),
-                    model_used: $config['model'],
+                    model_used: $this->model->model_id,
                     tokens_used: 0,
                     generation_time_ms: $elapsedMs,
                 );
             }
 
-            $rawText = $body['message']['content'] ?? '';
-            $tokensUsed = ($body['prompt_eval_count'] ?? 0) + ($body['eval_count'] ?? 0);
+            $rawText = $body['content'][0]['text'] ?? '';
+            $inputTokens = $body['usage']['input_tokens'] ?? 0;
+            $outputTokens = $body['usage']['output_tokens'] ?? 0;
+            $tokensUsed = $inputTokens + $outputTokens;
 
-            return $this->parseResponse($rawText, $config['model'], $tokensUsed, $elapsedMs);
+            return $this->parseResponse($rawText, $tokensUsed, $inputTokens, $outputTokens, $elapsedMs);
         } catch (ConnectionException $e) {
             return new ContentResponse(
                 valid: false,
                 data: [],
                 validation_errors: ['connection_error' => $e->getMessage()],
                 raw_response: '',
-                model_used: $config['model'],
+                model_used: $this->model->model_id,
                 tokens_used: 0,
                 generation_time_ms: (microtime(true) - $startTime) * 1000,
             );
         }
     }
 
-    private function parseResponse(string $rawText, string $model, int $tokensUsed, float $elapsedMs): ContentResponse
+    private function parseResponse(string $rawText, int $tokensUsed, int $inputTokens, int $outputTokens, float $elapsedMs): ContentResponse
     {
         $decoded = json_decode($rawText, true);
 
@@ -82,9 +85,11 @@ class OllamaProvider implements ContentAIProvider
                 data: [],
                 validation_errors: ['json_parse_error' => json_last_error_msg()],
                 raw_response: $rawText,
-                model_used: $model,
+                model_used: $this->model->model_id,
                 tokens_used: $tokensUsed,
                 generation_time_ms: $elapsedMs,
+                input_tokens: $inputTokens,
+                output_tokens: $outputTokens,
             );
         }
 
@@ -92,9 +97,11 @@ class OllamaProvider implements ContentAIProvider
             valid: true,
             data: $decoded,
             raw_response: $rawText,
-            model_used: $model,
+            model_used: $this->model->model_id,
             tokens_used: $tokensUsed,
             generation_time_ms: $elapsedMs,
+            input_tokens: $inputTokens,
+            output_tokens: $outputTokens,
         );
     }
 }

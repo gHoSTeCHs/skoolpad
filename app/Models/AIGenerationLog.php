@@ -14,6 +14,7 @@ class AIGenerationLog extends Model
 
     protected $fillable = [
         'content_project_id',
+        'ai_model_id',
         'prompt_type',
         'system_prompt',
         'user_prompt',
@@ -24,6 +25,8 @@ class AIGenerationLog extends Model
         'model_used',
         'provider',
         'tokens_used',
+        'input_tokens',
+        'output_tokens',
         'generation_time_ms',
         'estimated_cost_cents',
         'admin_action',
@@ -39,6 +42,8 @@ class AIGenerationLog extends Model
             'is_valid' => 'boolean',
             'validation_errors' => 'array',
             'tokens_used' => 'integer',
+            'input_tokens' => 'integer',
+            'output_tokens' => 'integer',
             'generation_time_ms' => 'integer',
             'estimated_cost_cents' => 'integer',
             'acted_at' => 'datetime',
@@ -48,6 +53,11 @@ class AIGenerationLog extends Model
     public function contentProject(): BelongsTo
     {
         return $this->belongsTo(ContentProject::class);
+    }
+
+    public function aiModel(): BelongsTo
+    {
+        return $this->belongsTo(AIModel::class);
     }
 
     public function actedBy(): BelongsTo

@@ -21,7 +21,7 @@ abstract class ContentPromptTemplate
 
     public function maxTokens(): int
     {
-        return (int) config('content-studio.providers.' . config('content-studio.ai_provider') . '.max_tokens', 8192);
+        return 8192;
     }
 
     public function build(array $context): ContentPrompt

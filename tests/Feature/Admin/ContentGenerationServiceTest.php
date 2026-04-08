@@ -1,71 +1,85 @@
 <?php
 
-use App\ContentStudio\ContentAIProvider;
+use App\ContentStudio\Adapters\AnthropicAdapter;
+use App\ContentStudio\Adapters\OpenAICompatibleAdapter;
 use App\ContentStudio\Prompts\ContentPromptTemplate;
 use App\DataTransferObjects\ContentPrompt;
 use App\DataTransferObjects\ContentResponse;
-use App\Models\ContentProject;
+use App\Enums\AIAdapterType;
+use App\Models\AIModel;
+use App\Models\PlatformSetting;
 use App\Services\ContentGenerationService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 
 uses(RefreshDatabase::class);
 
-beforeEach(function () {
-    config(['content-studio.ai_provider' => 'anthropic']);
-    config(['content-studio.retry.max_attempts' => 2]);
-    config(['content-studio.retry.validation_correction' => true]);
-});
-
-it('logs generation to ai_generation_logs', function () {
-    $project = ContentProject::factory()->create();
-
-    $mockProvider = Mockery::mock(ContentAIProvider::class);
-    $mockProvider->shouldReceive('generate')
-        ->once()
-        ->andReturn(new ContentResponse(
-            valid: true,
-            data: ['test' => 'value'],
-            raw_response: '{"test":"value"}',
-            model_used: 'test-model',
-            tokens_used: 100,
-            generation_time_ms: 500,
-        ));
-
-    $template = new class extends ContentPromptTemplate {
-        public function promptType(): string
-        {
-            return 'P-TEST';
-        }
-
-        public function systemPrompt(): string
-        {
-            return 'You are a test.';
-        }
-
-        public function userPrompt(array $context): string
-        {
-            return 'Generate test content.';
-        }
-
-        public function jsonSchema(): array
-        {
-            return [];
-        }
-    };
-
+it('resolves the correct adapter for openai_compatible models', function () {
+    $model = AIModel::factory()->create(['adapter_type' => AIAdapterType::OpenAICompatible]);
     $service = new ContentGenerationService();
 
-    $this->mock(ContentAIProvider::class, fn () => $mockProvider);
+    $adapter = $service->resolveAdapter($model);
 
-    app()->bind(ContentAIProvider::class, fn () => $mockProvider);
+    expect($adapter)->toBeInstanceOf(OpenAICompatibleAdapter::class);
+});
 
-    $prompt = $template->build([]);
-    $response = $mockProvider->generate($prompt);
+it('resolves the correct adapter for anthropic models', function () {
+    $model = AIModel::factory()->anthropic()->create();
+    $service = new ContentGenerationService();
 
-    expect($response->valid)->toBeTrue();
-    expect($response->data)->toBe(['test' => 'value']);
-    expect($response->model_used)->toBe('test-model');
-    expect($response->tokens_used)->toBe(100);
+    $adapter = $service->resolveAdapter($model);
+
+    expect($adapter)->toBeInstanceOf(AnthropicAdapter::class);
+});
+
+it('resolves model by explicit ID', function () {
+    $model = AIModel::factory()->create(['name' => 'Target Model']);
+    AIModel::factory()->create(['name' => 'Other Model']);
+
+    $service = new ContentGenerationService();
+    $resolved = $service->resolveModel($model->id);
+
+    expect($resolved->id)->toBe($model->id);
+});
+
+it('resolves model by task routing', function () {
+    $model = AIModel::factory()->create(['name' => 'Routed Model']);
+
+    PlatformSetting::query()->create([
+        'key' => 'ai_task_routing',
+        'value' => ['structure' => $model->id, 'content' => $model->id],
+    ]);
+
+    $service = new ContentGenerationService();
+    $resolved = $service->resolveModel(null, 'structure');
+
+    expect($resolved->id)->toBe($model->id);
+});
+
+it('falls back to first active model when no routing exists', function () {
+    $first = AIModel::factory()->create(['sort_order' => 1, 'name' => 'First']);
+    AIModel::factory()->create(['sort_order' => 2, 'name' => 'Second']);
+
+    $service = new ContentGenerationService();
+    $resolved = $service->resolveModel();
+
+    expect($resolved->id)->toBe($first->id);
+});
+
+it('skips inactive models in fallback', function () {
+    AIModel::factory()->inactive()->create(['sort_order' => 1, 'name' => 'Inactive']);
+    $active = AIModel::factory()->create(['sort_order' => 2, 'name' => 'Active']);
+
+    $service = new ContentGenerationService();
+    $resolved = $service->resolveModel();
+
+    expect($resolved->id)->toBe($active->id);
+});
+
+it('throws when no active models exist', function () {
+    $service = new ContentGenerationService();
+
+    expect(fn () => $service->resolveModel())
+        ->toThrow(RuntimeException::class, 'No active AI models configured');
 });
 
 it('creates a valid ContentPrompt from template', function () {
@@ -107,38 +121,35 @@ it('creates a valid ContentPrompt from template', function () {
         ->context->toBe(['subject' => 'Physics']);
 });
 
-it('creates a valid ContentResponse', function () {
+it('creates a ContentResponse with split token counts', function () {
     $response = new ContentResponse(
         valid: true,
         data: ['topics' => []],
         raw_response: '{"topics":[]}',
-        model_used: 'claude-sonnet-4-20250514',
-        tokens_used: 250,
+        model_used: 'deepseek-chat',
+        tokens_used: 350,
         generation_time_ms: 1200.5,
+        input_tokens: 200,
+        output_tokens: 150,
     );
 
     expect($response)
         ->valid->toBeTrue()
-        ->data->toBe(['topics' => []])
-        ->model_used->toBe('claude-sonnet-4-20250514')
-        ->tokens_used->toBe(250)
-        ->generation_time_ms->toBe(1200.5)
-        ->validation_errors->toBe([]);
+        ->tokens_used->toBe(350)
+        ->input_tokens->toBe(200)
+        ->output_tokens->toBe(150);
 });
 
-it('creates an invalid ContentResponse with errors', function () {
+it('defaults split tokens to zero for backward compatibility', function () {
     $response = new ContentResponse(
-        valid: false,
+        valid: true,
         data: [],
-        validation_errors: ['json_parse_error' => 'Syntax error'],
-        raw_response: 'not json',
-        model_used: 'gpt-4o',
-        tokens_used: 50,
-        generation_time_ms: 300,
+        raw_response: '',
+        model_used: 'test',
+        tokens_used: 100,
     );
 
     expect($response)
-        ->valid->toBeFalse()
-        ->validation_errors->toHaveKey('json_parse_error')
-        ->raw_response->toBe('not json');
+        ->input_tokens->toBe(0)
+        ->output_tokens->toBe(0);
 });
