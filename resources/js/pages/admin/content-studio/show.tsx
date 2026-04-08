@@ -1,13 +1,17 @@
 import { Head } from '@inertiajs/react';
-import { Sparkles } from 'lucide-react';
 import ContentStudioController from '@/actions/App/Http/Controllers/Admin/ContentStudioController';
+import { GenerationLogPanel } from '@/components/admin/content-studio/generation-log-panel';
+import { ProjectStepper } from '@/components/admin/content-studio/project-stepper';
+import { StageBlocks } from '@/components/admin/content-studio/stage-blocks';
+import { StageResearch } from '@/components/admin/content-studio/stage-research';
+import { StageScheme } from '@/components/admin/content-studio/stage-scheme';
 import { Badge } from '@/components/ui/badge';
-import { Card, CardContent } from '@/components/ui/card';
 import AdminLayout from '@/layouts/admin-layout';
-import type { ContentProject, ContentProjectStatus } from '@/types/content-studio';
+import type { ContentProject, ContentProjectStatus, GenerationLogEntry } from '@/types/content-studio';
 
 interface Props {
     project: ContentProject;
+    generationLogs: GenerationLogEntry[];
 }
 
 const STATUS_STYLES: Record<ContentProjectStatus, string> = {
@@ -19,7 +23,38 @@ const STATUS_STYLES: Record<ContentProjectStatus, string> = {
     complete: 'bg-[var(--badge-reward-bg)] text-[var(--badge-reward-fg)]',
 };
 
-export default function ContentStudioShow({ project }: Props) {
+function StageWorkspace({ project }: { project: ContentProject }) {
+    const status = project.status;
+    const aiContext = project.ai_context;
+    const researchApproved = !!aiContext?.research_approved;
+    const schemeApproved = !!aiContext?.scheme_approved;
+    const schemeSkipped = !!project.progress_data?.scheme_skipped;
+
+    return (
+        <div className="space-y-4">
+            <StageResearch
+                project={project}
+                isActive={status === 'draft' || status === 'research'}
+            />
+
+            {researchApproved && (
+                <StageScheme
+                    project={project}
+                    isActive={status === 'research' || (status === 'structuring' && !schemeApproved && !schemeSkipped)}
+                />
+            )}
+
+            {(schemeApproved || schemeSkipped) && (
+                <StageBlocks
+                    project={project}
+                    isActive={status === 'structuring'}
+                />
+            )}
+        </div>
+    );
+}
+
+export default function ContentStudioShow({ project, generationLogs }: Props) {
     const isSecondary = project.mode === 'secondary';
     const title = isSecondary
         ? project.curriculum_subject_name
@@ -51,19 +86,15 @@ export default function ContentStudioShow({ project }: Props) {
                     </div>
                 </div>
 
-                <Card>
-                    <CardContent className="flex flex-col items-center justify-center py-16 text-center">
-                        <div className="mb-4 rounded-full bg-muted p-4">
-                            <Sparkles className="size-8 text-muted-foreground" />
-                        </div>
-                        <h3 className="font-display text-lg font-semibold">
-                            Stage workspace coming soon
-                        </h3>
-                        <p className="mt-2 max-w-md text-sm text-muted-foreground">
-                            The Content Studio stages (research, structure, content generation, questions, and more) will be built in Phase 2.
-                        </p>
-                    </CardContent>
-                </Card>
+                <ProjectStepper
+                    status={project.status}
+                    progressData={project.progress_data}
+                    mode={project.mode}
+                />
+
+                <StageWorkspace project={project} />
+
+                <GenerationLogPanel logs={generationLogs} />
             </div>
         </AdminLayout>
     );

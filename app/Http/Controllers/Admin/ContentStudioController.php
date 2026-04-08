@@ -5,11 +5,18 @@ namespace App\Http\Controllers\Admin;
 use App\Concerns\Paginates;
 use App\Enums\ContentProjectMode;
 use App\Http\Controllers\Controller;
+use App\Http\Requests\Admin\ApproveBlockStructureRequest;
+use App\Http\Requests\Admin\ApproveResearchRequest;
+use App\Http\Requests\Admin\ApproveSchemeRequest;
+use App\Http\Requests\Admin\RunBlockStructureRequest;
+use App\Http\Requests\Admin\RunCurriculumResearchRequest;
+use App\Http\Requests\Admin\RunSchemeGenerationRequest;
 use App\Http\Requests\Admin\StoreContentProjectRequest;
 use App\Models\ContentProject;
 use App\Models\CurriculumSubject;
 use App\Models\Discipline;
 use App\Models\EducationLevel;
+use App\Services\ContentProjectService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Gate;
@@ -19,6 +26,10 @@ use Inertia\Response;
 class ContentStudioController extends Controller
 {
     use Paginates;
+
+    public function __construct(
+        private readonly ContentProjectService $projectService,
+    ) {}
 
     public function index(Request $request): Response
     {
@@ -92,7 +103,13 @@ class ContentStudioController extends Controller
         $contentProject->load(['educationLevel', 'curriculumSubject', 'discipline', 'createdBy']);
 
         $data = $contentProject->toArray();
-        unset($data['education_level'], $data['curriculum_subject'], $data['discipline'], $data['created_by'], $data['ai_context']);
+        unset($data['education_level'], $data['curriculum_subject'], $data['discipline'], $data['created_by']);
+
+        $generationLogs = $contentProject->aiGenerationLogs()
+            ->select(['id', 'prompt_type', 'model_used', 'is_valid', 'tokens_used', 'estimated_cost_cents', 'created_at'])
+            ->latest()
+            ->limit(20)
+            ->get();
 
         return Inertia::render('admin/content-studio/show', [
             'project' => array_merge($data, [
@@ -104,6 +121,98 @@ class ContentStudioController extends Controller
                 'discipline_name' => $contentProject->discipline?->name,
                 'created_by_name' => $contentProject->createdBy?->name,
             ]),
+            'generationLogs' => $generationLogs,
         ]);
+    }
+
+    public function runResearch(RunCurriculumResearchRequest $request, ContentProject $contentProject): RedirectResponse
+    {
+        Gate::authorize('update', $contentProject);
+
+        $response = $this->projectService->runCurriculumResearch(
+            $contentProject,
+            $request->validated('document_text'),
+            $request->validated('model_id'),
+        );
+
+        if ($response->valid) {
+            return back()->with('success', "Curriculum parsed successfully — {$response->data['total_topics_found']} topics found.");
+        }
+
+        return back()->with('error', 'AI generation failed validation. Check the generation log for details.');
+    }
+
+    public function approveResearch(ApproveResearchRequest $request, ContentProject $contentProject): RedirectResponse
+    {
+        Gate::authorize('update', $contentProject);
+
+        $this->projectService->approveResearch($contentProject, $request->validated('topics'));
+
+        return back()->with('success', 'Research approved. You can now generate the scheme of work.');
+    }
+
+    public function runScheme(RunSchemeGenerationRequest $request, ContentProject $contentProject): RedirectResponse
+    {
+        Gate::authorize('update', $contentProject);
+
+        $response = $this->projectService->runSchemeGeneration(
+            $contentProject,
+            $request->validated(),
+            $request->validated('model_id'),
+        );
+
+        if ($response->valid) {
+            return back()->with('success', 'Scheme of work generated. Review and approve the allocation.');
+        }
+
+        return back()->with('error', 'Scheme generation failed validation. Check the generation log for details.');
+    }
+
+    public function approveScheme(ApproveSchemeRequest $request, ContentProject $contentProject): RedirectResponse
+    {
+        Gate::authorize('update', $contentProject);
+
+        $this->projectService->approveScheme($contentProject, $request->validated('terms'));
+
+        return back()->with('success', 'Scheme of work approved. You can now generate block structures.');
+    }
+
+    public function runBlocks(RunBlockStructureRequest $request, ContentProject $contentProject): RedirectResponse
+    {
+        Gate::authorize('update', $contentProject);
+
+        $response = $this->projectService->runBlockStructure(
+            $contentProject,
+            $request->validated('topic_key'),
+            $request->validated('model_id'),
+        );
+
+        if ($response->valid) {
+            return back()->with('success', 'Block structure generated. Review and approve.');
+        }
+
+        return back()->with('error', 'Block structure generation failed. Check the generation log for details.');
+    }
+
+    public function approveBlocks(ApproveBlockStructureRequest $request, ContentProject $contentProject): RedirectResponse
+    {
+        Gate::authorize('update', $contentProject);
+
+        $this->projectService->approveBlockStructure(
+            $contentProject,
+            $request->validated('topic_key'),
+            $request->validated(),
+        );
+
+        return back()->with('success', 'Block structure approved. Topic and blocks created.');
+    }
+
+    public function skipScheme(ContentProject $contentProject): RedirectResponse
+    {
+        Gate::authorize('update', $contentProject);
+
+        $this->projectService->skipScheme($contentProject);
+
+        return back()->with('success', 'Scheme of work skipped. You can now generate block structures.');
     }
 }

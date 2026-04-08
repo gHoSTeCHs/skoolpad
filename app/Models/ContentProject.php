@@ -61,4 +61,58 @@ class ContentProject extends Model
     {
         return $this->hasMany(AIGenerationLog::class);
     }
+
+    public function isSecondary(): bool
+    {
+        return $this->mode === ContentProjectMode::Secondary;
+    }
+
+    public function isTertiary(): bool
+    {
+        return $this->mode === ContentProjectMode::Tertiary;
+    }
+
+    public function hasResearch(): bool
+    {
+        return ! empty($this->ai_context['research']);
+    }
+
+    public function hasApprovedResearch(): bool
+    {
+        return ! empty($this->ai_context['research_approved']);
+    }
+
+    public function hasScheme(): bool
+    {
+        return ! empty($this->ai_context['scheme']);
+    }
+
+    public function hasApprovedScheme(): bool
+    {
+        return ! empty($this->ai_context['scheme_approved']);
+    }
+
+    public function getBlockStructure(string $topicKey): ?array
+    {
+        return $this->ai_context['blocks'][$topicKey] ?? null;
+    }
+
+    public function isBlockApproved(string $topicKey): bool
+    {
+        return ! empty($this->progress_data['blocks_approved'][$topicKey]);
+    }
+
+    public function updateAiContext(string $key, mixed $value): void
+    {
+        $context = $this->ai_context ?? [];
+        $context[$key] = $value;
+        $this->update(['ai_context' => $context]);
+    }
+
+    public function updateProgressData(string $key, mixed $value): void
+    {
+        $progress = $this->progress_data ?? [];
+        $progress[$key] = $value;
+        $this->update(['progress_data' => $progress]);
+    }
 }
