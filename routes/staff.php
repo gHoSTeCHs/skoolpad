@@ -7,6 +7,7 @@ use App\Http\Controllers\Admin\BulkImportController;
 use App\Http\Controllers\Admin\CalendarTermController;
 use App\Http\Controllers\Admin\CanonicalTopicController;
 use App\Http\Controllers\Admin\ContentBlockController;
+use App\Http\Controllers\Admin\ContentStudioController;
 use App\Http\Controllers\Admin\CourseBlockMappingController;
 use App\Http\Controllers\Admin\CourseController;
 use App\Http\Controllers\Admin\CourseDepartmentController;
@@ -215,4 +216,9 @@ Route::middleware(['auth', 'verified', 'staff'])->prefix('admin')->name('admin.'
     Route::post('exam-types/{examType}/subjects', [ExamSubjectController::class, 'store'])->name('exam-subjects.store');
     Route::get('exam-subjects/{examSubject}/edit', [ExamSubjectController::class, 'edit'])->name('exam-subjects.edit');
     Route::put('exam-subjects/{examSubject}', [ExamSubjectController::class, 'update'])->name('exam-subjects.update');
+
+    Route::get('content-studio', [ContentStudioController::class, 'index'])->name('content-studio.index');
+    Route::get('content-studio/create', [ContentStudioController::class, 'create'])->name('content-studio.create');
+    Route::post('content-studio', [ContentStudioController::class, 'store'])->name('content-studio.store');
+    Route::get('content-studio/{contentProject}', [ContentStudioController::class, 'show'])->name('content-studio.show');
 });

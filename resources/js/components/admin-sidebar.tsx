@@ -14,10 +14,12 @@ import {
     Ruler,
     Settings,
     Shapes,
+    Sparkles,
     Upload,
     Users,
 } from 'lucide-react';
 import BulkImportController from '@/actions/App/Http/Controllers/Admin/BulkImportController';
+import ContentStudioController from '@/actions/App/Http/Controllers/Admin/ContentStudioController';
 import CanonicalTopicController from '@/actions/App/Http/Controllers/Admin/CanonicalTopicController';
 import CourseController from '@/actions/App/Http/Controllers/Admin/CourseController';
 import CurriculumMappingController from '@/actions/App/Http/Controllers/Admin/CurriculumMappingController';
@@ -49,6 +51,12 @@ const navGroups: NavGroup[] = [
         label: 'Overview',
         items: [
             { title: 'Dashboard', href: '/admin', icon: LayoutGrid },
+        ],
+    },
+    {
+        label: 'Content Studio',
+        items: [
+            { title: 'Content Studio', href: ContentStudioController.index.url(), icon: Sparkles },
         ],
     },
     {
