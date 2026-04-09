@@ -222,12 +222,12 @@ Route::middleware(['auth', 'verified', 'staff'])->prefix('admin')->name('admin.'
     Route::get('content-studio/create', [ContentStudioController::class, 'create'])->name('content-studio.create');
     Route::post('content-studio', [ContentStudioController::class, 'store'])->name('content-studio.store');
     Route::get('content-studio/{contentProject}', [ContentStudioController::class, 'show'])->name('content-studio.show');
-    Route::post('content-studio/{contentProject}/research', [ContentStudioController::class, 'runResearch'])->name('content-studio.run-research');
+    Route::post('content-studio/{contentProject}/research', [ContentStudioController::class, 'runResearch'])->name('content-studio.run-research')->middleware('throttle:10,1');
     Route::post('content-studio/{contentProject}/research/approve', [ContentStudioController::class, 'approveResearch'])->name('content-studio.approve-research');
-    Route::post('content-studio/{contentProject}/scheme', [ContentStudioController::class, 'runScheme'])->name('content-studio.run-scheme');
+    Route::post('content-studio/{contentProject}/scheme', [ContentStudioController::class, 'runScheme'])->name('content-studio.run-scheme')->middleware('throttle:10,1');
     Route::post('content-studio/{contentProject}/scheme/approve', [ContentStudioController::class, 'approveScheme'])->name('content-studio.approve-scheme');
     Route::post('content-studio/{contentProject}/scheme/skip', [ContentStudioController::class, 'skipScheme'])->name('content-studio.skip-scheme');
-    Route::post('content-studio/{contentProject}/blocks', [ContentStudioController::class, 'runBlocks'])->name('content-studio.run-blocks');
+    Route::post('content-studio/{contentProject}/blocks', [ContentStudioController::class, 'runBlocks'])->name('content-studio.run-blocks')->middleware('throttle:20,1');
     Route::post('content-studio/{contentProject}/blocks/approve', [ContentStudioController::class, 'approveBlocks'])->name('content-studio.approve-blocks');
 
     Route::get('ai-models', [AIModelController::class, 'index'])->name('ai-models.index');
