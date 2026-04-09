@@ -11,6 +11,7 @@ import {
 import { runBlocks, approveBlocks } from '@/actions/App/Http/Controllers/Admin/ContentStudioController';
 import { BlockTree } from '@/components/admin/content-studio/block-tree';
 import { TopicProgressList } from '@/components/admin/content-studio/topic-progress-list';
+import { slugify } from '@/lib/slug';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -39,13 +40,13 @@ function getTopicList(project: ContentProject): TopicEntry[] {
     if (scheme) {
         for (const term of scheme) {
             for (const topic of term.topics) {
-                const key = topic.title.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '');
+                const key = slugify(topic.title);
                 titles.push({ key, title: topic.title });
             }
         }
     } else if (research) {
         for (const topic of research) {
-            const key = topic.title.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '');
+            const key = slugify(topic.title);
             titles.push({ key, title: topic.title });
         }
     }

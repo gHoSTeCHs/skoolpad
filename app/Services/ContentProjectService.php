@@ -116,22 +116,26 @@ class ContentProjectService
                 ->where('curriculum_subject_level_id', $levelSubject->id)
                 ->delete();
 
+            $weekTopics = [];
             foreach ($editedScheme as $term) {
                 $termNumber = $term['term_number'];
 
                 foreach ($term['topics'] as $topic) {
-                    $weekStart = $topic['week_start'];
-                    $weekEnd = $topic['week_end'];
-
-                    for ($week = $weekStart; $week <= $weekEnd; $week++) {
-                        SchemeOfWorkItem::query()->create([
-                            'curriculum_subject_level_id' => $levelSubject->id,
-                            'term' => $termNumber,
-                            'week_number' => $week,
-                            'topic_label' => $topic['title'],
-                        ]);
+                    for ($week = $topic['week_start']; $week <= $topic['week_end']; $week++) {
+                        $key = "{$termNumber}-{$week}";
+                        $weekTopics[$key] ??= ['term' => $termNumber, 'week' => $week, 'labels' => []];
+                        $weekTopics[$key]['labels'][] = $topic['title'];
                     }
                 }
+            }
+
+            foreach ($weekTopics as $entry) {
+                SchemeOfWorkItem::query()->create([
+                    'curriculum_subject_level_id' => $levelSubject->id,
+                    'term' => $entry['term'],
+                    'week_number' => $entry['week'],
+                    'topic_label' => implode(' / ', $entry['labels']),
+                ]);
             }
 
             $project->updateAiContext('scheme_approved', $editedScheme);
@@ -201,6 +205,10 @@ class ContentProjectService
     {
         $this->ensureStatus($project, [ContentProjectStatus::Structuring]);
 
+        if ($project->isBlockApproved($topicKey)) {
+            throw new \DomainException("Topic '{$topicKey}' has already been approved.");
+        }
+
         $blockStructure = $project->getBlockStructure($topicKey);
         if (! $blockStructure && empty($data['blocks'])) {
             throw new \DomainException("No block structure for topic '{$topicKey}'. Generate one first.");
@@ -213,10 +221,18 @@ class ContentProjectService
                 throw new \DomainException('Cannot determine discipline for this project.');
             }
 
+            $baseSlug = $data['topic_slug'] ?? Str::slug($data['topic_title']);
+            $slug = $baseSlug;
+            $suffix = 1;
+            while (CanonicalTopic::query()->where('discipline_id', $discipline->id)->where('slug', $slug)->exists()) {
+                $slug = "{$baseSlug}-{$suffix}";
+                $suffix++;
+            }
+
             $topic = CanonicalTopic::query()->create([
                 'discipline_id' => $discipline->id,
                 'title' => $data['topic_title'],
-                'slug' => $data['topic_slug'] ?? Str::slug($data['topic_title']),
+                'slug' => $slug,
                 'summary' => $data['topic_summary'] ?? null,
                 'estimated_read_minutes' => $data['estimated_total_minutes'] ?? null,
                 'education_level' => $project->isSecondary() ? 'secondary' : 'tertiary',

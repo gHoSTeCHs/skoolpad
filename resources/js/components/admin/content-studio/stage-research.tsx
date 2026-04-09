@@ -163,10 +163,7 @@ function ResearchReview({ project, research }: { project: ContentProject; resear
 
     function handleRegenerate() {
         setIsRegenerating(true);
-        router.visit(runResearch.url(project.id).replace('/research', ''), {
-            preserveScroll: true,
-            onFinish: () => setIsRegenerating(false),
-        });
+        router.reload({ onFinish: () => setIsRegenerating(false) });
     }
 
     const termNumbers = [...new Set(editedTopics.map((t) => t.term_number))].sort();

@@ -167,7 +167,8 @@ it('prevents block approval when project is not in structuring status', function
 
     $this->actingAs($user)
         ->postJson(route('admin.content-studio.approve-blocks', $project), sampleBlockStructure())
-        ->assertStatus(500);
+        ->assertRedirect()
+        ->assertSessionHas('error');
 });
 
 it('can approve multiple topics sequentially', function () {

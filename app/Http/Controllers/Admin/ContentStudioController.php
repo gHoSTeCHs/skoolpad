@@ -129,11 +129,15 @@ class ContentStudioController extends Controller
     {
         Gate::authorize('update', $contentProject);
 
-        $response = $this->projectService->runCurriculumResearch(
-            $contentProject,
-            $request->validated('document_text'),
-            $request->validated('model_id'),
-        );
+        try {
+            $response = $this->projectService->runCurriculumResearch(
+                $contentProject,
+                $request->validated('document_text'),
+                $request->validated('model_id'),
+            );
+        } catch (\DomainException $e) {
+            return back()->with('error', $e->getMessage());
+        }
 
         if ($response->valid) {
             return back()->with('success', "Curriculum parsed successfully — {$response->data['total_topics_found']} topics found.");
@@ -146,7 +150,11 @@ class ContentStudioController extends Controller
     {
         Gate::authorize('update', $contentProject);
 
-        $this->projectService->approveResearch($contentProject, $request->validated('topics'));
+        try {
+            $this->projectService->approveResearch($contentProject, $request->validated('topics'));
+        } catch (\DomainException $e) {
+            return back()->with('error', $e->getMessage());
+        }
 
         return back()->with('success', 'Research approved. You can now generate the scheme of work.');
     }
@@ -155,11 +163,15 @@ class ContentStudioController extends Controller
     {
         Gate::authorize('update', $contentProject);
 
-        $response = $this->projectService->runSchemeGeneration(
-            $contentProject,
-            $request->validated(),
-            $request->validated('model_id'),
-        );
+        try {
+            $response = $this->projectService->runSchemeGeneration(
+                $contentProject,
+                $request->validated(),
+                $request->validated('model_id'),
+            );
+        } catch (\DomainException $e) {
+            return back()->with('error', $e->getMessage());
+        }
 
         if ($response->valid) {
             return back()->with('success', 'Scheme of work generated. Review and approve the allocation.');
@@ -172,7 +184,11 @@ class ContentStudioController extends Controller
     {
         Gate::authorize('update', $contentProject);
 
-        $this->projectService->approveScheme($contentProject, $request->validated('terms'));
+        try {
+            $this->projectService->approveScheme($contentProject, $request->validated('terms'));
+        } catch (\DomainException $e) {
+            return back()->with('error', $e->getMessage());
+        }
 
         return back()->with('success', 'Scheme of work approved. You can now generate block structures.');
     }
@@ -181,11 +197,15 @@ class ContentStudioController extends Controller
     {
         Gate::authorize('update', $contentProject);
 
-        $response = $this->projectService->runBlockStructure(
-            $contentProject,
-            $request->validated('topic_key'),
-            $request->validated('model_id'),
-        );
+        try {
+            $response = $this->projectService->runBlockStructure(
+                $contentProject,
+                $request->validated('topic_key'),
+                $request->validated('model_id'),
+            );
+        } catch (\DomainException $e) {
+            return back()->with('error', $e->getMessage());
+        }
 
         if ($response->valid) {
             return back()->with('success', 'Block structure generated. Review and approve.');
@@ -198,11 +218,15 @@ class ContentStudioController extends Controller
     {
         Gate::authorize('update', $contentProject);
 
-        $this->projectService->approveBlockStructure(
-            $contentProject,
-            $request->validated('topic_key'),
-            $request->validated(),
-        );
+        try {
+            $this->projectService->approveBlockStructure(
+                $contentProject,
+                $request->validated('topic_key'),
+                $request->validated(),
+            );
+        } catch (\DomainException $e) {
+            return back()->with('error', $e->getMessage());
+        }
 
         return back()->with('success', 'Block structure approved. Topic and blocks created.');
     }
@@ -211,7 +235,11 @@ class ContentStudioController extends Controller
     {
         Gate::authorize('update', $contentProject);
 
-        $this->projectService->skipScheme($contentProject);
+        try {
+            $this->projectService->skipScheme($contentProject);
+        } catch (\DomainException $e) {
+            return back()->with('error', $e->getMessage());
+        }
 
         return back()->with('success', 'Scheme of work skipped. You can now generate block structures.');
     }

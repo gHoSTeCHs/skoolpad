@@ -168,5 +168,6 @@ it('rejects approval when no research exists yet', function () {
         ->postJson(route('admin.content-studio.approve-research', $project), [
             'topics' => [['title' => 'Test', 'sub_topics' => [], 'term_number' => 1, 'sequence' => 1, 'estimated_hours' => 3, 'practical_component' => false, 'waec_alignment_note' => null]],
         ])
-        ->assertStatus(500);
+        ->assertRedirect()
+        ->assertSessionHas('error');
 });

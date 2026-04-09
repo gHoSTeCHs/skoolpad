@@ -214,7 +214,8 @@ it('prevents secondary projects from skipping scheme', function () {
 
     $this->actingAs($user)
         ->postJson(route('admin.content-studio.skip-scheme', $project))
-        ->assertStatus(500);
+        ->assertRedirect()
+        ->assertSessionHas('error');
 });
 
 it('rejects scheme generation when research is not yet approved', function () {
@@ -226,7 +227,8 @@ it('rejects scheme generation when research is not yet approved', function () {
             'terms_count' => 3,
             'weeks_per_term' => 10,
         ])
-        ->assertStatus(500);
+        ->assertRedirect()
+        ->assertSessionHas('error');
 });
 
 it('validates scheme generation request fields', function () {

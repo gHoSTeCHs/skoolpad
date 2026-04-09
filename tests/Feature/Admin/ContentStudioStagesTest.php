@@ -102,7 +102,8 @@ it('rejects scheme generation when research is not approved', function () {
             'terms_count' => 3,
             'weeks_per_term' => 10,
         ])
-        ->assertStatus(500);
+        ->assertRedirect()
+        ->assertSessionHas('error');
 });
 
 it('approves scheme and creates scheme of work items', function () {

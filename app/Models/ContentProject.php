@@ -9,6 +9,7 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Support\Facades\DB;
 
 class ContentProject extends Model
 {
@@ -104,15 +105,25 @@ class ContentProject extends Model
 
     public function updateAiContext(string $key, mixed $value): void
     {
-        $context = $this->ai_context ?? [];
-        $context[$key] = $value;
-        $this->update(['ai_context' => $context]);
+        DB::transaction(function () use ($key, $value) {
+            $fresh = static::query()->lockForUpdate()->find($this->id);
+            $context = $fresh->ai_context ?? [];
+            $context[$key] = $value;
+            $fresh->update(['ai_context' => $context]);
+            $this->setRawAttributes($fresh->getRawOriginal());
+            $this->syncOriginal();
+        });
     }
 
     public function updateProgressData(string $key, mixed $value): void
     {
-        $progress = $this->progress_data ?? [];
-        $progress[$key] = $value;
-        $this->update(['progress_data' => $progress]);
+        DB::transaction(function () use ($key, $value) {
+            $fresh = static::query()->lockForUpdate()->find($this->id);
+            $progress = $fresh->progress_data ?? [];
+            $progress[$key] = $value;
+            $fresh->update(['progress_data' => $progress]);
+            $this->setRawAttributes($fresh->getRawOriginal());
+            $this->syncOriginal();
+        });
     }
 }
