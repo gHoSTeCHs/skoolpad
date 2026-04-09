@@ -11,6 +11,8 @@ use Illuminate\Support\Facades\Http;
 
 class OpenAICompatibleAdapter implements ContentAIProvider
 {
+    use ParsesJsonResponse;
+
     public function __construct(private readonly AIModel $model) {}
 
     public function generate(ContentPrompt $prompt): ContentResponse
@@ -32,11 +34,11 @@ class OpenAICompatibleAdapter implements ContentAIProvider
 
             if (! empty($this->model->api_key)) {
                 $request = $request->withHeaders([
-                    'Authorization' => 'Bearer ' . $this->model->api_key,
+                    'Authorization' => 'Bearer '.$this->model->api_key,
                 ]);
             }
 
-            $response = $request->post(rtrim($this->model->base_url, '/') . '/chat/completions', [
+            $response = $request->post(rtrim($this->model->base_url, '/').'/chat/completions', [
                 'model' => $this->model->model_id,
                 'max_tokens' => $prompt->max_tokens,
                 'temperature' => $prompt->temperature,
@@ -78,35 +80,5 @@ class OpenAICompatibleAdapter implements ContentAIProvider
                 generation_time_ms: (microtime(true) - $startTime) * 1000,
             );
         }
-    }
-
-    private function parseResponse(string $rawText, int $tokensUsed, int $inputTokens, int $outputTokens, float $elapsedMs): ContentResponse
-    {
-        $decoded = json_decode($rawText, true);
-
-        if (json_last_error() !== JSON_ERROR_NONE) {
-            return new ContentResponse(
-                valid: false,
-                data: [],
-                validation_errors: ['json_parse_error' => json_last_error_msg()],
-                raw_response: $rawText,
-                model_used: $this->model->model_id,
-                tokens_used: $tokensUsed,
-                generation_time_ms: $elapsedMs,
-                input_tokens: $inputTokens,
-                output_tokens: $outputTokens,
-            );
-        }
-
-        return new ContentResponse(
-            valid: true,
-            data: $decoded,
-            raw_response: $rawText,
-            model_used: $this->model->model_id,
-            tokens_used: $tokensUsed,
-            generation_time_ms: $elapsedMs,
-            input_tokens: $inputTokens,
-            output_tokens: $outputTokens,
-        );
     }
 }
