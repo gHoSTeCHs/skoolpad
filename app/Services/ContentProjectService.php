@@ -129,14 +129,18 @@ class ContentProjectService
                 }
             }
 
-            foreach ($weekTopics as $entry) {
-                SchemeOfWorkItem::query()->create([
-                    'curriculum_subject_level_id' => $levelSubject->id,
-                    'term' => $entry['term'],
-                    'week_number' => $entry['week'],
-                    'topic_label' => implode(' / ', $entry['labels']),
-                ]);
-            }
+            $now = now();
+            $rows = array_map(fn ($entry) => [
+                'id' => (string) Str::uuid(),
+                'curriculum_subject_level_id' => $levelSubject->id,
+                'term' => $entry['term'],
+                'week_number' => $entry['week'],
+                'topic_label' => implode(' / ', $entry['labels']),
+                'created_at' => $now,
+                'updated_at' => $now,
+            ], array_values($weekTopics));
+
+            SchemeOfWorkItem::query()->insert($rows);
 
             $project->updateAiContext('scheme_approved', $editedScheme);
             $project->update(['status' => ContentProjectStatus::Structuring]);
@@ -290,12 +294,12 @@ class ContentProjectService
             return;
         }
 
+        $levelSubject = $this->resolveLevelSubject($project);
         $approvedScheme = $project->ai_context['scheme_approved'] ?? [];
+
         foreach ($approvedScheme as $term) {
             foreach ($term['topics'] as $schemeTopic) {
                 if (Str::slug($schemeTopic['title']) === $topicKey || $schemeTopic['title'] === $topicKey) {
-                    $levelSubject = $this->resolveLevelSubject($project);
-
                     SchemeOfWorkItem::query()
                         ->where('curriculum_subject_level_id', $levelSubject->id)
                         ->where('topic_label', $schemeTopic['title'])
