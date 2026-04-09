@@ -171,6 +171,45 @@ it('prevents block approval when project is not in structuring status', function
         ->assertSessionHas('error');
 });
 
+it('processes blocks in depth order when AI returns them out of order', function () {
+    $user = User::factory()->admin()->create();
+    $project = ContentProject::factory()->withApprovedScheme()->create(['created_by' => $user->id]);
+
+    $data = [
+        'topic_key' => 'introduction-to-physics',
+        'topic_title' => 'Introduction to Physics',
+        'topic_slug' => 'introduction-to-physics',
+        'topic_summary' => 'Overview.',
+        'estimated_total_minutes' => 25,
+        'blocks' => [
+            ['title' => 'Leaf A', 'slug' => 'leaf-a', 'block_type' => 'text', 'is_container' => false, 'depth_level' => 1, 'parent_index' => 4, 'sort_order' => 1, 'estimated_read_time' => 5, 'difficulty_level' => 'beginner', 'bloom_level' => 'remember', 'visualization' => ['recommended' => false], 'content_guidance' => 'A.'],
+            ['title' => 'Leaf B', 'slug' => 'leaf-b', 'block_type' => 'text', 'is_container' => false, 'depth_level' => 1, 'parent_index' => 4, 'sort_order' => 2, 'estimated_read_time' => 5, 'difficulty_level' => 'beginner', 'bloom_level' => 'understand', 'visualization' => ['recommended' => false], 'content_guidance' => 'B.'],
+            ['title' => 'Leaf C', 'slug' => 'leaf-c', 'block_type' => 'quiz', 'is_container' => false, 'depth_level' => 1, 'parent_index' => 4, 'sort_order' => 3, 'estimated_read_time' => 5, 'difficulty_level' => 'beginner', 'bloom_level' => 'apply', 'visualization' => ['recommended' => false], 'content_guidance' => 'C.'],
+            ['title' => 'Leaf D', 'slug' => 'leaf-d', 'block_type' => 'reference', 'is_container' => false, 'depth_level' => 1, 'parent_index' => 4, 'sort_order' => 4, 'estimated_read_time' => 5, 'difficulty_level' => 'beginner', 'bloom_level' => 'remember', 'visualization' => ['recommended' => false], 'content_guidance' => 'D.'],
+            ['title' => 'Root Container', 'slug' => 'root-container', 'block_type' => 'container', 'is_container' => true, 'depth_level' => 0, 'parent_index' => null, 'sort_order' => 1, 'estimated_read_time' => null, 'difficulty_level' => null, 'bloom_level' => null, 'visualization' => ['recommended' => false], 'content_guidance' => 'Root.'],
+        ],
+    ];
+
+    $this->actingAs($user)
+        ->postJson(route('admin.content-studio.approve-blocks', $project), $data)
+        ->assertRedirect();
+
+    $topic = CanonicalTopic::query()->where('slug', 'introduction-to-physics')->first();
+    $blocks = ContentBlock::query()->where('canonical_topic_id', $topic->id)->get();
+
+    expect($blocks)->toHaveCount(5);
+
+    $root = $blocks->firstWhere('depth_level', 0);
+    expect($root)->not->toBeNull();
+
+    $leafBlocks = $blocks->where('is_container', false);
+    expect($leafBlocks)->toHaveCount(4);
+
+    foreach ($leafBlocks as $leaf) {
+        expect($leaf->parent_block_id)->toBe($root->id);
+    }
+});
+
 it('can approve multiple topics sequentially', function () {
     $user = User::factory()->admin()->create();
     $project = ContentProject::factory()->withApprovedScheme()->create(['created_by' => $user->id]);

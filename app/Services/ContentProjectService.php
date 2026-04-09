@@ -59,8 +59,10 @@ class ContentProjectService
             throw new \DomainException('No research results to approve. Run curriculum research first.');
         }
 
-        $project->updateAiContext('research_approved', $editedTopics);
-        $project->updateProgressData('research_approved_at', now()->toISOString());
+        DB::transaction(function () use ($project, $editedTopics) {
+            $project->updateAiContext('research_approved', $editedTopics);
+            $project->updateProgressData('research_approved_at', now()->toISOString());
+        });
     }
 
     public function runSchemeGeneration(ContentProject $project, array $calendarConfig, ?string $modelId = null): ContentResponse
@@ -160,21 +162,28 @@ class ContentProjectService
             throw new \DomainException('Research must be approved before skipping to block structure.');
         }
 
-        $project->update(['status' => ContentProjectStatus::Structuring]);
-        $project->updateProgressData('scheme_skipped', true);
-        $project->updateProgressData('scheme_skipped_at', now()->toISOString());
+        DB::transaction(function () use ($project) {
+            $project->update(['status' => ContentProjectStatus::Structuring]);
+            $project->updateProgressData('scheme_skipped', true);
+            $project->updateProgressData('scheme_skipped_at', now()->toISOString());
+        });
     }
 
     public function runBlockStructure(ContentProject $project, string $topicKey, ?string $modelId = null): ContentResponse
     {
         $this->ensureStatus($project, [ContentProjectStatus::Structuring]);
 
-        $topicData = $this->getTopicByKey($project, $topicKey);
+        $allTopics = $this->getOrderedTopicList($project);
+        $topicIndex = array_search($topicKey, array_column($allTopics, 'key'), true);
+
+        if ($topicIndex === false) {
+            throw new \DomainException("Topic '{$topicKey}' not found in project.");
+        }
+
+        $topicData = $allTopics[$topicIndex];
         $subjectName = $this->resolveSubjectName($project);
         $educationLevel = $this->resolveEducationLevel($project);
 
-        $allTopics = $this->getOrderedTopicList($project);
-        $topicIndex = array_search($topicKey, array_column($allTopics, 'key'));
         $prerequisites = $topicIndex > 0
             ? array_map(fn ($t) => $t['title'], array_slice($allTopics, 0, $topicIndex))
             : [];
@@ -200,6 +209,13 @@ class ContentProjectService
             $blocks = $project->ai_context['blocks'] ?? [];
             $blocks[$topicKey] = $response->data;
             $project->updateAiContext('blocks', $blocks);
+        } else {
+            $failed = $project->ai_context['blocks_failed'] ?? [];
+            $failed[$topicKey] = [
+                'raw_response' => $response->raw_response,
+                'validation_errors' => $response->validation_errors,
+            ];
+            $project->updateAiContext('blocks_failed', $failed);
         }
 
         return $response;
@@ -260,7 +276,11 @@ class ContentProjectService
     {
         $createdBlocks = [];
 
-        foreach ($blocks as $index => $blockData) {
+        $processingOrder = array_keys($blocks);
+        usort($processingOrder, fn ($a, $b) => ($blocks[$a]['depth_level'] ?? 0) <=> ($blocks[$b]['depth_level'] ?? 0));
+
+        foreach ($processingOrder as $index) {
+            $blockData = $blocks[$index];
             $parentBlockId = null;
 
             if ($blockData['parent_index'] !== null && isset($createdBlocks[$blockData['parent_index']])) {
