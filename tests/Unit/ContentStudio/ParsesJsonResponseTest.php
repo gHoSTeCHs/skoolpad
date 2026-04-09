@@ -70,3 +70,62 @@ it('does not strip backticks in the middle of JSON', function () {
 
     expect(invokeStrip($adapter, $input))->toBe('{"code": "`inline code`"}');
 });
+
+function invokeExtractError(OpenAICompatibleAdapter $adapter, mixed $body, string $rawBody = ''): string
+{
+    $reflection = new ReflectionClass($adapter);
+    $method = $reflection->getMethod('extractErrorMessage');
+    $method->setAccessible(true);
+
+    return $method->invoke($adapter, $body, $rawBody);
+}
+
+it('extracts error from OpenAI error shape', function () {
+    $adapter = makeAdapter();
+    $body = ['error' => ['message' => 'Invalid API key provided']];
+
+    expect(invokeExtractError($adapter, $body))->toBe('Invalid API key provided');
+});
+
+it('extracts error from Gemini array-wrapped error shape', function () {
+    $adapter = makeAdapter();
+    $body = [
+        [
+            'error' => [
+                'code' => 503,
+                'message' => 'This model is currently experiencing high demand. Spikes in demand are usually temporary. Please try again later.',
+                'status' => 'UNAVAILABLE',
+            ],
+        ],
+    ];
+
+    expect(invokeExtractError($adapter, $body))
+        ->toBe('This model is currently experiencing high demand. Spikes in demand are usually temporary. Please try again later.');
+});
+
+it('extracts error from string error field', function () {
+    $adapter = makeAdapter();
+    $body = ['error' => 'Rate limit exceeded'];
+
+    expect(invokeExtractError($adapter, $body))->toBe('Rate limit exceeded');
+});
+
+it('falls back to raw body for unstructured errors', function () {
+    $adapter = makeAdapter();
+    $body = null;
+
+    expect(invokeExtractError($adapter, $body, 'Gateway Timeout'))->toBe('Gateway Timeout');
+});
+
+it('returns generic message when no error info available', function () {
+    $adapter = makeAdapter();
+
+    expect(invokeExtractError($adapter, null, ''))->toBe('Unknown API error');
+});
+
+it('does not return oversized raw bodies', function () {
+    $adapter = makeAdapter();
+    $longBody = str_repeat('x', 600);
+
+    expect(invokeExtractError($adapter, null, $longBody))->toBe('Unknown API error');
+});

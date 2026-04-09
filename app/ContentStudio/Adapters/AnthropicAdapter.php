@@ -50,7 +50,7 @@ class AnthropicAdapter implements ContentAIProvider
                 return new ContentResponse(
                     valid: false,
                     data: [],
-                    validation_errors: ['api_error' => $body['error']['message'] ?? 'Unknown API error'],
+                    validation_errors: ['api_error' => $this->extractErrorMessage($body, $response->body())],
                     raw_response: $response->body(),
                     model_used: $this->model->model_id,
                     tokens_used: 0,

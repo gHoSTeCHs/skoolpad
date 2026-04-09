@@ -143,7 +143,7 @@ class ContentStudioController extends Controller
             return back()->with('success', "Curriculum parsed successfully — {$response->data['total_topics_found']} topics found.");
         }
 
-        return back()->with('error', 'AI generation failed validation. Check the generation log for details.');
+        return back()->with('error', $this->formatGenerationError($response, 'research'));
     }
 
     public function approveResearch(ApproveResearchRequest $request, ContentProject $contentProject): RedirectResponse
@@ -177,7 +177,7 @@ class ContentStudioController extends Controller
             return back()->with('success', 'Scheme of work generated. Review and approve the allocation.');
         }
 
-        return back()->with('error', 'Scheme generation failed validation. Check the generation log for details.');
+        return back()->with('error', $this->formatGenerationError($response, 'scheme'));
     }
 
     public function approveScheme(ApproveSchemeRequest $request, ContentProject $contentProject): RedirectResponse
@@ -211,7 +211,7 @@ class ContentStudioController extends Controller
             return back()->with('success', 'Block structure generated. Review and approve.');
         }
 
-        return back()->with('error', 'Block structure generation failed. Check the generation log for details.');
+        return back()->with('error', $this->formatGenerationError($response, 'block structure'));
     }
 
     public function approveBlocks(ApproveBlockStructureRequest $request, ContentProject $contentProject): RedirectResponse
@@ -242,5 +242,28 @@ class ContentStudioController extends Controller
         }
 
         return back()->with('success', 'Scheme of work skipped. You can now generate block structures.');
+    }
+
+    private function formatGenerationError(\App\DataTransferObjects\ContentResponse $response, string $stage): string
+    {
+        $errors = $response->validation_errors;
+
+        if (isset($errors['api_error'])) {
+            return "AI provider error: {$errors['api_error']}";
+        }
+
+        if (isset($errors['connection_error'])) {
+            return 'Could not reach AI provider. Check network or switch models.';
+        }
+
+        if (isset($errors['config_error'])) {
+            return $errors['config_error'];
+        }
+
+        if (isset($errors['json_parse_error'])) {
+            return "AI returned malformed JSON for {$stage}. The generation log has the raw response.";
+        }
+
+        return "Generated {$stage} failed schema validation. Check the generation log for details.";
     }
 }

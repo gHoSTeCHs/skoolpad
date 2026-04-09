@@ -47,4 +47,37 @@ trait ParsesJsonResponse
 
         return $trimmed;
     }
+
+    /**
+     * Extract a human-readable error message from a variety of provider error shapes.
+     *
+     * Handles:
+     * - OpenAI: { "error": { "message": "..." } }
+     * - Anthropic: { "error": { "message": "..." } }
+     * - Gemini (REST): [{ "error": { "code": 503, "message": "...", "status": "UNAVAILABLE" } }]
+     * - Raw string error body
+     */
+    private function extractErrorMessage(mixed $body, string $fallbackBody): string
+    {
+        if (is_array($body)) {
+            if (isset($body['error']['message'])) {
+                return (string) $body['error']['message'];
+            }
+
+            if (isset($body[0]['error']['message'])) {
+                return (string) $body[0]['error']['message'];
+            }
+
+            if (isset($body['error']) && is_string($body['error'])) {
+                return $body['error'];
+            }
+        }
+
+        $trimmedBody = trim($fallbackBody);
+        if ($trimmedBody !== '' && strlen($trimmedBody) < 500) {
+            return $trimmedBody;
+        }
+
+        return 'Unknown API error';
+    }
 }

@@ -1,4 +1,3 @@
-import { useState } from 'react';
 import { router } from '@inertiajs/react';
 import {
     AlertTriangle,
@@ -8,15 +7,29 @@ import {
     Loader2,
     Sparkles,
 } from 'lucide-react';
-import { runBlocks, approveBlocks } from '@/actions/App/Http/Controllers/Admin/ContentStudioController';
+import { useState } from 'react';
+import {
+    runBlocks,
+    approveBlocks,
+} from '@/actions/App/Http/Controllers/Admin/ContentStudioController';
 import { BlockTree } from '@/components/admin/content-studio/block-tree';
 import { TopicProgressList } from '@/components/admin/content-studio/topic-progress-list';
-import { slugify } from '@/lib/slug';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import {
+    Card,
+    CardContent,
+    CardDescription,
+    CardHeader,
+    CardTitle,
+} from '@/components/ui/card';
 import { Separator } from '@/components/ui/separator';
-import type { BlockNode, BlockStructureResult, ContentProject } from '@/types/content-studio';
+import { slugify } from '@/lib/slug';
+import type {
+    BlockNode,
+    BlockStructureResult,
+    ContentProject,
+} from '@/types/content-studio';
 
 interface StageBlocksProps {
     project: ContentProject;
@@ -54,7 +67,11 @@ function getTopicList(project: ContentProject): TopicEntry[] {
     return titles.map(({ key, title }) => ({
         key,
         title,
-        status: approved[key] ? 'approved' : blocks[key] ? 'generated' : 'pending',
+        status: approved[key]
+            ? 'approved'
+            : blocks[key]
+              ? 'generated'
+              : 'pending',
     }));
 }
 
@@ -71,7 +88,9 @@ function BlockDetailPanel({
     status: 'pending' | 'generated' | 'approved';
     blockData: BlockStructureResult | null;
 }) {
-    const [editedBlocks, setEditedBlocks] = useState<BlockNode[]>(blockData?.blocks ?? []);
+    const [editedBlocks, setEditedBlocks] = useState<BlockNode[]>(
+        blockData?.blocks ?? [],
+    );
     const [isApproving, setIsApproving] = useState(false);
     const [isGenerating, setIsGenerating] = useState(false);
 
@@ -114,7 +133,10 @@ function BlockDetailPanel({
                     <Blocks className="size-5 text-muted-foreground" />
                 </div>
                 <p className="text-sm text-muted-foreground">
-                    No block structure generated for <span className="font-medium text-foreground">{topicTitle}</span>
+                    No block structure generated for{' '}
+                    <span className="font-medium text-foreground">
+                        {topicTitle}
+                    </span>
                 </p>
                 <Button onClick={handleGenerate} disabled={isGenerating}>
                     {isGenerating ? (
@@ -141,17 +163,26 @@ function BlockDetailPanel({
                     {topicTitle} — Approved
                 </div>
                 <div className="text-xs text-muted-foreground">
-                    {blockData.total_leaf_blocks} blocks · {blockData.estimated_total_minutes} min total
-                    {blockData.total_visualization_flags > 0 && ` · ${blockData.total_visualization_flags} visualizations`}
+                    {blockData.total_leaf_blocks} blocks ·{' '}
+                    {blockData.estimated_total_minutes} min total
+                    {blockData.total_visualization_flags > 0 &&
+                        ` · ${blockData.total_visualization_flags} visualizations`}
                 </div>
-                <BlockTree blocks={blockData.blocks} onChange={() => {}} readOnly />
+                <BlockTree
+                    blocks={blockData.blocks}
+                    onChange={() => {}}
+                    readOnly
+                />
             </div>
         );
     }
 
     if (status === 'generated' && blockData) {
         const leafCount = editedBlocks.filter((b) => !b.is_container).length;
-        const totalMinutes = editedBlocks.reduce((sum, b) => sum + (b.estimated_read_time ?? 0), 0);
+        const totalMinutes = editedBlocks.reduce(
+            (sum, b) => sum + (b.estimated_read_time ?? 0),
+            0,
+        );
 
         return (
             <div className="space-y-3">
@@ -164,22 +195,29 @@ function BlockDetailPanel({
                     </div>
                 </div>
 
-                {blockData.split_recommendation && blockData.split_recommendation.length > 0 && (
-                    <Alert>
-                        <AlertTriangle className="size-4 text-[var(--warning)]" />
-                        <AlertDescription className="text-xs">
-                            <span className="font-medium">Topic may be too large. </span>
-                            Consider splitting into: {blockData.split_recommendation.join(', ')}
-                        </AlertDescription>
-                    </Alert>
-                )}
+                {blockData.split_recommendation &&
+                    blockData.split_recommendation.length > 0 && (
+                        <Alert>
+                            <AlertTriangle className="size-4 text-[var(--warning)]" />
+                            <AlertDescription className="text-xs">
+                                <span className="font-medium">
+                                    Topic may be too large.{' '}
+                                </span>
+                                Consider splitting into:{' '}
+                                {blockData.split_recommendation.join(', ')}
+                            </AlertDescription>
+                        </Alert>
+                    )}
 
                 {blockData.merge_recommendation && (
                     <Alert>
                         <Info className="size-4 text-blue-500" />
                         <AlertDescription className="text-xs">
-                            <span className="font-medium">Topic may be too small. </span>
-                            Consider merging with: {blockData.merge_recommendation}
+                            <span className="font-medium">
+                                Topic may be too small.{' '}
+                            </span>
+                            Consider merging with:{' '}
+                            {blockData.merge_recommendation}
                         </AlertDescription>
                     </Alert>
                 )}
@@ -194,7 +232,11 @@ function BlockDetailPanel({
                         disabled={isApproving}
                         className="bg-[var(--success)] text-white hover:bg-[var(--success)]/90"
                     >
-                        {isApproving ? <Loader2 className="size-4 animate-spin" /> : <Check className="size-4" />}
+                        {isApproving ? (
+                            <Loader2 className="size-4 animate-spin" />
+                        ) : (
+                            <Check className="size-4" />
+                        )}
                         Approve Structure
                     </Button>
                 </div>
@@ -228,8 +270,9 @@ export function StageBlocks({ project, isActive }: StageBlocksProps) {
     }
 
     const selectedTopic = topics.find((t) => t.key === selectedKey);
-    const selectedBlockData: BlockStructureResult | null =
-        selectedKey ? (project.ai_context?.blocks?.[selectedKey] ?? null) : null;
+    const selectedBlockData: BlockStructureResult | null = selectedKey
+        ? (project.ai_context?.blocks?.[selectedKey] ?? null)
+        : null;
 
     const approvedCount = topics.filter((t) => t.status === 'approved').length;
 
@@ -243,12 +286,17 @@ export function StageBlocks({ project, isActive }: StageBlocksProps) {
                             Block Structure
                         </CardTitle>
                         <CardDescription className="mt-1">
-                            Generate and approve content block hierarchies for each topic.
+                            Generate and approve content block hierarchies for
+                            each topic.
                         </CardDescription>
                     </div>
                     <div className="text-right">
-                        <span className="text-sm font-medium">{approvedCount}/{topics.length}</span>
-                        <span className="ml-1 text-xs text-muted-foreground">approved</span>
+                        <span className="text-sm font-medium">
+                            {approvedCount}/{topics.length}
+                        </span>
+                        <span className="ml-1 text-xs text-muted-foreground">
+                            approved
+                        </span>
                     </div>
                 </div>
             </CardHeader>
@@ -264,7 +312,10 @@ export function StageBlocks({ project, isActive }: StageBlocksProps) {
                         />
                     </div>
 
-                    <Separator orientation="vertical" className="hidden sm:block" />
+                    <Separator
+                        orientation="vertical"
+                        className="hidden sm:block"
+                    />
                     <Separator className="sm:hidden" />
 
                     <div className="min-w-0 flex-1">
