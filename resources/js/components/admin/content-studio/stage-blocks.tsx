@@ -28,7 +28,9 @@ import { Separator } from '@/components/ui/separator';
 import { useGenerationStream } from '@/hooks/use-generation-stream';
 import { csPost, streamUrl } from '@/lib/content-studio';
 import { slugify } from '@/lib/slug';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import type {
+    AIModelOption,
     BlockNode,
     BlockStructureResult,
     ContentProject,
@@ -37,6 +39,7 @@ import type {
 
 interface StageBlocksProps {
     project: ContentProject;
+    aiModels: AIModelOption[];
     isActive: boolean;
     onProjectUpdate: (project: ContentProject) => void;
     onLogAppend: (entry: GenerationLogEntry) => void;
@@ -87,6 +90,9 @@ function BlockDetailPanel({
     topicTitle,
     status,
     blockData,
+    aiModels,
+    selectedModelId,
+    onSelectedModelChange,
     onProjectUpdate,
     onLogAppend,
 }: {
@@ -95,6 +101,9 @@ function BlockDetailPanel({
     topicTitle: string;
     status: 'pending' | 'generated' | 'approved';
     blockData: BlockStructureResult | null;
+    aiModels: AIModelOption[];
+    selectedModelId: string;
+    onSelectedModelChange: (value: string) => void;
     onProjectUpdate: (project: ContentProject) => void;
     onLogAppend: (entry: GenerationLogEntry) => void;
 }) {
@@ -109,7 +118,10 @@ function BlockDetailPanel({
         try {
             const { job_id } = await csPost<{ job_id: string }>(
                 runBlocks.url(project.id),
-                { topic_key: topicKey },
+                {
+                    topic_key: topicKey,
+                    ...(selectedModelId && { model_id: selectedModelId }),
+                },
             );
             startStream(
                 streamUrl(project.id, job_id),
@@ -168,19 +180,36 @@ function BlockDetailPanel({
                     </p>
                 </div>
                 <GenerationProgress status={streamStatus} message={streamMessage} />
-                <Button onClick={handleGenerate} disabled={isGenerating} size="lg">
-                    {isGenerating ? (
-                        <>
-                            <Loader2 className="size-4 animate-spin" />
-                            Generating...
-                        </>
-                    ) : (
-                        <>
-                            <Sparkles className="size-4" />
-                            Generate Block Structure
-                        </>
+                <div className="flex items-center gap-2">
+                    {aiModels.length > 1 && (
+                        <Select value={selectedModelId} onValueChange={onSelectedModelChange}>
+                            <SelectTrigger className="w-44">
+                                <SelectValue placeholder="Auto (default)" />
+                            </SelectTrigger>
+                            <SelectContent>
+                                <SelectItem value="">Auto (default)</SelectItem>
+                                {aiModels.map((model) => (
+                                    <SelectItem key={model.id} value={model.id}>
+                                        {model.name}
+                                    </SelectItem>
+                                ))}
+                            </SelectContent>
+                        </Select>
                     )}
-                </Button>
+                    <Button onClick={handleGenerate} disabled={isGenerating} size="lg">
+                        {isGenerating ? (
+                            <>
+                                <Loader2 className="size-4 animate-spin" />
+                                Generating...
+                            </>
+                        ) : (
+                            <>
+                                <Sparkles className="size-4" />
+                                Generate Block Structure
+                            </>
+                        )}
+                    </Button>
+                </div>
             </div>
         );
     }
@@ -277,9 +306,10 @@ function BlockDetailPanel({
     return null;
 }
 
-export function StageBlocks({ project, isActive, onProjectUpdate, onLogAppend }: StageBlocksProps) {
+export function StageBlocks({ project, aiModels, isActive, onProjectUpdate, onLogAppend }: StageBlocksProps) {
     const [selectedKey, setSelectedKey] = useState<string | null>(null);
     const [generatingTopic, setGeneratingTopic] = useState<string | null>(null);
+    const [selectedModelId, setSelectedModelId] = useState<string>('');
     const { startStream } = useGenerationStream();
     const topics = getTopicList(project);
 
@@ -293,7 +323,10 @@ export function StageBlocks({ project, isActive, onProjectUpdate, onLogAppend }:
         try {
             const { job_id } = await csPost<{ job_id: string }>(
                 runBlocks.url(project.id),
-                { topic_key: topicKey },
+                {
+                    topic_key: topicKey,
+                    ...(selectedModelId && { model_id: selectedModelId }),
+                },
             );
             startStream(
                 streamUrl(project.id, job_id),
@@ -370,6 +403,9 @@ export function StageBlocks({ project, isActive, onProjectUpdate, onLogAppend }:
                                 topicTitle={selectedTopic.title}
                                 status={selectedTopic.status}
                                 blockData={selectedBlockData}
+                                aiModels={aiModels}
+                                selectedModelId={selectedModelId}
+                                onSelectedModelChange={setSelectedModelId}
                                 onProjectUpdate={onProjectUpdate}
                                 onLogAppend={onLogAppend}
                             />

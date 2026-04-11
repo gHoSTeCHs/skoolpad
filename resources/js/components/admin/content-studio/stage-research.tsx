@@ -22,10 +22,12 @@ import { Switch } from '@/components/ui/switch';
 import { Textarea } from '@/components/ui/textarea';
 import { useGenerationStream } from '@/hooks/use-generation-stream';
 import { csPost, streamUrl } from '@/lib/content-studio';
-import type { ContentProject, GenerationLogEntry, ResearchResult, ResearchTopic } from '@/types/content-studio';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import type { AIModelOption, ContentProject, GenerationLogEntry, ResearchResult, ResearchTopic } from '@/types/content-studio';
 
 interface StageResearchProps {
     project: ContentProject;
+    aiModels: AIModelOption[];
     isActive: boolean;
     onProjectUpdate: (project: ContentProject) => void;
     onLogAppend: (entry: GenerationLogEntry) => void;
@@ -80,14 +82,17 @@ function ApprovedSummary({ project }: { project: ContentProject }) {
 
 function ResearchInput({
     project,
+    aiModels,
     onProjectUpdate,
     onLogAppend,
 }: {
     project: ContentProject;
+    aiModels: AIModelOption[];
     onProjectUpdate: (project: ContentProject) => void;
     onLogAppend: (entry: GenerationLogEntry) => void;
 }) {
     const [documentText, setDocumentText] = useState('');
+    const [selectedModelId, setSelectedModelId] = useState<string>('');
     const { status, message, startStream } = useGenerationStream();
     const isProcessing = status === 'processing' || status === 'validating';
 
@@ -96,7 +101,10 @@ function ResearchInput({
         try {
             const { job_id } = await csPost<{ job_id: string }>(
                 runResearch.url(project.id),
-                { document_text: documentText },
+                {
+                    document_text: documentText,
+                    ...(selectedModelId && { model_id: selectedModelId }),
+                },
             );
             startStream(
                 streamUrl(project.id, job_id),
@@ -138,19 +146,36 @@ function ResearchInput({
                             ? `${100 - documentText.length} more characters needed`
                             : `${documentText.length.toLocaleString()} characters`}
                     </span>
-                    <Button onClick={handleSubmit} disabled={isProcessing || documentText.length < 100}>
-                        {isProcessing ? (
-                            <>
-                                <Loader2 className="size-4 animate-spin" />
-                                Analyzing curriculum...
-                            </>
-                        ) : (
-                            <>
-                                <Sparkles className="size-4" />
-                                Parse Curriculum
-                            </>
+                    <div className="flex items-center gap-2">
+                        {aiModels.length > 1 && (
+                            <Select value={selectedModelId} onValueChange={setSelectedModelId}>
+                                <SelectTrigger className="w-44">
+                                    <SelectValue placeholder="Auto (default)" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    <SelectItem value="">Auto (default)</SelectItem>
+                                    {aiModels.map((model) => (
+                                        <SelectItem key={model.id} value={model.id}>
+                                            {model.name}
+                                        </SelectItem>
+                                    ))}
+                                </SelectContent>
+                            </Select>
                         )}
-                    </Button>
+                        <Button onClick={handleSubmit} disabled={isProcessing || documentText.length < 100}>
+                            {isProcessing ? (
+                                <>
+                                    <Loader2 className="size-4 animate-spin" />
+                                    Analyzing curriculum...
+                                </>
+                            ) : (
+                                <>
+                                    <Sparkles className="size-4" />
+                                    Parse Curriculum
+                                </>
+                            )}
+                        </Button>
+                    </div>
                 </div>
             </CardContent>
         </Card>
@@ -316,7 +341,7 @@ function ResearchReview({
     );
 }
 
-export function StageResearch({ project, isActive, onProjectUpdate, onLogAppend }: StageResearchProps) {
+export function StageResearch({ project, aiModels, isActive, onProjectUpdate, onLogAppend }: StageResearchProps) {
     const aiContext = project.ai_context;
     const isApproved = !!aiContext?.research_approved;
     const hasResearch = !!aiContext?.research;
@@ -341,12 +366,12 @@ export function StageResearch({ project, isActive, onProjectUpdate, onLogAppend 
                         </AlertDescription>
                     </Alert>
                     <div className="mt-4">
-                        <ResearchInput project={project} onProjectUpdate={onProjectUpdate} onLogAppend={onLogAppend} />
+                        <ResearchInput project={project} aiModels={aiModels} onProjectUpdate={onProjectUpdate} onLogAppend={onLogAppend} />
                     </div>
                 </CardContent>
             </Card>
         );
     }
 
-    return <ResearchInput project={project} onProjectUpdate={onProjectUpdate} onLogAppend={onLogAppend} />;
+    return <ResearchInput project={project} aiModels={aiModels} onProjectUpdate={onProjectUpdate} onLogAppend={onLogAppend} />;
 }

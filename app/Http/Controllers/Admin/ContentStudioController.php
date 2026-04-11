@@ -13,6 +13,7 @@ use App\Http\Requests\Admin\RunCurriculumResearchRequest;
 use App\Http\Requests\Admin\RunSchemeGenerationRequest;
 use App\Http\Requests\Admin\StoreContentProjectRequest;
 use App\Jobs\RunContentGeneration;
+use App\Models\AIModel;
 use App\Models\ContentProject;
 use App\Models\CurriculumSubject;
 use App\Models\Discipline;
@@ -110,9 +111,15 @@ class ContentStudioController extends Controller
             ->limit(20)
             ->get();
 
+        $aiModels = AIModel::query()
+            ->active()
+            ->orderBy('sort_order')
+            ->get(['id', 'name', 'model_id']);
+
         return Inertia::render('admin/content-studio/show', [
             'project' => $contentProject->toShowArray(),
             'generationLogs' => $generationLogs,
+            'aiModels' => $aiModels,
         ]);
     }
 

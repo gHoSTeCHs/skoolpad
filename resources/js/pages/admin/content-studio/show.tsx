@@ -8,11 +8,12 @@ import { StageResearch } from '@/components/admin/content-studio/stage-research'
 import { StageScheme } from '@/components/admin/content-studio/stage-scheme';
 import { Badge } from '@/components/ui/badge';
 import AdminLayout from '@/layouts/admin-layout';
-import type { ContentProject, ContentProjectStatus, GenerationLogEntry } from '@/types/content-studio';
+import type { AIModelOption, ContentProject, ContentProjectStatus, GenerationLogEntry } from '@/types/content-studio';
 
 interface Props {
     project: ContentProject;
     generationLogs: GenerationLogEntry[];
+    aiModels: AIModelOption[];
 }
 
 const STATUS_STYLES: Record<ContentProjectStatus, string> = {
@@ -26,11 +27,12 @@ const STATUS_STYLES: Record<ContentProjectStatus, string> = {
 
 interface StageWorkspaceProps {
     project: ContentProject;
+    aiModels: AIModelOption[];
     onProjectUpdate: (project: ContentProject) => void;
     onLogAppend: (entry: GenerationLogEntry) => void;
 }
 
-function StageWorkspace({ project, onProjectUpdate, onLogAppend }: StageWorkspaceProps) {
+function StageWorkspace({ project, aiModels, onProjectUpdate, onLogAppend }: StageWorkspaceProps) {
     const status = project.status;
     const aiContext = project.ai_context;
     const researchApproved = !!aiContext?.research_approved;
@@ -41,6 +43,7 @@ function StageWorkspace({ project, onProjectUpdate, onLogAppend }: StageWorkspac
         <div className="space-y-4">
             <StageResearch
                 project={project}
+                aiModels={aiModels}
                 isActive={status === 'draft' || status === 'research'}
                 onProjectUpdate={onProjectUpdate}
                 onLogAppend={onLogAppend}
@@ -49,6 +52,7 @@ function StageWorkspace({ project, onProjectUpdate, onLogAppend }: StageWorkspac
             {researchApproved && (
                 <StageScheme
                     project={project}
+                    aiModels={aiModels}
                     isActive={status === 'research' || (status === 'structuring' && !schemeApproved && !schemeSkipped)}
                     onProjectUpdate={onProjectUpdate}
                     onLogAppend={onLogAppend}
@@ -58,6 +62,7 @@ function StageWorkspace({ project, onProjectUpdate, onLogAppend }: StageWorkspac
             {(schemeApproved || schemeSkipped) && (
                 <StageBlocks
                     project={project}
+                    aiModels={aiModels}
                     isActive={status === 'structuring'}
                     onProjectUpdate={onProjectUpdate}
                     onLogAppend={onLogAppend}
@@ -67,7 +72,7 @@ function StageWorkspace({ project, onProjectUpdate, onLogAppend }: StageWorkspac
     );
 }
 
-export default function ContentStudioShow({ project: initialProject, generationLogs: initialLogs }: Props) {
+export default function ContentStudioShow({ project: initialProject, generationLogs: initialLogs, aiModels }: Props) {
     const [project, setProject] = useState(initialProject);
     const [logs, setLogs] = useState(initialLogs);
 
@@ -118,6 +123,7 @@ export default function ContentStudioShow({ project: initialProject, generationL
 
                 <StageWorkspace
                     project={project}
+                    aiModels={aiModels}
                     onProjectUpdate={handleProjectUpdate}
                     onLogAppend={handleLogAppend}
                 />

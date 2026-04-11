@@ -19,10 +19,11 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useGenerationStream } from '@/hooks/use-generation-stream';
 import { csPost, streamUrl } from '@/lib/content-studio';
-import type { ContentProject, GenerationLogEntry, SchemeTerm } from '@/types/content-studio';
+import type { AIModelOption, ContentProject, GenerationLogEntry, SchemeTerm } from '@/types/content-studio';
 
 interface StageSchemeProps {
     project: ContentProject;
+    aiModels: AIModelOption[];
     isActive: boolean;
     onProjectUpdate: (project: ContentProject) => void;
     onLogAppend: (entry: GenerationLogEntry) => void;
@@ -87,15 +88,18 @@ function SkippedSummary() {
 
 function SchemeGenerator({
     project,
+    aiModels,
     onProjectUpdate,
     onLogAppend,
 }: {
     project: ContentProject;
+    aiModels: AIModelOption[];
     onProjectUpdate: (project: ContentProject) => void;
     onLogAppend: (entry: GenerationLogEntry) => void;
 }) {
     const [termsCount, setTermsCount] = useState('3');
     const [weeksPerTerm, setWeeksPerTerm] = useState('10');
+    const [selectedModelId, setSelectedModelId] = useState<string>('');
     const { status, message, startStream } = useGenerationStream();
     const [isSkipping, setIsSkipping] = useState(false);
     const isTertiary = project.mode === 'tertiary';
@@ -108,6 +112,7 @@ function SchemeGenerator({
                 {
                     terms_count: parseInt(termsCount),
                     weeks_per_term: parseInt(weeksPerTerm),
+                    ...(selectedModelId && { model_id: selectedModelId }),
                 },
             );
             startStream(
@@ -181,6 +186,24 @@ function SchemeGenerator({
                             </SelectContent>
                         </Select>
                     </div>
+                    {aiModels.length > 1 && (
+                        <div className="space-y-1.5">
+                            <label className="text-sm font-medium">Model</label>
+                            <Select value={selectedModelId} onValueChange={setSelectedModelId}>
+                                <SelectTrigger className="w-44">
+                                    <SelectValue placeholder="Auto (default)" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    <SelectItem value="">Auto (default)</SelectItem>
+                                    {aiModels.map((model) => (
+                                        <SelectItem key={model.id} value={model.id}>
+                                            {model.name}
+                                        </SelectItem>
+                                    ))}
+                                </SelectContent>
+                            </Select>
+                        </div>
+                    )}
                     <div className="flex gap-2">
                         <Button onClick={handleGenerate} disabled={isGenerating}>
                             {isGenerating ? (
@@ -285,7 +308,7 @@ function SchemeReview({
     );
 }
 
-export function StageScheme({ project, isActive, onProjectUpdate, onLogAppend }: StageSchemeProps) {
+export function StageScheme({ project, aiModels, isActive, onProjectUpdate, onLogAppend }: StageSchemeProps) {
     const aiContext = project.ai_context;
     const isApproved = !!aiContext?.scheme_approved;
     const isSkipped = !!project.progress_data?.scheme_skipped;
@@ -305,7 +328,7 @@ export function StageScheme({ project, isActive, onProjectUpdate, onLogAppend }:
     }
 
     if (hasApprovedResearch) {
-        return <SchemeGenerator project={project} onProjectUpdate={onProjectUpdate} onLogAppend={onLogAppend} />;
+        return <SchemeGenerator project={project} aiModels={aiModels} onProjectUpdate={onProjectUpdate} onLogAppend={onLogAppend} />;
     }
 
     return null;

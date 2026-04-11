@@ -158,6 +158,12 @@ export interface DisciplineOption {
     slug: string;
 }
 
+export interface AIModelOption {
+    id: string;
+    name: string;
+    model_id: string;
+}
+
 export type AIAdapterType = 'openai_compatible' | 'anthropic';
 
 export interface AIModel {
