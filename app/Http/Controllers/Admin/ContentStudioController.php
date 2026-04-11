@@ -248,6 +248,7 @@ class ContentStudioController extends Controller
         Gate::authorize('view', $contentProject);
 
         return response()->stream(function () use ($contentProject, $jobId) {
+            set_time_limit(0);
             @ob_implicit_flush(true);
             while (ob_get_level()) {
                 ob_end_flush();
