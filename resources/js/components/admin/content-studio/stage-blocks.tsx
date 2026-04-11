@@ -120,7 +120,7 @@ function BlockDetailPanel({
                 runBlocks.url(project.id),
                 {
                     topic_key: topicKey,
-                    ...(selectedModelId && { model_id: selectedModelId }),
+                    ...(selectedModelId !== 'auto' && { model_id: selectedModelId }),
                 },
             );
             startStream(
@@ -187,7 +187,7 @@ function BlockDetailPanel({
                                 <SelectValue placeholder="Auto (default)" />
                             </SelectTrigger>
                             <SelectContent>
-                                <SelectItem value="">Auto (default)</SelectItem>
+                                <SelectItem value="auto">Auto (default)</SelectItem>
                                 {aiModels.map((model) => (
                                     <SelectItem key={model.id} value={model.id}>
                                         {model.name}
@@ -309,7 +309,7 @@ function BlockDetailPanel({
 export function StageBlocks({ project, aiModels, isActive, onProjectUpdate, onLogAppend }: StageBlocksProps) {
     const [selectedKey, setSelectedKey] = useState<string | null>(null);
     const [generatingTopic, setGeneratingTopic] = useState<string | null>(null);
-    const [selectedModelId, setSelectedModelId] = useState<string>('');
+    const [selectedModelId, setSelectedModelId] = useState<string>('auto');
     const { startStream } = useGenerationStream();
     const topics = getTopicList(project);
 
@@ -325,7 +325,7 @@ export function StageBlocks({ project, aiModels, isActive, onProjectUpdate, onLo
                 runBlocks.url(project.id),
                 {
                     topic_key: topicKey,
-                    ...(selectedModelId && { model_id: selectedModelId }),
+                    ...(selectedModelId !== 'auto' && { model_id: selectedModelId }),
                 },
             );
             startStream(

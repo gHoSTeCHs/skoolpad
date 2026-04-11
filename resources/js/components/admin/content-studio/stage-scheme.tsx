@@ -99,7 +99,7 @@ function SchemeGenerator({
 }) {
     const [termsCount, setTermsCount] = useState('3');
     const [weeksPerTerm, setWeeksPerTerm] = useState('10');
-    const [selectedModelId, setSelectedModelId] = useState<string>('');
+    const [selectedModelId, setSelectedModelId] = useState<string>('auto');
     const { status, message, startStream } = useGenerationStream();
     const [isSkipping, setIsSkipping] = useState(false);
     const isTertiary = project.mode === 'tertiary';
@@ -112,7 +112,7 @@ function SchemeGenerator({
                 {
                     terms_count: parseInt(termsCount),
                     weeks_per_term: parseInt(weeksPerTerm),
-                    ...(selectedModelId && { model_id: selectedModelId }),
+                    ...(selectedModelId !== 'auto' && { model_id: selectedModelId }),
                 },
             );
             startStream(
@@ -194,7 +194,7 @@ function SchemeGenerator({
                                     <SelectValue placeholder="Auto (default)" />
                                 </SelectTrigger>
                                 <SelectContent>
-                                    <SelectItem value="">Auto (default)</SelectItem>
+                                    <SelectItem value="auto">Auto (default)</SelectItem>
                                     {aiModels.map((model) => (
                                         <SelectItem key={model.id} value={model.id}>
                                             {model.name}

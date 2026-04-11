@@ -92,7 +92,7 @@ function ResearchInput({
     onLogAppend: (entry: GenerationLogEntry) => void;
 }) {
     const [documentText, setDocumentText] = useState('');
-    const [selectedModelId, setSelectedModelId] = useState<string>('');
+    const [selectedModelId, setSelectedModelId] = useState<string>('auto');
     const { status, message, startStream } = useGenerationStream();
     const isProcessing = status === 'processing' || status === 'validating';
 
@@ -103,7 +103,7 @@ function ResearchInput({
                 runResearch.url(project.id),
                 {
                     document_text: documentText,
-                    ...(selectedModelId && { model_id: selectedModelId }),
+                    ...(selectedModelId !== 'auto' && { model_id: selectedModelId }),
                 },
             );
             startStream(
@@ -153,7 +153,7 @@ function ResearchInput({
                                     <SelectValue placeholder="Auto (default)" />
                                 </SelectTrigger>
                                 <SelectContent>
-                                    <SelectItem value="">Auto (default)</SelectItem>
+                                    <SelectItem value="auto">Auto (default)</SelectItem>
                                     {aiModels.map((model) => (
                                         <SelectItem key={model.id} value={model.id}>
                                             {model.name}
