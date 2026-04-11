@@ -1,4 +1,3 @@
-import { router } from '@inertiajs/react';
 import {
     AlertTriangle,
     Blocks,
@@ -8,11 +7,13 @@ import {
     Sparkles,
 } from 'lucide-react';
 import { useState } from 'react';
+import { sileo } from 'sileo';
 import {
     runBlocks,
     approveBlocks,
 } from '@/actions/App/Http/Controllers/Admin/ContentStudioController';
 import { BlockTree } from '@/components/admin/content-studio/block-tree';
+import { GenerationProgress } from '@/components/admin/content-studio/generation-progress';
 import { TopicProgressList } from '@/components/admin/content-studio/topic-progress-list';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
@@ -24,16 +25,21 @@ import {
     CardTitle,
 } from '@/components/ui/card';
 import { Separator } from '@/components/ui/separator';
+import { useGenerationStream } from '@/hooks/use-generation-stream';
+import { csPost, streamUrl } from '@/lib/content-studio';
 import { slugify } from '@/lib/slug';
 import type {
     BlockNode,
     BlockStructureResult,
     ContentProject,
+    GenerationLogEntry,
 } from '@/types/content-studio';
 
 interface StageBlocksProps {
     project: ContentProject;
     isActive: boolean;
+    onProjectUpdate: (project: ContentProject) => void;
+    onLogAppend: (entry: GenerationLogEntry) => void;
 }
 
 interface TopicEntry {
@@ -81,64 +87,88 @@ function BlockDetailPanel({
     topicTitle,
     status,
     blockData,
+    onProjectUpdate,
+    onLogAppend,
 }: {
     project: ContentProject;
     topicKey: string;
     topicTitle: string;
     status: 'pending' | 'generated' | 'approved';
     blockData: BlockStructureResult | null;
+    onProjectUpdate: (project: ContentProject) => void;
+    onLogAppend: (entry: GenerationLogEntry) => void;
 }) {
     const [editedBlocks, setEditedBlocks] = useState<BlockNode[]>(
         blockData?.blocks ?? [],
     );
     const [isApproving, setIsApproving] = useState(false);
-    const [isGenerating, setIsGenerating] = useState(false);
+    const { status: streamStatus, message: streamMessage, startStream } = useGenerationStream();
+    const isGenerating = streamStatus === 'processing' || streamStatus === 'validating';
 
-    function handleGenerate() {
-        setIsGenerating(true);
-        router.post(
-            runBlocks.url(project.id),
-            { topic_key: topicKey },
-            {
-                preserveScroll: true,
-                onFinish: () => setIsGenerating(false),
-            },
-        );
+    async function handleGenerate() {
+        try {
+            const { job_id } = await csPost<{ job_id: string }>(
+                runBlocks.url(project.id),
+                { topic_key: topicKey },
+            );
+            startStream(
+                streamUrl(project.id, job_id),
+                (updatedProject, logEntry) => {
+                    onProjectUpdate(updatedProject);
+                    if (logEntry) onLogAppend(logEntry);
+                },
+                (errorMsg) => sileo.error({ title: errorMsg }),
+            );
+        } catch (e) {
+            sileo.error({ title: e instanceof Error ? e.message : 'Request failed' });
+        }
     }
 
-    function handleApprove() {
+    async function handleApprove() {
         if (!blockData) return;
         setIsApproving(true);
-        router.post(
-            approveBlocks.url(project.id),
-            {
-                topic_key: topicKey,
-                topic_title: blockData.topic_title,
-                topic_slug: blockData.topic_slug,
-                topic_summary: blockData.topic_summary,
-                estimated_total_minutes: blockData.estimated_total_minutes,
-                blocks: editedBlocks,
-            } as never,
-            {
-                preserveScroll: true,
-                onFinish: () => setIsApproving(false),
-            },
-        );
+        try {
+            const { project: updated, message } = await csPost<{ project: ContentProject; message: string }>(
+                approveBlocks.url(project.id),
+                {
+                    topic_key: topicKey,
+                    topic_title: blockData.topic_title,
+                    topic_slug: blockData.topic_slug,
+                    topic_summary: blockData.topic_summary,
+                    estimated_total_minutes: blockData.estimated_total_minutes,
+                    blocks: editedBlocks,
+                },
+            );
+            onProjectUpdate(updated);
+            sileo.success({ title: message });
+        } catch (e) {
+            sileo.error({ title: e instanceof Error ? e.message : 'Request failed' });
+        } finally {
+            setIsApproving(false);
+        }
     }
 
     if (status === 'pending') {
         return (
-            <div className="flex flex-col items-center justify-center gap-3 py-12 text-center">
-                <div className="rounded-full bg-muted p-3">
-                    <Blocks className="size-5 text-muted-foreground" />
+            <div className="flex flex-col items-center justify-center gap-4 py-12 text-center">
+                <div
+                    className="rounded-2xl border-2 border-dashed border-muted-foreground/20 p-5"
+                >
+                    <Blocks
+                        className="size-6 text-muted-foreground/40"
+                        style={{ animation: 'empty-pulse 3s ease-in-out infinite' }}
+                    />
                 </div>
-                <p className="text-sm text-muted-foreground">
-                    No block structure generated for{' '}
-                    <span className="font-medium text-foreground">
+                <div className="space-y-1">
+                    <p className="text-sm font-medium text-foreground">
                         {topicTitle}
-                    </span>
-                </p>
-                <Button onClick={handleGenerate} disabled={isGenerating}>
+                    </p>
+                    <p className="text-xs text-muted-foreground">
+                        AI will generate a hierarchical content structure for this topic
+                    </p>
+                </div>
+                <GenerationProgress status={streamStatus} message={streamMessage} />
+                <Button onClick={handleGenerate} disabled={isGenerating} size="lg">
                     {isGenerating ? (
                         <>
                             <Loader2 className="size-4 animate-spin" />
@@ -247,26 +277,40 @@ function BlockDetailPanel({
     return null;
 }
 
-export function StageBlocks({ project, isActive }: StageBlocksProps) {
+export function StageBlocks({ project, isActive, onProjectUpdate, onLogAppend }: StageBlocksProps) {
     const [selectedKey, setSelectedKey] = useState<string | null>(null);
     const [generatingTopic, setGeneratingTopic] = useState<string | null>(null);
+    const { startStream } = useGenerationStream();
     const topics = getTopicList(project);
 
     if (topics.length === 0) {
         return null;
     }
 
-    function handleGenerate(topicKey: string) {
+    async function handleGenerate(topicKey: string) {
         setGeneratingTopic(topicKey);
         setSelectedKey(topicKey);
-        router.post(
-            runBlocks.url(project.id),
-            { topic_key: topicKey },
-            {
-                preserveScroll: true,
-                onFinish: () => setGeneratingTopic(null),
-            },
-        );
+        try {
+            const { job_id } = await csPost<{ job_id: string }>(
+                runBlocks.url(project.id),
+                { topic_key: topicKey },
+            );
+            startStream(
+                streamUrl(project.id, job_id),
+                (updatedProject, logEntry) => {
+                    onProjectUpdate(updatedProject);
+                    if (logEntry) onLogAppend(logEntry);
+                    setGeneratingTopic(null);
+                },
+                (errorMsg) => {
+                    sileo.error({ title: errorMsg });
+                    setGeneratingTopic(null);
+                },
+            );
+        } catch (e) {
+            sileo.error({ title: e instanceof Error ? e.message : 'Request failed' });
+            setGeneratingTopic(null);
+        }
     }
 
     const selectedTopic = topics.find((t) => t.key === selectedKey);
@@ -326,6 +370,8 @@ export function StageBlocks({ project, isActive }: StageBlocksProps) {
                                 topicTitle={selectedTopic.title}
                                 status={selectedTopic.status}
                                 blockData={selectedBlockData}
+                                onProjectUpdate={onProjectUpdate}
+                                onLogAppend={onLogAppend}
                             />
                         ) : (
                             <div className="flex flex-col items-center justify-center gap-2 py-12 text-center">

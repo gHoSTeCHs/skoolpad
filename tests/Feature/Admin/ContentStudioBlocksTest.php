@@ -35,7 +35,8 @@ it('approves block structure and creates CanonicalTopic with correct fields', fu
 
     $this->actingAs($user)
         ->postJson(route('admin.content-studio.approve-blocks', $project), $data)
-        ->assertRedirect();
+        ->assertOk()
+        ->assertJsonStructure(['project', 'message']);
 
     $topic = CanonicalTopic::query()->where('slug', 'introduction-to-physics')->first();
 
@@ -54,7 +55,8 @@ it('creates correct ContentBlock hierarchy with paths and depths', function () {
 
     $this->actingAs($user)
         ->postJson(route('admin.content-studio.approve-blocks', $project), sampleBlockStructure())
-        ->assertRedirect();
+        ->assertOk()
+        ->assertJsonStructure(['project', 'message']);
 
     $topic = CanonicalTopic::query()->where('slug', 'introduction-to-physics')->first();
     $blocks = ContentBlock::query()
@@ -106,7 +108,8 @@ it('links SchemeOfWorkItem canonical_topic_id after block approval', function ()
 
     $this->actingAs($user)
         ->postJson(route('admin.content-studio.approve-blocks', $project), sampleBlockStructure())
-        ->assertRedirect();
+        ->assertOk()
+        ->assertJsonStructure(['project', 'message']);
 
     $topic = CanonicalTopic::query()->where('slug', 'introduction-to-physics')->first();
     $item = SchemeOfWorkItem::query()
@@ -123,7 +126,8 @@ it('tracks block approval in progress_data', function () {
 
     $this->actingAs($user)
         ->postJson(route('admin.content-studio.approve-blocks', $project), sampleBlockStructure())
-        ->assertRedirect();
+        ->assertOk()
+        ->assertJsonStructure(['project', 'message']);
 
     $project->refresh();
     $approved = $project->progress_data['blocks_approved'] ?? [];
@@ -167,8 +171,8 @@ it('prevents block approval when project is not in structuring status', function
 
     $this->actingAs($user)
         ->postJson(route('admin.content-studio.approve-blocks', $project), sampleBlockStructure())
-        ->assertRedirect()
-        ->assertSessionHas('error');
+        ->assertUnprocessable()
+        ->assertJson(['message' => "This action requires the project to be in one of these statuses: Structuring. Current status: {$project->status->label()}."]);
 });
 
 it('processes blocks in depth order when AI returns them out of order', function () {
@@ -192,7 +196,8 @@ it('processes blocks in depth order when AI returns them out of order', function
 
     $this->actingAs($user)
         ->postJson(route('admin.content-studio.approve-blocks', $project), $data)
-        ->assertRedirect();
+        ->assertOk()
+        ->assertJsonStructure(['project', 'message']);
 
     $topic = CanonicalTopic::query()->where('slug', 'introduction-to-physics')->first();
     $blocks = ContentBlock::query()->where('canonical_topic_id', $topic->id)->get();
@@ -217,7 +222,8 @@ it('can approve multiple topics sequentially', function () {
     $firstTopic = sampleBlockStructure();
     $this->actingAs($user)
         ->postJson(route('admin.content-studio.approve-blocks', $project), $firstTopic)
-        ->assertRedirect();
+        ->assertOk()
+        ->assertJsonStructure(['project', 'message']);
 
     $secondTopic = sampleBlockStructure();
     $secondTopic['topic_key'] = 'measurement';
@@ -227,7 +233,8 @@ it('can approve multiple topics sequentially', function () {
 
     $this->actingAs($user)
         ->postJson(route('admin.content-studio.approve-blocks', $project->fresh()), $secondTopic)
-        ->assertRedirect();
+        ->assertOk()
+        ->assertJsonStructure(['project', 'message']);
 
     expect(CanonicalTopic::query()->where('slug', 'introduction-to-physics')->exists())->toBeTrue()
         ->and(CanonicalTopic::query()->where('slug', 'measurement')->exists())->toBeTrue();

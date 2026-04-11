@@ -1,3 +1,4 @@
+import { useState, useCallback } from 'react';
 import { Head } from '@inertiajs/react';
 import ContentStudioController from '@/actions/App/Http/Controllers/Admin/ContentStudioController';
 import { GenerationLogPanel } from '@/components/admin/content-studio/generation-log-panel';
@@ -23,7 +24,13 @@ const STATUS_STYLES: Record<ContentProjectStatus, string> = {
     complete: 'bg-[var(--badge-reward-bg)] text-[var(--badge-reward-fg)]',
 };
 
-function StageWorkspace({ project }: { project: ContentProject }) {
+interface StageWorkspaceProps {
+    project: ContentProject;
+    onProjectUpdate: (project: ContentProject) => void;
+    onLogAppend: (entry: GenerationLogEntry) => void;
+}
+
+function StageWorkspace({ project, onProjectUpdate, onLogAppend }: StageWorkspaceProps) {
     const status = project.status;
     const aiContext = project.ai_context;
     const researchApproved = !!aiContext?.research_approved;
@@ -35,12 +42,16 @@ function StageWorkspace({ project }: { project: ContentProject }) {
             <StageResearch
                 project={project}
                 isActive={status === 'draft' || status === 'research'}
+                onProjectUpdate={onProjectUpdate}
+                onLogAppend={onLogAppend}
             />
 
             {researchApproved && (
                 <StageScheme
                     project={project}
                     isActive={status === 'research' || (status === 'structuring' && !schemeApproved && !schemeSkipped)}
+                    onProjectUpdate={onProjectUpdate}
+                    onLogAppend={onLogAppend}
                 />
             )}
 
@@ -48,13 +59,26 @@ function StageWorkspace({ project }: { project: ContentProject }) {
                 <StageBlocks
                     project={project}
                     isActive={status === 'structuring'}
+                    onProjectUpdate={onProjectUpdate}
+                    onLogAppend={onLogAppend}
                 />
             )}
         </div>
     );
 }
 
-export default function ContentStudioShow({ project, generationLogs }: Props) {
+export default function ContentStudioShow({ project: initialProject, generationLogs: initialLogs }: Props) {
+    const [project, setProject] = useState(initialProject);
+    const [logs, setLogs] = useState(initialLogs);
+
+    const handleProjectUpdate = useCallback((updated: ContentProject) => {
+        setProject(updated);
+    }, []);
+
+    const handleLogAppend = useCallback((entry: GenerationLogEntry) => {
+        setLogs((prev) => [entry, ...prev]);
+    }, []);
+
     const isSecondary = project.mode === 'secondary';
     const title = isSecondary
         ? project.curriculum_subject_name
@@ -92,9 +116,13 @@ export default function ContentStudioShow({ project, generationLogs }: Props) {
                     mode={project.mode}
                 />
 
-                <StageWorkspace project={project} />
+                <StageWorkspace
+                    project={project}
+                    onProjectUpdate={handleProjectUpdate}
+                    onLogAppend={handleLogAppend}
+                />
 
-                <GenerationLogPanel logs={generationLogs} />
+                <GenerationLogPanel logs={logs} />
             </div>
         </AdminLayout>
     );

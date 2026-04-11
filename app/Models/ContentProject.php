@@ -126,4 +126,22 @@ class ContentProject extends Model
             $this->syncOriginal();
         });
     }
+
+    public function toShowArray(): array
+    {
+        $this->loadMissing(['educationLevel', 'curriculumSubject', 'discipline', 'createdBy']);
+
+        $data = $this->toArray();
+        unset($data['education_level'], $data['curriculum_subject'], $data['discipline'], $data['created_by']);
+
+        return array_merge($data, [
+            'created_by' => $this->getAttributeValue('created_by'),
+            'mode_label' => $this->mode->label(),
+            'status_label' => $this->status->label(),
+            'education_level_name' => $this->educationLevel?->display_name ?? $this->educationLevel?->name,
+            'curriculum_subject_name' => $this->curriculumSubject?->name,
+            'discipline_name' => $this->discipline?->name,
+            'created_by_name' => $this->createdBy?->name,
+        ]);
+    }
 }

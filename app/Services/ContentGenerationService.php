@@ -19,8 +19,11 @@ class ContentGenerationService
 {
     public function generate(ContentPromptTemplate $template, array $context, ContentProject $project, ?string $modelId = null): ContentResponse
     {
+        set_time_limit(180);
+
         $model = $this->resolveModel($modelId, $template->promptType());
         $prompt = $template->build($context);
+        $prompt = $this->capMaxTokens($prompt, $model);
         $adapter = $this->resolveAdapter($model);
 
         $response = $adapter->generate($prompt);
@@ -33,14 +36,28 @@ class ContentGenerationService
             $response = $this->retryWithCorrection($adapter, $prompt, $response);
         }
 
-        $this->logGeneration($project, $model, $template, $prompt, $response);
+        $log = $this->logGeneration($project, $model, $template, $prompt, $response);
 
-        return $response;
+        return new ContentResponse(
+            valid: $response->valid,
+            data: $response->data,
+            validation_errors: $response->validation_errors,
+            raw_response: $response->raw_response,
+            model_used: $response->model_used,
+            tokens_used: $response->tokens_used,
+            generation_time_ms: $response->generation_time_ms,
+            input_tokens: $response->input_tokens,
+            output_tokens: $response->output_tokens,
+            generation_log_id: $log->id,
+        );
     }
 
     public function generateFromPrompt(ContentPrompt $prompt, ContentProject $project, string $promptType, ?string $modelId = null): ContentResponse
     {
+        set_time_limit(180);
+
         $model = $this->resolveModel($modelId, $promptType);
+        $prompt = $this->capMaxTokens($prompt, $model);
         $adapter = $this->resolveAdapter($model);
 
         $response = $adapter->generate($prompt);
@@ -53,9 +70,20 @@ class ContentGenerationService
             $response = $this->retryWithCorrection($adapter, $prompt, $response);
         }
 
-        $this->logGeneration($project, $model, null, $prompt, $response, $promptType);
+        $log = $this->logGeneration($project, $model, null, $prompt, $response, $promptType);
 
-        return $response;
+        return new ContentResponse(
+            valid: $response->valid,
+            data: $response->data,
+            validation_errors: $response->validation_errors,
+            raw_response: $response->raw_response,
+            model_used: $response->model_used,
+            tokens_used: $response->tokens_used,
+            generation_time_ms: $response->generation_time_ms,
+            input_tokens: $response->input_tokens,
+            output_tokens: $response->output_tokens,
+            generation_log_id: $log->id,
+        );
     }
 
     public function resolveModel(?string $modelId = null, ?string $taskType = null): AIModel
@@ -151,14 +179,14 @@ class ContentGenerationService
     {
         $errorSummary = collect($failed->validation_errors)
             ->map(fn ($errors, $field) => is_array($errors)
-                ? "{$field}: " . implode(', ', $errors)
+                ? "{$field}: ".implode(', ', $errors)
                 : "{$field}: {$errors}"
             )
             ->implode("\n");
 
         $correctionText = "Your previous response had the following validation errors:\n{$errorSummary}\n\n"
-            . "Please fix these errors and return the corrected JSON. Keep all other fields unchanged.\n\n"
-            . "Your previous response for reference:\n{$failed->raw_response}";
+            ."Please fix these errors and return the corrected JSON. Keep all other fields unchanged.\n\n"
+            ."Your previous response for reference:\n{$failed->raw_response}";
 
         return new ContentPrompt(
             system_prompt: $original->system_prompt,
@@ -171,6 +199,23 @@ class ContentGenerationService
         );
     }
 
+    private function capMaxTokens(ContentPrompt $prompt, AIModel $model): ContentPrompt
+    {
+        if ($prompt->max_tokens <= $model->max_tokens) {
+            return $prompt;
+        }
+
+        return new ContentPrompt(
+            system_prompt: $prompt->system_prompt,
+            user_prompt: $prompt->user_prompt,
+            expected_format: $prompt->expected_format,
+            json_schema: $prompt->json_schema,
+            temperature: $prompt->temperature,
+            max_tokens: $model->max_tokens,
+            context: $prompt->context,
+        );
+    }
+
     private function logGeneration(
         ContentProject $project,
         AIModel $model,
@@ -178,11 +223,11 @@ class ContentGenerationService
         ContentPrompt $prompt,
         ContentResponse $response,
         ?string $promptType = null,
-    ): void {
+    ): AIGenerationLog {
         $inputCost = ($response->input_tokens / 1_000_000) * $model->input_cost_per_million;
         $outputCost = ($response->output_tokens / 1_000_000) * $model->output_cost_per_million;
 
-        AIGenerationLog::query()->create([
+        return AIGenerationLog::query()->create([
             'content_project_id' => $project->id,
             'ai_model_id' => $model->id,
             'prompt_type' => $promptType ?? $template?->promptType() ?? 'unknown',

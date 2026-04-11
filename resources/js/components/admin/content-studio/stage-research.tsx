@@ -1,5 +1,4 @@
 import { useState } from 'react';
-import { router } from '@inertiajs/react';
 import {
     AlertTriangle,
     Check,
@@ -11,7 +10,9 @@ import {
     RotateCcw,
     Sparkles,
 } from 'lucide-react';
+import { sileo } from 'sileo';
 import { runResearch, approveResearch } from '@/actions/App/Http/Controllers/Admin/ContentStudioController';
+import { GenerationProgress } from '@/components/admin/content-studio/generation-progress';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -19,11 +20,15 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Input } from '@/components/ui/input';
 import { Switch } from '@/components/ui/switch';
 import { Textarea } from '@/components/ui/textarea';
-import type { ContentProject, ResearchResult, ResearchTopic } from '@/types/content-studio';
+import { useGenerationStream } from '@/hooks/use-generation-stream';
+import { csPost, streamUrl } from '@/lib/content-studio';
+import type { ContentProject, GenerationLogEntry, ResearchResult, ResearchTopic } from '@/types/content-studio';
 
 interface StageResearchProps {
     project: ContentProject;
     isActive: boolean;
+    onProjectUpdate: (project: ContentProject) => void;
+    onLogAppend: (entry: GenerationLogEntry) => void;
 }
 
 const CONFIDENCE_STYLES: Record<string, string> = {
@@ -39,7 +44,10 @@ function ApprovedSummary({ project }: { project: ContentProject }) {
     const termCount = new Set(approved?.map((t) => t.term_number)).size;
 
     return (
-        <div className="rounded-lg border border-[var(--badge-primary-bg)] bg-[var(--badge-primary-bg)]/30 dark:border-emerald-800/40 dark:bg-emerald-900/10 reader:border-emerald-800/40 reader:bg-emerald-900/10">
+        <div
+            className="rounded-lg border border-[var(--badge-primary-bg)] bg-[var(--badge-primary-bg)]/30 dark:border-emerald-800/40 dark:bg-emerald-900/10 reader:border-emerald-800/40 reader:bg-emerald-900/10"
+            style={{ animation: 'slide-in-from-top 0.3s ease-out' }}
+        >
             <button
                 type="button"
                 onClick={() => setExpanded(!expanded)}
@@ -70,21 +78,37 @@ function ApprovedSummary({ project }: { project: ContentProject }) {
     );
 }
 
-function ResearchInput({ project }: { project: ContentProject }) {
+function ResearchInput({
+    project,
+    onProjectUpdate,
+    onLogAppend,
+}: {
+    project: ContentProject;
+    onProjectUpdate: (project: ContentProject) => void;
+    onLogAppend: (entry: GenerationLogEntry) => void;
+}) {
     const [documentText, setDocumentText] = useState('');
-    const [isSubmitting, setIsSubmitting] = useState(false);
+    const { status, message, startStream } = useGenerationStream();
+    const isProcessing = status === 'processing' || status === 'validating';
 
-    function handleSubmit() {
+    async function handleSubmit() {
         if (!documentText.trim() || documentText.length < 100) return;
-        setIsSubmitting(true);
-        router.post(
-            runResearch.url(project.id),
-            { document_text: documentText },
-            {
-                preserveScroll: true,
-                onFinish: () => setIsSubmitting(false),
-            },
-        );
+        try {
+            const { job_id } = await csPost<{ job_id: string }>(
+                runResearch.url(project.id),
+                { document_text: documentText },
+            );
+            startStream(
+                streamUrl(project.id, job_id),
+                (updatedProject, logEntry) => {
+                    onProjectUpdate(updatedProject);
+                    if (logEntry) onLogAppend(logEntry);
+                },
+                (errorMsg) => sileo.error({ title: errorMsg }),
+            );
+        } catch (e) {
+            sileo.error({ title: e instanceof Error ? e.message : 'Request failed' });
+        }
     }
 
     return (
@@ -105,16 +129,17 @@ function ResearchInput({ project }: { project: ContentProject }) {
                     onChange={(e) => setDocumentText(e.target.value)}
                     placeholder="Paste the full curriculum document text here (NERDC syllabus, course outline, etc.)..."
                     className="min-h-48 font-mono text-xs leading-relaxed"
-                    disabled={isSubmitting}
+                    disabled={isProcessing}
                 />
+                <GenerationProgress status={status} message={message} />
                 <div className="flex items-center justify-between">
                     <span className="text-xs text-muted-foreground">
                         {documentText.length < 100
                             ? `${100 - documentText.length} more characters needed`
                             : `${documentText.length.toLocaleString()} characters`}
                     </span>
-                    <Button onClick={handleSubmit} disabled={isSubmitting || documentText.length < 100}>
-                        {isSubmitting ? (
+                    <Button onClick={handleSubmit} disabled={isProcessing || documentText.length < 100}>
+                        {isProcessing ? (
                             <>
                                 <Loader2 className="size-4 animate-spin" />
                                 Analyzing curriculum...
@@ -132,7 +157,15 @@ function ResearchInput({ project }: { project: ContentProject }) {
     );
 }
 
-function ResearchReview({ project, research }: { project: ContentProject; research: ResearchResult }) {
+function ResearchReview({
+    project,
+    research,
+    onProjectUpdate,
+}: {
+    project: ContentProject;
+    research: ResearchResult;
+    onProjectUpdate: (project: ContentProject) => void;
+}) {
     const [editedTopics, setEditedTopics] = useState<ResearchTopic[]>(() => {
         const topics: ResearchTopic[] = [];
         for (const term of research.terms) {
@@ -149,21 +182,25 @@ function ResearchReview({ project, research }: { project: ContentProject; resear
         setEditedTopics((prev) => prev.map((t, i) => (i === index ? { ...t, [field]: value } : t)));
     }
 
-    function handleApprove() {
+    async function handleApprove() {
         setIsApproving(true);
-        router.post(
-            approveResearch.url(project.id),
-            { topics: editedTopics } as never,
-            {
-                preserveScroll: true,
-                onFinish: () => setIsApproving(false),
-            },
-        );
+        try {
+            const { project: updated, message } = await csPost<{ project: ContentProject; message: string }>(
+                approveResearch.url(project.id),
+                { topics: editedTopics },
+            );
+            onProjectUpdate(updated);
+            sileo.success({ title: message });
+        } catch (e) {
+            sileo.error({ title: e instanceof Error ? e.message : 'Request failed' });
+        } finally {
+            setIsApproving(false);
+        }
     }
 
     function handleRegenerate() {
         setIsRegenerating(true);
-        router.reload({ onFinish: () => setIsRegenerating(false) });
+        window.location.reload();
     }
 
     const termNumbers = [...new Set(editedTopics.map((t) => t.term_number))].sort();
@@ -279,7 +316,7 @@ function ResearchReview({ project, research }: { project: ContentProject; resear
     );
 }
 
-export function StageResearch({ project, isActive }: StageResearchProps) {
+export function StageResearch({ project, isActive, onProjectUpdate, onLogAppend }: StageResearchProps) {
     const aiContext = project.ai_context;
     const isApproved = !!aiContext?.research_approved;
     const hasResearch = !!aiContext?.research;
@@ -290,7 +327,7 @@ export function StageResearch({ project, isActive }: StageResearchProps) {
     }
 
     if (hasResearch && !isApproved) {
-        return <ResearchReview project={project} research={aiContext!.research!} />;
+        return <ResearchReview project={project} research={aiContext!.research!} onProjectUpdate={onProjectUpdate} />;
     }
 
     if (hasFailed) {
@@ -304,12 +341,12 @@ export function StageResearch({ project, isActive }: StageResearchProps) {
                         </AlertDescription>
                     </Alert>
                     <div className="mt-4">
-                        <ResearchInput project={project} />
+                        <ResearchInput project={project} onProjectUpdate={onProjectUpdate} onLogAppend={onLogAppend} />
                     </div>
                 </CardContent>
             </Card>
         );
     }
 
-    return <ResearchInput project={project} />;
+    return <ResearchInput project={project} onProjectUpdate={onProjectUpdate} onLogAppend={onLogAppend} />;
 }

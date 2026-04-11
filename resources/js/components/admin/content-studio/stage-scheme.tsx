@@ -1,5 +1,4 @@
 import { useState } from 'react';
-import { router } from '@inertiajs/react';
 import {
     CalendarDays,
     Check,
@@ -10,17 +9,23 @@ import {
     SkipForward,
     Sparkles,
 } from 'lucide-react';
+import { sileo } from 'sileo';
 import { runScheme, approveScheme, skipScheme } from '@/actions/App/Http/Controllers/Admin/ContentStudioController';
+import { GenerationProgress } from '@/components/admin/content-studio/generation-progress';
 import { SchemeGrid } from '@/components/admin/content-studio/scheme-grid';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import type { ContentProject, SchemeTerm } from '@/types/content-studio';
+import { useGenerationStream } from '@/hooks/use-generation-stream';
+import { csPost, streamUrl } from '@/lib/content-studio';
+import type { ContentProject, GenerationLogEntry, SchemeTerm } from '@/types/content-studio';
 
 interface StageSchemeProps {
     project: ContentProject;
     isActive: boolean;
+    onProjectUpdate: (project: ContentProject) => void;
+    onLogAppend: (entry: GenerationLogEntry) => void;
 }
 
 function ApprovedSummary({ project }: { project: ContentProject }) {
@@ -30,7 +35,10 @@ function ApprovedSummary({ project }: { project: ContentProject }) {
     const termCount = scheme?.length ?? 0;
 
     return (
-        <div className="rounded-lg border border-[var(--badge-primary-bg)] bg-[var(--badge-primary-bg)]/30 dark:border-emerald-800/40 dark:bg-emerald-900/10 reader:border-emerald-800/40 reader:bg-emerald-900/10">
+        <div
+            className="rounded-lg border border-[var(--badge-primary-bg)] bg-[var(--badge-primary-bg)]/30 dark:border-emerald-800/40 dark:bg-emerald-900/10 reader:border-emerald-800/40 reader:bg-emerald-900/10"
+            style={{ animation: 'slide-in-from-top 0.3s ease-out' }}
+        >
             <button
                 type="button"
                 onClick={() => setExpanded(!expanded)}
@@ -77,38 +85,57 @@ function SkippedSummary() {
     );
 }
 
-function SchemeGenerator({ project }: { project: ContentProject }) {
+function SchemeGenerator({
+    project,
+    onProjectUpdate,
+    onLogAppend,
+}: {
+    project: ContentProject;
+    onProjectUpdate: (project: ContentProject) => void;
+    onLogAppend: (entry: GenerationLogEntry) => void;
+}) {
     const [termsCount, setTermsCount] = useState('3');
     const [weeksPerTerm, setWeeksPerTerm] = useState('10');
-    const [isGenerating, setIsGenerating] = useState(false);
+    const { status, message, startStream } = useGenerationStream();
     const [isSkipping, setIsSkipping] = useState(false);
     const isTertiary = project.mode === 'tertiary';
+    const isGenerating = status === 'processing' || status === 'validating';
 
-    function handleGenerate() {
-        setIsGenerating(true);
-        router.post(
-            runScheme.url(project.id),
-            {
-                terms_count: parseInt(termsCount),
-                weeks_per_term: parseInt(weeksPerTerm),
-            },
-            {
-                preserveScroll: true,
-                onFinish: () => setIsGenerating(false),
-            },
-        );
+    async function handleGenerate() {
+        try {
+            const { job_id } = await csPost<{ job_id: string }>(
+                runScheme.url(project.id),
+                {
+                    terms_count: parseInt(termsCount),
+                    weeks_per_term: parseInt(weeksPerTerm),
+                },
+            );
+            startStream(
+                streamUrl(project.id, job_id),
+                (updatedProject, logEntry) => {
+                    onProjectUpdate(updatedProject);
+                    if (logEntry) onLogAppend(logEntry);
+                },
+                (errorMsg) => sileo.error({ title: errorMsg }),
+            );
+        } catch (e) {
+            sileo.error({ title: e instanceof Error ? e.message : 'Request failed' });
+        }
     }
 
-    function handleSkip() {
+    async function handleSkip() {
         setIsSkipping(true);
-        router.post(
-            skipScheme.url(project.id),
-            {},
-            {
-                preserveScroll: true,
-                onFinish: () => setIsSkipping(false),
-            },
-        );
+        try {
+            const { project: updated, message: msg } = await csPost<{ project: ContentProject; message: string }>(
+                skipScheme.url(project.id),
+            );
+            onProjectUpdate(updated);
+            sileo.success({ title: msg });
+        } catch (e) {
+            sileo.error({ title: e instanceof Error ? e.message : 'Request failed' });
+        } finally {
+            setIsSkipping(false);
+        }
     }
 
     return (
@@ -126,6 +153,7 @@ function SchemeGenerator({ project }: { project: ContentProject }) {
                 </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
+                <GenerationProgress status={status} message={message} />
                 <div className="flex flex-wrap items-end gap-4">
                     <div className="space-y-1.5">
                         <label className="text-sm font-medium">Terms</label>
@@ -180,7 +208,15 @@ function SchemeGenerator({ project }: { project: ContentProject }) {
     );
 }
 
-function SchemeReview({ project, scheme }: { project: ContentProject; scheme: SchemeTerm[] }) {
+function SchemeReview({
+    project,
+    scheme,
+    onProjectUpdate,
+}: {
+    project: ContentProject;
+    scheme: SchemeTerm[];
+    onProjectUpdate: (project: ContentProject) => void;
+}) {
     const [editedTerms, setEditedTerms] = useState<SchemeTerm[]>(() =>
         scheme.map((t) => ({ ...t, topics: t.topics.map((tp) => ({ ...tp })) })),
     );
@@ -188,16 +224,20 @@ function SchemeReview({ project, scheme }: { project: ContentProject; scheme: Sc
     const totalTopics = editedTerms.reduce((sum, t) => sum + t.topics.length, 0);
     const totalPeriods = editedTerms.reduce((sum, t) => sum + t.topics.reduce((s, tp) => s + tp.periods, 0), 0);
 
-    function handleApprove() {
+    async function handleApprove() {
         setIsApproving(true);
-        router.post(
-            approveScheme.url(project.id),
-            { terms: editedTerms } as never,
-            {
-                preserveScroll: true,
-                onFinish: () => setIsApproving(false),
-            },
-        );
+        try {
+            const { project: updated, message } = await csPost<{ project: ContentProject; message: string }>(
+                approveScheme.url(project.id),
+                { terms: editedTerms },
+            );
+            onProjectUpdate(updated);
+            sileo.success({ title: message });
+        } catch (e) {
+            sileo.error({ title: e instanceof Error ? e.message : 'Request failed' });
+        } finally {
+            setIsApproving(false);
+        }
     }
 
     function handleReset() {
@@ -245,7 +285,7 @@ function SchemeReview({ project, scheme }: { project: ContentProject; scheme: Sc
     );
 }
 
-export function StageScheme({ project, isActive }: StageSchemeProps) {
+export function StageScheme({ project, isActive, onProjectUpdate, onLogAppend }: StageSchemeProps) {
     const aiContext = project.ai_context;
     const isApproved = !!aiContext?.scheme_approved;
     const isSkipped = !!project.progress_data?.scheme_skipped;
@@ -261,11 +301,11 @@ export function StageScheme({ project, isActive }: StageSchemeProps) {
     }
 
     if (hasScheme && !isApproved) {
-        return <SchemeReview project={project} scheme={aiContext!.scheme!.terms} />;
+        return <SchemeReview project={project} scheme={aiContext!.scheme!.terms} onProjectUpdate={onProjectUpdate} />;
     }
 
     if (hasApprovedResearch) {
-        return <SchemeGenerator project={project} />;
+        return <SchemeGenerator project={project} onProjectUpdate={onProjectUpdate} onLogAppend={onLogAppend} />;
     }
 
     return null;

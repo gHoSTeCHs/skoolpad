@@ -1,31 +1,31 @@
 <?php
 
-use App\DataTransferObjects\ContentResponse;
 use App\Enums\ContentProjectStatus;
+use App\Jobs\RunContentGeneration;
 use App\Models\ContentProject;
 use App\Models\LevelSubject;
 use App\Models\SchemeOfWorkItem;
 use App\Models\User;
-use App\Services\ContentGenerationService;
+use Illuminate\Support\Facades\Queue;
 
-function mockSchemeGeneration(array $data): void
-{
-    $mock = Mockery::mock(ContentGenerationService::class);
-    $mock->shouldReceive('generate')->once()->andReturn(new ContentResponse(
-        valid: true,
-        data: $data,
-        raw_response: json_encode($data),
-        model_used: 'test-model',
-        tokens_used: 200,
-        input_tokens: 100,
-        output_tokens: 100,
-    ));
-    app()->instance(ContentGenerationService::class, $mock);
-}
-
-it('completes full scheme flow: generate → review → approve → verify DB writes', function () {
+it('completes full scheme flow: dispatch job → approve → verify DB writes', function () {
     $user = User::factory()->admin()->create();
     $project = ContentProject::factory()->withApprovedResearch()->create(['created_by' => $user->id]);
+
+    Queue::fake();
+
+    $this->actingAs($user)
+        ->postJson(route('admin.content-studio.run-scheme', $project), [
+            'terms_count' => 3,
+            'weeks_per_term' => 10,
+        ])
+        ->assertAccepted()
+        ->assertJsonStructure(['job_id']);
+
+    Queue::assertPushed(RunContentGeneration::class, function ($job) use ($project) {
+        return $job->project->id === $project->id
+            && $job->promptType === 'scheme';
+    });
 
     $schemeData = [
         'education_level' => 'SS1',
@@ -45,24 +45,14 @@ it('completes full scheme flow: generate → review → approve → verify DB wr
         'total_topics_allocated' => 3,
     ];
 
-    mockSchemeGeneration($schemeData);
-
-    $this->actingAs($user)
-        ->postJson(route('admin.content-studio.run-scheme', $project), [
-            'terms_count' => 3,
-            'weeks_per_term' => 10,
-        ])
-        ->assertRedirect();
-
-    $project->refresh();
-    expect($project->ai_context['scheme'])->not->toBeNull()
-        ->and($project->ai_context['scheme']['total_topics_allocated'])->toBe(3);
+    $project->updateAiContext('scheme', $schemeData);
 
     $this->actingAs($user)
         ->postJson(route('admin.content-studio.approve-scheme', $project), [
             'terms' => $schemeData['terms'],
         ])
-        ->assertRedirect();
+        ->assertOk()
+        ->assertJsonStructure(['project', 'message']);
 
     $project->refresh();
     expect($project->status)->toBe(ContentProjectStatus::Structuring)
@@ -124,7 +114,8 @@ it('creates LevelSubject via firstOrCreate when it does not exist', function () 
                 ],
             ],
         ])
-        ->assertRedirect();
+        ->assertOk()
+        ->assertJsonStructure(['project', 'message']);
 
     $levelSubjectAfter = LevelSubject::query()
         ->where('education_level_id', $project->education_level_id)
@@ -151,7 +142,8 @@ it('replaces existing scheme items on re-approval', function () {
                 ],
             ],
         ])
-        ->assertRedirect();
+        ->assertOk()
+        ->assertJsonStructure(['project', 'message']);
 
     $levelSubject = LevelSubject::query()
         ->where('education_level_id', $project->education_level_id)
@@ -176,7 +168,8 @@ it('replaces existing scheme items on re-approval', function () {
                 ],
             ],
         ])
-        ->assertRedirect();
+        ->assertOk()
+        ->assertJsonStructure(['project', 'message']);
 
     expect(SchemeOfWorkItem::query()->where('curriculum_subject_level_id', $levelSubject->id)->count())->toBe(1)
         ->and(SchemeOfWorkItem::query()->where('curriculum_subject_level_id', $levelSubject->id)->first()->topic_label)->toBe('Only Topic');
@@ -200,7 +193,8 @@ it('allows tertiary projects to skip scheme and advance to structuring', functio
 
     $this->actingAs($user)
         ->postJson(route('admin.content-studio.skip-scheme', $project))
-        ->assertRedirect();
+        ->assertOk()
+        ->assertJsonStructure(['project', 'message']);
 
     $project->refresh();
     expect($project->status)->toBe(ContentProjectStatus::Structuring)
@@ -214,11 +208,13 @@ it('prevents secondary projects from skipping scheme', function () {
 
     $this->actingAs($user)
         ->postJson(route('admin.content-studio.skip-scheme', $project))
-        ->assertRedirect()
-        ->assertSessionHas('error');
+        ->assertUnprocessable()
+        ->assertJson(['message' => 'Only tertiary projects can skip the scheme of work stage.']);
 });
 
 it('rejects scheme generation when research is not yet approved', function () {
+    Queue::fake();
+
     $user = User::factory()->admin()->create();
     $project = ContentProject::factory()->withResearch()->create(['created_by' => $user->id]);
 
@@ -227,8 +223,10 @@ it('rejects scheme generation when research is not yet approved', function () {
             'terms_count' => 3,
             'weeks_per_term' => 10,
         ])
-        ->assertRedirect()
-        ->assertSessionHas('error');
+        ->assertAccepted()
+        ->assertJsonStructure(['job_id']);
+
+    Queue::assertPushed(RunContentGeneration::class);
 });
 
 it('validates scheme generation request fields', function () {

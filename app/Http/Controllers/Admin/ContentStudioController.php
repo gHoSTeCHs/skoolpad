@@ -12,14 +12,18 @@ use App\Http\Requests\Admin\RunBlockStructureRequest;
 use App\Http\Requests\Admin\RunCurriculumResearchRequest;
 use App\Http\Requests\Admin\RunSchemeGenerationRequest;
 use App\Http\Requests\Admin\StoreContentProjectRequest;
+use App\Jobs\RunContentGeneration;
 use App\Models\ContentProject;
 use App\Models\CurriculumSubject;
 use App\Models\Discipline;
 use App\Models\EducationLevel;
 use App\Services\ContentProjectService;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Gate;
+use Illuminate\Support\Str;
 use Inertia\Inertia;
 use Inertia\Response;
 
@@ -100,11 +104,6 @@ class ContentStudioController extends Controller
     {
         Gate::authorize('view', $contentProject);
 
-        $contentProject->load(['educationLevel', 'curriculumSubject', 'discipline', 'createdBy']);
-
-        $data = $contentProject->toArray();
-        unset($data['education_level'], $data['curriculum_subject'], $data['discipline'], $data['created_by']);
-
         $generationLogs = $contentProject->aiGenerationLogs()
             ->select(['id', 'prompt_type', 'model_used', 'is_valid', 'tokens_used', 'estimated_cost_cents', 'created_at'])
             ->latest()
@@ -112,109 +111,96 @@ class ContentStudioController extends Controller
             ->get();
 
         return Inertia::render('admin/content-studio/show', [
-            'project' => array_merge($data, [
-                'created_by' => $contentProject->getAttributeValue('created_by'),
-                'mode_label' => $contentProject->mode->label(),
-                'status_label' => $contentProject->status->label(),
-                'education_level_name' => $contentProject->educationLevel?->display_name ?? $contentProject->educationLevel?->name,
-                'curriculum_subject_name' => $contentProject->curriculumSubject?->name,
-                'discipline_name' => $contentProject->discipline?->name,
-                'created_by_name' => $contentProject->createdBy?->name,
-            ]),
+            'project' => $contentProject->toShowArray(),
             'generationLogs' => $generationLogs,
         ]);
     }
 
-    public function runResearch(RunCurriculumResearchRequest $request, ContentProject $contentProject): RedirectResponse
+    public function runResearch(RunCurriculumResearchRequest $request, ContentProject $contentProject): JsonResponse
     {
         Gate::authorize('update', $contentProject);
 
-        try {
-            $response = $this->projectService->runCurriculumResearch(
-                $contentProject,
-                $request->validated('document_text'),
-                $request->validated('model_id'),
-            );
-        } catch (\DomainException $e) {
-            return back()->with('error', $e->getMessage());
-        }
+        $jobId = Str::uuid()->toString();
 
-        if ($response->valid) {
-            return back()->with('success', "Curriculum parsed successfully — {$response->data['total_topics_found']} topics found.");
-        }
+        RunContentGeneration::dispatch(
+            $contentProject,
+            'research',
+            ['document_text' => $request->validated('document_text')],
+            $jobId,
+            $request->validated('model_id'),
+        );
 
-        return back()->with('error', $this->formatGenerationError($response, 'research'));
+        return response()->json(['job_id' => $jobId], 202);
     }
 
-    public function approveResearch(ApproveResearchRequest $request, ContentProject $contentProject): RedirectResponse
+    public function approveResearch(ApproveResearchRequest $request, ContentProject $contentProject): JsonResponse
     {
         Gate::authorize('update', $contentProject);
 
         try {
             $this->projectService->approveResearch($contentProject, $request->validated('topics'));
         } catch (\DomainException $e) {
-            return back()->with('error', $e->getMessage());
+            return response()->json(['message' => $e->getMessage()], 422);
         }
 
-        return back()->with('success', 'Research approved. You can now generate the scheme of work.');
+        return response()->json([
+            'project' => $contentProject->refresh()->toShowArray(),
+            'message' => 'Research approved.',
+        ]);
     }
 
-    public function runScheme(RunSchemeGenerationRequest $request, ContentProject $contentProject): RedirectResponse
+    public function runScheme(RunSchemeGenerationRequest $request, ContentProject $contentProject): JsonResponse
     {
         Gate::authorize('update', $contentProject);
 
-        try {
-            $response = $this->projectService->runSchemeGeneration(
-                $contentProject,
-                $request->validated(),
-                $request->validated('model_id'),
-            );
-        } catch (\DomainException $e) {
-            return back()->with('error', $e->getMessage());
-        }
+        $jobId = Str::uuid()->toString();
+        $context = collect($request->validated())->except('model_id')->all();
 
-        if ($response->valid) {
-            return back()->with('success', 'Scheme of work generated. Review and approve the allocation.');
-        }
+        RunContentGeneration::dispatch(
+            $contentProject,
+            'scheme',
+            $context,
+            $jobId,
+            $request->validated('model_id'),
+        );
 
-        return back()->with('error', $this->formatGenerationError($response, 'scheme'));
+        return response()->json(['job_id' => $jobId], 202);
     }
 
-    public function approveScheme(ApproveSchemeRequest $request, ContentProject $contentProject): RedirectResponse
+    public function approveScheme(ApproveSchemeRequest $request, ContentProject $contentProject): JsonResponse
     {
         Gate::authorize('update', $contentProject);
 
         try {
             $this->projectService->approveScheme($contentProject, $request->validated('terms'));
         } catch (\DomainException $e) {
-            return back()->with('error', $e->getMessage());
+            return response()->json(['message' => $e->getMessage()], 422);
         }
 
-        return back()->with('success', 'Scheme of work approved. You can now generate block structures.');
+        return response()->json([
+            'project' => $contentProject->refresh()->toShowArray(),
+            'message' => 'Scheme of work approved. You can now generate block structures.',
+        ]);
     }
 
-    public function runBlocks(RunBlockStructureRequest $request, ContentProject $contentProject): RedirectResponse
+    public function runBlocks(RunBlockStructureRequest $request, ContentProject $contentProject): JsonResponse
     {
         Gate::authorize('update', $contentProject);
 
-        try {
-            $response = $this->projectService->runBlockStructure(
-                $contentProject,
-                $request->validated('topic_key'),
-                $request->validated('model_id'),
-            );
-        } catch (\DomainException $e) {
-            return back()->with('error', $e->getMessage());
-        }
+        $jobId = Str::uuid()->toString();
 
-        if ($response->valid) {
-            return back()->with('success', 'Block structure generated. Review and approve.');
-        }
+        RunContentGeneration::dispatch(
+            $contentProject,
+            'blocks',
+            ['topic_key' => $request->validated('topic_key')],
+            $jobId,
+            $request->validated('model_id'),
+        );
 
-        return back()->with('error', $this->formatGenerationError($response, 'block structure'));
+        return response()->json(['job_id' => $jobId], 202);
     }
 
-    public function approveBlocks(ApproveBlockStructureRequest $request, ContentProject $contentProject): RedirectResponse
+    public function approveBlocks(ApproveBlockStructureRequest $request, ContentProject $contentProject): JsonResponse
     {
         Gate::authorize('update', $contentProject);
 
@@ -225,45 +211,79 @@ class ContentStudioController extends Controller
                 $request->validated(),
             );
         } catch (\DomainException $e) {
-            return back()->with('error', $e->getMessage());
+            return response()->json(['message' => $e->getMessage()], 422);
         }
 
-        return back()->with('success', 'Block structure approved. Topic and blocks created.');
+        return response()->json([
+            'project' => $contentProject->refresh()->toShowArray(),
+            'message' => 'Block structure approved. Topic and blocks created.',
+        ]);
     }
 
-    public function skipScheme(ContentProject $contentProject): RedirectResponse
+    public function skipScheme(ContentProject $contentProject): JsonResponse
     {
         Gate::authorize('update', $contentProject);
 
         try {
             $this->projectService->skipScheme($contentProject);
         } catch (\DomainException $e) {
-            return back()->with('error', $e->getMessage());
+            return response()->json(['message' => $e->getMessage()], 422);
         }
 
-        return back()->with('success', 'Scheme of work skipped. You can now generate block structures.');
+        return response()->json([
+            'project' => $contentProject->refresh()->toShowArray(),
+            'message' => 'Scheme of work skipped.',
+        ]);
     }
 
-    private function formatGenerationError(\App\DataTransferObjects\ContentResponse $response, string $stage): string
+    public function stream(ContentProject $contentProject, string $jobId): \Symfony\Component\HttpFoundation\StreamedResponse
     {
-        $errors = $response->validation_errors;
+        Gate::authorize('view', $contentProject);
 
-        if (isset($errors['api_error'])) {
-            return "AI provider error: {$errors['api_error']}";
-        }
+        return response()->stream(function () use ($contentProject, $jobId) {
+            @ob_implicit_flush(true);
+            while (ob_get_level()) {
+                ob_end_flush();
+            }
 
-        if (isset($errors['connection_error'])) {
-            return 'Could not reach AI provider. Check network or switch models.';
-        }
+            $lastEventIndex = 0;
 
-        if (isset($errors['config_error'])) {
-            return $errors['config_error'];
-        }
+            if (isset($_SERVER['HTTP_LAST_EVENT_ID'])) {
+                $lastEventIndex = (int) $_SERVER['HTTP_LAST_EVENT_ID'];
+            }
 
-        if (isset($errors['json_parse_error'])) {
-            return "AI returned malformed JSON for {$stage}. The generation log has the raw response.";
-        }
+            $startTime = time();
+            $maxDuration = 180;
 
-        return "Generated {$stage} failed schema validation. Check the generation log for details.";
+            while ((time() - $startTime) < $maxDuration) {
+                $events = Cache::get("cs_job:{$contentProject->id}:{$jobId}", []);
+                $newEvents = array_slice($events, $lastEventIndex);
+
+                foreach ($newEvents as $event) {
+                    echo "id: {$event['id']}\n";
+                    echo "event: {$event['type']}\n";
+                    echo 'data: '.json_encode($event['data'])."\n\n";
+
+                    $lastEventIndex = $event['id'];
+
+                    if (in_array($event['type'], ['complete', 'error'])) {
+                        return;
+                    }
+                }
+
+                echo ": ping\n\n";
+
+                if (connection_aborted()) {
+                    return;
+                }
+
+                usleep(2_000_000);
+            }
+        }, 200, [
+            'Content-Type' => 'text/event-stream',
+            'Cache-Control' => 'no-cache',
+            'Connection' => 'keep-alive',
+            'X-Accel-Buffering' => 'no',
+        ]);
     }
 }

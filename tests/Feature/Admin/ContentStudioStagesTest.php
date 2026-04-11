@@ -1,15 +1,15 @@
 <?php
 
-use App\DataTransferObjects\ContentResponse;
 use App\Enums\ContentProjectStatus;
 use App\Enums\UserRole;
+use App\Jobs\RunContentGeneration;
 use App\Models\CanonicalTopic;
 use App\Models\ContentBlock;
 use App\Models\ContentProject;
 use App\Models\LevelSubject;
 use App\Models\SchemeOfWorkItem;
 use App\Models\User;
-use App\Services\ContentGenerationService;
+use Illuminate\Support\Facades\Queue;
 
 it('prevents students from accessing stage endpoints', function () {
     $student = User::factory()->create(['role' => UserRole::Student]);
@@ -22,47 +22,23 @@ it('prevents students from accessing stage endpoints', function () {
         ->assertForbidden();
 });
 
-it('runs curriculum research and stores results', function () {
+it('dispatches research job and returns 202', function () {
+    Queue::fake();
+
     $user = User::factory()->admin()->create();
     $project = ContentProject::factory()->create(['created_by' => $user->id]);
-
-    $mockData = [
-        'education_level' => 'SS1',
-        'subject' => 'Physics',
-        'total_topics_found' => 2,
-        'source_confidence' => 'medium',
-        'terms' => [
-            ['term_number' => 1, 'term_label' => 'First Term', 'topics' => [
-                ['sequence' => 1, 'title' => 'Topic A', 'sub_topics' => [], 'estimated_hours' => 3, 'practical_component' => false, 'waec_alignment_note' => null],
-                ['sequence' => 2, 'title' => 'Topic B', 'sub_topics' => ['sub1'], 'estimated_hours' => 4, 'practical_component' => true, 'waec_alignment_note' => null],
-            ]],
-        ],
-        'lab_work_summary' => null,
-        'conflicts' => [],
-        'missing_data' => [],
-    ];
-
-    $mock = Mockery::mock(ContentGenerationService::class);
-    $mock->shouldReceive('generate')->once()->andReturn(new ContentResponse(
-        valid: true,
-        data: $mockData,
-        raw_response: json_encode($mockData),
-        model_used: 'test',
-        tokens_used: 100,
-        input_tokens: 50,
-        output_tokens: 50,
-    ));
-    $this->app->instance(ContentGenerationService::class, $mock);
 
     $this->actingAs($user)
         ->postJson(route('admin.content-studio.run-research', $project), [
             'document_text' => str_repeat('Curriculum content here. ', 50),
         ])
-        ->assertRedirect();
+        ->assertAccepted()
+        ->assertJsonStructure(['job_id']);
 
-    $project->refresh();
-    expect($project->status)->toBe(ContentProjectStatus::Research)
-        ->and($project->ai_context['research']['total_topics_found'])->toBe(2);
+    Queue::assertPushed(RunContentGeneration::class, function ($job) use ($project) {
+        return $job->project->id === $project->id
+            && $job->promptType === 'research';
+    });
 });
 
 it('rejects research with invalid document text', function () {
@@ -87,13 +63,16 @@ it('approves research with edited topics', function () {
                 ['title' => 'Topic A', 'sub_topics' => [], 'term_number' => 1, 'sequence' => 1, 'estimated_hours' => 3, 'practical_component' => false, 'waec_alignment_note' => null],
             ],
         ])
-        ->assertRedirect();
+        ->assertOk()
+        ->assertJsonStructure(['project', 'message']);
 
     $project->refresh();
     expect($project->ai_context['research_approved'])->toHaveCount(1);
 });
 
-it('rejects scheme generation when research is not approved', function () {
+it('dispatches scheme job when research is not yet approved', function () {
+    Queue::fake();
+
     $user = User::factory()->admin()->create();
     $project = ContentProject::factory()->withResearch()->create(['created_by' => $user->id]);
 
@@ -102,8 +81,10 @@ it('rejects scheme generation when research is not approved', function () {
             'terms_count' => 3,
             'weeks_per_term' => 10,
         ])
-        ->assertRedirect()
-        ->assertSessionHas('error');
+        ->assertAccepted()
+        ->assertJsonStructure(['job_id']);
+
+    Queue::assertPushed(RunContentGeneration::class);
 });
 
 it('approves scheme and creates scheme of work items', function () {
@@ -123,7 +104,8 @@ it('approves scheme and creates scheme of work items', function () {
                 ],
             ],
         ])
-        ->assertRedirect();
+        ->assertOk()
+        ->assertJsonStructure(['project', 'message']);
 
     $project->refresh();
     expect($project->status)->toBe(ContentProjectStatus::Structuring);
@@ -152,7 +134,8 @@ it('allows tertiary projects to skip scheme', function () {
 
     $this->actingAs($user)
         ->postJson(route('admin.content-studio.skip-scheme', $project))
-        ->assertRedirect();
+        ->assertOk()
+        ->assertJsonStructure(['project', 'message']);
 
     $project->refresh();
     expect($project->status)->toBe(ContentProjectStatus::Structuring);
@@ -177,7 +160,8 @@ it('approves block structure and creates topic with blocks', function () {
                 ['title' => 'Summary', 'slug' => 'summary', 'block_type' => 'reference', 'is_container' => false, 'depth_level' => 1, 'parent_index' => 0, 'sort_order' => 4, 'estimated_read_time' => 3, 'difficulty_level' => 'beginner', 'bloom_level' => 'remember', 'visualization' => ['recommended' => false], 'content_guidance' => 'Key terms.'],
             ],
         ])
-        ->assertRedirect();
+        ->assertOk()
+        ->assertJsonStructure(['project', 'message']);
 
     $topic = CanonicalTopic::query()->where('slug', 'introduction-to-physics')->first();
     expect($topic)->not->toBeNull();

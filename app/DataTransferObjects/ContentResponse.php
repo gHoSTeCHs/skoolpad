@@ -14,5 +14,6 @@ class ContentResponse
         public readonly float $generation_time_ms = 0,
         public readonly int $input_tokens = 0,
         public readonly int $output_tokens = 0,
+        public readonly ?string $generation_log_id = null,
     ) {}
 }
