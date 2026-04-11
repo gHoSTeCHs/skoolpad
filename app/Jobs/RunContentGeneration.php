@@ -33,9 +33,7 @@ class RunContentGeneration implements ShouldQueue
         public readonly array $context,
         public readonly string $jobId,
         public readonly ?string $modelId = null,
-    ) {
-        $this->onQueue('content-studio');
-    }
+    ) {}
 
     public function handle(ContentProjectService $projectService): void
     {

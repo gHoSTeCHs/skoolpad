@@ -219,7 +219,7 @@ it('formats json parse error with stage label', function () {
     expect($lastEvent['data']['message'])->toContain('malformed JSON for research');
 });
 
-it('assigns to content-studio queue', function () {
+it('uses the default queue', function () {
     $project = createProjectWithResearch();
 
     $job = new RunContentGeneration(
@@ -229,5 +229,5 @@ it('assigns to content-studio queue', function () {
         'test-job-id',
     );
 
-    expect($job->queue)->toBe('content-studio');
+    expect($job->queue)->toBeNull();
 });
