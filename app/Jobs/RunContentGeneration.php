@@ -12,6 +12,7 @@ use Illuminate\Foundation\Bus\Dispatchable;
 use Illuminate\Queue\InteractsWithQueue;
 use Illuminate\Queue\SerializesModels;
 use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\Log;
 
 class RunContentGeneration implements ShouldQueue
 {
@@ -37,9 +38,23 @@ class RunContentGeneration implements ShouldQueue
 
     public function handle(ContentProjectService $projectService): void
     {
+        $startedAt = microtime(true);
+
+        Log::info('[ContentStudio] Job started', [
+            'job_id' => $this->jobId,
+            'project_id' => $this->project->id,
+            'prompt_type' => $this->promptType,
+            'model_id' => $this->modelId,
+        ]);
+
         try {
             $this->project->refresh();
         } catch (\Illuminate\Database\Eloquent\ModelNotFoundException) {
+            Log::warning('[ContentStudio] Project deleted before job execution', [
+                'job_id' => $this->jobId,
+                'project_id' => $this->project->id,
+            ]);
+
             $this->writeEvent('error', [
                 'stage' => $this->promptType,
                 'message' => 'Project was deleted while generation was pending.',
@@ -57,6 +72,8 @@ class RunContentGeneration implements ShouldQueue
         try {
             $response = $this->callService($projectService);
 
+            $elapsedMs = (int) ((microtime(true) - $startedAt) * 1000);
+
             if ($response->valid) {
                 $logEntry = $response->generation_log_id
                     ? AIGenerationLog::query()
@@ -64,18 +81,43 @@ class RunContentGeneration implements ShouldQueue
                         ->find($response->generation_log_id)
                     : null;
 
+                Log::info('[ContentStudio] Job completed successfully', [
+                    'job_id' => $this->jobId,
+                    'project_id' => $this->project->id,
+                    'prompt_type' => $this->promptType,
+                    'tokens_used' => $logEntry?->tokens_used,
+                    'elapsed_ms' => $elapsedMs,
+                ]);
+
                 $this->writeEvent('complete', [
                     'stage' => $this->promptType,
                     'project' => $this->project->refresh()->toShowArray(),
                     'log_entry' => $logEntry?->toArray(),
                 ]);
             } else {
+                $errorMessage = $this->formatError($response);
+
+                Log::warning('[ContentStudio] Job generation failed', [
+                    'job_id' => $this->jobId,
+                    'project_id' => $this->project->id,
+                    'prompt_type' => $this->promptType,
+                    'elapsed_ms' => $elapsedMs,
+                    'message' => $errorMessage,
+                ]);
+
                 $this->writeEvent('error', [
                     'stage' => $this->promptType,
-                    'message' => $this->formatError($response),
+                    'message' => $errorMessage,
                 ]);
             }
         } catch (\DomainException $e) {
+            Log::warning('[ContentStudio] Job rejected by domain guard', [
+                'job_id' => $this->jobId,
+                'project_id' => $this->project->id,
+                'prompt_type' => $this->promptType,
+                'message' => $e->getMessage(),
+            ]);
+
             $this->writeEvent('error', [
                 'stage' => $this->promptType,
                 'message' => $e->getMessage(),
@@ -85,6 +127,14 @@ class RunContentGeneration implements ShouldQueue
 
     public function failed(?\Throwable $exception): void
     {
+        Log::error('[ContentStudio] Job failed (uncaught exception)', [
+            'job_id' => $this->jobId,
+            'project_id' => $this->project->id,
+            'prompt_type' => $this->promptType,
+            'exception' => $exception?->getMessage(),
+            'trace' => $exception?->getTraceAsString(),
+        ]);
+
         $this->writeEvent('error', [
             'stage' => $this->promptType,
             'message' => 'Job failed: '.($exception?->getMessage() ?? 'Unknown error'),
