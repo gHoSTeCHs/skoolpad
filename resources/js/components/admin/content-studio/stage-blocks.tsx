@@ -26,7 +26,7 @@ import {
 } from '@/components/ui/card';
 import { Separator } from '@/components/ui/separator';
 import { useGenerationStream } from '@/hooks/use-generation-stream';
-import { csPost, streamUrl } from '@/lib/content-studio';
+import { csPost } from '@/lib/content-studio';
 import { slugify } from '@/lib/slug';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import type {
@@ -124,7 +124,8 @@ function BlockDetailPanel({
                 },
             );
             startStream(
-                streamUrl(project.id, job_id),
+                project.id,
+                job_id,
                 (updatedProject, logEntry) => {
                     onProjectUpdate(updatedProject);
                     if (logEntry) onLogAppend(logEntry);
@@ -329,7 +330,8 @@ export function StageBlocks({ project, aiModels, isActive, onProjectUpdate, onLo
                 },
             );
             startStream(
-                streamUrl(project.id, job_id),
+                project.id,
+                job_id,
                 (updatedProject, logEntry) => {
                     onProjectUpdate(updatedProject);
                     if (logEntry) onLogAppend(logEntry);

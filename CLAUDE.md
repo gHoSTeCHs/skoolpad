@@ -1,288 +1,253 @@
-<laravel-boost-guidelines>
-=== foundation rules ===
+# Skoolpad
 
-# Laravel Boost Guidelines
+Nigerian educational platform for tertiary (university/polytechnic/college) and secondary school students. Provides question practice with 16 question types, spaced repetition (SM-2), content management, exam preparation, CGPA simulation, guided study plans, and gamification (XP, badges, streaks, leaderboards). Monetization via Paystack subscription tiers gating answer depth levels and daily AI/OCR limits.
 
-The Laravel Boost guidelines are specifically curated by Laravel maintainers for this application. These guidelines should be followed closely to ensure the best experience when building Laravel applications.
+## Dev Commands
 
-## Foundational Context
-
-This application is a Laravel application and its main Laravel ecosystems package & versions are below. You are an expert with them all. Ensure you abide by these specific packages & versions.
-
-- php - 8.3.12
-- inertiajs/inertia-laravel (INERTIA) - v2
-- laravel/fortify (FORTIFY) - v1
-- laravel/framework (LARAVEL) - v12
-- laravel/prompts (PROMPTS) - v0
-- laravel/wayfinder (WAYFINDER) - v0
-- laravel/mcp (MCP) - v0
-- laravel/pint (PINT) - v1
-- laravel/sail (SAIL) - v1
-- pestphp/pest (PEST) - v4
-- phpunit/phpunit (PHPUNIT) - v12
-- @inertiajs/react (INERTIA) - v2
-- react (REACT) - v19
-- tailwindcss (TAILWINDCSS) - v4
-- @laravel/vite-plugin-wayfinder (WAYFINDER) - v0
-- eslint (ESLINT) - v9
-- prettier (PRETTIER) - v3
-
-## Conventions
-
-- You must follow all existing code conventions used in this application. When creating or editing a file, check sibling files for the correct structure, approach, and naming.
-- Use descriptive names for variables and methods. For example, `isRegisteredForDiscounts`, not `discount()`.
-- Check for existing components to reuse before writing a new one.
-
-## Verification Scripts
-
-- Do not create verification scripts or tinker when tests cover that functionality and prove they work. Unit and feature tests are more important.
-
-## Application Structure & Architecture
-
-- Stick to existing directory structure; don't create new base folders without approval.
-- Do not change the application's dependencies without approval.
-
-## Frontend Bundling
-
-- If the user doesn't see a frontend change reflected in the UI, it could mean they need to run `npm run build`, `npm run dev`, or `composer run dev`. Ask them.
-
-## Documentation Files
-
-- You must only create documentation files if explicitly requested by the user.
-
-## Replies
-
-- Be concise in your explanations - focus on what's important rather than explaining obvious details.
-
-=== boost rules ===
-
-# Laravel Boost
-
-- Laravel Boost is an MCP server that comes with powerful tools designed specifically for this application. Use them.
-
-## Artisan
-
-- Use the `list-artisan-commands` tool when you need to call an Artisan command to double-check the available parameters.
-
-## URLs
-
-- Whenever you share a project URL with the user, you should use the `get-absolute-url` tool to ensure you're using the correct scheme, domain/IP, and port.
-
-## Tinker / Debugging
-
-- You should use the `tinker` tool when you need to execute PHP to debug code or query Eloquent models directly.
-- Use the `database-query` tool when you only need to read from the database.
-- Use the `database-schema` tool to inspect table structure before writing migrations or models.
-
-## Reading Browser Logs With the `browser-logs` Tool
-
-- You can read browser logs, errors, and exceptions using the `browser-logs` tool from Boost.
-- Only recent browser logs will be useful - ignore old logs.
-
-## Searching Documentation (Critically Important)
-
-- Boost comes with a powerful `search-docs` tool you should use before trying other approaches when working with Laravel or Laravel ecosystem packages. This tool automatically passes a list of installed packages and their versions to the remote Boost API, so it returns only version-specific documentation for the user's circumstance. You should pass an array of packages to filter on if you know you need docs for particular packages.
-- Search the documentation before making code changes to ensure we are taking the correct approach.
-- Use multiple, broad, simple, topic-based queries at once. For example: `['rate limiting', 'routing rate limiting', 'routing']`. The most relevant results will be returned first.
-- Do not add package names to queries; package information is already shared. For example, use `test resource table`, not `filament 4 test resource table`.
-
-### Available Search Syntax
-
-1. Simple Word Searches with auto-stemming - query=authentication - finds 'authenticate' and 'auth'.
-2. Multiple Words (AND Logic) - query=rate limit - finds knowledge containing both "rate" AND "limit".
-3. Quoted Phrases (Exact Position) - query="infinite scroll" - words must be adjacent and in that order.
-4. Mixed Queries - query=middleware "rate limit" - "middleware" AND exact phrase "rate limit".
-5. Multiple Queries - queries=["authentication", "middleware"] - ANY of these terms.
-
-=== php rules ===
-
-# PHP
-
-- Always use curly braces for control structures, even for single-line bodies.
-
-## Constructors
-
-- Use PHP 8 constructor property promotion in `__construct()`.
-    - `public function __construct(public GitHub $github) { }`
-- Do not allow empty `__construct()` methods with zero parameters unless the constructor is private.
-
-## Type Declarations
-
-- Always use explicit return type declarations for methods and functions.
-- Use appropriate PHP type hints for method parameters.
-
-<!-- Explicit Return Types and Method Params -->
-```php
-protected function isAccessible(User $user, ?string $path = null): bool
-{
-    ...
-}
+```bash
+composer run dev               # Full dev (both servers)
+php artisan test --compact     # Run Pest tests (compact output)
+php artisan test --compact --filter=testName  # Run specific test
+vendor/bin/pint --dirty --format agent        # Fix code style (dirty files only)
+npm run build                  # Production frontend build
 ```
 
-## Enums
+## Institution Scoping (IMPORTANT)
 
-- Typically, keys in an Enum should be TitleCase. For example: `FavoritePerson`, `BestLake`, `Monthly`.
+There is NO formal multi-tenancy package, NO global scopes, NO tenant middleware. Institution scoping is manual and relationship-based:
 
-## Comments
+- `StudentProfile` has `institution_id` FK → Institution
+- `InstitutionCourse` has `institution_id` FK → Institution
+- `Faculty` has `institution_id` FK → Institution
+- Controllers manually filter with `->where('institution_id', ...)` or `->whereHas(...)`
+- Student enrollment chains through: StudentProfile → StudentCourse → InstitutionCourse → Institution
 
-- Prefer PHPDoc blocks over inline comments. Never use comments within the code itself unless the logic is exceptionally complex.
+Content has a dual scope model:
 
-## PHPDoc Blocks
+- **Platform-wide**: CanonicalTopic, ContentBlock, Discipline (not institution-scoped)
+- **Institution-scoped**: InstitutionCourse, Faculty, Department, CourseTopicMapping
 
-- Add useful array shape type definitions when appropriate.
+Students can browse cross-institution content via `browse_all` flag, but their enrolled courses are institution-scoped.
 
-=== tests rules ===
+### InstitutionModerator Scoping (TBD)
 
-# Test Enforcement
-
-- Every change must be programmatically tested. Write a new test or update an existing test, then run the affected tests to make sure they pass.
-- Run the minimum number of tests needed to ensure code quality and speed. Use `php artisan test --compact` with a specific filename or filter.
-
-=== inertia-laravel/core rules ===
-
-# Inertia
-
-- Inertia creates fully client-side rendered SPAs without modern SPA complexity, leveraging existing server-side patterns.
-- Components live in `resources/js/pages` (unless specified in `vite.config.js`). Use `Inertia::render()` for server-side routing instead of Blade views.
-- ALWAYS use `search-docs` tool for version-specific Inertia documentation and updated code examples.
-- IMPORTANT: Activate `inertia-react-development` when working with Inertia client-side patterns.
-
-=== inertia-laravel/v2 rules ===
-
-# Inertia v2
-
-- Use all Inertia features from v1 and v2. Check the documentation before making changes to ensure the correct approach.
-- New features: deferred props, infinite scrolling (merging props + `WhenVisible`), lazy loading on scroll, polling, prefetching.
-- When using deferred props, add an empty state with a pulsing or animated skeleton.
-
-=== laravel/core rules ===
-
-# Do Things the Laravel Way
-
-- Use `php artisan make:` commands to create new files (i.e. migrations, controllers, models, etc.). You can list available Artisan commands using the `list-artisan-commands` tool.
-- If you're creating a generic PHP class, use `php artisan make:class`.
-- Pass `--no-interaction` to all Artisan commands to ensure they work without user input. You should also pass the correct `--options` to ensure correct behavior.
-
-## Database
-
-- Always use proper Eloquent relationship methods with return type hints. Prefer relationship methods over raw queries or manual joins.
-- Use Eloquent models and relationships before suggesting raw database queries.
-- Avoid `DB::`; prefer `Model::query()`. Generate code that leverages Laravel's ORM capabilities rather than bypassing them.
-- Generate code that prevents N+1 query problems by using eager loading.
-- Use Laravel's query builder for very complex database operations.
-
-### Model Creation
-
-- When creating new models, create useful factories and seeders for them too. Ask the user if they need any other things, using `list-artisan-commands` to check the available options to `php artisan make:model`.
-
-### APIs & Eloquent Resources
-
-- For APIs, default to using Eloquent API Resources and API versioning unless existing API routes do not, then you should follow existing application convention.
-
-## Controllers & Validation
-
-- Always create Form Request classes for validation rather than inline validation in controllers. Include both validation rules and custom error messages.
-- Check sibling Form Requests to see if the application uses array or string based validation rules.
+The `manage_scoped_*` permissions exist in the UserRole enum but the actual mechanism for assigning moderators to institutions is not yet built. No `moderator_institution_id` or pivot table exists yet.
 
 ## Authentication & Authorization
 
-- Use Laravel's built-in authentication and authorization features (gates, policies, Sanctum, etc.).
+### Auth Stack
 
-## URL Generation
+Fortify (session-based, no Sanctum/API tokens). New users always register as `Student` role.
 
-- When generating links to other pages, prefer named routes and the `route()` function.
+### Role System (Enum-Driven, NOT Spatie)
 
-## Queues
+All authorization flows through `UserRole` enum methods. No Spatie packages. Only one Policy exists (QuestionPolicy).
 
-- Use queued jobs for time-consuming operations with the `ShouldQueue` interface.
+| Role                 | Level | Staff? | Key Permissions                                          |
+| -------------------- | ----- | ------ | -------------------------------------------------------- |
+| SuperAdmin           | 999   | Yes    | Everything (22 permissions)                              |
+| ContentManager       | 100   | Yes    | Topics, courses, questions, publishing, bulk import      |
+| InstitutionModerator | 70    | Yes    | Scoped courses/questions/submissions (scoping TBD)       |
+| ContentReviewer      | 60    | Yes    | Review submissions, view content analytics               |
+| CommunityModerator   | 50    | Yes    | Reported content, user flags                             |
+| Student              | 10    | No     | View/practice content, submit contributions, own profile |
 
-## Configuration
+Secondary roles: Users can hold a `secondary_role` (e.g., Student + ContentReviewer), but authorization currently only checks the primary `role` field.
 
-- Use environment variables only in configuration files - never use the `env()` function directly outside of config files. Always use `config('app.name')`, not `env('APP_NAME')`.
+### Middleware
 
-## Testing
+| Alias        | Class                    | Purpose                                                 |
+| ------------ | ------------------------ | ------------------------------------------------------- |
+| `onboarded`  | EnsureOnboardingComplete | Redirects students without StudentProfile to onboarding |
+| `staff`      | EnsureUserIsStaff        | 403 if not staff role                                   |
+| `permission` | EnsureUserHasPermission  | 403 if role lacks specified permission                  |
 
-- When creating models for tests, use the factories for the models. Check if the factory has custom states that can be used before manually setting up the model.
-- Faker: Use methods such as `$this->faker->word()` or `fake()->randomDigit()`. Follow existing conventions whether to use `$this->faker` or `fake()`.
-- When creating tests, make use of `php artisan make:test [options] {name}` to create a feature test, and pass `--unit` to create a unit test. Most tests should be feature tests.
+### Route Protection
 
-## Vite Error
+| Routes             | Middleware                |
+| ------------------ | ------------------------- |
+| Student features   | auth, verified, onboarded |
+| Admin (`/admin/*`) | auth, verified, staff     |
+| Settings           | auth, verified            |
+| Onboarding         | auth, verified            |
 
-- If you receive an "Illuminate\Foundation\ViteException: Unable to locate file in Vite manifest" error, you can run `npm run build` or ask the user to run `npm run dev` or `composer run dev`.
+## Student System
 
-=== laravel/v12 rules ===
+### Two Student Types
 
-# Laravel 12
+StudentProfile branches into two completely different flows:
 
-- CRITICAL: ALWAYS use `search-docs` tool for version-specific Laravel documentation and updated code examples.
-- Since Laravel 11, Laravel has a new streamlined file structure which this project uses.
+**Tertiary**: institution_id, faculty_id, department_id, level (100L–700L), matric_number, admission_year
+**Secondary**: institution_type_id, education_system_id, education_level_id, stream_id, school_name, state_or_region
 
-## Laravel 12 Structure
+Check with `$profile->isTertiary()` / `$profile->isSecondary()`. Dashboard, course enrollment, and study plan logic all branch on student type.
 
-- In Laravel 12, middleware are no longer registered in `app/Http/Kernel.php`.
-- Middleware are configured declaratively in `bootstrap/app.php` using `Application::configure()->withMiddleware()`.
-- `bootstrap/app.php` is the file to register middleware, exceptions, and routing files.
-- `bootstrap/providers.php` contains application specific service providers.
-- The `app\Console\Kernel.php` file no longer exists; use `bootstrap/app.php` or `routes/console.php` for console configuration.
-- Console commands in `app/Console/Commands/` are automatically available and do not require manual registration.
+### Onboarding
 
-## Database
+13-step onboarding flow (CompleteOnboardingRequest) with tertiary vs secondary branching. Creates StudentProfile, enrolls in suggested courses, sets exam goals and study preferences. Student cannot access main app until onboarded (enforced by `onboarded` middleware).
 
-- When modifying a column, the migration must include all of the attributes that were previously defined on the column. Otherwise, they will be dropped and lost.
-- Laravel 12 allows limiting eagerly loaded records natively, without external packages: `$query->latest()->limit(10);`.
+### Practice Engine
 
-### Models
+PracticeService is the core learning engine:
 
-- Casts can and likely should be set in a `casts()` method on a model rather than the `$casts` property. Follow existing conventions from other models.
+1. `createSession()` — Config: course, topics, difficulty, type, mode, count, time limit
+2. `selectQuestions()` — Smart filtering, excludes recently-correct for spaced repetition
+3. `submitAnswer()` — Auto-grades 12 of 16 question types
+4. `completeSession()` — Final score, triggers spaced repetition scheduling
 
-=== wayfinder/core rules ===
+**8 Practice Modes**: Timed, Untimed, Review, SpeedDrill, WeakTopic, YearWalk, RandomMix, FullMock
 
-# Laravel Wayfinder
+**Auto-Gradable** (12): MCQ, MultiSelectMcq, TrueFalse, FillBlank, Cloze, Matching, Ordering, DiagramLabel, Calculation, NumericEntry, AssertionReason, MatrixMatching
+**Manual-Grade** (4): Theory, ShortAnswer, Essay, Group
 
-Wayfinder generates TypeScript functions for Laravel routes. Import from `@/actions/` (controllers) or `@/routes/` (named routes).
+### Spaced Repetition (SM-2)
 
-- IMPORTANT: Activate `wayfinder-development` skill whenever referencing backend routes in frontend components.
-- Invokable Controllers: `import StorePost from '@/actions/.../StorePostController'; StorePost()`.
-- Parameter Binding: Detects route keys (`{post:slug}`) — `show({ slug: "my-post" })`.
-- Query Merging: `show(1, { mergeQuery: { page: 2, sort: null } })` merges with current URL, `null` removes params.
-- Inertia: Use `.form()` with `<Form>` component or `form.submit(store())` with useForm.
+SpacedRepetitionService: ease_factor (default 2.50), interval_days, repetition_count. Items cycle through Active → Graduated → Suspended.
 
-=== pint/core rules ===
+### Guided Study
 
-# Laravel Pint Code Formatter
+GuidedStudyService builds daily plans with 4 priority tiers:
 
-- You must run `vendor/bin/pint --dirty --format agent` before finalizing changes to ensure your code matches the project's expected style.
-- Do not run `vendor/bin/pint --test --format agent`, simply run `vendor/bin/pint --format agent` to fix any formatting issues.
+1. Spaced repetition reviews (highest)
+2. Scheme of work items for current term/week
+3. Weak topics (remediation)
+4. Next unread content blocks
 
-=== pest/core rules ===
+## Content System
 
-## Pest
+### Content Hierarchy
 
-- This project uses Pest for testing. Create tests: `php artisan make:test --pest {name}`.
-- Run tests: `php artisan test --compact` or filter: `php artisan test --compact --filter=testName`.
-- Do NOT delete tests without approval.
-- CRITICAL: ALWAYS use `search-docs` tool for version-specific Pest documentation and updated code examples.
-- IMPORTANT: Activate `pest-testing` every time you're working with a Pest or testing-related task.
+```
+Discipline (Computer Science, Engineering, etc.)
+└── CanonicalTopic (platform-wide, not institution-scoped)
+    └── ContentBlock (hierarchical, max depth 5, types: container/text/code/diagram/example/exercise/quiz/reference/comparison)
+        └── Prerequisites (block-to-block, hard vs soft)
+```
 
-=== inertia-react/core rules ===
+### Question System
 
-# Inertia + React
+Questions can belong to InstitutionCourse OR ExamSubject (XOR constraint — never both). 16 question types defined in QuestionType enum. Questions have status lifecycle: Draft → InReview → Published → Archived.
 
-- IMPORTANT: Activate `inertia-react-development` when working with Inertia React client-side patterns.
+**QuestionAnswer** provides answers at multiple depth levels (quick, standard, deep_dive). One answer per depth per question. Depth access is gated by subscription tier when monetization is enabled.
 
-=== tailwindcss/core rules ===
+### Content Submission Pipeline
 
-# Tailwind CSS
+Students can submit: Questions, Corrections, TopicContent, PastQuestionUploads. Flow: Pending → Approved/Rejected via ContentReviewService. Approved question submissions become actual Question records.
 
-- Always use existing Tailwind conventions; check project patterns before adding new ones.
-- IMPORTANT: Always use `search-docs` tool for version-specific Tailwind CSS documentation and updated code examples. Never rely on training data.
-- IMPORTANT: Activate `tailwindcss-development` every time you're working with a Tailwind CSS or styling-related task.
+## Academic Structure
 
-=== laravel/fortify rules ===
+```
+Country
+├── Institution
+│   ├── Faculty → Department
+│   ├── InstitutionCourse → CourseDepartmentOffering
+│   │   ├── CourseTopicMapping (syllabus: topic sequence + weight)
+│   │   ├── CourseBlockMapping (teaching depth per block)
+│   │   └── SchemeOfWorkItem (term/week schedule)
+│   └── CalendarTerm (academic year terms)
+├── EducationSystem (NERDC, WAEC, etc.)
+│   ├── CurriculumTier → EducationLevel
+│   ├── Stream (Science, Commerce, Arts)
+│   ├── CurriculumSubject → LevelSubject
+│   └── AssessmentType → AssessmentSubject
+├── ExamType (JAMB, WAEC, NECO — legacy) → ExamSubject
+├── InstitutionType (level_progression, credit_system, grading_scale)
+└── GradingScale (CGPA, GPA, percentage, letter, points, classification)
+```
 
-# Laravel Fortify
+## Gamification
 
-- Fortify is a headless authentication backend that provides authentication routes and controllers for Laravel applications.
-- IMPORTANT: Always use the `search-docs` tool for detailed Laravel Fortify patterns and documentation.
-- IMPORTANT: Activate `developing-with-fortify` skill when working with Fortify authentication features.
-</laravel-boost-guidelines>
+- **UserLevel**: current_xp, current_level, streak_days, longest_streak, streak_freeze
+- **XpTransaction**: action-based XP awards with polymorphic reference
+- **ContributionStat**: tracks student content submissions → ContributionBadge tiers
+- **Leaderboard**: weekly_xp, rank, scoped by class_level
+- **Badge/UserBadge**: Achievement system with requirement_type/value thresholds
+- **CgpaSimulation**: what-if CGPA calculator
+
+## Subscription & Monetization
+
+Controlled by `config('skoolpad.monetization_enabled')` (env: `SKOOLPAD_MONETIZATION_ENABLED`).
+
+When disabled: all users get Quick answer depth only.
+When enabled: AnswerDepthService checks active subscription plan features JSON:
+
+```json
+{
+    "daily_ocr": 5,
+    "daily_ai_messages": 10,
+    "daily_gradings": 20,
+    "answer_depths": ["quick", "standard"]
+}
+```
+
+Paystack integration is model-ready (plan codes, subscription codes, customer codes on models) but webhook controllers/services are not yet implemented.
+
+Parent-paid subscriptions supported via `UserSubscription.paid_by` FK.
+
+## Design System
+
+Three appearance modes (not just light/dark):
+
+| Mode                      | Heading Font        | Body Font      | Background           | Primary              |
+| ------------------------- | ------------------- | -------------- | -------------------- | -------------------- |
+| Light (Warm Editorial)    | Bricolage Grotesque | DM Sans        | Warm beige           | #1A6B4F (deep green) |
+| Dark (Warm Editorial)     | Bricolage Grotesque | DM Sans        | #161210 (dark brown) | #1A6B4F              |
+| Reader (Midnight Scholar) | Outfit              | Source Serif 4 | #0A1929 (deep blue)  | #3EBD93 (teal)       |
+
+Custom Tailwind variant for Reader mode: `@custom-variant reader (&:is(.reader *));`
+
+Palette names: Canopy (green), Ember (orange/rust), Honey (yellow/amber). 60+ semantic CSS tokens per mode.
+
+## Frontend Specifics
+
+### Key Libraries (beyond standard stack)
+
+- **Tiptap** — Rich text editor (math/KaTeX, code highlighting, tables, images)
+- **Recharts** — Data visualization
+- **dnd-kit** — Drag and drop (reordering blocks, sections)
+- **i18next** — Internationalization
+- **shadcn/ui** — Component primitives (Radix UI)
+
+### Shared Hooks
+
+| Hook                  | Purpose                                     |
+| --------------------- | ------------------------------------------- |
+| `useAppearance()`     | Theme management (light/dark/reader/system) |
+| `useFilterHandlers()` | URL-based filtering for index pages         |
+| `useSlug()`           | Slug generation from titles                 |
+| `useMobile()`         | Responsive breakpoint detection             |
+| `useInitials()`       | Name initials extraction                    |
+
+### SSOT Form Components
+
+All forms use `FormField`, `FormWrapper`, `FormPageLayout` components. Don't create new form wrappers.
+
+### Type Files (26 files, 380+ types)
+
+Key files: `models.ts` (core), `enums.ts`, `questions.ts` (16 type configs), `practice.ts`, `courses.ts`, `student-courses.ts`, `topics.ts`, `student-topics.ts`, `onboarding.ts` (13 steps), `auth.ts`, `dashboard.ts`, `guided-study.ts`
+
+### State Management
+
+No Redux/Zustand. Inertia shared data + URL state (useFilterHandlers) + useForm + localStorage for appearance only.
+
+## Not Yet Implemented
+
+- Paystack webhook controllers/payment processing
+- InstitutionModerator → Institution assignment mechanism
+- Events, Notifications, Observers (none exist)
+- AI/ML integration (no API keys configured)
+- Voting/Election module (Phase 3.5 — no code exists)
+
+## Extra Quality Checks (Skoolpad-Specific)
+
+Beyond global quality gates, verify on every PR:
+
+- [ ] Institution-scoped queries explicitly filter by institution_id
+- [ ] Student type branching (tertiary vs secondary) handled in both backend and frontend
+- [ ] Question type handling covers all 16 types or explicitly throws for unsupported
+- [ ] Content status lifecycle respected (Draft → InReview → Published → Archived)
+- [ ] Answer depth access checks go through AnswerDepthService
+- [ ] All three appearance modes tested (Light, Dark, Reader)
+- [ ] Onboarding flow changes tested for both student types
+- [ ] Practice engine changes have Pest tests with known input→output
+- [ ] Spaced repetition scheduling verified after practice completion

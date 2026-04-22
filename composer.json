@@ -13,6 +13,7 @@
         "inertiajs/inertia-laravel": "^2.0",
         "laravel/fortify": "^1.30",
         "laravel/framework": "^12.0",
+        "laravel/reverb": "^1.0",
         "laravel/tinker": "^2.10.1",
         "laravel/wayfinder": "^0.1.9"
     },
@@ -50,7 +51,7 @@
         ],
         "dev": [
             "Composer\\Config::disableProcessTimeout",
-            "npx concurrently -c \"#93c5fd,#c4b5fd,#fdba74\" --kill-others-on-fail \"php artisan serve  --port=8673\" \"php artisan queue:work --tries=1 --verbose\" \"npm run dev -- --port 5673\" --names='server,queue,vite'"
+            "npx concurrently -c \"#93c5fd,#c4b5fd,#fdba74,#fb7185\" --kill-others-on-fail \"php artisan serve  --port=8673\" \"php artisan queue:work --tries=1 --verbose\" \"npm run dev -- --port 5673\" \"php artisan reverb:start\" --names='server,queue,vite,reverb'"
         ],
         "dev:ssr": [
             "npm run build:ssr",

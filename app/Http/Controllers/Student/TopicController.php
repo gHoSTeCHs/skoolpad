@@ -26,9 +26,11 @@ class TopicController extends Controller
     use Paginates;
 
     public function __construct(
-        private PrerequisiteGapService $prerequisiteService,
-        private TopicBrowseService $topicBrowseService,
-    ) {}
+        private readonly PrerequisiteGapService $prerequisiteService,
+        private TopicBrowseService              $topicBrowseService,
+    )
+    {
+    }
 
     public function browse(Request $request): Response
     {
@@ -68,7 +70,7 @@ class TopicController extends Controller
             ->get();
 
         $disciplines = Discipline::query()
-            ->whereHas('canonicalTopics', fn ($q) => $q->published()
+            ->whereHas('canonicalTopics', fn($q) => $q->published()
                 ->whereIn('id', $scope['topic_ids']))
             ->select('id', 'name')
             ->orderBy('name')
@@ -163,19 +165,19 @@ class TopicController extends Controller
         $baseQuestionQuery = \App\Models\Question::query()
             ->published()
             ->whereNull('parent_question_id')
-            ->whereHas('topicLinks', fn ($q) => $q->where('canonical_topic_id', $topic->id));
+            ->whereHas('topicLinks', fn($q) => $q->where('canonical_topic_id', $topic->id));
 
         $relatedQuestions = (clone $baseQuestionQuery)
-            ->when($courseId, fn ($q) => $q->where('institution_course_id', $courseId))
+            ->when($courseId, fn($q) => $q->where('institution_course_id', $courseId))
             ->with([
                 'topicLinks.canonicalTopic:id,title',
-                'answers' => fn ($q) => $q->where('is_published', true),
-                'children' => fn ($q) => $q->published()->orderBy('sort_order'),
-                'children.answers' => fn ($q) => $q->where('is_published', true),
-                'children.children' => fn ($q) => $q->published()->orderBy('sort_order'),
-                'children.children.answers' => fn ($q) => $q->where('is_published', true),
-                'children.children.children' => fn ($q) => $q->published()->orderBy('sort_order'),
-                'children.children.children.answers' => fn ($q) => $q->where('is_published', true),
+                'answers' => fn($q) => $q->where('is_published', true),
+                'children' => fn($q) => $q->published()->orderBy('sort_order'),
+                'children.answers' => fn($q) => $q->where('is_published', true),
+                'children.children' => fn($q) => $q->published()->orderBy('sort_order'),
+                'children.children.answers' => fn($q) => $q->where('is_published', true),
+                'children.children.children' => fn($q) => $q->published()->orderBy('sort_order'),
+                'children.children.children.answers' => fn($q) => $q->where('is_published', true),
             ])
             ->limit(10)
             ->get();
@@ -190,14 +192,14 @@ class TopicController extends Controller
         $isSecondary = $profile?->isSecondary() ?? false;
 
         $topicNotes = [];
-        if (! $isSecondary) {
+        if (!$isSecondary) {
             $topicNotes = StudentNote::query()
                 ->where('user_id', $user->id)
                 ->where('canonical_topic_id', $topic->id)
                 ->orderByDesc('is_pinned')
                 ->orderByDesc('updated_at')
                 ->get(['id', 'title', 'is_pinned', 'updated_at'])
-                ->map(fn ($n) => [
+                ->map(fn($n) => [
                     'id' => $n->id,
                     'title' => $n->title,
                     'is_pinned' => $n->is_pinned,
@@ -354,20 +356,20 @@ class TopicController extends Controller
             ->orderBy('sort_order')
             ->get();
 
-        $blocksByParent = $blocks->groupBy(fn ($b) => $b->parent_block_id ?? 'root');
+        $blocksByParent = $blocks->groupBy(fn($b) => $b->parent_block_id ?? 'root');
 
         return $this->nestBlocks($blocksByParent, 'root');
     }
 
     /**
-     * @param  \Illuminate\Support\Collection<string, \Illuminate\Support\Collection<int, ContentBlock>>  $blocksByParent
+     * @param \Illuminate\Support\Collection<string, \Illuminate\Support\Collection<int, ContentBlock>> $blocksByParent
      * @return array<int, array<string, mixed>>
      */
     private function nestBlocks($blocksByParent, string $parentId): array
     {
         $children = $blocksByParent->get($parentId, collect());
 
-        return $children->map(fn (ContentBlock $block) => [
+        return $children->map(fn(ContentBlock $block) => [
             'id' => $block->id,
             'title' => $block->title,
             'path' => $block->path,
@@ -378,10 +380,10 @@ class TopicController extends Controller
             'content' => $block->content,
             'simplifiedContent' => $block->simplified_content,
             'isContainer' => $block->is_container,
-            'prerequisites' => $block->prerequisites->map(fn ($prereq) => [
+            'prerequisites' => $block->prerequisites->map(fn($prereq) => [
                 'id' => $prereq->id,
                 'title' => $prereq->title,
-                'isHard' => (bool) $prereq->pivot->is_hard_prerequisite,
+                'isHard' => (bool)$prereq->pivot->is_hard_prerequisite,
             ])->values()->all(),
             'children' => $this->nestBlocks($blocksByParent, $block->id),
         ])->values()->all();

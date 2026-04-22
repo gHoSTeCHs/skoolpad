@@ -3,6 +3,7 @@
 namespace App\Jobs;
 
 use App\DataTransferObjects\ContentResponse;
+use App\Events\ContentGenerationUpdate;
 use App\Models\AIGenerationLog;
 use App\Models\ContentProject;
 use App\Services\ContentProjectService;
@@ -11,7 +12,6 @@ use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Bus\Dispatchable;
 use Illuminate\Queue\InteractsWithQueue;
 use Illuminate\Queue\SerializesModels;
-use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Log;
 
 class RunContentGeneration implements ShouldQueue
@@ -55,7 +55,7 @@ class RunContentGeneration implements ShouldQueue
                 'project_id' => $this->project->id,
             ]);
 
-            $this->writeEvent('error', [
+            $this->broadcastUpdate('error', [
                 'stage' => $this->promptType,
                 'message' => 'Project was deleted while generation was pending.',
             ]);
@@ -63,7 +63,7 @@ class RunContentGeneration implements ShouldQueue
             return;
         }
 
-        $this->writeEvent('status', [
+        $this->broadcastUpdate('status', [
             'stage' => $this->promptType,
             'state' => 'processing',
             'message' => 'Calling AI provider...',
@@ -89,7 +89,7 @@ class RunContentGeneration implements ShouldQueue
                     'elapsed_ms' => $elapsedMs,
                 ]);
 
-                $this->writeEvent('complete', [
+                $this->broadcastUpdate('complete', [
                     'stage' => $this->promptType,
                     'project' => $this->project->refresh()->toShowArray(),
                     'log_entry' => $logEntry?->toArray(),
@@ -105,7 +105,7 @@ class RunContentGeneration implements ShouldQueue
                     'message' => $errorMessage,
                 ]);
 
-                $this->writeEvent('error', [
+                $this->broadcastUpdate('error', [
                     'stage' => $this->promptType,
                     'message' => $errorMessage,
                 ]);
@@ -118,7 +118,7 @@ class RunContentGeneration implements ShouldQueue
                 'message' => $e->getMessage(),
             ]);
 
-            $this->writeEvent('error', [
+            $this->broadcastUpdate('error', [
                 'stage' => $this->promptType,
                 'message' => $e->getMessage(),
             ]);
@@ -135,7 +135,7 @@ class RunContentGeneration implements ShouldQueue
             'trace' => $exception?->getTraceAsString(),
         ]);
 
-        $this->writeEvent('error', [
+        $this->broadcastUpdate('error', [
             'stage' => $this->promptType,
             'message' => 'Job failed: '.($exception?->getMessage() ?? 'Unknown error'),
         ]);
@@ -187,16 +187,13 @@ class RunContentGeneration implements ShouldQueue
         return "Generated {$stage} failed schema validation. Check the generation log for details.";
     }
 
-    private function writeEvent(string $type, array $data): void
+    private function broadcastUpdate(string $type, array $data): void
     {
-        $cacheKey = "cs_job:{$this->project->id}:{$this->jobId}";
-        $events = Cache::get($cacheKey, []);
-        $events[] = [
-            'id' => count($events) + 1,
-            'type' => $type,
-            'data' => $data,
-            'timestamp' => now()->toISOString(),
-        ];
-        Cache::put($cacheKey, $events, 300);
+        broadcast(new ContentGenerationUpdate(
+            projectId: $this->project->id,
+            jobId: $this->jobId,
+            type: $type,
+            data: $data,
+        ));
     }
 }

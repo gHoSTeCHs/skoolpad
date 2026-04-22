@@ -18,7 +18,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useGenerationStream } from '@/hooks/use-generation-stream';
-import { csPost, streamUrl } from '@/lib/content-studio';
+import { csPost } from '@/lib/content-studio';
 import type { AIModelOption, ContentProject, GenerationLogEntry, SchemeTerm } from '@/types/content-studio';
 
 interface StageSchemeProps {
@@ -116,7 +116,8 @@ function SchemeGenerator({
                 },
             );
             startStream(
-                streamUrl(project.id, job_id),
+                project.id,
+                job_id,
                 (updatedProject, logEntry) => {
                     onProjectUpdate(updatedProject);
                     if (logEntry) onLogAppend(logEntry);

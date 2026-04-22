@@ -21,7 +21,7 @@ import { Input } from '@/components/ui/input';
 import { Switch } from '@/components/ui/switch';
 import { Textarea } from '@/components/ui/textarea';
 import { useGenerationStream } from '@/hooks/use-generation-stream';
-import { csPost, streamUrl } from '@/lib/content-studio';
+import { csPost } from '@/lib/content-studio';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import type { AIModelOption, ContentProject, GenerationLogEntry, ResearchResult, ResearchTopic } from '@/types/content-studio';
 
@@ -107,7 +107,8 @@ function ResearchInput({
                 },
             );
             startStream(
-                streamUrl(project.id, job_id),
+                project.id,
+                job_id,
                 (updatedProject, logEntry) => {
                     onProjectUpdate(updatedProject);
                     if (logEntry) onLogAppend(logEntry);

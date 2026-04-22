@@ -8,6 +8,11 @@ import { ErrorBoundary } from './components/error-boundary';
 import { AppErrorFallback } from './components/error-boundary/app-error-fallback';
 import { FlashToaster } from './components/flash-toaster';
 import { initializeTheme } from './hooks/use-appearance';
+import { configureEcho } from '@laravel/echo-react';
+
+configureEcho({
+    broadcaster: 'reverb',
+});
 
 const appName = import.meta.env.VITE_APP_NAME || 'Laravel';
 

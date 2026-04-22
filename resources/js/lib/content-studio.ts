@@ -20,7 +20,3 @@ export async function csPost<T>(url: string, data: Record<string, unknown> = {})
 
     return response.json();
 }
-
-export function streamUrl(projectId: string, jobId: string): string {
-    return `/admin/content-studio/${projectId}/stream/${jobId}`;
-}

@@ -3,13 +3,14 @@
 use App\DataTransferObjects\ContentResponse;
 use App\Enums\ContentProjectMode;
 use App\Enums\ContentProjectStatus;
+use App\Events\ContentGenerationUpdate;
 use App\Jobs\RunContentGeneration;
 use App\Models\AIModel;
 use App\Models\ContentProject;
 use App\Models\User;
 use App\Services\ContentProjectService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
-use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\Event;
 
 uses(RefreshDatabase::class);
 
@@ -32,7 +33,8 @@ function createProjectWithResearch(): ContentProject
     return $project;
 }
 
-it('writes status and complete events to cache on success', function () {
+it('broadcasts status and complete events on success', function () {
+    Event::fake([ContentGenerationUpdate::class]);
     $project = createProjectWithResearch();
     $jobId = 'test-job-'.fake()->uuid();
 
@@ -63,18 +65,26 @@ it('writes status and complete events to cache on success', function () {
 
     $job->handle(app(ContentProjectService::class));
 
-    $events = Cache::get("cs_job:{$project->id}:{$jobId}");
-    expect($events)->toBeArray()
-        ->and($events)->toHaveCount(2);
+    Event::assertDispatched(
+        ContentGenerationUpdate::class,
+        fn ($event) => $event->projectId === $project->id
+            && $event->jobId === $jobId
+            && $event->type === 'status'
+            && $event->data['state'] === 'processing',
+    );
 
-    expect($events[0]['type'])->toBe('status');
-    expect($events[0]['data']['state'])->toBe('processing');
-
-    expect($events[1]['type'])->toBe('complete');
-    expect($events[1]['data'])->toHaveKeys(['stage', 'project', 'log_entry']);
+    Event::assertDispatched(
+        ContentGenerationUpdate::class,
+        fn ($event) => $event->projectId === $project->id
+            && $event->jobId === $jobId
+            && $event->type === 'complete'
+            && isset($event->data['project'])
+            && array_key_exists('log_entry', $event->data),
+    );
 });
 
-it('writes error event when generation fails', function () {
+it('broadcasts error event when generation fails', function () {
+    Event::fake([ContentGenerationUpdate::class]);
     $project = createProjectWithResearch();
     $jobId = 'test-job-'.fake()->uuid();
 
@@ -102,13 +112,15 @@ it('writes error event when generation fails', function () {
 
     $job->handle(app(ContentProjectService::class));
 
-    $events = Cache::get("cs_job:{$project->id}:{$jobId}");
-    $lastEvent = end($events);
-    expect($lastEvent['type'])->toBe('error');
-    expect($lastEvent['data']['message'])->toContain('Rate limit exceeded');
+    Event::assertDispatched(
+        ContentGenerationUpdate::class,
+        fn ($event) => $event->type === 'error'
+            && str_contains($event->data['message'], 'Rate limit exceeded'),
+    );
 });
 
-it('writes error event on DomainException', function () {
+it('broadcasts error event on DomainException', function () {
+    Event::fake([ContentGenerationUpdate::class]);
     $project = createProjectWithResearch();
     $jobId = 'test-job-'.fake()->uuid();
 
@@ -128,13 +140,15 @@ it('writes error event on DomainException', function () {
 
     $job->handle(app(ContentProjectService::class));
 
-    $events = Cache::get("cs_job:{$project->id}:{$jobId}");
-    $lastEvent = end($events);
-    expect($lastEvent['type'])->toBe('error');
-    expect($lastEvent['data']['message'])->toBe('Research must be approved first.');
+    Event::assertDispatched(
+        ContentGenerationUpdate::class,
+        fn ($event) => $event->type === 'error'
+            && $event->data['message'] === 'Research must be approved first.',
+    );
 });
 
-it('writes error event when job fails via failed method', function () {
+it('broadcasts error event when job fails via failed method', function () {
+    Event::fake([ContentGenerationUpdate::class]);
     $project = createProjectWithResearch();
     $jobId = 'test-job-'.fake()->uuid();
 
@@ -147,13 +161,15 @@ it('writes error event when job fails via failed method', function () {
 
     $job->failed(new \RuntimeException('Connection timed out'));
 
-    $events = Cache::get("cs_job:{$project->id}:{$jobId}");
-    expect($events)->toHaveCount(1);
-    expect($events[0]['type'])->toBe('error');
-    expect($events[0]['data']['message'])->toContain('Connection timed out');
+    Event::assertDispatched(
+        ContentGenerationUpdate::class,
+        fn ($event) => $event->type === 'error'
+            && str_contains($event->data['message'], 'Connection timed out'),
+    );
 });
 
 it('formats connection error message correctly', function () {
+    Event::fake([ContentGenerationUpdate::class]);
     $project = createProjectWithResearch();
     $jobId = 'test-job-'.fake()->uuid();
 
@@ -181,12 +197,15 @@ it('formats connection error message correctly', function () {
 
     $job->handle(app(ContentProjectService::class));
 
-    $events = Cache::get("cs_job:{$project->id}:{$jobId}");
-    $lastEvent = end($events);
-    expect($lastEvent['data']['message'])->toBe('Could not reach AI provider. Check network or switch models.');
+    Event::assertDispatched(
+        ContentGenerationUpdate::class,
+        fn ($event) => $event->type === 'error'
+            && $event->data['message'] === 'Could not reach AI provider. Check network or switch models.',
+    );
 });
 
 it('formats json parse error with stage label', function () {
+    Event::fake([ContentGenerationUpdate::class]);
     $project = createProjectWithResearch();
     $jobId = 'test-job-'.fake()->uuid();
 
@@ -214,9 +233,11 @@ it('formats json parse error with stage label', function () {
 
     $job->handle(app(ContentProjectService::class));
 
-    $events = Cache::get("cs_job:{$project->id}:{$jobId}");
-    $lastEvent = end($events);
-    expect($lastEvent['data']['message'])->toContain('malformed JSON for research');
+    Event::assertDispatched(
+        ContentGenerationUpdate::class,
+        fn ($event) => $event->type === 'error'
+            && str_contains($event->data['message'], 'malformed JSON for research'),
+    );
 });
 
 it('uses the default queue', function () {

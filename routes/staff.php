@@ -229,7 +229,6 @@ Route::middleware(['auth', 'verified', 'staff'])->prefix('admin')->name('admin.'
     Route::post('content-studio/{contentProject}/scheme/skip', [ContentStudioController::class, 'skipScheme'])->name('content-studio.skip-scheme');
     Route::post('content-studio/{contentProject}/blocks', [ContentStudioController::class, 'runBlocks'])->name('content-studio.run-blocks')->middleware('throttle:20,1');
     Route::post('content-studio/{contentProject}/blocks/approve', [ContentStudioController::class, 'approveBlocks'])->name('content-studio.approve-blocks');
-    Route::get('content-studio/{contentProject}/stream/{jobId}', [ContentStudioController::class, 'stream'])->name('content-studio.stream')->middleware('throttle:30,1');
 
     Route::get('ai-models', [AIModelController::class, 'index'])->name('ai-models.index');
     Route::get('ai-models/create', [AIModelController::class, 'create'])->name('ai-models.create');

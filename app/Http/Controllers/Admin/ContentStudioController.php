@@ -22,7 +22,6 @@ use App\Services\ContentProjectService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Str;
 use Inertia\Inertia;
@@ -240,58 +239,6 @@ class ContentStudioController extends Controller
         return response()->json([
             'project' => $contentProject->refresh()->toShowArray(),
             'message' => 'Scheme of work skipped.',
-        ]);
-    }
-
-    public function stream(ContentProject $contentProject, string $jobId): \Symfony\Component\HttpFoundation\StreamedResponse
-    {
-        Gate::authorize('view', $contentProject);
-
-        return response()->stream(function () use ($contentProject, $jobId) {
-            set_time_limit(0);
-            @ob_implicit_flush(true);
-            while (ob_get_level()) {
-                ob_end_flush();
-            }
-
-            $lastEventIndex = 0;
-
-            if (isset($_SERVER['HTTP_LAST_EVENT_ID'])) {
-                $lastEventIndex = (int) $_SERVER['HTTP_LAST_EVENT_ID'];
-            }
-
-            $startTime = time();
-            $maxDuration = 180;
-
-            while ((time() - $startTime) < $maxDuration) {
-                $events = Cache::get("cs_job:{$contentProject->id}:{$jobId}", []);
-                $newEvents = array_slice($events, $lastEventIndex);
-
-                foreach ($newEvents as $event) {
-                    echo "id: {$event['id']}\n";
-                    echo "event: {$event['type']}\n";
-                    echo 'data: '.json_encode($event['data'])."\n\n";
-
-                    $lastEventIndex = $event['id'];
-
-                    if (in_array($event['type'], ['complete', 'error'])) {
-                        return;
-                    }
-                }
-
-                echo ": ping\n\n";
-
-                if (connection_aborted()) {
-                    return;
-                }
-
-                usleep(2_000_000);
-            }
-        }, 200, [
-            'Content-Type' => 'text/event-stream',
-            'Cache-Control' => 'no-cache',
-            'Connection' => 'keep-alive',
-            'X-Accel-Buffering' => 'no',
         ]);
     }
 }
