@@ -2,6 +2,7 @@ import { useState, useCallback } from 'react';
 import { Head } from '@inertiajs/react';
 import ContentStudioController from '@/actions/App/Http/Controllers/Admin/ContentStudioController';
 import { GenerationLogPanel } from '@/components/admin/content-studio/generation-log-panel';
+import { ProjectModelSummary } from '@/components/admin/content-studio/project-model-summary';
 import { ProjectStepper } from '@/components/admin/content-studio/project-stepper';
 import { StageBlocks } from '@/components/admin/content-studio/stage-blocks';
 import { StageResearch } from '@/components/admin/content-studio/stage-research';
@@ -78,7 +79,7 @@ function StageWorkspace({ project, aiModels, resolvedModels, onProjectUpdate, on
     );
 }
 
-export default function ContentStudioShow({ project: initialProject, generationLogs: initialLogs, aiModels, resolvedModels }: Props) {
+export default function ContentStudioShow({ project: initialProject, generationLogs: initialLogs, aiModels, platformDefaultModelId, resolvedModels }: Props) {
     const [project, setProject] = useState(initialProject);
     const [logs, setLogs] = useState(initialLogs);
 
@@ -120,6 +121,14 @@ export default function ContentStudioShow({ project: initialProject, generationL
                         </div>
                     </div>
                 </div>
+
+                <ProjectModelSummary
+                    project={project}
+                    aiModels={aiModels}
+                    resolvedModels={resolvedModels}
+                    platformDefaultModelId={platformDefaultModelId}
+                    onProjectUpdate={handleProjectUpdate}
+                />
 
                 <ProjectStepper
                     status={project.status}
