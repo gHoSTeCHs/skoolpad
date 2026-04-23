@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\Admin\AIModelController;
+use App\Http\Controllers\Admin\AIPlatformSettingsController;
 use App\Http\Controllers\Admin\AnswerController;
 use App\Http\Controllers\Admin\AssessmentSubjectController;
 use App\Http\Controllers\Admin\AssessmentTypeController;
@@ -158,6 +159,8 @@ Route::middleware(['auth', 'verified', 'staff'])->prefix('admin')->name('admin.'
     Route::get('import/history', [BulkImportController::class, 'history'])->name('import.history');
     Route::get('settings', [SettingsController::class, 'index'])->name('settings.index');
     Route::put('settings', [SettingsController::class, 'update'])->name('settings.update');
+    Route::get('settings/ai', [AIPlatformSettingsController::class, 'edit'])->name('settings.ai.edit');
+    Route::put('settings/ai', [AIPlatformSettingsController::class, 'update'])->name('settings.ai.update');
     Route::get('settings/plans', [SubscriptionPlanController::class, 'index'])->name('settings.plans.index');
     Route::get('settings/plans/{plan}/edit', [SubscriptionPlanController::class, 'edit'])->name('settings.plans.edit');
     Route::put('settings/plans/{plan}', [SubscriptionPlanController::class, 'update'])->name('settings.plans.update');
