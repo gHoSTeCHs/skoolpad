@@ -55,6 +55,61 @@ it('resolves model by task routing', function () {
     expect($resolved->id)->toBe($model->id);
 });
 
+it('resolves model from platform default when no routing matches', function () {
+    AIModel::factory()->create(['sort_order' => 1, 'name' => 'First']);
+    $platformDefault = AIModel::factory()->create(['sort_order' => 5, 'name' => 'Platform Default']);
+
+    PlatformSetting::query()->create([
+        'key' => 'content_studio.default_model_id',
+        'value' => ['model_id' => $platformDefault->id],
+    ]);
+
+    $service = new ContentGenerationService();
+    $resolved = $service->resolveModel();
+
+    expect($resolved->id)->toBe($platformDefault->id);
+});
+
+it('prefers task routing over platform default', function () {
+    $routed = AIModel::factory()->create(['name' => 'Routed']);
+    $platformDefault = AIModel::factory()->create(['name' => 'Platform Default']);
+
+    PlatformSetting::query()->create([
+        'key' => 'ai_task_routing',
+        'value' => ['scheme' => $routed->id],
+    ]);
+
+    PlatformSetting::query()->create([
+        'key' => 'content_studio.default_model_id',
+        'value' => ['model_id' => $platformDefault->id],
+    ]);
+
+    $service = new ContentGenerationService();
+    $resolved = $service->resolveModel(null, 'scheme');
+
+    expect($resolved->id)->toBe($routed->id);
+});
+
+it('falls back to platform default when task routing has no match for stage', function () {
+    $platformDefault = AIModel::factory()->create(['name' => 'Platform Default']);
+    $other = AIModel::factory()->create(['name' => 'Other']);
+
+    PlatformSetting::query()->create([
+        'key' => 'ai_task_routing',
+        'value' => ['research' => $other->id],
+    ]);
+
+    PlatformSetting::query()->create([
+        'key' => 'content_studio.default_model_id',
+        'value' => ['model_id' => $platformDefault->id],
+    ]);
+
+    $service = new ContentGenerationService();
+    $resolved = $service->resolveModel(null, 'scheme');
+
+    expect($resolved->id)->toBe($platformDefault->id);
+});
+
 it('falls back to first active model when no routing exists', function () {
     $first = AIModel::factory()->create(['sort_order' => 1, 'name' => 'First']);
     AIModel::factory()->create(['sort_order' => 2, 'name' => 'Second']);
@@ -63,6 +118,21 @@ it('falls back to first active model when no routing exists', function () {
     $resolved = $service->resolveModel();
 
     expect($resolved->id)->toBe($first->id);
+});
+
+it('skips inactive platform default and falls through to sort order', function () {
+    $inactive = AIModel::factory()->inactive()->create(['name' => 'Inactive Default']);
+    $active = AIModel::factory()->create(['sort_order' => 1, 'name' => 'Active First']);
+
+    PlatformSetting::query()->create([
+        'key' => 'content_studio.default_model_id',
+        'value' => ['model_id' => $inactive->id],
+    ]);
+
+    $service = new ContentGenerationService();
+    $resolved = $service->resolveModel();
+
+    expect($resolved->id)->toBe($active->id);
 });
 
 it('skips inactive models in fallback', function () {

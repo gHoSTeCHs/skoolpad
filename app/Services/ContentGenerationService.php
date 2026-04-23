@@ -113,6 +113,18 @@ class ContentGenerationService
             }
         }
 
+        $platformDefault = PlatformSetting::query()
+            ->where('key', 'content_studio.default_model_id')
+            ->value('value');
+
+        if (is_array($platformDefault) && ! empty($platformDefault['model_id'])) {
+            $model = AIModel::query()->active()->find($platformDefault['model_id']);
+
+            if ($model) {
+                return $model;
+            }
+        }
+
         $fallback = AIModel::query()->active()->orderBy('sort_order')->first();
 
         if (! $fallback) {

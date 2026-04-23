@@ -69,6 +69,11 @@ class AIModelSeeder extends Seeder
 
         if ($firstModel) {
             PlatformSetting::query()->updateOrCreate(
+                ['key' => 'content_studio.default_model_id'],
+                ['value' => ['model_id' => $firstModel->id]],
+            );
+
+            PlatformSetting::query()->updateOrCreate(
                 ['key' => 'ai_task_routing'],
                 [
                     'value' => [
