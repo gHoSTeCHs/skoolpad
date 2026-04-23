@@ -7,6 +7,7 @@ use App\DataTransferObjects\ContentPrompt;
 use App\DataTransferObjects\ContentResponse;
 use App\Enums\AIAdapterType;
 use App\Models\AIModel;
+use App\Models\ContentProject;
 use App\Models\PlatformSetting;
 use App\Services\ContentGenerationService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -53,6 +54,77 @@ it('resolves model by task routing', function () {
     $resolved = $service->resolveModel(null, 'scheme');
 
     expect($resolved->id)->toBe($model->id);
+});
+
+it('resolves model from project stage override when project and stage provided', function () {
+    $stageModel = AIModel::factory()->create(['name' => 'Stage Override']);
+    $projectDefault = AIModel::factory()->create(['name' => 'Project Default']);
+    $platformDefault = AIModel::factory()->create(['name' => 'Platform Default']);
+
+    $project = ContentProject::factory()->create([
+        'scheme_model_id' => $stageModel->id,
+        'default_ai_model_id' => $projectDefault->id,
+    ]);
+
+    PlatformSetting::query()->create([
+        'key' => 'content_studio.default_model_id',
+        'value' => ['model_id' => $platformDefault->id],
+    ]);
+
+    $service = new ContentGenerationService();
+    $resolved = $service->resolveModel(null, 'scheme', $project);
+
+    expect($resolved->id)->toBe($stageModel->id);
+});
+
+it('falls back to project default when stage override not set', function () {
+    $projectDefault = AIModel::factory()->create(['name' => 'Project Default']);
+    $platformDefault = AIModel::factory()->create(['name' => 'Platform Default']);
+
+    $project = ContentProject::factory()->create([
+        'default_ai_model_id' => $projectDefault->id,
+    ]);
+
+    PlatformSetting::query()->create([
+        'key' => 'content_studio.default_model_id',
+        'value' => ['model_id' => $platformDefault->id],
+    ]);
+
+    $service = new ContentGenerationService();
+    $resolved = $service->resolveModel(null, 'scheme', $project);
+
+    expect($resolved->id)->toBe($projectDefault->id);
+});
+
+it('prefers explicit request override over all project and platform defaults', function () {
+    $override = AIModel::factory()->create(['name' => 'Request Override']);
+    $stageModel = AIModel::factory()->create(['name' => 'Stage']);
+    $projectDefault = AIModel::factory()->create(['name' => 'Project Default']);
+
+    $project = ContentProject::factory()->create([
+        'scheme_model_id' => $stageModel->id,
+        'default_ai_model_id' => $projectDefault->id,
+    ]);
+
+    $service = new ContentGenerationService();
+    $resolved = $service->resolveModel($override->id, 'scheme', $project);
+
+    expect($resolved->id)->toBe($override->id);
+});
+
+it('skips inactive project stage model and falls through', function () {
+    $inactive = AIModel::factory()->inactive()->create();
+    $projectDefault = AIModel::factory()->create(['name' => 'Project Default']);
+
+    $project = ContentProject::factory()->create([
+        'scheme_model_id' => $inactive->id,
+        'default_ai_model_id' => $projectDefault->id,
+    ]);
+
+    $service = new ContentGenerationService();
+    $resolved = $service->resolveModel(null, 'scheme', $project);
+
+    expect($resolved->id)->toBe($projectDefault->id);
 });
 
 it('resolves model from platform default when no routing matches', function () {

@@ -21,7 +21,7 @@ class ContentGenerationService
     {
         set_time_limit(180);
 
-        $model = $this->resolveModel($modelId, $template->promptType());
+        $model = $this->resolveModel($modelId, $template->promptType(), $project);
         $prompt = $template->build($context);
         $prompt = $this->capMaxTokens($prompt, $model);
         $adapter = $this->resolveAdapter($model);
@@ -56,7 +56,7 @@ class ContentGenerationService
     {
         set_time_limit(180);
 
-        $model = $this->resolveModel($modelId, $promptType);
+        $model = $this->resolveModel($modelId, $promptType, $project);
         $prompt = $this->capMaxTokens($prompt, $model);
         $adapter = $this->resolveAdapter($model);
 
@@ -86,10 +86,35 @@ class ContentGenerationService
         );
     }
 
-    public function resolveModel(?string $modelId = null, ?string $taskType = null): AIModel
+    public function resolveModel(?string $modelId = null, ?string $taskType = null, ?ContentProject $project = null): AIModel
     {
         if ($modelId) {
             $model = AIModel::query()->active()->find($modelId);
+
+            if ($model) {
+                return $model;
+            }
+        }
+
+        if ($project && $taskType) {
+            $stageColumn = match ($taskType) {
+                'research' => 'research_model_id',
+                'scheme' => 'scheme_model_id',
+                'blocks' => 'blocks_model_id',
+                default => null,
+            };
+
+            if ($stageColumn && $project->{$stageColumn}) {
+                $model = AIModel::query()->active()->find($project->{$stageColumn});
+
+                if ($model) {
+                    return $model;
+                }
+            }
+        }
+
+        if ($project && $project->default_ai_model_id) {
+            $model = AIModel::query()->active()->find($project->default_ai_model_id);
 
             if ($model) {
                 return $model;
