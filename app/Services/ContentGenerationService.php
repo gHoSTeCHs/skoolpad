@@ -19,9 +19,7 @@ class ContentGenerationService
 {
     public function generate(ContentPromptTemplate $template, array $context, ContentProject $project, ?string $modelId = null): ContentResponse
     {
-        set_time_limit(180);
-
-        $model = $this->resolveModel($modelId, $template->promptType());
+        $model = $this->resolveModel($modelId, $template->promptType(), $project);
         $prompt = $template->build($context);
         $prompt = $this->capMaxTokens($prompt, $model);
         $adapter = $this->resolveAdapter($model);
@@ -32,7 +30,7 @@ class ContentGenerationService
             $response = $this->validateSchema($response, $template->jsonSchema());
         }
 
-        if (! $response->valid && config('content-studio.retry.validation_correction')) {
+        if (! $response->valid && $this->shouldRetry($response) && config('content-studio.retry.validation_correction')) {
             $response = $this->retryWithCorrection($adapter, $prompt, $response);
         }
 
@@ -54,9 +52,7 @@ class ContentGenerationService
 
     public function generateFromPrompt(ContentPrompt $prompt, ContentProject $project, string $promptType, ?string $modelId = null): ContentResponse
     {
-        set_time_limit(180);
-
-        $model = $this->resolveModel($modelId, $promptType);
+        $model = $this->resolveModel($modelId, $promptType, $project);
         $prompt = $this->capMaxTokens($prompt, $model);
         $adapter = $this->resolveAdapter($model);
 
@@ -66,7 +62,7 @@ class ContentGenerationService
             $response = $this->validateSchema($response, $prompt->json_schema);
         }
 
-        if (! $response->valid && config('content-studio.retry.validation_correction')) {
+        if (! $response->valid && $this->shouldRetry($response) && config('content-studio.retry.validation_correction')) {
             $response = $this->retryWithCorrection($adapter, $prompt, $response);
         }
 
@@ -86,10 +82,35 @@ class ContentGenerationService
         );
     }
 
-    public function resolveModel(?string $modelId = null, ?string $taskType = null): AIModel
+    public function resolveModel(?string $modelId = null, ?string $taskType = null, ?ContentProject $project = null): AIModel
     {
         if ($modelId) {
             $model = AIModel::query()->active()->find($modelId);
+
+            if ($model) {
+                return $model;
+            }
+        }
+
+        if ($project && $taskType) {
+            $stageColumn = match ($taskType) {
+                'research' => 'research_model_id',
+                'scheme' => 'scheme_model_id',
+                'blocks' => 'blocks_model_id',
+                default => null,
+            };
+
+            if ($stageColumn && $project->{$stageColumn}) {
+                $model = AIModel::query()->active()->find($project->{$stageColumn});
+
+                if ($model) {
+                    return $model;
+                }
+            }
+        }
+
+        if ($project && $project->default_ai_model_id) {
+            $model = AIModel::query()->active()->find($project->default_ai_model_id);
 
             if ($model) {
                 return $model;
@@ -113,6 +134,18 @@ class ContentGenerationService
             }
         }
 
+        $platformDefault = PlatformSetting::query()
+            ->where('key', 'content_studio.default_model_id')
+            ->value('value');
+
+        if (is_array($platformDefault) && ! empty($platformDefault['model_id'])) {
+            $model = AIModel::query()->active()->find($platformDefault['model_id']);
+
+            if ($model) {
+                return $model;
+            }
+        }
+
         $fallback = AIModel::query()->active()->orderBy('sort_order')->first();
 
         if (! $fallback) {
@@ -128,6 +161,19 @@ class ContentGenerationService
             AIAdapterType::OpenAICompatible => new OpenAICompatibleAdapter($model),
             AIAdapterType::Anthropic => new AnthropicAdapter($model),
         };
+    }
+
+    private function shouldRetry(ContentResponse $response): bool
+    {
+        $nonRetryable = ['connection_error', 'api_error', 'config_error'];
+
+        foreach ($nonRetryable as $key) {
+            if (isset($response->validation_errors[$key])) {
+                return false;
+            }
+        }
+
+        return true;
     }
 
     private function validateSchema(ContentResponse $response, array $schema): ContentResponse

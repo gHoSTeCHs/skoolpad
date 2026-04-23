@@ -39,7 +39,7 @@ class AIModelSeeder extends Seeder
                 'slug' => 'gemini-flash',
                 'adapter_type' => AIAdapterType::OpenAICompatible,
                 'base_url' => 'https://generativelanguage.googleapis.com/v1beta/openai',
-                'model_id' => 'gemini-2.5-flash-preview-04-17',
+                'model_id' => 'gemini-2.5-flash',
                 'max_tokens' => 8192,
                 'input_cost_per_million' => 15,
                 'output_cost_per_million' => 60,
@@ -69,10 +69,16 @@ class AIModelSeeder extends Seeder
 
         if ($firstModel) {
             PlatformSetting::query()->updateOrCreate(
+                ['key' => 'content_studio.default_model_id'],
+                ['value' => ['model_id' => $firstModel->id]],
+            );
+
+            PlatformSetting::query()->updateOrCreate(
                 ['key' => 'ai_task_routing'],
                 [
                     'value' => [
-                        'structure' => $firstModel->id,
+                        'scheme' => $firstModel->id,
+                        'blocks' => $firstModel->id,
                         'content' => $firstModel->id,
                         'questions' => $firstModel->id,
                         'explanations' => $firstModel->id,

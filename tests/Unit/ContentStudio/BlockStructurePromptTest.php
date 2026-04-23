@@ -5,14 +5,14 @@ use App\DataTransferObjects\ContentPrompt;
 
 uses(Tests\TestCase::class);
 
-it('returns structure as prompt type', function () {
+it('returns blocks as prompt type', function () {
     $prompt = new BlockStructurePrompt;
 
-    expect($prompt->promptType())->toBe('structure');
+    expect($prompt->promptType())->toBe('blocks');
 });
 
-it('uses structure temperature from config', function () {
-    config(['content-studio.temperature.structure' => 0.3]);
+it('uses blocks temperature from config', function () {
+    config(['content-studio.temperature.blocks' => 0.3]);
 
     $prompt = new BlockStructurePrompt;
 

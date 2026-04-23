@@ -12,12 +12,15 @@ use App\Http\Requests\Admin\RunBlockStructureRequest;
 use App\Http\Requests\Admin\RunCurriculumResearchRequest;
 use App\Http\Requests\Admin\RunSchemeGenerationRequest;
 use App\Http\Requests\Admin\StoreContentProjectRequest;
+use App\Http\Requests\Admin\UpdateContentProjectModelsRequest;
 use App\Jobs\RunContentGeneration;
 use App\Models\AIModel;
 use App\Models\ContentProject;
 use App\Models\CurriculumSubject;
 use App\Models\Discipline;
 use App\Models\EducationLevel;
+use App\Models\PlatformSetting;
+use App\Services\ContentGenerationService;
 use App\Services\ContentProjectService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
@@ -33,6 +36,7 @@ class ContentStudioController extends Controller
 
     public function __construct(
         private readonly ContentProjectService $projectService,
+        private readonly ContentGenerationService $generationService,
     ) {}
 
     public function index(Request $request): Response
@@ -115,11 +119,85 @@ class ContentStudioController extends Controller
             ->orderBy('sort_order')
             ->get(['id', 'name', 'model_id']);
 
+        $platformDefaultValue = PlatformSetting::query()
+            ->where('key', 'content_studio.default_model_id')
+            ->value('value');
+        $platformDefaultModelId = is_array($platformDefaultValue)
+            ? ($platformDefaultValue['model_id'] ?? null)
+            : null;
+
+        $resolvedModels = $aiModels->isNotEmpty()
+            ? collect(['research', 'scheme', 'blocks'])->mapWithKeys(function (string $stage) use ($contentProject) {
+                $model = $this->generationService->resolveModel(null, $stage, $contentProject);
+                $source = $this->describeResolutionSource($contentProject, $stage);
+
+                return [$stage => [
+                    'id' => $model->id,
+                    'name' => $model->name,
+                    'model_id' => $model->model_id,
+                    'source' => $source,
+                ]];
+            })->all()
+            : [];
+
         return Inertia::render('admin/content-studio/show', [
             'project' => $contentProject->toShowArray(),
             'generationLogs' => $generationLogs,
             'aiModels' => $aiModels,
+            'platformDefaultModelId' => $platformDefaultModelId,
+            'resolvedModels' => $resolvedModels,
         ]);
+    }
+
+    public function updateModels(UpdateContentProjectModelsRequest $request, ContentProject $contentProject): JsonResponse
+    {
+        Gate::authorize('update', $contentProject);
+
+        $contentProject->update($request->validated());
+
+        return response()->json([
+            'project' => $contentProject->refresh()->toShowArray(),
+            'message' => 'Project model preferences updated.',
+        ]);
+    }
+
+    private function describeResolutionSource(ContentProject $project, string $stage): string
+    {
+        $stageColumn = match ($stage) {
+            'research' => 'research_model_id',
+            'scheme' => 'scheme_model_id',
+            'blocks' => 'blocks_model_id',
+            default => null,
+        };
+
+        if ($stageColumn && $this->activeModelExists($project->{$stageColumn})) {
+            return 'stage_override';
+        }
+
+        if ($this->activeModelExists($project->default_ai_model_id)) {
+            return 'project_default';
+        }
+
+        $platformValue = PlatformSetting::query()
+            ->where('key', 'content_studio.default_model_id')
+            ->value('value');
+
+        $platformModelId = is_array($platformValue) ? ($platformValue['model_id'] ?? null) : null;
+
+        if ($this->activeModelExists($platformModelId)) {
+            return 'platform_default';
+        }
+
+        return 'fallback';
+    }
+
+    private function activeModelExists(?string $modelId): bool
+    {
+        if (! $modelId) {
+            return false;
+        }
+
+        return AIModel::query()->active()->whereKey($modelId)->exists();
     }
 
     public function runResearch(RunCurriculumResearchRequest $request, ContentProject $contentProject): JsonResponse

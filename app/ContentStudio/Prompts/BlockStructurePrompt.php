@@ -6,12 +6,12 @@ class BlockStructurePrompt extends ContentPromptTemplate
 {
     public function promptType(): string
     {
-        return 'structure';
+        return 'blocks';
     }
 
     public function temperature(): float
     {
-        return config('content-studio.temperature.structure', 0.3);
+        return config('content-studio.temperature.blocks', 0.3);
     }
 
     public function systemPrompt(): string
@@ -56,6 +56,37 @@ Each canonical topic should cover what can be taught in 1-2 weeks of typical lec
 - If the provided topic spans MORE than 2 weeks at most institutions, you MUST recommend splitting it into multiple canonical topics in your response. List the suggested split in a "split_recommendation" field.
 - If the provided topic would fill LESS than 1 week, note this in a "merge_recommendation" field suggesting a related topic it could be combined with.
 - The goal: a student should be able to read an entire topic's content blocks in one focused study session (30-90 minutes total). Topics larger than this become overwhelming. Topics smaller than this feel insubstantial.
+
+CONTAINER STRUCTURE REQUIREMENT (MANDATORY — this is the most common failure):
+- Container blocks (is_container: true) are REQUIRED for any topic with more than 5 leaf blocks.
+- Containers are NOT optional decoration — they are the mechanism the UI uses to render hierarchy. Without them, the topic renders as an ungrouped flat list, which is unacceptable.
+- A container has is_container: true, no read_time, no difficulty_level, no bloom_level, no content_guidance meaningful content. Its only purpose is to GROUP leaves.
+- Rule of thumb: for every 3-5 leaf blocks, introduce ONE container block to hold them.
+- A topic with 8-12 leaf blocks should typically have 2-3 containers. A topic with 4-5 leaves may have 0-1 containers.
+
+CORRECT STRUCTURE EXAMPLE (8 leaf blocks organized into 2 containers):
+  blocks[0] = { depth_level: 0, is_container: true,  parent_index: null, title: "Foundations" }
+  blocks[1] = { depth_level: 1, is_container: false, parent_index: 0,    title: "Introduction", block_type: "text" }
+  blocks[2] = { depth_level: 1, is_container: false, parent_index: 0,    title: "Key Terms",    block_type: "reference" }
+  blocks[3] = { depth_level: 1, is_container: false, parent_index: 0,    title: "Overview",     block_type: "text" }
+  blocks[4] = { depth_level: 0, is_container: true,  parent_index: null, title: "Applications" }
+  blocks[5] = { depth_level: 1, is_container: false, parent_index: 4,    title: "Worked Example", block_type: "example" }
+  blocks[6] = { depth_level: 1, is_container: false, parent_index: 4,    title: "Practice",       block_type: "exercise" }
+  ...
+
+WRONG STRUCTURE (DO NOT DO THIS — flat list with no containers):
+  blocks[0] = { depth_level: 1, is_container: false, parent_index: null, title: "Introduction" }
+  blocks[1] = { depth_level: 1, is_container: false, parent_index: 0,    title: "..." }   // INVALID: parent is a leaf, not a container
+  blocks[2] = { depth_level: 1, is_container: false, parent_index: 0,    title: "..." }   // INVALID: same reason
+
+HIERARCHY RULES (READ CAREFULLY — these are the second most common failure modes):
+- The `parent_index` field is the index of a block's parent within the `blocks` array.
+- For ROOT blocks (top of the hierarchy), `parent_index` MUST be the JSON `null` literal. NOT 0. NOT -1. NOT omitted. Literally `null`.
+- A root block is any block that is not contained by another block. Every topic has at least one root.
+- `parent_index: 0` means "my parent is the block at index 0 in the array" — NEVER use this for a root. Block 0 itself is a root and MUST have `parent_index: null`.
+- A block can only reference a parent that (a) appears EARLIER in the array than itself, (b) has `is_container: true`, and (c) has a smaller `depth_level`.
+- A block's `parent_index` MUST NEVER equal its own index. Self-references are invalid.
+- EVERY parent_index that is not null MUST point to a block with is_container: true. Leaves cannot have children.
 
 CRITICAL RULES:
 1. Every topic MUST have at least 4 leaf blocks and at most 15.
@@ -120,7 +151,7 @@ Return JSON:
             "block_type": "string — one of: container, text, code, diagram, example, exercise, quiz, reference, comparison",
             "is_container": "boolean — true if this block has children and no content",
             "depth_level": "integer — 0 for root, 1 for top-level sections, 2 for sub-sections, etc. Max 5.",
-            "parent_index": "integer or null — index of parent block in this array, null for root",
+            "parent_index": "integer or null — index of parent block. MUST be null (JSON null) for root blocks. NEVER 0 for a root. Block 0 is itself a root and must have parent_index: null.",
             "sort_order": "integer — display order among siblings, starting at 1",
             "estimated_read_time": "integer or null — minutes to read. Null for containers. 5-10 for leaf blocks.",
             "difficulty_level": "string or null — beginner, intermediate, or advanced. Null for containers.",
@@ -150,14 +181,18 @@ CONSTRAINT CHECKLIST — verify before returning:
 6. All estimated_read_time values for leaf blocks are between 3 and 12 minutes
 7. estimated_total_minutes is the sum of all leaf block read times
 8. No block has depth_level > 5
-9. Every non-root block has a valid parent_index
-10. Container blocks have is_container: true and null for read_time, difficulty, bloom
-11. total_leaf_blocks matches actual count of blocks where is_container is false
-12. Visualization flags are selective (20-40% of leaf blocks), not applied to every block
-13. All slugs are lowercase with hyphens, no special characters
-14. All enum values match the allowed lists exactly
-15. If estimated_total_minutes > 90, set split_recommendation with suggested sub-topics
-16. If estimated_total_minutes < 25 and total_leaf_blocks < 4, set merge_recommendation
+9. Every non-root block has a valid parent_index pointing to an EARLIER block where is_container is true
+10. At least one block has parent_index: null (there must be at least one root)
+11. No block has parent_index equal to its own index (no self-references)
+12. parent_index: 0 is NEVER used for a root — only `null` means root
+13. If total_leaf_blocks > 5, the blocks array includes at least one container block (is_container: true)
+14. Container blocks have is_container: true and null for read_time, difficulty, bloom
+15. total_leaf_blocks matches actual count of blocks where is_container is false
+16. Visualization flags are selective (20-40% of leaf blocks), not applied to every block
+17. All slugs are lowercase with hyphens, no special characters
+18. All enum values match the allowed lists exactly
+19. If estimated_total_minutes > 90, set split_recommendation with suggested sub-topics
+20. If estimated_total_minutes < 25 and total_leaf_blocks < 4, set merge_recommendation
 PROMPT;
     }
 

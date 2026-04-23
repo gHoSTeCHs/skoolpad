@@ -2,9 +2,9 @@ function getCookie(name: string): string | undefined {
     return document.cookie.match(new RegExp(`${name}=([^;]+)`))?.[1];
 }
 
-export async function csPost<T>(url: string, data: Record<string, unknown> = {}): Promise<T> {
+async function csRequest<T>(method: 'POST' | 'PUT', url: string, data: Record<string, unknown>): Promise<T> {
     const response = await fetch(url, {
-        method: 'POST',
+        method,
         headers: {
             'Content-Type': 'application/json',
             'X-XSRF-TOKEN': decodeURIComponent(getCookie('XSRF-TOKEN') ?? ''),
@@ -21,4 +21,12 @@ export async function csPost<T>(url: string, data: Record<string, unknown> = {})
     }
 
     return response.json();
+}
+
+export async function csPost<T>(url: string, data: Record<string, unknown> = {}): Promise<T> {
+    return csRequest<T>('POST', url, data);
+}
+
+export async function csPut<T>(url: string, data: Record<string, unknown> = {}): Promise<T> {
+    return csRequest<T>('PUT', url, data);
 }

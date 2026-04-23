@@ -1,6 +1,7 @@
 import { Head, Link, router } from '@inertiajs/react';
-import { Banknote, CreditCard, Info, UserPlus } from 'lucide-react';
+import { Banknote, ChevronRight, CreditCard, Cpu, Info, UserPlus } from 'lucide-react';
 import { useState } from 'react';
+import AIPlatformSettingsController from '@/actions/App/Http/Controllers/Admin/AIPlatformSettingsController';
 import SettingsController from '@/actions/App/Http/Controllers/Admin/SettingsController';
 import SubscriptionPlanController from '@/actions/App/Http/Controllers/Admin/SubscriptionPlanController';
 import { PageHeader } from '@/components/admin/page-header';
@@ -102,6 +103,26 @@ export default function AdminSettings({ settings }: Props) {
                         iconBg="bg-[var(--badge-primary-bg)]"
                         iconFg="text-[var(--badge-primary-fg)]"
                     />
+
+                    <Link
+                        href={AIPlatformSettingsController.edit.url()}
+                        className="group block"
+                    >
+                        <Card className="transition-colors hover:border-foreground/30">
+                            <CardContent className="flex items-center gap-4 pt-6">
+                                <div className="shrink-0 rounded-lg bg-[var(--badge-neutral-bg)] p-2.5">
+                                    <Cpu className="size-5 text-[var(--badge-neutral-fg)]" />
+                                </div>
+                                <div className="min-w-0 flex-1">
+                                    <p className="font-display text-base font-semibold tracking-tight">AI Routing</p>
+                                    <p className="mt-0.5 text-sm text-muted-foreground">
+                                        Set the platform default AI model for Content Studio generation.
+                                    </p>
+                                </div>
+                                <ChevronRight className="size-4 shrink-0 text-muted-foreground transition-transform group-hover:translate-x-0.5" />
+                            </CardContent>
+                        </Card>
+                    </Link>
 
                     <div className="flex items-start gap-3 rounded-lg border border-[var(--badge-reward-bg)] bg-[var(--badge-reward-bg)]/30 px-4 py-3">
                         <Info className="mt-0.5 size-4 shrink-0 text-[var(--badge-reward-fg)]" />

@@ -13,17 +13,19 @@ import { sileo } from 'sileo';
 import { runScheme, approveScheme, skipScheme } from '@/actions/App/Http/Controllers/Admin/ContentStudioController';
 import { GenerationProgress } from '@/components/admin/content-studio/generation-progress';
 import { SchemeGrid } from '@/components/admin/content-studio/scheme-grid';
+import { StageModelSelector } from '@/components/admin/content-studio/stage-model-selector';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useGenerationStream } from '@/hooks/use-generation-stream';
 import { csPost } from '@/lib/content-studio';
-import type { AIModelOption, ContentProject, GenerationLogEntry, SchemeTerm } from '@/types/content-studio';
+import type { AIModelOption, ContentProject, GenerationLogEntry, ResolvedStageModel, SchemeTerm } from '@/types/content-studio';
 
 interface StageSchemeProps {
     project: ContentProject;
     aiModels: AIModelOption[];
+    resolvedModel: ResolvedStageModel;
     isActive: boolean;
     onProjectUpdate: (project: ContentProject) => void;
     onLogAppend: (entry: GenerationLogEntry) => void;
@@ -89,21 +91,24 @@ function SkippedSummary() {
 function SchemeGenerator({
     project,
     aiModels,
+    resolvedModel,
     onProjectUpdate,
     onLogAppend,
 }: {
     project: ContentProject;
     aiModels: AIModelOption[];
+    resolvedModel: ResolvedStageModel;
     onProjectUpdate: (project: ContentProject) => void;
     onLogAppend: (entry: GenerationLogEntry) => void;
 }) {
     const [termsCount, setTermsCount] = useState('3');
     const [weeksPerTerm, setWeeksPerTerm] = useState('10');
-    const [selectedModelId, setSelectedModelId] = useState<string>('auto');
+    const [runOverrideId, setRunOverrideId] = useState<string | null>(null);
     const { status, message, startStream } = useGenerationStream();
     const [isSkipping, setIsSkipping] = useState(false);
     const isTertiary = project.mode === 'tertiary';
     const isGenerating = status === 'processing' || status === 'validating';
+    const runOverrideModel = runOverrideId ? aiModels.find((m) => m.id === runOverrideId) : null;
 
     async function handleGenerate() {
         try {
@@ -112,7 +117,7 @@ function SchemeGenerator({
                 {
                     terms_count: parseInt(termsCount),
                     weeks_per_term: parseInt(weeksPerTerm),
-                    ...(selectedModelId !== 'auto' && { model_id: selectedModelId }),
+                    ...(runOverrideId && { model_id: runOverrideId }),
                 },
             );
             startStream(
@@ -121,6 +126,7 @@ function SchemeGenerator({
                 (updatedProject, logEntry) => {
                     onProjectUpdate(updatedProject);
                     if (logEntry) onLogAppend(logEntry);
+                    setRunOverrideId(null);
                 },
                 (errorMsg) => sileo.error({ title: errorMsg }),
             );
@@ -187,24 +193,20 @@ function SchemeGenerator({
                             </SelectContent>
                         </Select>
                     </div>
-                    {aiModels.length > 1 && (
-                        <div className="space-y-1.5">
-                            <label className="text-sm font-medium">Model</label>
-                            <Select value={selectedModelId} onValueChange={setSelectedModelId}>
-                                <SelectTrigger className="w-44">
-                                    <SelectValue placeholder="Auto (default)" />
-                                </SelectTrigger>
-                                <SelectContent>
-                                    <SelectItem value="auto">Auto (default)</SelectItem>
-                                    {aiModels.map((model) => (
-                                        <SelectItem key={model.id} value={model.id}>
-                                            {model.name}
-                                        </SelectItem>
-                                    ))}
-                                </SelectContent>
-                            </Select>
-                        </div>
-                    )}
+                    <div className="space-y-1.5">
+                        <label className="text-sm font-medium">Model</label>
+                        <StageModelSelector
+                            projectId={project.id}
+                            stage="scheme"
+                            resolvedModel={resolvedModel}
+                            aiModels={aiModels}
+                            currentStageOverrideId={project.scheme_model_id}
+                            runOverrideId={runOverrideId}
+                            onProjectUpdate={onProjectUpdate}
+                            onRunOverrideChange={setRunOverrideId}
+                            disabled={isGenerating}
+                        />
+                    </div>
                     <div className="flex gap-2">
                         <Button onClick={handleGenerate} disabled={isGenerating}>
                             {isGenerating ? (
@@ -215,7 +217,7 @@ function SchemeGenerator({
                             ) : (
                                 <>
                                     <Sparkles className="size-4" />
-                                    Generate Scheme
+                                    {runOverrideModel ? `Generate with ${runOverrideModel.name}` : 'Generate Scheme'}
                                 </>
                             )}
                         </Button>
@@ -309,7 +311,7 @@ function SchemeReview({
     );
 }
 
-export function StageScheme({ project, aiModels, isActive, onProjectUpdate, onLogAppend }: StageSchemeProps) {
+export function StageScheme({ project, aiModels, resolvedModel, isActive, onProjectUpdate, onLogAppend }: StageSchemeProps) {
     const aiContext = project.ai_context;
     const isApproved = !!aiContext?.scheme_approved;
     const isSkipped = !!project.progress_data?.scheme_skipped;
@@ -329,7 +331,7 @@ export function StageScheme({ project, aiModels, isActive, onProjectUpdate, onLo
     }
 
     if (hasApprovedResearch) {
-        return <SchemeGenerator project={project} aiModels={aiModels} onProjectUpdate={onProjectUpdate} onLogAppend={onLogAppend} />;
+        return <SchemeGenerator project={project} aiModels={aiModels} resolvedModel={resolvedModel} onProjectUpdate={onProjectUpdate} onLogAppend={onLogAppend} />;
     }
 
     return null;

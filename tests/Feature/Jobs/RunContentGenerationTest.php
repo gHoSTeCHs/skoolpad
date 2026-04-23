@@ -78,8 +78,8 @@ it('broadcasts status and complete events on success', function () {
         fn ($event) => $event->projectId === $project->id
             && $event->jobId === $jobId
             && $event->type === 'complete'
-            && isset($event->data['project'])
-            && array_key_exists('log_entry', $event->data),
+            && $event->data['stage'] === 'research'
+            && array_key_exists('generation_log_id', $event->data),
     );
 });
 

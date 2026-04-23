@@ -13,6 +13,7 @@ import {
 import { sileo } from 'sileo';
 import { runResearch, approveResearch } from '@/actions/App/Http/Controllers/Admin/ContentStudioController';
 import { GenerationProgress } from '@/components/admin/content-studio/generation-progress';
+import { StageModelSelector } from '@/components/admin/content-studio/stage-model-selector';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -22,12 +23,12 @@ import { Switch } from '@/components/ui/switch';
 import { Textarea } from '@/components/ui/textarea';
 import { useGenerationStream } from '@/hooks/use-generation-stream';
 import { csPost } from '@/lib/content-studio';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import type { AIModelOption, ContentProject, GenerationLogEntry, ResearchResult, ResearchTopic } from '@/types/content-studio';
+import type { AIModelOption, ContentProject, GenerationLogEntry, ResearchResult, ResearchTopic, ResolvedStageModel } from '@/types/content-studio';
 
 interface StageResearchProps {
     project: ContentProject;
     aiModels: AIModelOption[];
+    resolvedModel: ResolvedStageModel;
     isActive: boolean;
     onProjectUpdate: (project: ContentProject) => void;
     onLogAppend: (entry: GenerationLogEntry) => void;
@@ -83,18 +84,21 @@ function ApprovedSummary({ project }: { project: ContentProject }) {
 function ResearchInput({
     project,
     aiModels,
+    resolvedModel,
     onProjectUpdate,
     onLogAppend,
 }: {
     project: ContentProject;
     aiModels: AIModelOption[];
+    resolvedModel: ResolvedStageModel;
     onProjectUpdate: (project: ContentProject) => void;
     onLogAppend: (entry: GenerationLogEntry) => void;
 }) {
     const [documentText, setDocumentText] = useState('');
-    const [selectedModelId, setSelectedModelId] = useState<string>('auto');
+    const [runOverrideId, setRunOverrideId] = useState<string | null>(null);
     const { status, message, startStream } = useGenerationStream();
     const isProcessing = status === 'processing' || status === 'validating';
+    const runOverrideModel = runOverrideId ? aiModels.find((m) => m.id === runOverrideId) : null;
 
     async function handleSubmit() {
         if (!documentText.trim() || documentText.length < 100) return;
@@ -103,7 +107,7 @@ function ResearchInput({
                 runResearch.url(project.id),
                 {
                     document_text: documentText,
-                    ...(selectedModelId !== 'auto' && { model_id: selectedModelId }),
+                    ...(runOverrideId && { model_id: runOverrideId }),
                 },
             );
             startStream(
@@ -112,6 +116,7 @@ function ResearchInput({
                 (updatedProject, logEntry) => {
                     onProjectUpdate(updatedProject);
                     if (logEntry) onLogAppend(logEntry);
+                    setRunOverrideId(null);
                 },
                 (errorMsg) => sileo.error({ title: errorMsg }),
             );
@@ -141,28 +146,24 @@ function ResearchInput({
                     disabled={isProcessing}
                 />
                 <GenerationProgress status={status} message={message} />
-                <div className="flex items-center justify-between">
+                <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
                     <span className="text-xs text-muted-foreground">
                         {documentText.length < 100
                             ? `${100 - documentText.length} more characters needed`
                             : `${documentText.length.toLocaleString()} characters`}
                     </span>
-                    <div className="flex items-center gap-2">
-                        {aiModels.length > 1 && (
-                            <Select value={selectedModelId} onValueChange={setSelectedModelId}>
-                                <SelectTrigger className="w-44">
-                                    <SelectValue placeholder="Auto (default)" />
-                                </SelectTrigger>
-                                <SelectContent>
-                                    <SelectItem value="auto">Auto (default)</SelectItem>
-                                    {aiModels.map((model) => (
-                                        <SelectItem key={model.id} value={model.id}>
-                                            {model.name}
-                                        </SelectItem>
-                                    ))}
-                                </SelectContent>
-                            </Select>
-                        )}
+                    <div className="flex flex-wrap items-center gap-2">
+                        <StageModelSelector
+                            projectId={project.id}
+                            stage="research"
+                            resolvedModel={resolvedModel}
+                            aiModels={aiModels}
+                            currentStageOverrideId={project.research_model_id}
+                            runOverrideId={runOverrideId}
+                            onProjectUpdate={onProjectUpdate}
+                            onRunOverrideChange={setRunOverrideId}
+                            disabled={isProcessing}
+                        />
                         <Button onClick={handleSubmit} disabled={isProcessing || documentText.length < 100}>
                             {isProcessing ? (
                                 <>
@@ -172,7 +173,7 @@ function ResearchInput({
                             ) : (
                                 <>
                                     <Sparkles className="size-4" />
-                                    Parse Curriculum
+                                    {runOverrideModel ? `Parse with ${runOverrideModel.name}` : 'Parse Curriculum'}
                                 </>
                             )}
                         </Button>
@@ -342,7 +343,7 @@ function ResearchReview({
     );
 }
 
-export function StageResearch({ project, aiModels, isActive, onProjectUpdate, onLogAppend }: StageResearchProps) {
+export function StageResearch({ project, aiModels, resolvedModel, isActive, onProjectUpdate, onLogAppend }: StageResearchProps) {
     const aiContext = project.ai_context;
     const isApproved = !!aiContext?.research_approved;
     const hasResearch = !!aiContext?.research;
@@ -367,12 +368,12 @@ export function StageResearch({ project, aiModels, isActive, onProjectUpdate, on
                         </AlertDescription>
                     </Alert>
                     <div className="mt-4">
-                        <ResearchInput project={project} aiModels={aiModels} onProjectUpdate={onProjectUpdate} onLogAppend={onLogAppend} />
+                        <ResearchInput project={project} aiModels={aiModels} resolvedModel={resolvedModel} onProjectUpdate={onProjectUpdate} onLogAppend={onLogAppend} />
                     </div>
                 </CardContent>
             </Card>
         );
     }
 
-    return <ResearchInput project={project} aiModels={aiModels} onProjectUpdate={onProjectUpdate} onLogAppend={onLogAppend} />;
+    return <ResearchInput project={project} aiModels={aiModels} resolvedModel={resolvedModel} onProjectUpdate={onProjectUpdate} onLogAppend={onLogAppend} />;
 }

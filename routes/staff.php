@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\Admin\AIModelController;
+use App\Http\Controllers\Admin\AIPlatformSettingsController;
 use App\Http\Controllers\Admin\AnswerController;
 use App\Http\Controllers\Admin\AssessmentSubjectController;
 use App\Http\Controllers\Admin\AssessmentTypeController;
@@ -158,6 +159,8 @@ Route::middleware(['auth', 'verified', 'staff'])->prefix('admin')->name('admin.'
     Route::get('import/history', [BulkImportController::class, 'history'])->name('import.history');
     Route::get('settings', [SettingsController::class, 'index'])->name('settings.index');
     Route::put('settings', [SettingsController::class, 'update'])->name('settings.update');
+    Route::get('settings/ai', [AIPlatformSettingsController::class, 'edit'])->name('settings.ai.edit');
+    Route::put('settings/ai', [AIPlatformSettingsController::class, 'update'])->name('settings.ai.update');
     Route::get('settings/plans', [SubscriptionPlanController::class, 'index'])->name('settings.plans.index');
     Route::get('settings/plans/{plan}/edit', [SubscriptionPlanController::class, 'edit'])->name('settings.plans.edit');
     Route::put('settings/plans/{plan}', [SubscriptionPlanController::class, 'update'])->name('settings.plans.update');
@@ -222,6 +225,7 @@ Route::middleware(['auth', 'verified', 'staff'])->prefix('admin')->name('admin.'
     Route::get('content-studio/create', [ContentStudioController::class, 'create'])->name('content-studio.create');
     Route::post('content-studio', [ContentStudioController::class, 'store'])->name('content-studio.store');
     Route::get('content-studio/{contentProject}', [ContentStudioController::class, 'show'])->name('content-studio.show');
+    Route::put('content-studio/{contentProject}/models', [ContentStudioController::class, 'updateModels'])->name('content-studio.update-models');
     Route::post('content-studio/{contentProject}/research', [ContentStudioController::class, 'runResearch'])->name('content-studio.run-research')->middleware('throttle:10,1');
     Route::post('content-studio/{contentProject}/research/approve', [ContentStudioController::class, 'approveResearch'])->name('content-studio.approve-research');
     Route::post('content-studio/{contentProject}/scheme', [ContentStudioController::class, 'runScheme'])->name('content-studio.run-scheme')->middleware('throttle:10,1');

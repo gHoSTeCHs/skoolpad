@@ -22,6 +22,10 @@ class ContentProject extends Model
         'curriculum_subject_id',
         'discipline_id',
         'status',
+        'default_ai_model_id',
+        'research_model_id',
+        'scheme_model_id',
+        'blocks_model_id',
         'created_by',
         'progress_data',
         'ai_context',
@@ -61,6 +65,26 @@ class ContentProject extends Model
     public function aiGenerationLogs(): HasMany
     {
         return $this->hasMany(AIGenerationLog::class);
+    }
+
+    public function defaultAiModel(): BelongsTo
+    {
+        return $this->belongsTo(AIModel::class, 'default_ai_model_id');
+    }
+
+    public function researchModel(): BelongsTo
+    {
+        return $this->belongsTo(AIModel::class, 'research_model_id');
+    }
+
+    public function schemeModel(): BelongsTo
+    {
+        return $this->belongsTo(AIModel::class, 'scheme_model_id');
+    }
+
+    public function blocksModel(): BelongsTo
+    {
+        return $this->belongsTo(AIModel::class, 'blocks_model_id');
     }
 
     public function isSecondary(): bool

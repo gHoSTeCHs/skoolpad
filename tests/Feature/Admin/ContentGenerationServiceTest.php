@@ -7,6 +7,7 @@ use App\DataTransferObjects\ContentPrompt;
 use App\DataTransferObjects\ContentResponse;
 use App\Enums\AIAdapterType;
 use App\Models\AIModel;
+use App\Models\ContentProject;
 use App\Models\PlatformSetting;
 use App\Services\ContentGenerationService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -46,13 +47,139 @@ it('resolves model by task routing', function () {
 
     PlatformSetting::query()->create([
         'key' => 'ai_task_routing',
-        'value' => ['structure' => $model->id, 'content' => $model->id],
+        'value' => ['scheme' => $model->id, 'blocks' => $model->id],
     ]);
 
     $service = new ContentGenerationService();
-    $resolved = $service->resolveModel(null, 'structure');
+    $resolved = $service->resolveModel(null, 'scheme');
 
     expect($resolved->id)->toBe($model->id);
+});
+
+it('resolves model from project stage override when project and stage provided', function () {
+    $stageModel = AIModel::factory()->create(['name' => 'Stage Override']);
+    $projectDefault = AIModel::factory()->create(['name' => 'Project Default']);
+    $platformDefault = AIModel::factory()->create(['name' => 'Platform Default']);
+
+    $project = ContentProject::factory()->create([
+        'scheme_model_id' => $stageModel->id,
+        'default_ai_model_id' => $projectDefault->id,
+    ]);
+
+    PlatformSetting::query()->create([
+        'key' => 'content_studio.default_model_id',
+        'value' => ['model_id' => $platformDefault->id],
+    ]);
+
+    $service = new ContentGenerationService();
+    $resolved = $service->resolveModel(null, 'scheme', $project);
+
+    expect($resolved->id)->toBe($stageModel->id);
+});
+
+it('falls back to project default when stage override not set', function () {
+    $projectDefault = AIModel::factory()->create(['name' => 'Project Default']);
+    $platformDefault = AIModel::factory()->create(['name' => 'Platform Default']);
+
+    $project = ContentProject::factory()->create([
+        'default_ai_model_id' => $projectDefault->id,
+    ]);
+
+    PlatformSetting::query()->create([
+        'key' => 'content_studio.default_model_id',
+        'value' => ['model_id' => $platformDefault->id],
+    ]);
+
+    $service = new ContentGenerationService();
+    $resolved = $service->resolveModel(null, 'scheme', $project);
+
+    expect($resolved->id)->toBe($projectDefault->id);
+});
+
+it('prefers explicit request override over all project and platform defaults', function () {
+    $override = AIModel::factory()->create(['name' => 'Request Override']);
+    $stageModel = AIModel::factory()->create(['name' => 'Stage']);
+    $projectDefault = AIModel::factory()->create(['name' => 'Project Default']);
+
+    $project = ContentProject::factory()->create([
+        'scheme_model_id' => $stageModel->id,
+        'default_ai_model_id' => $projectDefault->id,
+    ]);
+
+    $service = new ContentGenerationService();
+    $resolved = $service->resolveModel($override->id, 'scheme', $project);
+
+    expect($resolved->id)->toBe($override->id);
+});
+
+it('skips inactive project stage model and falls through', function () {
+    $inactive = AIModel::factory()->inactive()->create();
+    $projectDefault = AIModel::factory()->create(['name' => 'Project Default']);
+
+    $project = ContentProject::factory()->create([
+        'scheme_model_id' => $inactive->id,
+        'default_ai_model_id' => $projectDefault->id,
+    ]);
+
+    $service = new ContentGenerationService();
+    $resolved = $service->resolveModel(null, 'scheme', $project);
+
+    expect($resolved->id)->toBe($projectDefault->id);
+});
+
+it('resolves model from platform default when no routing matches', function () {
+    AIModel::factory()->create(['sort_order' => 1, 'name' => 'First']);
+    $platformDefault = AIModel::factory()->create(['sort_order' => 5, 'name' => 'Platform Default']);
+
+    PlatformSetting::query()->create([
+        'key' => 'content_studio.default_model_id',
+        'value' => ['model_id' => $platformDefault->id],
+    ]);
+
+    $service = new ContentGenerationService();
+    $resolved = $service->resolveModel();
+
+    expect($resolved->id)->toBe($platformDefault->id);
+});
+
+it('prefers task routing over platform default', function () {
+    $routed = AIModel::factory()->create(['name' => 'Routed']);
+    $platformDefault = AIModel::factory()->create(['name' => 'Platform Default']);
+
+    PlatformSetting::query()->create([
+        'key' => 'ai_task_routing',
+        'value' => ['scheme' => $routed->id],
+    ]);
+
+    PlatformSetting::query()->create([
+        'key' => 'content_studio.default_model_id',
+        'value' => ['model_id' => $platformDefault->id],
+    ]);
+
+    $service = new ContentGenerationService();
+    $resolved = $service->resolveModel(null, 'scheme');
+
+    expect($resolved->id)->toBe($routed->id);
+});
+
+it('falls back to platform default when task routing has no match for stage', function () {
+    $platformDefault = AIModel::factory()->create(['name' => 'Platform Default']);
+    $other = AIModel::factory()->create(['name' => 'Other']);
+
+    PlatformSetting::query()->create([
+        'key' => 'ai_task_routing',
+        'value' => ['research' => $other->id],
+    ]);
+
+    PlatformSetting::query()->create([
+        'key' => 'content_studio.default_model_id',
+        'value' => ['model_id' => $platformDefault->id],
+    ]);
+
+    $service = new ContentGenerationService();
+    $resolved = $service->resolveModel(null, 'scheme');
+
+    expect($resolved->id)->toBe($platformDefault->id);
 });
 
 it('falls back to first active model when no routing exists', function () {
@@ -63,6 +190,21 @@ it('falls back to first active model when no routing exists', function () {
     $resolved = $service->resolveModel();
 
     expect($resolved->id)->toBe($first->id);
+});
+
+it('skips inactive platform default and falls through to sort order', function () {
+    $inactive = AIModel::factory()->inactive()->create(['name' => 'Inactive Default']);
+    $active = AIModel::factory()->create(['sort_order' => 1, 'name' => 'Active First']);
+
+    PlatformSetting::query()->create([
+        'key' => 'content_studio.default_model_id',
+        'value' => ['model_id' => $inactive->id],
+    ]);
+
+    $service = new ContentGenerationService();
+    $resolved = $service->resolveModel();
+
+    expect($resolved->id)->toBe($active->id);
 });
 
 it('skips inactive models in fallback', function () {
