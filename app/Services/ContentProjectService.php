@@ -209,8 +209,36 @@ class ContentProjectService
         $response = $this->generationService->generate($prompt, $context, $project, $modelId);
 
         if ($response->valid) {
+            $normalized = $this->normalizeBlockStructure($response->data);
+
+            if ($normalized === null) {
+                $failed = $project->ai_context['blocks_failed'] ?? [];
+                $failed[$topicKey] = [
+                    'raw_response' => $response->raw_response,
+                    'validation_errors' => [
+                        'normalization_error' => 'AI did not produce a valid block hierarchy. Either no root blocks exist, or the structure is a flat list missing container blocks. Try regenerating, or switch models.',
+                    ],
+                ];
+                $project->updateAiContext('blocks_failed', $failed);
+
+                return new ContentResponse(
+                    valid: false,
+                    data: $response->data,
+                    validation_errors: [
+                        'normalization_error' => 'AI did not produce a valid block hierarchy. Either no root blocks exist, or the structure is a flat list missing container blocks. Try regenerating, or switch models.',
+                    ],
+                    raw_response: $response->raw_response,
+                    model_used: $response->model_used,
+                    tokens_used: $response->tokens_used,
+                    generation_time_ms: $response->generation_time_ms,
+                    input_tokens: $response->input_tokens,
+                    output_tokens: $response->output_tokens,
+                    generation_log_id: $response->generation_log_id,
+                );
+            }
+
             $blocks = $project->ai_context['blocks'] ?? [];
-            $blocks[$topicKey] = $response->data;
+            $blocks[$topicKey] = $normalized;
             $project->updateAiContext('blocks', $blocks);
             $this->rememberStageModel($project, 'blocks', $response->generation_log_id);
         } else {
@@ -483,5 +511,76 @@ class ContentProjectService
         if ($aiModelId) {
             $project->update([$column => $aiModelId]);
         }
+    }
+
+    /**
+     * Normalize an AI-generated block structure so the UI can render it.
+     * Nullifies self-referencing, out-of-range, or points-to-leaf parent_index values.
+     * If no roots remain, promotes minimum-depth blocks to roots.
+     *
+     * @param  array<string, mixed>  $data
+     * @return array<string, mixed>|null  Normalized data, or null if no valid root candidates exist
+     */
+    public static function normalizeBlockStructure(array $data): ?array
+    {
+        if (! isset($data['blocks']) || ! is_array($data['blocks']) || count($data['blocks']) === 0) {
+            return null;
+        }
+
+        $blocks = array_values($data['blocks']);
+        $count = count($blocks);
+
+        foreach ($blocks as $i => $block) {
+            $pi = $block['parent_index'] ?? null;
+
+            if ($pi === null) {
+                continue;
+            }
+
+            if (! is_int($pi) || $pi === $i || $pi < 0 || $pi >= $count) {
+                $blocks[$i]['parent_index'] = null;
+
+                continue;
+            }
+
+            if (! ($blocks[$pi]['is_container'] ?? false)) {
+                $blocks[$i]['parent_index'] = null;
+            }
+        }
+
+        $hasRoot = false;
+        foreach ($blocks as $block) {
+            if (($block['parent_index'] ?? null) === null) {
+                $hasRoot = true;
+                break;
+            }
+        }
+
+        if (! $hasRoot) {
+            $minDepth = null;
+            foreach ($blocks as $block) {
+                $d = $block['depth_level'] ?? null;
+                if (is_int($d) && ($minDepth === null || $d < $minDepth)) {
+                    $minDepth = $d;
+                }
+            }
+
+            if ($minDepth !== null) {
+                foreach ($blocks as $i => $block) {
+                    if (($block['depth_level'] ?? null) === $minDepth) {
+                        $blocks[$i]['parent_index'] = null;
+                        $hasRoot = true;
+                    }
+                }
+            }
+        }
+
+        if (! $hasRoot) {
+            return null;
+        }
+
+        $data['blocks'] = $blocks;
+
+        return $data;
     }
 }
