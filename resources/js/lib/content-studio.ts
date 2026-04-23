@@ -14,8 +14,10 @@ export async function csPost<T>(url: string, data: Record<string, unknown> = {})
     });
 
     if (!response.ok) {
-        const error = await response.json();
-        throw new Error(error.message ?? 'Request failed');
+        const body = (await response.json().catch(() => ({}))) as {
+            message?: string;
+        };
+        throw new Error(body.message ?? `HTTP ${response.status}`);
     }
 
     return response.json();
