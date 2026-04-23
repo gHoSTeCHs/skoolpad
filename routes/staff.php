@@ -1,5 +1,7 @@
 <?php
 
+use App\Http\Controllers\Admin\AIModelController;
+use App\Http\Controllers\Admin\AIPlatformSettingsController;
 use App\Http\Controllers\Admin\AnswerController;
 use App\Http\Controllers\Admin\AssessmentSubjectController;
 use App\Http\Controllers\Admin\AssessmentTypeController;
@@ -7,6 +9,7 @@ use App\Http\Controllers\Admin\BulkImportController;
 use App\Http\Controllers\Admin\CalendarTermController;
 use App\Http\Controllers\Admin\CanonicalTopicController;
 use App\Http\Controllers\Admin\ContentBlockController;
+use App\Http\Controllers\Admin\ContentStudioController;
 use App\Http\Controllers\Admin\CourseBlockMappingController;
 use App\Http\Controllers\Admin\CourseController;
 use App\Http\Controllers\Admin\CourseDepartmentController;
@@ -156,6 +159,8 @@ Route::middleware(['auth', 'verified', 'staff'])->prefix('admin')->name('admin.'
     Route::get('import/history', [BulkImportController::class, 'history'])->name('import.history');
     Route::get('settings', [SettingsController::class, 'index'])->name('settings.index');
     Route::put('settings', [SettingsController::class, 'update'])->name('settings.update');
+    Route::get('settings/ai', [AIPlatformSettingsController::class, 'edit'])->name('settings.ai.edit');
+    Route::put('settings/ai', [AIPlatformSettingsController::class, 'update'])->name('settings.ai.update');
     Route::get('settings/plans', [SubscriptionPlanController::class, 'index'])->name('settings.plans.index');
     Route::get('settings/plans/{plan}/edit', [SubscriptionPlanController::class, 'edit'])->name('settings.plans.edit');
     Route::put('settings/plans/{plan}', [SubscriptionPlanController::class, 'update'])->name('settings.plans.update');
@@ -215,4 +220,25 @@ Route::middleware(['auth', 'verified', 'staff'])->prefix('admin')->name('admin.'
     Route::post('exam-types/{examType}/subjects', [ExamSubjectController::class, 'store'])->name('exam-subjects.store');
     Route::get('exam-subjects/{examSubject}/edit', [ExamSubjectController::class, 'edit'])->name('exam-subjects.edit');
     Route::put('exam-subjects/{examSubject}', [ExamSubjectController::class, 'update'])->name('exam-subjects.update');
+
+    Route::get('content-studio', [ContentStudioController::class, 'index'])->name('content-studio.index');
+    Route::get('content-studio/create', [ContentStudioController::class, 'create'])->name('content-studio.create');
+    Route::post('content-studio', [ContentStudioController::class, 'store'])->name('content-studio.store');
+    Route::get('content-studio/{contentProject}', [ContentStudioController::class, 'show'])->name('content-studio.show');
+    Route::put('content-studio/{contentProject}/models', [ContentStudioController::class, 'updateModels'])->name('content-studio.update-models');
+    Route::post('content-studio/{contentProject}/research', [ContentStudioController::class, 'runResearch'])->name('content-studio.run-research')->middleware('throttle:10,1');
+    Route::post('content-studio/{contentProject}/research/approve', [ContentStudioController::class, 'approveResearch'])->name('content-studio.approve-research');
+    Route::post('content-studio/{contentProject}/scheme', [ContentStudioController::class, 'runScheme'])->name('content-studio.run-scheme')->middleware('throttle:10,1');
+    Route::post('content-studio/{contentProject}/scheme/approve', [ContentStudioController::class, 'approveScheme'])->name('content-studio.approve-scheme');
+    Route::post('content-studio/{contentProject}/scheme/skip', [ContentStudioController::class, 'skipScheme'])->name('content-studio.skip-scheme');
+    Route::post('content-studio/{contentProject}/blocks', [ContentStudioController::class, 'runBlocks'])->name('content-studio.run-blocks')->middleware('throttle:20,1');
+    Route::post('content-studio/{contentProject}/blocks/approve', [ContentStudioController::class, 'approveBlocks'])->name('content-studio.approve-blocks');
+
+    Route::get('ai-models', [AIModelController::class, 'index'])->name('ai-models.index');
+    Route::get('ai-models/create', [AIModelController::class, 'create'])->name('ai-models.create');
+    Route::post('ai-models', [AIModelController::class, 'store'])->name('ai-models.store');
+    Route::get('ai-models/{ai_model}/edit', [AIModelController::class, 'edit'])->name('ai-models.edit');
+    Route::put('ai-models/{ai_model}', [AIModelController::class, 'update'])->name('ai-models.update');
+    Route::delete('ai-models/{ai_model}', [AIModelController::class, 'destroy'])->name('ai-models.destroy');
+    Route::post('ai-models/{ai_model}/test', [AIModelController::class, 'testConnection'])->name('ai-models.test');
 });

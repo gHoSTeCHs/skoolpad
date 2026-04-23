@@ -7,6 +7,8 @@ use App\Enums\BillingPeriod;
 use App\Enums\BlockDifficultyLevel;
 use App\Enums\BlockType;
 use App\Enums\BloomLevel;
+use App\Enums\ContentProjectMode;
+use App\Enums\ContentProjectStatus;
 use App\Enums\ContentSubmissionStatus;
 use App\Enums\ContentSubmissionType;
 use App\Enums\ContextType;
@@ -28,6 +30,7 @@ use App\Models\AssessmentType;
 use App\Models\CalendarTerm;
 use App\Models\CanonicalTopic;
 use App\Models\ContentBlock;
+use App\Models\ContentProject;
 use App\Models\ContentSubmission;
 use App\Models\Country;
 use App\Models\CourseBlockMapping;
@@ -736,6 +739,21 @@ class DatabaseSeeder extends Seeder
 
         $this->call(Csc302Seeder::class);
         $this->call(SecondaryPracticeSeeder::class);
+
+        ContentProject::query()->create([
+            'mode' => ContentProjectMode::Secondary,
+            'education_level_id' => $ss1->id,
+            'curriculum_subject_id' => CurriculumSubject::query()->where('name', 'Physics')->first()?->id,
+            'status' => ContentProjectStatus::Draft,
+            'created_by' => $admin->id,
+        ]);
+
+        ContentProject::query()->create([
+            'mode' => ContentProjectMode::Tertiary,
+            'discipline_id' => $disciplines['computer-science']->id,
+            'status' => ContentProjectStatus::Research,
+            'created_by' => $admin->id,
+        ]);
     }
 
     private function seedQuestions(User $admin, Institution $mouau, Institution $unn): void
@@ -1922,5 +1940,6 @@ class DatabaseSeeder extends Seeder
                 'content_block_id' => $item['content_block_id'] ?? null,
             ]);
         }
+
     }
 }

@@ -193,8 +193,17 @@
       "mcp__plugin_laravel-boost_laravel-boost__get-config",
       "mcp__plugin_laravel-boost_laravel-boost__list-routes",
       "mcp__plugin_playwright_playwright__browser_wait_for",
-      "mcp__plugin_playwright_playwright__browser_run_code"
-    ]
+      "mcp__plugin_playwright_playwright__browser_run_code",
+      "mcp__plugin_playwright_playwright__browser_evaluate",
+      "mcp__plugin_playwright_playwright__browser_press_key",
+      "mcp__laravel-boost__last-error",
+      "mcp__laravel-boost__read-log-entries",
+      "mcp__plugin_playwright_playwright__browser_resize",
+      "mcp__laravel-boost__list-artisan-commands",
+      "mcp__plugin_context7_context7__resolve-library-id",
+      "WebFetch(domain:sileo.aaryan.design)"
+    ],
+    "defaultMode": "bypassPermissions"
   },
   "enableAllProjectMcpServers": true,
   "enabledMcpjsonServers": [

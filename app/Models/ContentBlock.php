@@ -34,6 +34,7 @@ class ContentBlock extends Model
         'bloom_level',
         'is_container',
         'is_published',
+        'visualization_config',
     ];
 
     /** @return array<string, string> */
@@ -50,6 +51,7 @@ class ContentBlock extends Model
             'bloom_level' => BloomLevel::class,
             'is_container' => 'boolean',
             'is_published' => 'boolean',
+            'visualization_config' => 'array',
         ];
     }
 
