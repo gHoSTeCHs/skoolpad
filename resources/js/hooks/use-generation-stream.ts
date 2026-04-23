@@ -1,4 +1,5 @@
 import { useCallback, useRef, useState } from 'react';
+import { router } from '@inertiajs/react';
 import { echo } from '@laravel/echo-react';
 import type { ContentProject, GenerationLogEntry } from '@/types/content-studio';
 
@@ -11,9 +12,13 @@ interface EventPayload {
         stage?: string;
         state?: StreamStatus;
         message?: string;
-        project?: ContentProject;
-        log_entry?: GenerationLogEntry | null;
+        generation_log_id?: string | null;
     };
+}
+
+interface ReloadedProps {
+    project: ContentProject;
+    generationLogs: GenerationLogEntry[];
 }
 
 interface UseGenerationStreamReturn {
@@ -28,19 +33,34 @@ interface UseGenerationStreamReturn {
     cancel: () => void;
 }
 
+const HUNG_JOB_TIMEOUT_MS = 5 * 60 * 1000;
+
 export function useGenerationStream(): UseGenerationStreamReturn {
     const [status, setStatus] = useState<StreamStatus>('idle');
     const [message, setMessage] = useState('');
     const channelNameRef = useRef<string | null>(null);
+    const watchdogRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-    const cancel = useCallback(() => {
+    const clearWatchdog = useCallback(() => {
+        if (watchdogRef.current) {
+            clearTimeout(watchdogRef.current);
+            watchdogRef.current = null;
+        }
+    }, []);
+
+    const teardown = useCallback(() => {
+        clearWatchdog();
         if (channelNameRef.current) {
             echo().leave(channelNameRef.current);
             channelNameRef.current = null;
         }
+    }, [clearWatchdog]);
+
+    const cancel = useCallback(() => {
+        teardown();
         setStatus('idle');
         setMessage('');
-    }, []);
+    }, [teardown]);
 
     const startStream = useCallback(
         (
@@ -49,15 +69,21 @@ export function useGenerationStream(): UseGenerationStreamReturn {
             onComplete: (project: ContentProject, logEntry: GenerationLogEntry | null) => void,
             onError: (message: string) => void,
         ) => {
-            if (channelNameRef.current) {
-                echo().leave(channelNameRef.current);
-                channelNameRef.current = null;
-            }
+            teardown();
 
             const channelName = `content-studio.${projectId}`;
             channelNameRef.current = channelName;
             setStatus('processing');
             setMessage('Starting generation...');
+
+            watchdogRef.current = setTimeout(() => {
+                if (channelNameRef.current !== channelName) return;
+                const errorMsg = 'Lost connection to the generation job. Refresh the page to check status.';
+                setStatus('error');
+                setMessage(errorMsg);
+                teardown();
+                onError(errorMsg);
+            }, HUNG_JOB_TIMEOUT_MS);
 
             echo()
                 .private(channelName)
@@ -70,24 +96,32 @@ export function useGenerationStream(): UseGenerationStreamReturn {
                     } else if (payload.type === 'complete') {
                         setStatus('complete');
                         setMessage('');
-                        const project = payload.data.project;
-                        const logEntry = payload.data.log_entry ?? null;
-                        echo().leave(channelName);
-                        channelNameRef.current = null;
-                        if (project) {
-                            onComplete(project, logEntry);
-                        }
+                        teardown();
+
+                        router.reload({
+                            only: ['project', 'generationLogs', 'resolvedModels'],
+                            onSuccess: (page) => {
+                                const props = page.props as unknown as ReloadedProps;
+                                const logEntry = props.generationLogs[0] ?? null;
+                                onComplete(props.project, logEntry);
+                            },
+                        });
                     } else if (payload.type === 'error') {
                         const errorMsg = payload.data.message ?? 'Unknown error';
                         setStatus('error');
                         setMessage(errorMsg);
-                        echo().leave(channelName);
-                        channelNameRef.current = null;
-                        onError(errorMsg);
+                        teardown();
+
+                        router.reload({
+                            only: ['project', 'generationLogs', 'resolvedModels'],
+                            onSuccess: () => {
+                                onError(errorMsg);
+                            },
+                        });
                     }
                 });
         },
-        [],
+        [teardown],
     );
 
     return { status, message, startStream, cancel };

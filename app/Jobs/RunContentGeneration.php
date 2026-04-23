@@ -4,7 +4,6 @@ namespace App\Jobs;
 
 use App\DataTransferObjects\ContentResponse;
 use App\Events\ContentGenerationUpdate;
-use App\Models\AIGenerationLog;
 use App\Models\ContentProject;
 use App\Services\ContentProjectService;
 use Illuminate\Bus\Queueable;
@@ -75,24 +74,17 @@ class RunContentGeneration implements ShouldQueue
             $elapsedMs = (int) ((microtime(true) - $startedAt) * 1000);
 
             if ($response->valid) {
-                $logEntry = $response->generation_log_id
-                    ? AIGenerationLog::query()
-                        ->select(['id', 'prompt_type', 'model_used', 'is_valid', 'tokens_used', 'estimated_cost_cents', 'created_at'])
-                        ->find($response->generation_log_id)
-                    : null;
-
                 Log::info('[ContentStudio] Job completed successfully', [
                     'job_id' => $this->jobId,
                     'project_id' => $this->project->id,
                     'prompt_type' => $this->promptType,
-                    'tokens_used' => $logEntry?->tokens_used,
+                    'generation_log_id' => $response->generation_log_id,
                     'elapsed_ms' => $elapsedMs,
                 ]);
 
                 $this->broadcastUpdate('complete', [
                     'stage' => $this->promptType,
-                    'project' => $this->project->refresh()->toShowArray(),
-                    'log_entry' => $logEntry?->toArray(),
+                    'generation_log_id' => $response->generation_log_id,
                 ]);
             } else {
                 $errorMessage = $this->formatError($response);
