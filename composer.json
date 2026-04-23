@@ -51,12 +51,12 @@
         ],
         "dev": [
             "Composer\\Config::disableProcessTimeout",
-            "npx concurrently -c \"#93c5fd,#c4b5fd,#fdba74,#fb7185\" --kill-others-on-fail \"php artisan serve  --port=8673\" \"php artisan queue:work --tries=1 --verbose\" \"npm run dev -- --port 5673\" \"php artisan reverb:start\" --names='server,queue,vite,reverb'"
+            "npx concurrently -c \"#c4b5fd,#86efac,#fdba74\" \"php artisan queue:work --tries=1 --verbose\" \"php artisan reverb:start\" \"npm run dev -- --port 5673\" --names='queue,reverb,vite'"
         ],
         "dev:ssr": [
             "npm run build:ssr",
             "Composer\\Config::disableProcessTimeout",
-            "npx concurrently -c \"#93c5fd,#c4b5fd,#fb7185,#fdba74\" \"php artisan serve\" \"php artisan queue:listen --tries=1\" \"php artisan pail --timeout=0\" \"php artisan inertia:start-ssr\" --names=server,queue,logs,ssr --kill-others"
+            "npx concurrently -c \"#c4b5fd,#86efac,#fb7185,#fdba74\" \"php artisan queue:work --tries=1 --verbose\" \"php artisan reverb:start\" \"php artisan pail --timeout=0\" \"php artisan inertia:start-ssr\" --names=queue,reverb,logs,ssr"
         ],
         "lint": [
             "pint --parallel"
