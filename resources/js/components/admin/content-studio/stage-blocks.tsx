@@ -14,6 +14,7 @@ import {
 } from '@/actions/App/Http/Controllers/Admin/ContentStudioController';
 import { BlockTree } from '@/components/admin/content-studio/block-tree';
 import { GenerationProgress } from '@/components/admin/content-studio/generation-progress';
+import { StageModelSelector } from '@/components/admin/content-studio/stage-model-selector';
 import { TopicProgressList } from '@/components/admin/content-studio/topic-progress-list';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
@@ -28,18 +29,19 @@ import { Separator } from '@/components/ui/separator';
 import { useGenerationStream } from '@/hooks/use-generation-stream';
 import { csPost } from '@/lib/content-studio';
 import { slugify } from '@/lib/slug';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import type {
     AIModelOption,
     BlockNode,
     BlockStructureResult,
     ContentProject,
     GenerationLogEntry,
+    ResolvedStageModel,
 } from '@/types/content-studio';
 
 interface StageBlocksProps {
     project: ContentProject;
     aiModels: AIModelOption[];
+    resolvedModel: ResolvedStageModel;
     isActive: boolean;
     onProjectUpdate: (project: ContentProject) => void;
     onLogAppend: (entry: GenerationLogEntry) => void;
@@ -91,8 +93,9 @@ function BlockDetailPanel({
     status,
     blockData,
     aiModels,
-    selectedModelId,
-    onSelectedModelChange,
+    resolvedModel,
+    runOverrideId,
+    onRunOverrideChange,
     onProjectUpdate,
     onLogAppend,
 }: {
@@ -102,8 +105,9 @@ function BlockDetailPanel({
     status: 'pending' | 'generated' | 'approved';
     blockData: BlockStructureResult | null;
     aiModels: AIModelOption[];
-    selectedModelId: string;
-    onSelectedModelChange: (value: string) => void;
+    resolvedModel: ResolvedStageModel;
+    runOverrideId: string | null;
+    onRunOverrideChange: (value: string | null) => void;
     onProjectUpdate: (project: ContentProject) => void;
     onLogAppend: (entry: GenerationLogEntry) => void;
 }) {
@@ -113,6 +117,7 @@ function BlockDetailPanel({
     const [isApproving, setIsApproving] = useState(false);
     const { status: streamStatus, message: streamMessage, startStream } = useGenerationStream();
     const isGenerating = streamStatus === 'processing' || streamStatus === 'validating';
+    const runOverrideModel = runOverrideId ? aiModels.find((m) => m.id === runOverrideId) : null;
 
     async function handleGenerate() {
         try {
@@ -120,7 +125,7 @@ function BlockDetailPanel({
                 runBlocks.url(project.id),
                 {
                     topic_key: topicKey,
-                    ...(selectedModelId !== 'auto' && { model_id: selectedModelId }),
+                    ...(runOverrideId && { model_id: runOverrideId }),
                 },
             );
             startStream(
@@ -129,6 +134,7 @@ function BlockDetailPanel({
                 (updatedProject, logEntry) => {
                     onProjectUpdate(updatedProject);
                     if (logEntry) onLogAppend(logEntry);
+                    onRunOverrideChange(null);
                 },
                 (errorMsg) => sileo.error({ title: errorMsg }),
             );
@@ -181,22 +187,18 @@ function BlockDetailPanel({
                     </p>
                 </div>
                 <GenerationProgress status={streamStatus} message={streamMessage} />
-                <div className="flex items-center gap-2">
-                    {aiModels.length > 1 && (
-                        <Select value={selectedModelId} onValueChange={onSelectedModelChange}>
-                            <SelectTrigger className="w-44">
-                                <SelectValue placeholder="Auto (default)" />
-                            </SelectTrigger>
-                            <SelectContent>
-                                <SelectItem value="auto">Auto (default)</SelectItem>
-                                {aiModels.map((model) => (
-                                    <SelectItem key={model.id} value={model.id}>
-                                        {model.name}
-                                    </SelectItem>
-                                ))}
-                            </SelectContent>
-                        </Select>
-                    )}
+                <div className="flex flex-wrap items-center justify-center gap-2">
+                    <StageModelSelector
+                        projectId={project.id}
+                        stage="blocks"
+                        resolvedModel={resolvedModel}
+                        aiModels={aiModels}
+                        currentStageOverrideId={project.blocks_model_id}
+                        runOverrideId={runOverrideId}
+                        onProjectUpdate={onProjectUpdate}
+                        onRunOverrideChange={onRunOverrideChange}
+                        disabled={isGenerating}
+                    />
                     <Button onClick={handleGenerate} disabled={isGenerating} size="lg">
                         {isGenerating ? (
                             <>
@@ -206,7 +208,7 @@ function BlockDetailPanel({
                         ) : (
                             <>
                                 <Sparkles className="size-4" />
-                                Generate Block Structure
+                                {runOverrideModel ? `Generate with ${runOverrideModel.name}` : 'Generate Block Structure'}
                             </>
                         )}
                     </Button>
@@ -307,10 +309,10 @@ function BlockDetailPanel({
     return null;
 }
 
-export function StageBlocks({ project, aiModels, isActive, onProjectUpdate, onLogAppend }: StageBlocksProps) {
+export function StageBlocks({ project, aiModels, resolvedModel, isActive, onProjectUpdate, onLogAppend }: StageBlocksProps) {
     const [selectedKey, setSelectedKey] = useState<string | null>(null);
     const [generatingTopic, setGeneratingTopic] = useState<string | null>(null);
-    const [selectedModelId, setSelectedModelId] = useState<string>('auto');
+    const [runOverrideId, setRunOverrideId] = useState<string | null>(null);
     const { startStream } = useGenerationStream();
     const topics = getTopicList(project);
 
@@ -326,7 +328,7 @@ export function StageBlocks({ project, aiModels, isActive, onProjectUpdate, onLo
                 runBlocks.url(project.id),
                 {
                     topic_key: topicKey,
-                    ...(selectedModelId !== 'auto' && { model_id: selectedModelId }),
+                    ...(runOverrideId && { model_id: runOverrideId }),
                 },
             );
             startStream(
@@ -336,6 +338,7 @@ export function StageBlocks({ project, aiModels, isActive, onProjectUpdate, onLo
                     onProjectUpdate(updatedProject);
                     if (logEntry) onLogAppend(logEntry);
                     setGeneratingTopic(null);
+                    setRunOverrideId(null);
                 },
                 (errorMsg) => {
                     sileo.error({ title: errorMsg });
@@ -406,8 +409,9 @@ export function StageBlocks({ project, aiModels, isActive, onProjectUpdate, onLo
                                 status={selectedTopic.status}
                                 blockData={selectedBlockData}
                                 aiModels={aiModels}
-                                selectedModelId={selectedModelId}
-                                onSelectedModelChange={setSelectedModelId}
+                                resolvedModel={resolvedModel}
+                                runOverrideId={runOverrideId}
+                                onRunOverrideChange={setRunOverrideId}
                                 onProjectUpdate={onProjectUpdate}
                                 onLogAppend={onLogAppend}
                             />

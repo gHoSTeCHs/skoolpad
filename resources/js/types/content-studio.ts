@@ -14,6 +14,10 @@ export interface ContentProject {
     education_level_name: string | null;
     curriculum_subject_name: string | null;
     discipline_name: string | null;
+    default_ai_model_id: string | null;
+    research_model_id: string | null;
+    scheme_model_id: string | null;
+    blocks_model_id: string | null;
     created_by: string;
     created_by_name: string | null;
     progress_data: ProgressData | null;
@@ -21,6 +25,17 @@ export interface ContentProject {
     created_at: string;
     updated_at: string;
 }
+
+export type ModelResolutionSource = 'stage_override' | 'project_default' | 'platform_default' | 'fallback';
+
+export interface ResolvedStageModel {
+    id: string;
+    name: string;
+    model_id: string;
+    source: ModelResolutionSource;
+}
+
+export type ResolvedStageModels = Record<'research' | 'scheme' | 'blocks', ResolvedStageModel>;
 
 export interface ProgressData {
     research_approved_at?: string;
