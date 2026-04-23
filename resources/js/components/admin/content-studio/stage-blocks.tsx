@@ -4,9 +4,10 @@ import {
     Check,
     Info,
     Loader2,
+    RotateCcw,
     Sparkles,
 } from 'lucide-react';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { sileo } from 'sileo';
 import {
     runBlocks,
@@ -17,6 +18,17 @@ import { GenerationProgress } from '@/components/admin/content-studio/generation
 import { StageModelSelector } from '@/components/admin/content-studio/stage-model-selector';
 import { TopicProgressList } from '@/components/admin/content-studio/topic-progress-list';
 import { Alert, AlertDescription } from '@/components/ui/alert';
+import {
+    AlertDialog,
+    AlertDialogAction,
+    AlertDialogCancel,
+    AlertDialogContent,
+    AlertDialogDescription,
+    AlertDialogFooter,
+    AlertDialogHeader,
+    AlertDialogTitle,
+    AlertDialogTrigger,
+} from '@/components/ui/alert-dialog';
 import { Button } from '@/components/ui/button';
 import {
     Card,
@@ -115,6 +127,10 @@ function BlockDetailPanel({
         blockData?.blocks ?? [],
     );
     const [isApproving, setIsApproving] = useState(false);
+
+    useEffect(() => {
+        setEditedBlocks(blockData?.blocks ?? []);
+    }, [blockData]);
     const { status: streamStatus, message: streamMessage, startStream } = useGenerationStream();
     const isGenerating = streamStatus === 'processing' || streamStatus === 'validating';
     const runOverrideModel = runOverrideId ? aiModels.find((m) => m.id === runOverrideId) : null;
@@ -286,12 +302,62 @@ function BlockDetailPanel({
 
                 <BlockTree blocks={editedBlocks} onChange={setEditedBlocks} />
 
+                <GenerationProgress status={streamStatus} message={streamMessage} />
+
                 <Separator />
 
-                <div className="flex items-center justify-end gap-2">
+                <div className="flex flex-col-reverse gap-3 sm:flex-row sm:items-center sm:justify-between">
+                    <div className="flex flex-wrap items-center gap-2">
+                        <StageModelSelector
+                            projectId={project.id}
+                            stage="blocks"
+                            resolvedModel={resolvedModel}
+                            aiModels={aiModels}
+                            currentStageOverrideId={project.blocks_model_id}
+                            runOverrideId={runOverrideId}
+                            onProjectUpdate={onProjectUpdate}
+                            onRunOverrideChange={onRunOverrideChange}
+                            disabled={isGenerating || isApproving}
+                        />
+                        <AlertDialog>
+                            <AlertDialogTrigger asChild>
+                                <Button
+                                    variant="outline"
+                                    disabled={isGenerating || isApproving}
+                                    className="border-amber-500/40 text-amber-700 hover:bg-amber-500/10 hover:text-amber-800 dark:text-amber-300 dark:hover:text-amber-200 reader:text-amber-300 reader:hover:text-amber-200"
+                                >
+                                    {isGenerating ? (
+                                        <Loader2 className="size-4 animate-spin" />
+                                    ) : (
+                                        <RotateCcw className="size-4" />
+                                    )}
+                                    Regenerate
+                                </Button>
+                            </AlertDialogTrigger>
+                            <AlertDialogContent>
+                                <AlertDialogHeader>
+                                    <AlertDialogTitle className="font-display">
+                                        Regenerate block structure?
+                                    </AlertDialogTitle>
+                                    <AlertDialogDescription>
+                                        The current blocks for <span className="font-medium text-foreground">{topicTitle}</span> will be replaced with a new AI generation. Any edits you&apos;ve made will be lost. Approved blocks for other topics are unaffected.
+                                    </AlertDialogDescription>
+                                </AlertDialogHeader>
+                                <AlertDialogFooter>
+                                    <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                    <AlertDialogAction
+                                        onClick={handleGenerate}
+                                        className="bg-amber-600 text-white hover:bg-amber-700 dark:bg-amber-500 dark:hover:bg-amber-600 reader:bg-amber-500 reader:hover:bg-amber-600"
+                                    >
+                                        {runOverrideModel ? `Regenerate with ${runOverrideModel.name}` : 'Regenerate'}
+                                    </AlertDialogAction>
+                                </AlertDialogFooter>
+                            </AlertDialogContent>
+                        </AlertDialog>
+                    </div>
                     <Button
                         onClick={handleApprove}
-                        disabled={isApproving}
+                        disabled={isApproving || isGenerating}
                         className="bg-[var(--success)] text-white hover:bg-[var(--success)]/90"
                     >
                         {isApproving ? (
