@@ -7,6 +7,7 @@ use App\ContentStudio\Prompts\CurriculumParserPrompt;
 use App\ContentStudio\Prompts\SchemeOfWorkPrompt;
 use App\DataTransferObjects\ContentResponse;
 use App\Enums\ContentProjectStatus;
+use App\Models\AIGenerationLog;
 use App\Models\CanonicalTopic;
 use App\Models\ContentProject;
 use App\Models\LevelSubject;
@@ -41,6 +42,7 @@ class ContentProjectService
         if ($response->valid) {
             $project->updateAiContext('research', $response->data);
             $project->update(['status' => ContentProjectStatus::Research]);
+            $this->rememberStageModel($project, 'research', $response->generation_log_id);
         } else {
             $project->updateAiContext('research_failed', [
                 'raw_response' => $response->raw_response,
@@ -93,6 +95,7 @@ class ContentProjectService
 
         if ($response->valid) {
             $project->updateAiContext('scheme', $response->data);
+            $this->rememberStageModel($project, 'scheme', $response->generation_log_id);
         } else {
             $project->updateAiContext('scheme_failed', [
                 'raw_response' => $response->raw_response,
@@ -209,6 +212,7 @@ class ContentProjectService
             $blocks = $project->ai_context['blocks'] ?? [];
             $blocks[$topicKey] = $response->data;
             $project->updateAiContext('blocks', $blocks);
+            $this->rememberStageModel($project, 'blocks', $response->generation_log_id);
         } else {
             $failed = $project->ai_context['blocks_failed'] ?? [];
             $failed[$topicKey] = [
@@ -454,6 +458,30 @@ class ContentProjectService
         if (! in_array($project->status, $allowed, true)) {
             $allowedLabels = implode(', ', array_map(fn ($s) => $s->label(), $allowed));
             throw new \DomainException("This action requires the project to be in one of these statuses: {$allowedLabels}. Current status: {$project->status->label()}.");
+        }
+    }
+
+    private function rememberStageModel(ContentProject $project, string $stage, ?string $generationLogId): void
+    {
+        if (! $generationLogId) {
+            return;
+        }
+
+        $column = match ($stage) {
+            'research' => 'research_model_id',
+            'scheme' => 'scheme_model_id',
+            'blocks' => 'blocks_model_id',
+            default => null,
+        };
+
+        if (! $column) {
+            return;
+        }
+
+        $aiModelId = AIGenerationLog::query()->whereKey($generationLogId)->value('ai_model_id');
+
+        if ($aiModelId) {
+            $project->update([$column => $aiModelId]);
         }
     }
 }

@@ -2,6 +2,8 @@
 
 use App\DataTransferObjects\ContentResponse;
 use App\Enums\ContentProjectStatus;
+use App\Models\AIGenerationLog;
+use App\Models\AIModel;
 use App\Models\CanonicalTopic;
 use App\Models\ContentBlock;
 use App\Models\ContentProject;
@@ -360,4 +362,71 @@ it('links scheme of work items to created topic', function () {
         ->first();
 
     expect($item->canonical_topic_id)->toBe($topic->id);
+});
+
+it('persists research_model_id on successful research run', function () {
+    $project = ContentProject::factory()->create();
+    $model = AIModel::factory()->create();
+    $log = AIGenerationLog::query()->create([
+        'content_project_id' => $project->id,
+        'ai_model_id' => $model->id,
+        'prompt_type' => 'research',
+        'system_prompt' => 'sys',
+        'user_prompt' => 'user',
+        'raw_response' => '{}',
+        'is_valid' => true,
+        'model_used' => $model->model_id,
+        'provider' => $model->adapter_type->value,
+    ]);
+
+    $mock = Mockery::mock(ContentGenerationService::class);
+    $mock->shouldReceive('generate')->once()->andReturn(new ContentResponse(
+        valid: true,
+        data: [
+            'education_level' => 'SS1',
+            'subject' => 'Physics',
+            'total_topics_found' => 0,
+            'source_confidence' => 'medium',
+            'terms' => [],
+            'lab_work_summary' => null,
+            'conflicts' => [],
+            'missing_data' => [],
+        ],
+        raw_response: '{}',
+        model_used: 'test-model',
+        generation_log_id: $log->id,
+    ));
+
+    $service = makeService($mock);
+    $service->runCurriculumResearch($project, 'Curriculum document text...');
+
+    $project->refresh();
+    expect($project->research_model_id)->toBe($model->id);
+});
+
+it('does not write stage model when generation log id is absent', function () {
+    $project = ContentProject::factory()->create();
+
+    $mock = Mockery::mock(ContentGenerationService::class);
+    $mock->shouldReceive('generate')->once()->andReturn(new ContentResponse(
+        valid: true,
+        data: [
+            'education_level' => 'SS1',
+            'subject' => 'Physics',
+            'total_topics_found' => 0,
+            'source_confidence' => 'medium',
+            'terms' => [],
+            'lab_work_summary' => null,
+            'conflicts' => [],
+            'missing_data' => [],
+        ],
+        raw_response: '{}',
+        model_used: 'test-model',
+    ));
+
+    $service = makeService($mock);
+    $service->runCurriculumResearch($project, 'Curriculum document text...');
+
+    $project->refresh();
+    expect($project->research_model_id)->toBeNull();
 });
