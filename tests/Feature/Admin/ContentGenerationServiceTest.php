@@ -46,11 +46,11 @@ it('resolves model by task routing', function () {
 
     PlatformSetting::query()->create([
         'key' => 'ai_task_routing',
-        'value' => ['structure' => $model->id, 'content' => $model->id],
+        'value' => ['scheme' => $model->id, 'blocks' => $model->id],
     ]);
 
     $service = new ContentGenerationService();
-    $resolved = $service->resolveModel(null, 'structure');
+    $resolved = $service->resolveModel(null, 'scheme');
 
     expect($resolved->id)->toBe($model->id);
 });

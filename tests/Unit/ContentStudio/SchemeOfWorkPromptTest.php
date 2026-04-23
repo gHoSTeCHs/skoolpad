@@ -5,14 +5,14 @@ use App\DataTransferObjects\ContentPrompt;
 
 uses(Tests\TestCase::class);
 
-it('returns structure as prompt type', function () {
+it('returns scheme as prompt type', function () {
     $prompt = new SchemeOfWorkPrompt;
 
-    expect($prompt->promptType())->toBe('structure');
+    expect($prompt->promptType())->toBe('scheme');
 });
 
-it('uses structure temperature from config', function () {
-    config(['content-studio.temperature.structure' => 0.3]);
+it('uses scheme temperature from config', function () {
+    config(['content-studio.temperature.scheme' => 0.3]);
 
     $prompt = new SchemeOfWorkPrompt;
 

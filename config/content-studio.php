@@ -2,7 +2,8 @@
 
 return [
     'temperature' => [
-        'structure' => 0.3,
+        'scheme' => 0.3,
+        'blocks' => 0.3,
         'content' => 0.5,
         'questions' => 0.4,
         'explanations' => 0.5,

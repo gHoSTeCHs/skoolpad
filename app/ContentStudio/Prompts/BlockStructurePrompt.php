@@ -6,12 +6,12 @@ class BlockStructurePrompt extends ContentPromptTemplate
 {
     public function promptType(): string
     {
-        return 'structure';
+        return 'blocks';
     }
 
     public function temperature(): float
     {
-        return config('content-studio.temperature.structure', 0.3);
+        return config('content-studio.temperature.blocks', 0.3);
     }
 
     public function systemPrompt(): string
