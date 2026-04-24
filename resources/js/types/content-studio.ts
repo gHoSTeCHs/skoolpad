@@ -1,3 +1,5 @@
+import type { TiptapJSON } from '@/types/tiptap';
+
 export type ContentProjectMode = 'secondary' | 'tertiary';
 
 export type ContentProjectStatus = 'draft' | 'research' | 'structuring' | 'generating' | 'reviewing' | 'complete';
@@ -18,6 +20,7 @@ export interface ContentProject {
     research_model_id: string | null;
     scheme_model_id: string | null;
     blocks_model_id: string | null;
+    content_model_id: string | null;
     created_by: string;
     created_by_name: string | null;
     progress_data: ProgressData | null;
@@ -35,7 +38,10 @@ export interface ResolvedStageModel {
     source: ModelResolutionSource;
 }
 
-export type ResolvedStageModels = Record<'research' | 'scheme' | 'blocks', ResolvedStageModel>;
+export type ResolvedStageModels = Record<
+    'research' | 'scheme' | 'blocks' | 'content',
+    ResolvedStageModel
+>;
 
 export interface ProgressData {
     research_approved_at?: string;
@@ -200,3 +206,77 @@ export interface AIModel {
 }
 
 export type { EnumOption } from '@/types/questions';
+
+export type BlockGenerationStatus = 'not_started' | 'generated' | 'approved';
+
+export interface KeyTerm {
+    term: string;
+    definition: string;
+    first_block_id?: string;
+}
+
+export interface SymbolEntry {
+    symbol: string;
+    quantity: string;
+    unit: string;
+    first_block_id?: string;
+}
+
+export interface TopicGlossary {
+    terms: KeyTerm[];
+    symbols: SymbolEntry[];
+}
+
+export interface DriftAdvisory {
+    source_block_id: string;
+    source_block_title: string;
+    reason: string;
+    terms_removed: string[];
+    terms_changed: string[];
+    symbols_removed: string[];
+    flagged_at: string;
+}
+
+export interface ContentBlock {
+    id: string;
+    canonical_topic_id: string;
+    parent_block_id: string | null;
+    title: string;
+    slug: string;
+    block_type: string;
+    path: string;
+    depth_level: number;
+    sort_order: number;
+    is_container: boolean;
+    content: TiptapJSON | null;
+    simplified_content: TiptapJSON | null;
+    estimated_read_time: number | null;
+    difficulty_level: string | null;
+    bloom_level: string | null;
+    visualization_config: Record<string, unknown> | null;
+    is_published: boolean;
+    content_guidance: string | null;
+    generation_status: BlockGenerationStatus;
+    summary_sentence: string | null;
+    key_terms_introduced: KeyTerm[] | null;
+    symbols_used: SymbolEntry[] | null;
+    formulas_used: string[] | null;
+    word_count: number | null;
+    nigerian_context_used: boolean | null;
+    last_generated_at: string | null;
+    last_generation_log_id: string | null;
+    drift_advisory: DriftAdvisory | null;
+}
+
+export interface TopicWithBlocks {
+    id: string;
+    title: string;
+    slug: string;
+    summary: string | null;
+    estimated_read_minutes: number | null;
+    education_level: string | null;
+    is_published: boolean;
+    published_at: string | null;
+    glossary: TopicGlossary | null;
+    blocks: ContentBlock[];
+}

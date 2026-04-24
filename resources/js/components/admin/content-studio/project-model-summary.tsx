@@ -22,12 +22,13 @@ interface ProjectModelSummaryProps {
     onProjectUpdate: (project: ContentProject) => void;
 }
 
-const STAGE_ORDER: Array<keyof ResolvedStageModels> = ['research', 'scheme', 'blocks'];
+const STAGE_ORDER: Array<keyof ResolvedStageModels> = ['research', 'scheme', 'blocks', 'content'];
 
 const STAGE_LABELS: Record<keyof ResolvedStageModels, string> = {
     research: 'Research',
     scheme: 'Scheme',
     blocks: 'Blocks',
+    content: 'Content',
 };
 
 const INHERIT_VALUE = '__inherit__';
@@ -81,7 +82,7 @@ export function ProjectModelSummary({
 
                 <div className="hidden w-px bg-border/60 md:block" aria-hidden />
 
-                <div className="grid grid-cols-3 divide-x divide-border/60 md:flex-1">
+                <div className="grid grid-cols-4 divide-x divide-border/60 md:flex-1">
                     {STAGE_ORDER.map((stage) => (
                         <StageReadout
                             key={stage}
