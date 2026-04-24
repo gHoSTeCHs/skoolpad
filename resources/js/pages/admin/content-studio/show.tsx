@@ -5,11 +5,12 @@ import { GenerationLogPanel } from '@/components/admin/content-studio/generation
 import { ProjectModelSummary } from '@/components/admin/content-studio/project-model-summary';
 import { ProjectStepper } from '@/components/admin/content-studio/project-stepper';
 import { StageBlocks } from '@/components/admin/content-studio/stage-blocks';
+import { StageContent } from '@/components/admin/content-studio/stage-content';
 import { StageResearch } from '@/components/admin/content-studio/stage-research';
 import { StageScheme } from '@/components/admin/content-studio/stage-scheme';
 import { Badge } from '@/components/ui/badge';
 import AdminLayout from '@/layouts/admin-layout';
-import type { AIModelOption, ContentProject, ContentProjectStatus, GenerationLogEntry, ResolvedStageModels } from '@/types/content-studio';
+import type { AIModelOption, ContentProject, ContentProjectStatus, GenerationLogEntry, ResolvedStageModels, TopicWithBlocks } from '@/types/content-studio';
 
 interface Props {
     project: ContentProject;
@@ -17,6 +18,7 @@ interface Props {
     aiModels: AIModelOption[];
     platformDefaultModelId: string | null;
     resolvedModels: ResolvedStageModels;
+    topicsWithBlocks: TopicWithBlocks[];
 }
 
 const STATUS_STYLES: Record<ContentProjectStatus, string> = {
@@ -32,16 +34,18 @@ interface StageWorkspaceProps {
     project: ContentProject;
     aiModels: AIModelOption[];
     resolvedModels: ResolvedStageModels;
+    topicsWithBlocks: TopicWithBlocks[];
     onProjectUpdate: (project: ContentProject) => void;
     onLogAppend: (entry: GenerationLogEntry) => void;
 }
 
-function StageWorkspace({ project, aiModels, resolvedModels, onProjectUpdate, onLogAppend }: StageWorkspaceProps) {
+function StageWorkspace({ project, aiModels, resolvedModels, topicsWithBlocks, onProjectUpdate, onLogAppend }: StageWorkspaceProps) {
     const status = project.status;
     const aiContext = project.ai_context;
     const researchApproved = !!aiContext?.research_approved;
     const schemeApproved = !!aiContext?.scheme_approved;
     const schemeSkipped = !!project.progress_data?.scheme_skipped;
+    const anyTopicApproved = Object.keys(project.progress_data?.blocks_approved ?? {}).length > 0;
 
     return (
         <div className="space-y-4">
@@ -75,11 +79,21 @@ function StageWorkspace({ project, aiModels, resolvedModels, onProjectUpdate, on
                     onLogAppend={onLogAppend}
                 />
             )}
+
+            {anyTopicApproved && (
+                <StageContent
+                    project={project}
+                    topicsWithBlocks={topicsWithBlocks}
+                    aiModels={aiModels}
+                    resolvedModels={resolvedModels}
+                    onProjectUpdate={onProjectUpdate}
+                />
+            )}
         </div>
     );
 }
 
-export default function ContentStudioShow({ project: initialProject, generationLogs: initialLogs, aiModels, platformDefaultModelId, resolvedModels }: Props) {
+export default function ContentStudioShow({ project: initialProject, generationLogs: initialLogs, aiModels, platformDefaultModelId, resolvedModels, topicsWithBlocks }: Props) {
     const [project, setProject] = useState(initialProject);
     const [logs, setLogs] = useState(initialLogs);
 
@@ -140,6 +154,7 @@ export default function ContentStudioShow({ project: initialProject, generationL
                     project={project}
                     aiModels={aiModels}
                     resolvedModels={resolvedModels}
+                    topicsWithBlocks={topicsWithBlocks}
                     onProjectUpdate={handleProjectUpdate}
                     onLogAppend={handleLogAppend}
                 />
