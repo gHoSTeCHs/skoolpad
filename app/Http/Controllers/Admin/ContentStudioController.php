@@ -8,18 +8,28 @@ use App\Http\Controllers\Controller;
 use App\Http\Requests\Admin\ApproveBlockStructureRequest;
 use App\Http\Requests\Admin\ApproveResearchRequest;
 use App\Http\Requests\Admin\ApproveSchemeRequest;
+use App\Http\Requests\Admin\GenerateBlockContentRequest;
+use App\Http\Requests\Admin\GenerateTopicContentRequest;
+use App\Http\Requests\Admin\ResetTopicContentRequest;
 use App\Http\Requests\Admin\RunBlockStructureRequest;
 use App\Http\Requests\Admin\RunCurriculumResearchRequest;
 use App\Http\Requests\Admin\RunSchemeGenerationRequest;
+use App\Http\Requests\Admin\SaveBlockContentRequest;
 use App\Http\Requests\Admin\StoreContentProjectRequest;
+use App\Http\Requests\Admin\UpdateBlockGuidanceRequest;
 use App\Http\Requests\Admin\UpdateContentProjectModelsRequest;
+use App\Jobs\RunBlockContentGeneration;
 use App\Jobs\RunContentGeneration;
+use App\Jobs\RunTopicContentGeneration;
 use App\Models\AIModel;
+use App\Models\CanonicalTopic;
+use App\Models\ContentBlock;
 use App\Models\ContentProject;
 use App\Models\CurriculumSubject;
 use App\Models\Discipline;
 use App\Models\EducationLevel;
 use App\Models\PlatformSetting;
+use App\Services\ContentBlockGenerationService;
 use App\Services\ContentGenerationService;
 use App\Services\ContentProjectService;
 use Illuminate\Http\JsonResponse;
@@ -37,6 +47,7 @@ class ContentStudioController extends Controller
     public function __construct(
         private readonly ContentProjectService $projectService,
         private readonly ContentGenerationService $generationService,
+        private readonly ContentBlockGenerationService $blockGenerationService,
     ) {}
 
     public function index(Request $request): Response
@@ -317,6 +328,166 @@ class ContentStudioController extends Controller
         return response()->json([
             'project' => $contentProject->refresh()->toShowArray(),
             'message' => 'Scheme of work skipped.',
+        ]);
+    }
+
+    public function runTopicContent(
+        GenerateTopicContentRequest $request,
+        ContentProject $contentProject,
+        CanonicalTopic $canonicalTopic,
+    ): JsonResponse {
+        Gate::authorize('update', $contentProject);
+
+        if (\App\ContentStudio\Support\TopicGenerationLock::isHeld($canonicalTopic->id)) {
+            return response()->json(['message' => 'Content generation already in progress for this topic.'], 409);
+        }
+
+        $jobId = Str::uuid()->toString();
+        RunTopicContentGeneration::dispatch(
+            $contentProject,
+            $canonicalTopic,
+            $jobId,
+            $request->validated()['model_id'] ?? null,
+            (bool) ($request->validated()['only_unstarted'] ?? true),
+        );
+
+        return response()->json(['job_id' => $jobId], 202);
+    }
+
+    public function runBlockContent(
+        GenerateBlockContentRequest $request,
+        ContentProject $contentProject,
+        ContentBlock $contentBlock,
+    ): JsonResponse {
+        Gate::authorize('update', $contentProject);
+
+        if (\App\ContentStudio\Support\TopicGenerationLock::isHeld($contentBlock->canonical_topic_id)) {
+            return response()->json(['message' => 'A topic-wide generation is currently running.'], 409);
+        }
+
+        $jobId = Str::uuid()->toString();
+        RunBlockContentGeneration::dispatch(
+            $contentProject,
+            $contentBlock,
+            $jobId,
+            $request->validated()['model_id'] ?? null,
+        );
+
+        return response()->json(['job_id' => $jobId], 202);
+    }
+
+    public function regenerateBlockContent(
+        GenerateBlockContentRequest $request,
+        ContentProject $contentProject,
+        ContentBlock $contentBlock,
+    ): JsonResponse {
+        return $this->runBlockContent($request, $contentProject, $contentBlock);
+    }
+
+    public function saveBlockContent(
+        SaveBlockContentRequest $request,
+        ContentProject $contentProject,
+        ContentBlock $contentBlock,
+    ): JsonResponse {
+        Gate::authorize('update', $contentProject);
+
+        try {
+            $this->blockGenerationService->saveBlockContent($contentBlock, $request->validated());
+        } catch (\DomainException $e) {
+            return response()->json(['message' => $e->getMessage()], 422);
+        }
+
+        return response()->json([
+            'project' => $contentProject->refresh()->toShowArray(),
+            'message' => 'Block content saved.',
+        ]);
+    }
+
+    public function approveBlockContent(
+        ContentProject $contentProject,
+        ContentBlock $contentBlock,
+    ): JsonResponse {
+        Gate::authorize('update', $contentProject);
+
+        try {
+            $this->blockGenerationService->approveBlockContent($contentBlock);
+        } catch (\DomainException $e) {
+            return response()->json(['message' => $e->getMessage()], 422);
+        }
+
+        return response()->json([
+            'project' => $contentProject->refresh()->toShowArray(),
+            'message' => 'Block approved.',
+        ]);
+    }
+
+    public function dismissBlockAdvisory(
+        ContentProject $contentProject,
+        ContentBlock $contentBlock,
+    ): JsonResponse {
+        Gate::authorize('update', $contentProject);
+
+        $this->blockGenerationService->dismissBlockAdvisory($contentBlock);
+
+        return response()->json([
+            'project' => $contentProject->refresh()->toShowArray(),
+            'message' => 'Advisory dismissed.',
+        ]);
+    }
+
+    public function updateBlockGuidance(
+        UpdateBlockGuidanceRequest $request,
+        ContentProject $contentProject,
+        ContentBlock $contentBlock,
+    ): JsonResponse {
+        Gate::authorize('update', $contentProject);
+
+        try {
+            $this->blockGenerationService->updateBlockGuidance($contentBlock, $request->validated()['content_guidance']);
+        } catch (\DomainException $e) {
+            return response()->json(['message' => $e->getMessage()], 422);
+        }
+
+        return response()->json([
+            'project' => $contentProject->refresh()->toShowArray(),
+            'message' => 'Guidance updated.',
+        ]);
+    }
+
+    public function markTopicComplete(
+        ContentProject $contentProject,
+        CanonicalTopic $canonicalTopic,
+    ): JsonResponse {
+        Gate::authorize('update', $contentProject);
+
+        try {
+            $this->projectService->markTopicComplete($contentProject, $canonicalTopic);
+        } catch (\DomainException $e) {
+            return response()->json(['message' => $e->getMessage()], 422);
+        }
+
+        return response()->json([
+            'project' => $contentProject->refresh()->toShowArray(),
+            'message' => 'Topic marked complete and published.',
+        ]);
+    }
+
+    public function resetTopicContent(
+        ResetTopicContentRequest $request,
+        ContentProject $contentProject,
+        CanonicalTopic $canonicalTopic,
+    ): JsonResponse {
+        Gate::authorize('update', $contentProject);
+
+        try {
+            $this->projectService->resetTopicContent($contentProject, $canonicalTopic);
+        } catch (\DomainException $e) {
+            return response()->json(['message' => $e->getMessage()], 422);
+        }
+
+        return response()->json([
+            'project' => $contentProject->refresh()->toShowArray(),
+            'message' => 'Topic content reset.',
         ]);
     }
 }
