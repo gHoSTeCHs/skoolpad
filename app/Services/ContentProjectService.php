@@ -519,7 +519,7 @@ class ContentProjectService
      * If no roots remain, promotes minimum-depth blocks to roots.
      *
      * @param  array<string, mixed>  $data
-     * @return array<string, mixed>|null  Normalized data, or null if no valid root candidates exist
+     * @return array<string, mixed>|null Normalized data, or null if no valid root candidates exist
      */
     public static function normalizeBlockStructure(array $data): ?array
     {
@@ -586,26 +586,27 @@ class ContentProjectService
 
     public function markTopicComplete(\App\Models\ContentProject $project, \App\Models\CanonicalTopic $topic): void
     {
-        $leaves = \App\Models\ContentBlock::query()
-            ->where('canonical_topic_id', $topic->id)
-            ->where('is_container', false)
-            ->get();
-
-        if ($leaves->isEmpty()) {
-            throw new \DomainException("Topic '{$topic->title}' has no leaf blocks to publish.");
-        }
-
-        $unapproved = $leaves->filter(
-            fn (\App\Models\ContentBlock $b) => $b->generation_status !== \App\Enums\BlockGenerationStatus::Approved
-        );
-
-        if ($unapproved->isNotEmpty()) {
-            throw new \DomainException(
-                "Cannot mark topic complete — {$unapproved->count()} block(s) are not approved."
-            );
-        }
-
         DB::transaction(function () use ($topic) {
+            $leaves = \App\Models\ContentBlock::query()
+                ->where('canonical_topic_id', $topic->id)
+                ->where('is_container', false)
+                ->lockForUpdate()
+                ->get();
+
+            if ($leaves->isEmpty()) {
+                throw new \DomainException("Topic '{$topic->title}' has no leaf blocks to publish.");
+            }
+
+            $unapproved = $leaves->filter(
+                fn (\App\Models\ContentBlock $b) => $b->generation_status !== \App\Enums\BlockGenerationStatus::Approved
+            );
+
+            if ($unapproved->isNotEmpty()) {
+                throw new \DomainException(
+                    "Cannot mark topic complete — {$unapproved->count()} block(s) are not approved."
+                );
+            }
+
             $topic->update(['is_published' => true, 'published_at' => now()]);
             \App\Models\ContentBlock::query()
                 ->where('canonical_topic_id', $topic->id)
@@ -616,34 +617,40 @@ class ContentProjectService
 
     public function resetTopicContent(\App\Models\ContentProject $project, \App\Models\CanonicalTopic $topic): void
     {
-        if (\App\ContentStudio\Support\TopicGenerationLock::isHeld($topic->id)) {
+        // Acquire the same lock generation jobs use so no job can start during the
+        // reset. If the lock is already held, generation is in progress — reject.
+        if (! \App\ContentStudio\Support\TopicGenerationLock::acquire($topic->id)) {
             throw new \DomainException('Cannot reset — content generation is in progress for this topic.');
         }
 
-        DB::transaction(function () use ($topic) {
-            \App\Models\ContentBlock::query()
-                ->where('canonical_topic_id', $topic->id)
-                ->where('is_container', false)
-                ->update([
-                    'generation_status' => \App\Enums\BlockGenerationStatus::NotStarted->value,
-                    'content' => null,
-                    'summary_sentence' => null,
-                    'key_terms_introduced' => null,
-                    'symbols_used' => null,
-                    'formulas_used' => null,
-                    'word_count' => null,
-                    'nigerian_context_used' => null,
-                    'last_generated_at' => null,
-                    'last_generation_log_id' => null,
-                    'drift_advisory' => null,
-                    'is_published' => false,
-                ]);
+        try {
+            DB::transaction(function () use ($topic) {
+                \App\Models\ContentBlock::query()
+                    ->where('canonical_topic_id', $topic->id)
+                    ->where('is_container', false)
+                    ->update([
+                        'generation_status' => \App\Enums\BlockGenerationStatus::NotStarted->value,
+                        'content' => null,
+                        'summary_sentence' => null,
+                        'key_terms_introduced' => null,
+                        'symbols_used' => null,
+                        'formulas_used' => null,
+                        'word_count' => null,
+                        'nigerian_context_used' => null,
+                        'last_generated_at' => null,
+                        'last_generation_log_id' => null,
+                        'drift_advisory' => null,
+                        'is_published' => false,
+                    ]);
 
-            $topic->update([
-                'glossary' => null,
-                'is_published' => false,
-                'published_at' => null,
-            ]);
-        });
+                $topic->update([
+                    'glossary' => null,
+                    'is_published' => false,
+                    'published_at' => null,
+                ]);
+            });
+        } finally {
+            \App\ContentStudio\Support\TopicGenerationLock::release($topic->id);
+        }
     }
 }
