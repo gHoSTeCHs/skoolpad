@@ -5,6 +5,8 @@ interface ProjectStepperProps {
     status: ContentProjectStatus;
     progressData: ProgressData | null;
     mode: ContentProjectMode;
+    selectedStep: string;
+    onStepClick: (key: string) => void;
 }
 
 interface StepConfig {
@@ -25,6 +27,21 @@ function getSteps(mode: ContentProjectMode): StepConfig[] {
     ];
 
     return steps;
+}
+
+function isStepClickable(stepKey: string, progressData: ProgressData | null): boolean {
+    const anyTopicApproved = Object.keys(progressData?.blocks_approved ?? {}).length > 0;
+    const schemeApproved = !!progressData?.scheme_approved_at;
+    const schemeSkipped = !!progressData?.scheme_skipped;
+    const researchComplete = !!progressData?.research_approved_at;
+
+    switch (stepKey) {
+        case 'research': return true;
+        case 'scheme': return researchComplete;
+        case 'blocks': return schemeApproved || schemeSkipped;
+        case 'content': return anyTopicApproved;
+        default: return false;
+    }
 }
 
 function getStepState(
@@ -103,7 +120,7 @@ function StepIcon({ state }: { state: StepState }) {
     );
 }
 
-export function ProjectStepper({ status, progressData, mode }: ProjectStepperProps) {
+export function ProjectStepper({ status, progressData, mode, selectedStep, onStepClick }: ProjectStepperProps) {
     const steps = getSteps(mode);
 
     return (
@@ -111,22 +128,49 @@ export function ProjectStepper({ status, progressData, mode }: ProjectStepperPro
             <div className="flex min-w-max items-center gap-0">
                 {steps.map((step, index) => {
                     const state = getStepState(step.key, status, progressData);
+                    const clickable = isStepClickable(step.key, progressData);
+                    const isSelected = step.key === selectedStep;
                     const isLast = index === steps.length - 1;
-                    const isFuture = ['content', 'questions'].includes(step.key);
+
+                    const inner = (
+                        <div className={`flex items-center gap-2.5 transition-opacity ${!clickable ? 'opacity-35' : ''}`}>
+                            <StepIcon state={state} />
+                            <div className="flex flex-col">
+                                <span className={`text-sm font-medium transition-colors ${
+                                    isSelected
+                                        ? 'text-foreground'
+                                        : state === 'active'
+                                            ? 'text-foreground'
+                                            : 'text-muted-foreground'
+                                }`}>
+                                    {step.label}
+                                </span>
+                                {step.sublabel && (
+                                    <span className="text-xs text-muted-foreground/70">{step.sublabel}</span>
+                                )}
+                            </div>
+                        </div>
+                    );
 
                     return (
                         <div key={step.key} className="flex items-center">
-                            <div className={`flex items-center gap-2.5 ${isFuture ? 'opacity-40' : ''}`}>
-                                <StepIcon state={state} />
-                                <div className="flex flex-col">
-                                    <span className={`text-sm font-medium ${state === 'active' ? 'text-foreground' : 'text-muted-foreground'}`}>
-                                        {step.label}
-                                    </span>
-                                    {step.sublabel && (
-                                        <span className="text-xs text-muted-foreground/70">{step.sublabel}</span>
+                            {clickable ? (
+                                <button
+                                    type="button"
+                                    onClick={() => onStepClick(step.key)}
+                                    className={`relative flex flex-col gap-0 rounded px-1 py-1 outline-none transition-colors focus-visible:ring-2 focus-visible:ring-primary/50 ${
+                                        isSelected ? '' : 'hover:opacity-80'
+                                    }`}
+                                    aria-current={isSelected ? 'step' : undefined}
+                                >
+                                    {inner}
+                                    {isSelected && (
+                                        <span className="absolute -bottom-1 left-0 right-0 h-0.5 rounded-full bg-primary" />
                                     )}
-                                </div>
-                            </div>
+                                </button>
+                            ) : (
+                                <div className="px-1 py-1">{inner}</div>
+                            )}
                             {!isLast && (
                                 <div className={`mx-4 h-px w-10 ${state === 'completed' ? 'bg-primary/40' : 'bg-border'}`} />
                             )}

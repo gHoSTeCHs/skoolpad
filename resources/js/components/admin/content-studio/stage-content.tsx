@@ -146,6 +146,23 @@ export function StageContent({ project, topicsWithBlocks, aiModels, resolvedMode
         }
     }, [project.id, onProjectUpdate]);
 
+    const handleUpdateGuidance = useCallback(async (block: ContentBlock, guidance: string): Promise<void> => {
+        try {
+            const { project: fresh } = await csPut<{ project: ContentProject }>(
+                ContentStudioAction.updateBlockGuidance.url([project.id, block.id]),
+                { content_guidance: guidance },
+            );
+            onProjectUpdate(fresh);
+            sileo.success({ title: 'Guidance saved' });
+            await new Promise<void>((resolve) =>
+                router.reload({ only: ['topicsWithBlocks'], onFinish: () => resolve() })
+            );
+        } catch (e: unknown) {
+            sileo.error({ title: e instanceof Error ? e.message : 'Failed to save guidance' });
+            throw e;
+        }
+    }, [project.id, onProjectUpdate]);
+
     const handleResetTopic = useCallback(async (topic: TopicWithBlocks, confirmSlug: string) => {
         try {
             const { project: fresh } = await csPost<{ project: ContentProject }>(
@@ -185,6 +202,7 @@ export function StageContent({ project, topicsWithBlocks, aiModels, resolvedMode
                         onSaveBlock={handleSaveBlock}
                         onApproveBlock={handleApproveBlock}
                         onDismissAdvisory={handleDismissAdvisory}
+                        onUpdateGuidance={handleUpdateGuidance}
                         onMarkTopicComplete={() => handleMarkComplete(activeTopic)}
                         onResetTopic={(slug) => handleResetTopic(activeTopic, slug)}
                         onProjectUpdate={onProjectUpdate}

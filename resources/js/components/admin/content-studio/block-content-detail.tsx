@@ -1,6 +1,6 @@
 'use no memo';
-import { useCallback, useEffect, useMemo, useState } from 'react';
-import { FileText } from 'lucide-react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { FileText, PenLine, X } from 'lucide-react';
 import {
     AlertDialog,
     AlertDialogAction,
@@ -34,6 +34,7 @@ interface BlockContentDetailProps {
     onRegenerate: (modelId: string | null) => void;
     onSave: (payload: SaveContentPayload) => Promise<void>;
     onDismissAdvisory: () => void;
+    onUpdateGuidance: (guidance: string) => Promise<void>;
     onProjectUpdate: (project: ContentProject) => void;
 }
 
@@ -56,16 +57,37 @@ export function BlockContentDetail({
     onRegenerate,
     onSave,
     onDismissAdvisory,
+    onUpdateGuidance,
     onProjectUpdate,
 }: BlockContentDetailProps) {
     const [editedContent, setEditedContent] = useState<TiptapJSON | null>(block.content);
     const [isEditing, setIsEditing] = useState(false);
     const [runOverrideId, setRunOverrideId] = useState<string | null>(null);
+    const [isEditingGuidance, setIsEditingGuidance] = useState(false);
+    const [guidanceDraft, setGuidanceDraft] = useState('');
+    const [isSavingGuidance, setIsSavingGuidance] = useState(false);
 
     useEffect(() => {
         setEditedContent(block.content);
         setIsEditing(false);
+        setIsEditingGuidance(false);
     }, [block.id, block.content]);
+
+    const handleStartEditGuidance = useCallback(() => {
+        setGuidanceDraft(block.content_guidance ?? '');
+        setIsEditingGuidance(true);
+    }, [block.content_guidance]);
+
+    const handleSaveGuidance = useCallback(async () => {
+        if (!guidanceDraft.trim()) return;
+        setIsSavingGuidance(true);
+        try {
+            await onUpdateGuidance(guidanceDraft.trim());
+            setIsEditingGuidance(false);
+        } finally {
+            setIsSavingGuidance(false);
+        }
+    }, [guidanceDraft, onUpdateGuidance]);
 
     const handleSave = useCallback(async () => {
         if (!editedContent) return;
@@ -130,9 +152,19 @@ export function BlockContentDetail({
                 />
             </div>
 
-            {/* Guidance */}
-            {block.content_guidance && (
-                <GuidanceView guidance={block.content_guidance} />
+            {/* Guidance — always visible; editable when null */}
+            {isEditingGuidance ? (
+                <GuidanceEditor
+                    value={guidanceDraft}
+                    onChange={setGuidanceDraft}
+                    onSave={handleSaveGuidance}
+                    onCancel={() => setIsEditingGuidance(false)}
+                    isSaving={isSavingGuidance}
+                />
+            ) : block.content_guidance ? (
+                <GuidanceView guidance={block.content_guidance} onEdit={handleStartEditGuidance} />
+            ) : (
+                <GuidanceEmptyState onAdd={handleStartEditGuidance} />
             )}
 
             {/* Drift advisory */}
@@ -152,17 +184,17 @@ export function BlockContentDetail({
 
             {/* Body — switches on generation_status */}
             {block.generation_status === 'not_started' && !isBusy && (
-                <div className="flex flex-col items-start gap-4 rounded-md border border-dashed border-border bg-background p-8">
+                <div className="flex flex-col items-start gap-3 rounded-md border border-dashed border-border bg-background p-8">
                     <div className="flex items-center gap-2 text-muted-foreground">
                         <FileText className="h-4 w-4" aria-hidden />
                         <span className="text-sm">No content generated yet.</span>
                     </div>
-                    <Button onClick={() => onGenerate(runOverrideId)} disabled={!block.content_guidance}>
+                    <Button onClick={() => onGenerate(runOverrideId)} disabled={!block.content_guidance || isEditingGuidance}>
                         Generate Content
                     </Button>
-                    {!block.content_guidance && (
+                    {!block.content_guidance && !isEditingGuidance && (
                         <p className="text-xs text-muted-foreground">
-                            This block has no guidance set. Edit guidance before generating.
+                            Add guidance above before generating.
                         </p>
                     )}
                 </div>
@@ -224,15 +256,83 @@ function StatusDot({ status }: { status: ContentBlock['generation_status'] }) {
     );
 }
 
-function GuidanceView({ guidance }: { guidance: string }) {
+function GuidanceEmptyState({ onAdd }: { onAdd: () => void }) {
     return (
-        <details className="group rounded-md border border-border bg-background px-3 py-2">
-            <summary className="cursor-pointer list-none font-mono text-[10px] uppercase tracking-[0.16em] text-muted-foreground">
-                Guidance
-                <span className="ml-2 text-foreground group-open:hidden">→ show</span>
-                <span className="ml-2 text-foreground hidden group-open:inline">↓ hide</span>
+        <button
+            type="button"
+            onClick={onAdd}
+            className="flex w-full items-center gap-2.5 rounded-md border border-dashed border-border bg-background px-3 py-2.5 text-left transition-colors hover:border-primary/50 hover:bg-primary/5"
+        >
+            <PenLine className="h-3.5 w-3.5 flex-none text-muted-foreground" aria-hidden />
+            <span className="font-mono text-[10px] uppercase tracking-[0.16em] text-muted-foreground">
+                No guidance — click to add
+            </span>
+        </button>
+    );
+}
+
+function GuidanceEditor({
+    value,
+    onChange,
+    onSave,
+    onCancel,
+    isSaving,
+}: {
+    value: string;
+    onChange: (v: string) => void;
+    onSave: () => void;
+    onCancel: () => void;
+    isSaving: boolean;
+}) {
+    const ref = useRef<HTMLTextAreaElement>(null);
+    useEffect(() => { ref.current?.focus(); }, []);
+
+    return (
+        <div className="rounded-md border border-primary/40 bg-background ring-1 ring-primary/20">
+            <div className="flex items-center justify-between border-b border-border px-3 py-2">
+                <span className="font-mono text-[10px] uppercase tracking-[0.16em] text-muted-foreground">Guidance</span>
+                <button type="button" onClick={onCancel} className="rounded p-0.5 text-muted-foreground hover:text-foreground">
+                    <X className="h-3.5 w-3.5" aria-hidden />
+                </button>
+            </div>
+            <textarea
+                ref={ref}
+                value={value}
+                onChange={(e) => onChange(e.target.value)}
+                placeholder="Describe what this block should cover — scope, key concepts, examples, depth level..."
+                rows={4}
+                className="w-full resize-y bg-transparent px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground/50 focus:outline-none"
+            />
+            <div className="flex items-center gap-2 border-t border-border px-3 py-2">
+                <Button size="sm" onClick={onSave} disabled={!value.trim() || isSaving}>
+                    {isSaving ? 'Saving…' : 'Save guidance'}
+                </Button>
+                <Button size="sm" variant="ghost" onClick={onCancel} disabled={isSaving}>
+                    Cancel
+                </Button>
+            </div>
+        </div>
+    );
+}
+
+function GuidanceView({ guidance, onEdit }: { guidance: string; onEdit: () => void }) {
+    return (
+        <details className="group rounded-md border border-border bg-background">
+            <summary className="flex cursor-pointer list-none items-center justify-between px-3 py-2">
+                <span className="font-mono text-[10px] uppercase tracking-[0.16em] text-muted-foreground">
+                    Guidance
+                    <span className="ml-2 opacity-60 group-open:hidden">↓ show</span>
+                    <span className="ml-2 opacity-60 hidden group-open:inline">↑ hide</span>
+                </span>
+                <button
+                    type="button"
+                    onClick={(e) => { e.preventDefault(); onEdit(); }}
+                    className="font-mono text-[10px] uppercase tracking-[0.14em] text-primary hover:underline"
+                >
+                    Edit
+                </button>
             </summary>
-            <p className="pt-2 text-sm text-foreground">{guidance}</p>
+            <p className="border-t border-border px-3 py-2.5 text-sm text-foreground">{guidance}</p>
         </details>
     );
 }

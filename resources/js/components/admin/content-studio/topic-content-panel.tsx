@@ -21,6 +21,7 @@ interface TopicContentPanelProps {
     onSaveBlock: (block: ContentBlock, payload: SaveContentPayload) => Promise<void>;
     onApproveBlock: (block: ContentBlock) => Promise<void>;
     onDismissAdvisory: (block: ContentBlock) => void;
+    onUpdateGuidance: (block: ContentBlock, guidance: string) => Promise<void>;
     onMarkTopicComplete: () => void;
     onResetTopic: (confirmSlug: string) => void;
     onProjectUpdate: (project: ContentProject) => void;
@@ -41,6 +42,7 @@ export function TopicContentPanel({
     onSaveBlock,
     onApproveBlock,
     onDismissAdvisory,
+    onUpdateGuidance,
     onMarkTopicComplete,
     onResetTopic,
     onProjectUpdate,
@@ -152,6 +154,7 @@ export function TopicContentPanel({
                             onRegenerate={(modelId) => onRegenerateBlock(selected, modelId)}
                             onSave={(payload) => onSaveBlock(selected, payload)}
                             onDismissAdvisory={() => onDismissAdvisory(selected)}
+                            onUpdateGuidance={(guidance) => onUpdateGuidance(selected, guidance)}
                             onProjectUpdate={onProjectUpdate}
                         />
                     ) : (
