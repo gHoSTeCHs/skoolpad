@@ -28,6 +28,7 @@ class CanonicalTopic extends Model
         'summary',
         'difficulty_level',
         'estimated_read_minutes',
+        'glossary',
         'language',
         'education_level',
         'is_published',
@@ -46,6 +47,7 @@ class CanonicalTopic extends Model
             'education_level' => 'string',
             'exam_frequency_score' => 'decimal:4',
             'parent_verification_kit' => 'array',
+            'glossary' => 'array',
         ];
     }
 
