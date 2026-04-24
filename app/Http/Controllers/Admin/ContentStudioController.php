@@ -138,7 +138,7 @@ class ContentStudioController extends Controller
             : null;
 
         $resolvedModels = $aiModels->isNotEmpty()
-            ? collect(['research', 'scheme', 'blocks'])->mapWithKeys(function (string $stage) use ($contentProject) {
+            ? collect(['research', 'scheme', 'blocks', 'content'])->mapWithKeys(function (string $stage) use ($contentProject) {
                 $model = $this->generationService->resolveModel(null, $stage, $contentProject);
                 $source = $this->describeResolutionSource($contentProject, $stage);
 
@@ -151,12 +151,64 @@ class ContentStudioController extends Controller
             })->all()
             : [];
 
+        $approvedTopicIds = collect($contentProject->progress_data['blocks_approved'] ?? [])
+            ->pluck('topic_id')->filter()->values()->all();
+
+        $topicsWithBlocks = \App\Models\CanonicalTopic::query()
+            ->whereIn('id', $approvedTopicIds)
+            ->with('contentBlocks')
+            ->get()
+            ->map(fn (\App\Models\CanonicalTopic $topic) => [
+                'id' => $topic->id,
+                'title' => $topic->title,
+                'slug' => $topic->slug,
+                'summary' => $topic->summary,
+                'estimated_read_minutes' => $topic->estimated_read_minutes,
+                'education_level' => $topic->education_level,
+                'is_published' => $topic->is_published,
+                'published_at' => $topic->published_at?->toIso8601String(),
+                'glossary' => $topic->glossary,
+                'blocks' => $topic->contentBlocks
+                    ->sortBy(fn (\App\Models\ContentBlock $b) => \App\Services\ContentBlockGenerationService::pathKey($b->path))
+                    ->map(fn (\App\Models\ContentBlock $b) => [
+                        'id' => $b->id,
+                        'canonical_topic_id' => $b->canonical_topic_id,
+                        'parent_block_id' => $b->parent_block_id,
+                        'title' => $b->title,
+                        'slug' => $b->slug,
+                        'block_type' => $b->block_type->value,
+                        'path' => $b->path,
+                        'depth_level' => $b->depth_level,
+                        'sort_order' => $b->sort_order,
+                        'is_container' => $b->is_container,
+                        'content' => $b->content,
+                        'simplified_content' => $b->simplified_content,
+                        'estimated_read_time' => $b->estimated_read_time,
+                        'difficulty_level' => $b->difficulty_level?->value,
+                        'bloom_level' => $b->bloom_level?->value,
+                        'visualization_config' => $b->visualization_config,
+                        'is_published' => $b->is_published,
+                        'content_guidance' => $b->content_guidance,
+                        'generation_status' => $b->generation_status->value,
+                        'summary_sentence' => $b->summary_sentence,
+                        'key_terms_introduced' => $b->key_terms_introduced,
+                        'symbols_used' => $b->symbols_used,
+                        'formulas_used' => $b->formulas_used,
+                        'word_count' => $b->word_count,
+                        'nigerian_context_used' => $b->nigerian_context_used,
+                        'last_generated_at' => $b->last_generated_at?->toIso8601String(),
+                        'last_generation_log_id' => $b->last_generation_log_id,
+                        'drift_advisory' => $b->drift_advisory,
+                    ])->values()->all(),
+            ])->values()->all();
+
         return Inertia::render('admin/content-studio/show', [
             'project' => $contentProject->toShowArray(),
             'generationLogs' => $generationLogs,
             'aiModels' => $aiModels,
             'platformDefaultModelId' => $platformDefaultModelId,
             'resolvedModels' => $resolvedModels,
+            'topicsWithBlocks' => $topicsWithBlocks,
         ]);
     }
 
@@ -178,6 +230,7 @@ class ContentStudioController extends Controller
             'research' => 'research_model_id',
             'scheme' => 'scheme_model_id',
             'blocks' => 'blocks_model_id',
+            'content' => 'content_model_id',
             default => null,
         };
 
