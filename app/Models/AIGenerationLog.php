@@ -3,12 +3,14 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
+use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class AIGenerationLog extends Model
 {
-    use HasUuids;
+    /** @use HasFactory<\Database\Factories\AIGenerationLogFactory> */
+    use HasFactory, HasUuids;
 
     protected $table = 'ai_generation_logs';
 
