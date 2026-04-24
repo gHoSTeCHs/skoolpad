@@ -138,9 +138,9 @@ class ContentStudioController extends Controller
             : null;
 
         $resolvedModels = $aiModels->isNotEmpty()
-            ? collect(['research', 'scheme', 'blocks', 'content'])->mapWithKeys(function (string $stage) use ($contentProject) {
+            ? collect(['research', 'scheme', 'blocks', 'content'])->mapWithKeys(function (string $stage) use ($contentProject, $platformDefaultModelId) {
                 $model = $this->generationService->resolveModel(null, $stage, $contentProject);
-                $source = $this->describeResolutionSource($contentProject, $stage);
+                $source = $this->describeResolutionSource($contentProject, $stage, $platformDefaultModelId);
 
                 return [$stage => [
                     'id' => $model->id,
@@ -224,7 +224,7 @@ class ContentStudioController extends Controller
         ]);
     }
 
-    private function describeResolutionSource(ContentProject $project, string $stage): string
+    private function describeResolutionSource(ContentProject $project, string $stage, ?string $platformModelId = null): string
     {
         $stageColumn = match ($stage) {
             'research' => 'research_model_id',
@@ -241,12 +241,6 @@ class ContentStudioController extends Controller
         if ($this->activeModelExists($project->default_ai_model_id)) {
             return 'project_default';
         }
-
-        $platformValue = PlatformSetting::query()
-            ->where('key', 'content_studio.default_model_id')
-            ->value('value');
-
-        $platformModelId = is_array($platformValue) ? ($platformValue['model_id'] ?? null) : null;
 
         if ($this->activeModelExists($platformModelId)) {
             return 'platform_default';

@@ -54,18 +54,24 @@ class RunTopicContentGeneration implements ShouldQueue
                 'message' => "Starting content generation for topic: {$this->topic->title}",
             ]);
 
-            $blocks = ContentBlock::query()
+            $this->project->loadMissing('curriculumSubject');
+
+            $query = ContentBlock::query()
                 ->where('canonical_topic_id', $this->topic->id)
-                ->where('is_container', false)
+                ->where('is_container', false);
+
+            if ($this->onlyUnstarted) {
+                $query->where('generation_status', BlockGenerationStatus::NotStarted->value);
+            }
+
+            $blocks = $query
                 ->get()
                 ->sortBy(fn (ContentBlock $b) => ContentBlockGenerationService::pathKey($b->path))
                 ->values();
 
-            if ($this->onlyUnstarted) {
-                $blocks = $blocks->filter(
-                    fn (ContentBlock $b) => $b->generation_status === BlockGenerationStatus::NotStarted,
-                )->values();
-            }
+            // Stamp the already-loaded topic onto each block to avoid a lazy query per block
+            // inside assembleContext.
+            $blocks->each(fn (ContentBlock $b) => $b->setRelation('canonicalTopic', $this->topic));
 
             $service = $container->make(ContentBlockGenerationService::class);
             $total = $blocks->count();

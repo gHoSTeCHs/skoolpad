@@ -97,16 +97,24 @@ class ContentBlockGenerationService
 
     private function ancestorContainerTitles(ContentBlock $block): array
     {
-        $titles = [];
-        $parent = $block->parent;
-        while ($parent) {
-            if ($parent->is_container) {
-                array_unshift($titles, $parent->title);
-            }
-            $parent = $parent->parent;
+        $parts = explode('.', $block->path);
+        if (count($parts) <= 1) {
+            return [];
         }
 
-        return $titles;
+        $ancestorPaths = [];
+        for ($i = 1; $i < count($parts); $i++) {
+            $ancestorPaths[] = implode('.', array_slice($parts, 0, $i));
+        }
+
+        return ContentBlock::query()
+            ->where('canonical_topic_id', $block->canonical_topic_id)
+            ->whereIn('path', $ancestorPaths)
+            ->where('is_container', true)
+            ->get(['path', 'title'])
+            ->sortBy(fn (ContentBlock $b) => count(explode('.', $b->path)))
+            ->pluck('title')
+            ->all();
     }
 
     public static function mergeGlossary(?array $glossary, array $newTerms, array $newSymbols, string $blockId): array
@@ -235,16 +243,23 @@ class ContentBlockGenerationService
     public function flagDownstream(ContentBlock $source, array $diff): void
     {
         $sourceKey = self::pathKey($source->path);
-        $downstream = ContentBlock::query()
+        $downstreamIds = ContentBlock::query()
             ->where('canonical_topic_id', $source->canonical_topic_id)
             ->where('is_container', false)
             ->where('id', '!=', $source->id)
-            ->get()
-            ->filter(fn (ContentBlock $b) => self::pathKey($b->path) > $sourceKey);
+            ->get(['id', 'path'])
+            ->filter(fn (ContentBlock $b) => self::pathKey($b->path) > $sourceKey)
+            ->pluck('id')
+            ->all();
 
-        foreach ($downstream as $block) {
-            $block->update([
-                'drift_advisory' => [
+        if (empty($downstreamIds)) {
+            return;
+        }
+
+        ContentBlock::query()
+            ->whereIn('id', $downstreamIds)
+            ->update([
+                'drift_advisory' => json_encode([
                     'source_block_id' => $source->id,
                     'source_block_title' => $source->title,
                     'reason' => $diff['reason'],
@@ -252,9 +267,8 @@ class ContentBlockGenerationService
                     'terms_changed' => $diff['terms_changed'],
                     'symbols_removed' => $diff['symbols_removed'],
                     'flagged_at' => now()->toIso8601String(),
-                ],
+                ]),
             ]);
-        }
     }
 
     public function generateBlockContent(ContentBlock $block, ContentProject $project, ?string $modelId = null): ContentResponse

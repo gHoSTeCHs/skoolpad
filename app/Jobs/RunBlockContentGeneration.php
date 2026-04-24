@@ -31,6 +31,9 @@ class RunBlockContentGeneration implements ShouldQueue
     {
         $service = $container->make(ContentBlockGenerationService::class);
 
+        $this->block->loadMissing('canonicalTopic');
+        $this->project->loadMissing('curriculumSubject');
+
         $this->broadcastUpdate('status', ['message' => "Generating block: {$this->block->title}"]);
 
         try {
