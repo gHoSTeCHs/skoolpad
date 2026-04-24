@@ -81,4 +81,11 @@ class CanonicalTopicFactory extends Factory
             'published_at' => null,
         ]);
     }
+
+    public function withGlossary(array $terms = [], array $symbols = []): static
+    {
+        return $this->state(fn () => [
+            'glossary' => ['terms' => $terms, 'symbols' => $symbols],
+        ]);
+    }
 }

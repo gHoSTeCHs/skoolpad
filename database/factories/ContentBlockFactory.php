@@ -75,4 +75,70 @@ class ContentBlockFactory extends Factory
             'is_published' => true,
         ]);
     }
+
+    public function notStarted(): static
+    {
+        return $this->state(fn () => [
+            'generation_status' => \App\Enums\BlockGenerationStatus::NotStarted->value,
+            'content' => null,
+            'summary_sentence' => null,
+            'key_terms_introduced' => null,
+            'symbols_used' => null,
+        ]);
+    }
+
+    public function generated(): static
+    {
+        return $this->state(fn () => [
+            'generation_status' => \App\Enums\BlockGenerationStatus::Generated->value,
+            'content' => ['type' => 'doc', 'content' => [['type' => 'paragraph', 'content' => [['type' => 'text', 'text' => 'Sample']]]]],
+            'summary_sentence' => 'Sample summary.',
+            'key_terms_introduced' => [['term' => 'sample', 'definition' => 'a sample term']],
+            'symbols_used' => [],
+            'word_count' => 120,
+            'nigerian_context_used' => true,
+            'last_generated_at' => now(),
+        ]);
+    }
+
+    public function approved(): static
+    {
+        return $this->generated()->state(fn () => [
+            'generation_status' => \App\Enums\BlockGenerationStatus::Approved->value,
+        ]);
+    }
+
+    public function leaf(): static
+    {
+        return $this->state(fn () => ['is_container' => false]);
+    }
+
+    public function at(string $path): static
+    {
+        return $this->state(fn () => [
+            'path' => $path,
+            'depth_level' => substr_count($path, '.'),
+            'sort_order' => (int) last(explode('.', $path)),
+        ]);
+    }
+
+    public function withGuidance(string $guidance): static
+    {
+        return $this->state(fn () => ['content_guidance' => $guidance]);
+    }
+
+    public function withAdvisory(\App\Models\ContentBlock $source, string $reason = 'both'): static
+    {
+        return $this->state(fn () => [
+            'drift_advisory' => [
+                'source_block_id' => $source->id,
+                'source_block_title' => $source->title,
+                'reason' => $reason,
+                'terms_removed' => [],
+                'terms_changed' => [],
+                'symbols_removed' => [],
+                'flagged_at' => now()->toIso8601String(),
+            ],
+        ]);
+    }
 }
