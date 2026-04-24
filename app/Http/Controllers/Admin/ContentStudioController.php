@@ -428,6 +428,8 @@ class ContentStudioController extends Controller
         ContentProject $contentProject,
         ContentBlock $contentBlock,
     ): JsonResponse {
+        Gate::authorize('update', $contentProject);
+
         return $this->runBlockContent($request, $contentProject, $contentBlock);
     }
 
