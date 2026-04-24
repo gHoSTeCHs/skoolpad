@@ -13,7 +13,7 @@ import type {
     ResolvedStageModel,
 } from '@/types/content-studio';
 
-type Stage = 'research' | 'scheme' | 'blocks';
+type Stage = 'research' | 'scheme' | 'blocks' | 'content';
 type Mode = 'default' | 'stage' | 'run';
 
 interface StageModelSelectorProps {
@@ -28,16 +28,18 @@ interface StageModelSelectorProps {
     disabled?: boolean;
 }
 
-const STAGE_COLUMN: Record<Stage, 'research_model_id' | 'scheme_model_id' | 'blocks_model_id'> = {
+const STAGE_COLUMN: Record<Stage, 'research_model_id' | 'scheme_model_id' | 'blocks_model_id' | 'content_model_id'> = {
     research: 'research_model_id',
     scheme: 'scheme_model_id',
     blocks: 'blocks_model_id',
+    content: 'content_model_id',
 };
 
 const STAGE_LABEL: Record<Stage, string> = {
     research: 'research',
     scheme: 'scheme of work',
     blocks: 'block structure',
+    content: 'content',
 };
 
 const SOURCE_LABEL: Record<ModelResolutionSource, string> = {
