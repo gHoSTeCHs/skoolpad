@@ -325,4 +325,96 @@ class ContentBlockGenerationService
 
         return $response;
     }
+
+    public function saveBlockContent(ContentBlock $block, array $payload): void
+    {
+        if ($block->is_container) {
+            throw new \DomainException('Container blocks have no content.');
+        }
+
+        $violations = \App\ContentStudio\Support\TiptapAllowList::findViolations($payload['content'] ?? []);
+        if (! empty($violations)) {
+            throw new \DomainException(
+                'Content contains disallowed Tiptap nodes: ' . json_encode($violations)
+            );
+        }
+
+        $prior = [
+            'key_terms' => $block->key_terms_introduced ?? [],
+            'symbols' => $block->symbols_used ?? [],
+            'summary' => $block->summary_sentence,
+        ];
+        $new = [
+            'key_terms' => $payload['key_terms_introduced'] ?? [],
+            'symbols' => $payload['symbols_used'] ?? [],
+            'summary' => $payload['summary_sentence'] ?? null,
+        ];
+
+        $diff = self::compareContract($prior, $new);
+
+        $updates = [
+            'content' => $payload['content'],
+            'summary_sentence' => $new['summary'],
+            'key_terms_introduced' => $new['key_terms'],
+            'symbols_used' => $new['symbols'],
+            'formulas_used' => $payload['formulas_used'] ?? [],
+            'word_count' => $payload['word_count'] ?? null,
+            'nigerian_context_used' => $payload['nigerian_context_used'] ?? null,
+        ];
+
+        if ($diff !== null && $block->generation_status === BlockGenerationStatus::Approved) {
+            $updates['generation_status'] = BlockGenerationStatus::Generated->value;
+        }
+
+        DB::transaction(function () use ($block, $updates, $new, $diff) {
+            $block->update($updates);
+
+            if ($diff !== null) {
+                /** @var CanonicalTopic $topic */
+                $topic = CanonicalTopic::query()->lockForUpdate()->find($block->canonical_topic_id);
+                $merged = self::mergeGlossary($topic->glossary, $new['key_terms'], $new['symbols'], $block->id);
+                $topic->update(['glossary' => $merged]);
+            }
+        });
+
+        if ($diff !== null) {
+            $this->flagDownstream($block->fresh(), $diff);
+        }
+    }
+
+    public function updateBlockGuidance(ContentBlock $block, string $guidance): void
+    {
+        if ($block->is_container) {
+            throw new \DomainException('Container blocks have no content_guidance.');
+        }
+
+        $block->update(['content_guidance' => $guidance]);
+    }
+
+    public function dismissBlockAdvisory(ContentBlock $block): void
+    {
+        if ($block->drift_advisory === null) {
+            return;
+        }
+
+        $block->update(['drift_advisory' => null]);
+    }
+
+    public function approveBlockContent(ContentBlock $block): void
+    {
+        if ($block->generation_status === \App\Enums\BlockGenerationStatus::Approved) {
+            return;
+        }
+
+        if ($block->generation_status !== \App\Enums\BlockGenerationStatus::Generated) {
+            throw new \DomainException(
+                "Block must be in 'generated' state to approve; current state: {$block->generation_status->value}"
+            );
+        }
+
+        $block->update([
+            'generation_status' => \App\Enums\BlockGenerationStatus::Approved->value,
+            'drift_advisory' => null,
+        ]);
+    }
 }
