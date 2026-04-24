@@ -334,6 +334,7 @@ class ContentProjectService
                 'difficulty_level' => $blockData['difficulty_level'] ?? null,
                 'bloom_level' => $blockData['bloom_level'] ?? null,
                 'visualization_config' => $vizConfig,
+                'content_guidance' => $blockData['is_container'] ? null : ($blockData['content_guidance'] ?? null),
             ]);
 
             $createdBlocks[$index] = $block;

@@ -1,4 +1,4 @@
-import { useState, useCallback, useRef } from 'react';
+import { useState, useCallback } from 'react';
 import { Head } from '@inertiajs/react';
 import ContentStudioController from '@/actions/App/Http/Controllers/Admin/ContentStudioController';
 import { GenerationLogPanel } from '@/components/admin/content-studio/generation-log-panel';
@@ -12,7 +12,6 @@ import { Badge } from '@/components/ui/badge';
 import AdminLayout from '@/layouts/admin-layout';
 import type { AIModelOption, ContentProject, ContentProjectStatus, GenerationLogEntry, ResolvedStageModels, TopicWithBlocks } from '@/types/content-studio';
 
-const STEP_ORDER = ['research', 'scheme', 'blocks', 'content', 'questions'] as const;
 
 function getDefaultStep(project: ContentProject): string {
     const anyTopicApproved = Object.keys(project.progress_data?.blocks_approved ?? {}).length > 0;
@@ -116,16 +115,9 @@ export default function ContentStudioShow({ project: initialProject, generationL
     const [project, setProject] = useState(initialProject);
     const [logs, setLogs] = useState(initialLogs);
     const [activeStep, setActiveStep] = useState(() => getDefaultStep(initialProject));
-    const activeStepRef = useRef(activeStep);
-    activeStepRef.current = activeStep;
 
     const handleProjectUpdate = useCallback((updated: ContentProject) => {
         setProject(updated);
-        // Auto-advance to the next available step, never go back automatically.
-        const next = getDefaultStep(updated);
-        const currentIdx = STEP_ORDER.indexOf(activeStepRef.current as typeof STEP_ORDER[number]);
-        const nextIdx = STEP_ORDER.indexOf(next as typeof STEP_ORDER[number]);
-        if (nextIdx > currentIdx) setActiveStep(next);
     }, []);
 
     const handleLogAppend = useCallback((entry: GenerationLogEntry) => {

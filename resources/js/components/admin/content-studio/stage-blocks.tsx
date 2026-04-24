@@ -7,6 +7,7 @@ import {
     RotateCcw,
     Sparkles,
 } from 'lucide-react';
+import { router } from '@inertiajs/react';
 import { useEffect, useState } from 'react';
 import { sileo } from 'sileo';
 import {
@@ -176,6 +177,7 @@ function BlockDetailPanel({
             );
             onProjectUpdate(updated);
             sileo.success({ title: message });
+            router.reload({ only: ['topicsWithBlocks'] });
         } catch (e) {
             sileo.error({ title: e instanceof Error ? e.message : 'Request failed' });
         } finally {
