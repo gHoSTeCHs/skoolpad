@@ -13,6 +13,8 @@ interface EventPayload {
         state?: StreamStatus;
         message?: string;
         generation_log_id?: string | null;
+        block_id?: string;
+        topic_id?: string;
     };
 }
 
@@ -99,7 +101,7 @@ export function useGenerationStream(): UseGenerationStreamReturn {
                         teardown();
 
                         router.reload({
-                            only: ['project', 'generationLogs', 'resolvedModels'],
+                            only: ['project', 'generationLogs', 'resolvedModels', 'topicsWithBlocks'],
                             onSuccess: (page) => {
                                 const props = page.props as unknown as ReloadedProps;
                                 const logEntry = props.generationLogs[0] ?? null;
@@ -113,7 +115,7 @@ export function useGenerationStream(): UseGenerationStreamReturn {
                         teardown();
 
                         router.reload({
-                            only: ['project', 'generationLogs', 'resolvedModels'],
+                            only: ['project', 'generationLogs', 'resolvedModels', 'topicsWithBlocks'],
                             onSuccess: () => {
                                 onError(errorMsg);
                             },
