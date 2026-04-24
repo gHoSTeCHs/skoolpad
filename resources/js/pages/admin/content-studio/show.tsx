@@ -23,10 +23,10 @@ interface Props {
 
 const STATUS_STYLES: Record<ContentProjectStatus, string> = {
     draft: 'bg-[var(--badge-neutral-bg)] text-[var(--badge-neutral-fg)]',
-    research: 'bg-blue-100 text-blue-800 dark:bg-blue-900/40 dark:text-blue-300 reader:bg-blue-900/40 reader:text-blue-300',
-    structuring: 'bg-amber-100 text-amber-800 dark:bg-amber-900/40 dark:text-amber-300 reader:bg-amber-900/40 reader:text-amber-300',
-    generating: 'bg-purple-100 text-purple-800 dark:bg-purple-900/40 dark:text-purple-300 reader:bg-purple-900/40 reader:text-purple-300',
-    reviewing: 'bg-orange-100 text-orange-800 dark:bg-orange-900/40 dark:text-orange-300 reader:bg-orange-900/40 reader:text-orange-300',
+    research: 'bg-[var(--badge-primary-bg)] text-[var(--badge-primary-fg)]',
+    structuring: 'bg-[var(--badge-reward-bg)] text-[var(--badge-reward-fg)]',
+    generating: 'bg-[var(--badge-primary-bg)] text-[var(--badge-primary-fg)]',
+    reviewing: 'bg-[var(--badge-danger-bg)] text-[var(--badge-danger-fg)]',
     complete: 'bg-[var(--badge-reward-bg)] text-[var(--badge-reward-fg)]',
 };
 

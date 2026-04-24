@@ -14,6 +14,7 @@ use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Bus\Dispatchable;
 use Illuminate\Queue\InteractsWithQueue;
 use Illuminate\Queue\SerializesModels;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 
 class RunTopicContentGeneration implements ShouldQueue
@@ -44,6 +45,7 @@ class RunTopicContentGeneration implements ShouldQueue
     {
         if (! TopicGenerationLock::acquire($this->topic->id)) {
             Log::info('Topic generation already in progress; skipping', ['topic_id' => $this->topic->id]);
+
             return;
         }
 
@@ -71,7 +73,7 @@ class RunTopicContentGeneration implements ShouldQueue
             foreach ($blocks as $i => $block) {
                 $this->broadcastUpdate('status', [
                     'block_id' => $block->id,
-                    'message' => 'Generating block ' . ($i + 1) . "/{$total}: {$block->title}",
+                    'message' => 'Generating block '.($i + 1)."/{$total}: {$block->title}",
                 ]);
 
                 try {
@@ -88,6 +90,15 @@ class RunTopicContentGeneration implements ShouldQueue
                     $this->broadcastUpdate('error', [
                         'block_id' => $block->id,
                         'message' => $e->getMessage(),
+                    ]);
+                } catch (\Throwable $e) {
+                    Log::error('Unexpected per-block error in topic supervisor', [
+                        'project_id' => $this->project->id, 'block_id' => $block->id, 'exception' => $e,
+                    ]);
+                    $this->appendFailure($block, 'unknown', 'Unexpected error during generation');
+                    $this->broadcastUpdate('error', [
+                        'block_id' => $block->id,
+                        'message' => 'Unexpected error during generation',
                     ]);
                 }
             }
@@ -113,14 +124,16 @@ class RunTopicContentGeneration implements ShouldQueue
 
     private function appendFailure(ContentBlock $block, string $reason, string $message): void
     {
-        $fresh = $this->project->fresh();
-        $context = $fresh->ai_context ?? [];
-        $context['content_failed'] = $context['content_failed'] ?? [];
-        $context['content_failed'][$block->id] = [
-            'reason' => $reason,
-            'error_message' => $message,
-            'attempted_at' => now()->toIso8601String(),
-        ];
-        $fresh->update(['ai_context' => $context]);
+        DB::transaction(function () use ($block, $reason, $message) {
+            $project = ContentProject::query()->lockForUpdate()->find($this->project->id);
+            $context = $project->ai_context ?? [];
+            $context['content_failed'] = $context['content_failed'] ?? [];
+            $context['content_failed'][$block->id] = [
+                'reason' => $reason,
+                'error_message' => $message,
+                'attempted_at' => now()->toIso8601String(),
+            ];
+            $project->update(['ai_context' => $context]);
+        });
     }
 }

@@ -39,10 +39,6 @@ interface BlockContentDetailProps {
 
 export interface SaveContentPayload {
     content: TiptapJSON;
-    summary_sentence: string;
-    key_terms_introduced: ContentBlock['key_terms_introduced'];
-    symbols_used: ContentBlock['symbols_used'];
-    formulas_used: string[];
     word_count: number | null;
     nigerian_context_used: boolean | null;
 }
@@ -75,15 +71,11 @@ export function BlockContentDetail({
         if (!editedContent) return;
         await onSave({
             content: editedContent,
-            summary_sentence: block.summary_sentence ?? '',
-            key_terms_introduced: block.key_terms_introduced ?? [],
-            symbols_used: block.symbols_used ?? [],
-            formulas_used: block.formulas_used ?? [],
             word_count: block.word_count,
             nigerian_context_used: block.nigerian_context_used,
         });
         setIsEditing(false);
-    }, [editedContent, block, onSave]);
+    }, [editedContent, block.word_count, block.nigerian_context_used, onSave]);
 
     const handleSaveAndApprove = useCallback(async () => {
         await handleSave();

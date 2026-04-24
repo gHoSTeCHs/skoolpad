@@ -11,6 +11,7 @@ use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Bus\Dispatchable;
 use Illuminate\Queue\InteractsWithQueue;
 use Illuminate\Queue\SerializesModels;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 
 class RunBlockContentGeneration implements ShouldQueue
@@ -77,14 +78,16 @@ class RunBlockContentGeneration implements ShouldQueue
 
     private function appendFailure(string $reason, string $message): void
     {
-        $fresh = $this->project->fresh();
-        $context = $fresh->ai_context ?? [];
-        $context['content_failed'] = $context['content_failed'] ?? [];
-        $context['content_failed'][$this->block->id] = [
-            'reason' => $reason,
-            'error_message' => $message,
-            'attempted_at' => now()->toIso8601String(),
-        ];
-        $fresh->update(['ai_context' => $context]);
+        DB::transaction(function () use ($reason, $message) {
+            $project = ContentProject::query()->lockForUpdate()->find($this->project->id);
+            $context = $project->ai_context ?? [];
+            $context['content_failed'] = $context['content_failed'] ?? [];
+            $context['content_failed'][$this->block->id] = [
+                'reason' => $reason,
+                'error_message' => $message,
+                'attempted_at' => now()->toIso8601String(),
+            ];
+            $project->update(['ai_context' => $context]);
+        });
     }
 }

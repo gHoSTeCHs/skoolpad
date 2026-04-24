@@ -3,17 +3,18 @@
 namespace App\Services;
 
 use App\ContentStudio\Prompts\ContentBlockPrompt;
+use App\DataTransferObjects\ContentResponse;
 use App\Enums\BlockGenerationStatus;
 use App\Models\CanonicalTopic;
 use App\Models\ContentBlock;
 use App\Models\ContentProject;
-use App\DataTransferObjects\ContentResponse;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 
 class ContentBlockGenerationService
 {
     public const GLOSSARY_TERMS_CAP = 50;
+
     public const GLOSSARY_SYMBOLS_CAP = 30;
 
     public function __construct(
@@ -132,6 +133,7 @@ class ContentBlockGenerationService
                 if ($owned) {
                     $terms->put($existing, array_merge($terms[$existing], ['definition' => $new['definition']]));
                 }
+
                 continue;
             }
 
@@ -162,6 +164,7 @@ class ContentBlockGenerationService
                 if ($owned) {
                     $symbols->put($existing, array_merge($symbols[$existing], $new));
                 }
+
                 continue;
             }
 
@@ -211,9 +214,15 @@ class ContentBlockGenerationService
         }
 
         $reasons = [];
-        if ($termsChangedFlag) $reasons[] = 'key_terms';
-        if ($symbolsChangedFlag) $reasons[] = 'symbols';
-        if ($summaryChanged) $reasons[] = 'summary';
+        if ($termsChangedFlag) {
+            $reasons[] = 'key_terms';
+        }
+        if ($symbolsChangedFlag) {
+            $reasons[] = 'symbols';
+        }
+        if ($summaryChanged) {
+            $reasons[] = 'summary';
+        }
 
         return [
             'reason' => implode('+', $reasons),
@@ -260,7 +269,7 @@ class ContentBlockGenerationService
         $context = $this->assembleContext($block, $project);
 
         $response = $this->generation->generate(
-            new ContentBlockPrompt(),
+            new ContentBlockPrompt,
             $context,
             $project,
             $modelId ?? $project->content_model_id,
@@ -269,7 +278,7 @@ class ContentBlockGenerationService
         if (! $response->valid) {
             throw new \DomainException(
                 'Content generation returned an invalid response: '
-                . json_encode($response->validation_errors),
+                .json_encode($response->validation_errors),
             );
         }
 
@@ -282,7 +291,7 @@ class ContentBlockGenerationService
 
         $data = $response->data;
 
-        DB::transaction(function () use ($block, $data, $response) {
+        DB::transaction(function () use ($block, $data, $response, $hadPrior, $prior) {
             $block->update([
                 'content' => $data['content'],
                 'generation_status' => BlockGenerationStatus::Generated->value,
@@ -308,20 +317,20 @@ class ContentBlockGenerationService
             );
 
             $topic->update(['glossary' => $merged]);
-        });
 
-        if ($hadPrior) {
-            $new = [
-                'key_terms' => $data['key_terms_introduced'],
-                'symbols' => $data['symbols_used'],
-                'summary' => $data['summary_sentence'],
-            ];
-            $diff = self::compareContract($prior, $new);
+            if ($hadPrior) {
+                $new = [
+                    'key_terms' => $data['key_terms_introduced'],
+                    'symbols' => $data['symbols_used'],
+                    'summary' => $data['summary_sentence'],
+                ];
+                $diff = self::compareContract($prior, $new);
 
-            if ($diff !== null) {
-                $this->flagDownstream($block->fresh(), $diff);
+                if ($diff !== null) {
+                    $this->flagDownstream($block, $diff);
+                }
             }
-        }
+        });
 
         return $response;
     }
@@ -335,7 +344,7 @@ class ContentBlockGenerationService
         $violations = \App\ContentStudio\Support\TiptapAllowList::findViolations($payload['content'] ?? []);
         if (! empty($violations)) {
             throw new \DomainException(
-                'Content contains disallowed Tiptap nodes: ' . json_encode($violations)
+                'Content contains disallowed Tiptap nodes: '.json_encode($violations)
             );
         }
 
@@ -344,10 +353,21 @@ class ContentBlockGenerationService
             'symbols' => $block->symbols_used ?? [],
             'summary' => $block->summary_sentence,
         ];
+
+        // When contract fields are absent from the payload (e.g. v1 prose-only save),
+        // fall back to the block's existing values so compareContract sees no change
+        // and no drift advisory or glossary update is triggered. When v2 unlocks
+        // contract editing the FormRequest will include these fields and they flow through.
         $new = [
-            'key_terms' => $payload['key_terms_introduced'] ?? [],
-            'symbols' => $payload['symbols_used'] ?? [],
-            'summary' => $payload['summary_sentence'] ?? null,
+            'key_terms' => array_key_exists('key_terms_introduced', $payload)
+                ? ($payload['key_terms_introduced'] ?? [])
+                : ($block->key_terms_introduced ?? []),
+            'symbols' => array_key_exists('symbols_used', $payload)
+                ? ($payload['symbols_used'] ?? [])
+                : ($block->symbols_used ?? []),
+            'summary' => array_key_exists('summary_sentence', $payload)
+                ? $payload['summary_sentence']
+                : $block->summary_sentence,
         ];
 
         $diff = self::compareContract($prior, $new);
@@ -357,7 +377,9 @@ class ContentBlockGenerationService
             'summary_sentence' => $new['summary'],
             'key_terms_introduced' => $new['key_terms'],
             'symbols_used' => $new['symbols'],
-            'formulas_used' => $payload['formulas_used'] ?? [],
+            'formulas_used' => array_key_exists('formulas_used', $payload)
+                ? $payload['formulas_used']
+                : ($block->formulas_used ?? []),
             'word_count' => $payload['word_count'] ?? null,
             'nigerian_context_used' => $payload['nigerian_context_used'] ?? null,
         ];
@@ -374,12 +396,9 @@ class ContentBlockGenerationService
                 $topic = CanonicalTopic::query()->lockForUpdate()->find($block->canonical_topic_id);
                 $merged = self::mergeGlossary($topic->glossary, $new['key_terms'], $new['symbols'], $block->id);
                 $topic->update(['glossary' => $merged]);
+                $this->flagDownstream($block, $diff);
             }
         });
-
-        if ($diff !== null) {
-            $this->flagDownstream($block->fresh(), $diff);
-        }
     }
 
     public function updateBlockGuidance(ContentBlock $block, string $guidance): void
