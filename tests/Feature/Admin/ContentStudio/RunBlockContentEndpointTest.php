@@ -13,8 +13,11 @@ uses(\Illuminate\Foundation\Testing\RefreshDatabase::class);
 it('dispatches RunBlockContentGeneration and returns 202', function () {
     Queue::fake();
     $user = User::factory()->admin()->create();
-    $project = ContentProject::factory()->create(['created_by' => $user->id]);
     $topic = CanonicalTopic::factory()->create();
+    $project = ContentProject::factory()->create([
+        'created_by' => $user->id,
+        'progress_data' => ['blocks_approved' => ['k' => ['topic_id' => $topic->id, 'approved_at' => now()->toIso8601String()]]],
+    ]);
     $block = ContentBlock::factory()->leaf()->at('1.1')->for($topic, 'canonicalTopic')->withGuidance('g')->notStarted()->create();
 
     $this->actingAs($user)
@@ -27,8 +30,11 @@ it('dispatches RunBlockContentGeneration and returns 202', function () {
 
 it('returns 409 when topic generation is already in progress (block endpoint too)', function () {
     $user = User::factory()->admin()->create();
-    $project = ContentProject::factory()->create(['created_by' => $user->id]);
     $topic = CanonicalTopic::factory()->create();
+    $project = ContentProject::factory()->create([
+        'created_by' => $user->id,
+        'progress_data' => ['blocks_approved' => ['k' => ['topic_id' => $topic->id, 'approved_at' => now()->toIso8601String()]]],
+    ]);
     $block = ContentBlock::factory()->leaf()->at('1.1')->for($topic, 'canonicalTopic')->withGuidance('g')->notStarted()->create();
     TopicGenerationLock::acquire($topic->id);
 

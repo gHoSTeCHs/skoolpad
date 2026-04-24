@@ -95,7 +95,7 @@ class RunTopicContentGeneration implements ShouldQueue
                     $this->appendFailure($block, 'validation_exhausted', $e->getMessage());
                     $this->broadcastUpdate('error', [
                         'block_id' => $block->id,
-                        'message' => $e->getMessage(),
+                        'message' => 'Block generation failed. Check project logs for details.',
                     ]);
                 } catch (\Throwable $e) {
                     Log::error('Unexpected per-block error in topic supervisor', [
@@ -104,7 +104,7 @@ class RunTopicContentGeneration implements ShouldQueue
                     $this->appendFailure($block, 'unknown', 'Unexpected error during generation');
                     $this->broadcastUpdate('error', [
                         'block_id' => $block->id,
-                        'message' => 'Unexpected error during generation',
+                        'message' => 'Unexpected error. Check project logs for details.',
                     ]);
                 }
             }

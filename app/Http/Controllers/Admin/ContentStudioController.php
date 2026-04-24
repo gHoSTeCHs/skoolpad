@@ -198,7 +198,9 @@ class ContentStudioController extends Controller
                         'nigerian_context_used' => $b->nigerian_context_used,
                         'last_generated_at' => $b->last_generated_at?->toIso8601String(),
                         'last_generation_log_id' => $b->last_generation_log_id,
-                        'drift_advisory' => $b->drift_advisory,
+                        'drift_advisory' => $b->drift_advisory
+                            ? array_diff_key($b->drift_advisory, ['source_block_id' => null])
+                            : null,
                     ])->values()->all(),
             ])->values()->all();
 
@@ -247,6 +249,26 @@ class ContentStudioController extends Controller
         }
 
         return 'fallback';
+    }
+
+    private function assertTopicBelongsToProject(ContentProject $project, CanonicalTopic $topic): void
+    {
+        $approvedTopicIds = collect($project->progress_data['blocks_approved'] ?? [])
+            ->pluck('topic_id')
+            ->filter()
+            ->all();
+
+        abort_unless(in_array($topic->id, $approvedTopicIds, true), 403, 'Topic does not belong to this project.');
+    }
+
+    private function assertBlockBelongsToProject(ContentProject $project, ContentBlock $block): void
+    {
+        $approvedTopicIds = collect($project->progress_data['blocks_approved'] ?? [])
+            ->pluck('topic_id')
+            ->filter()
+            ->all();
+
+        abort_unless(in_array($block->canonical_topic_id, $approvedTopicIds, true), 403, 'Block does not belong to this project.');
     }
 
     private function activeModelExists(?string $modelId): bool
@@ -384,6 +406,7 @@ class ContentStudioController extends Controller
         CanonicalTopic $canonicalTopic,
     ): JsonResponse {
         Gate::authorize('update', $contentProject);
+        $this->assertTopicBelongsToProject($contentProject, $canonicalTopic);
 
         if (\App\ContentStudio\Support\TopicGenerationLock::isHeld($canonicalTopic->id)) {
             return response()->json(['message' => 'Content generation already in progress for this topic.'], 409);
@@ -407,6 +430,7 @@ class ContentStudioController extends Controller
         ContentBlock $contentBlock,
     ): JsonResponse {
         Gate::authorize('update', $contentProject);
+        $this->assertBlockBelongsToProject($contentProject, $contentBlock);
 
         if (\App\ContentStudio\Support\TopicGenerationLock::isHeld($contentBlock->canonical_topic_id)) {
             return response()->json(['message' => 'A topic-wide generation is currently running.'], 409);
@@ -439,6 +463,7 @@ class ContentStudioController extends Controller
         ContentBlock $contentBlock,
     ): JsonResponse {
         Gate::authorize('update', $contentProject);
+        $this->assertBlockBelongsToProject($contentProject, $contentBlock);
 
         try {
             $this->blockGenerationService->saveBlockContent($contentBlock, $request->validated());
@@ -457,6 +482,7 @@ class ContentStudioController extends Controller
         ContentBlock $contentBlock,
     ): JsonResponse {
         Gate::authorize('update', $contentProject);
+        $this->assertBlockBelongsToProject($contentProject, $contentBlock);
 
         try {
             $this->blockGenerationService->approveBlockContent($contentBlock);
@@ -475,6 +501,7 @@ class ContentStudioController extends Controller
         ContentBlock $contentBlock,
     ): JsonResponse {
         Gate::authorize('update', $contentProject);
+        $this->assertBlockBelongsToProject($contentProject, $contentBlock);
 
         $this->blockGenerationService->dismissBlockAdvisory($contentBlock);
 
@@ -490,6 +517,7 @@ class ContentStudioController extends Controller
         ContentBlock $contentBlock,
     ): JsonResponse {
         Gate::authorize('update', $contentProject);
+        $this->assertBlockBelongsToProject($contentProject, $contentBlock);
 
         try {
             $this->blockGenerationService->updateBlockGuidance($contentBlock, $request->validated()['content_guidance']);
@@ -508,6 +536,7 @@ class ContentStudioController extends Controller
         CanonicalTopic $canonicalTopic,
     ): JsonResponse {
         Gate::authorize('update', $contentProject);
+        $this->assertTopicBelongsToProject($contentProject, $canonicalTopic);
 
         try {
             $this->projectService->markTopicComplete($contentProject, $canonicalTopic);
@@ -527,6 +556,7 @@ class ContentStudioController extends Controller
         CanonicalTopic $canonicalTopic,
     ): JsonResponse {
         Gate::authorize('update', $contentProject);
+        $this->assertTopicBelongsToProject($contentProject, $canonicalTopic);
 
         try {
             $this->projectService->resetTopicContent($contentProject, $canonicalTopic);

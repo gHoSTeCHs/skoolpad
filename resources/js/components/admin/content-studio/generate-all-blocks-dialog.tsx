@@ -66,7 +66,7 @@ export function GenerateAllBlocksDialog({
 
                 <AlertDialogFooter>
                     <AlertDialogCancel>Cancel</AlertDialogCancel>
-                    <AlertDialogAction onClick={() => onConfirm(force)}>Start generation</AlertDialogAction>
+                    <AlertDialogAction onClick={() => onConfirm(force)} disabled={disabled}>Start generation</AlertDialogAction>
                 </AlertDialogFooter>
             </AlertDialogContent>
         </AlertDialog>

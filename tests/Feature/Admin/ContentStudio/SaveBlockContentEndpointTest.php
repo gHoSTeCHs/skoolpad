@@ -18,8 +18,11 @@ function validPayload(): array
 
 it('saves edited block Tiptap content and returns refreshed project', function () {
     $user = User::factory()->admin()->create();
-    $project = ContentProject::factory()->create(['created_by' => $user->id]);
     $topic = CanonicalTopic::factory()->create();
+    $project = ContentProject::factory()->create([
+        'created_by' => $user->id,
+        'progress_data' => ['blocks_approved' => ['k' => ['topic_id' => $topic->id, 'approved_at' => now()->toIso8601String()]]],
+    ]);
     $block = ContentBlock::factory()->leaf()->at('1.1')->for($topic, 'canonicalTopic')->generated()->create();
 
     $this->actingAs($user)
@@ -33,8 +36,11 @@ it('saves edited block Tiptap content and returns refreshed project', function (
 
 it('rejects payloads with disallowed Tiptap nodes (422)', function () {
     $user = User::factory()->admin()->create();
-    $project = ContentProject::factory()->create(['created_by' => $user->id]);
     $topic = CanonicalTopic::factory()->create();
+    $project = ContentProject::factory()->create([
+        'created_by' => $user->id,
+        'progress_data' => ['blocks_approved' => ['k' => ['topic_id' => $topic->id, 'approved_at' => now()->toIso8601String()]]],
+    ]);
     $block = ContentBlock::factory()->leaf()->at('1.1')->for($topic, 'canonicalTopic')->generated()->create();
 
     $payload = validPayload();
@@ -47,8 +53,11 @@ it('rejects payloads with disallowed Tiptap nodes (422)', function () {
 
 it('rejects payloads that attempt to edit contract fields (v1 guard, 422)', function () {
     $user = User::factory()->admin()->create();
-    $project = ContentProject::factory()->create(['created_by' => $user->id]);
     $topic = CanonicalTopic::factory()->create();
+    $project = ContentProject::factory()->create([
+        'created_by' => $user->id,
+        'progress_data' => ['blocks_approved' => ['k' => ['topic_id' => $topic->id, 'approved_at' => now()->toIso8601String()]]],
+    ]);
     $block = ContentBlock::factory()->leaf()->at('1.1')->for($topic, 'canonicalTopic')->generated()->create();
 
     foreach ([

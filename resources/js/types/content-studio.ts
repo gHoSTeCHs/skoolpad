@@ -228,7 +228,6 @@ export interface TopicGlossary {
 }
 
 export interface DriftAdvisory {
-    source_block_id: string;
     source_block_title: string;
     reason: string;
     terms_removed: string[];

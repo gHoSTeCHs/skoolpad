@@ -10,8 +10,11 @@ uses(\Illuminate\Foundation\Testing\RefreshDatabase::class);
 
 it('resets topic content and glossary when confirm_slug matches', function () {
     $user = User::factory()->admin()->create();
-    $project = ContentProject::factory()->create(['created_by' => $user->id]);
     $topic = CanonicalTopic::factory()->withGlossary(terms: [['term' => 'x', 'definition' => 'y', 'first_block_id' => 'z']])->create();
+    $project = ContentProject::factory()->create([
+        'created_by' => $user->id,
+        'progress_data' => ['blocks_approved' => ['k' => ['topic_id' => $topic->id, 'approved_at' => now()->toIso8601String()]]],
+    ]);
     ContentBlock::factory()->leaf()->at('1.1')->for($topic, 'canonicalTopic')->approved()->create();
 
     $this->actingAs($user)

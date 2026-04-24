@@ -50,7 +50,7 @@ class RunBlockContentGeneration implements ShouldQueue
             ]);
 
             $this->appendFailure('validation_exhausted', $e->getMessage());
-            $this->broadcastUpdate('error', ['message' => $e->getMessage()]);
+            $this->broadcastUpdate('error', ['message' => 'Block generation failed. Check project logs for details.']);
         } catch (\Throwable $e) {
             Log::error('Unexpected block content generation error', [
                 'project_id' => $this->project->id,
@@ -59,7 +59,7 @@ class RunBlockContentGeneration implements ShouldQueue
             ]);
 
             $this->appendFailure('unknown', 'Unexpected error');
-            $this->broadcastUpdate('error', ['message' => 'Unexpected error']);
+            $this->broadcastUpdate('error', ['message' => 'Unexpected error. Check project logs for details.']);
 
             throw $e;
         }

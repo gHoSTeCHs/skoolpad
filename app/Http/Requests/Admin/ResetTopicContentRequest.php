@@ -16,10 +16,13 @@ class ResetTopicContentRequest extends FormRequest
     public function rules(): array
     {
         $topic = $this->route('canonicalTopic');
-        $expectedSlug = $topic instanceof CanonicalTopic ? $topic->slug : '';
+
+        if (! $topic instanceof CanonicalTopic || blank($topic->slug)) {
+            return ['confirm_slug' => ['prohibited']];
+        }
 
         return [
-            'confirm_slug' => ['required', 'string', Rule::in([$expectedSlug])],
+            'confirm_slug' => ['required', 'string', Rule::in([$topic->slug])],
         ];
     }
 

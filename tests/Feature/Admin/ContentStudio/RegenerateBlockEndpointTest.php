@@ -12,8 +12,11 @@ uses(\Illuminate\Foundation\Testing\RefreshDatabase::class);
 it('regenerates a generated block by dispatching the single-block job', function () {
     Queue::fake();
     $user = User::factory()->admin()->create();
-    $project = ContentProject::factory()->create(['created_by' => $user->id]);
     $topic = CanonicalTopic::factory()->create();
+    $project = ContentProject::factory()->create([
+        'created_by' => $user->id,
+        'progress_data' => ['blocks_approved' => ['k' => ['topic_id' => $topic->id, 'approved_at' => now()->toIso8601String()]]],
+    ]);
     $block = ContentBlock::factory()->leaf()->at('1.1')->for($topic, 'canonicalTopic')->withGuidance('g')->generated()->create();
 
     $this->actingAs($user)
@@ -27,8 +30,11 @@ it('regenerates a generated block by dispatching the single-block job', function
 it('regenerates an approved block', function () {
     Queue::fake();
     $user = User::factory()->admin()->create();
-    $project = ContentProject::factory()->create(['created_by' => $user->id]);
     $topic = CanonicalTopic::factory()->create();
+    $project = ContentProject::factory()->create([
+        'created_by' => $user->id,
+        'progress_data' => ['blocks_approved' => ['k' => ['topic_id' => $topic->id, 'approved_at' => now()->toIso8601String()]]],
+    ]);
     $block = ContentBlock::factory()->leaf()->at('1.1')->for($topic, 'canonicalTopic')->withGuidance('g')->approved()->create();
 
     $this->actingAs($user)
@@ -40,8 +46,11 @@ it('regenerates an approved block', function () {
 
 it('returns 409 on regenerate when topic generation is already in progress', function () {
     $user = User::factory()->admin()->create();
-    $project = ContentProject::factory()->create(['created_by' => $user->id]);
     $topic = CanonicalTopic::factory()->create();
+    $project = ContentProject::factory()->create([
+        'created_by' => $user->id,
+        'progress_data' => ['blocks_approved' => ['k' => ['topic_id' => $topic->id, 'approved_at' => now()->toIso8601String()]]],
+    ]);
     $block = ContentBlock::factory()->leaf()->at('1.1')->for($topic, 'canonicalTopic')->withGuidance('g')->approved()->create();
     \App\ContentStudio\Support\TopicGenerationLock::acquire($topic->id);
 
