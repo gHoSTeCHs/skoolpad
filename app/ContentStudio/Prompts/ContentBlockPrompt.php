@@ -161,7 +161,7 @@ USER;
             'symbols_used.*.symbol' => ['required_with:symbols_used.*.quantity', 'string', 'max:50'],
             'symbols_used.*.quantity' => ['required_with:symbols_used.*.symbol', 'string', 'max:100'],
             'symbols_used.*.unit' => ['required_with:symbols_used.*.symbol', 'string', 'max:50'],
-            'formulas_used' => ['required', 'array'],
+            'formulas_used' => ['nullable', 'array'],
             'formulas_used.*' => ['string', 'max:500'],
             'word_count' => ['required', 'integer', 'min:1'],
             'nigerian_context_used' => ['required', 'boolean'],
