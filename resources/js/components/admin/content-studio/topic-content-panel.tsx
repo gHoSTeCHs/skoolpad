@@ -103,7 +103,7 @@ export function TopicContentPanel({
             </div>
 
             {/* Body */}
-            <div className="grid flex-1 grid-cols-[18rem_1fr] overflow-hidden">
+            <div className="grid min-h-0 flex-1 grid-cols-[18rem_1fr] overflow-hidden">
                 {/* Left — block list */}
                 <div className="overflow-y-auto border-r border-border bg-card">
                     <ul className="divide-y divide-border">

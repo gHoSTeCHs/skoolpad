@@ -213,7 +213,7 @@ export function StageContent({ project, topicsWithBlocks, aiModels, resolvedMode
     }
 
     return (
-        <div className="flex flex-col gap-4 p-6">
+        <div className="flex h-full flex-col gap-4 overflow-y-auto p-6">
             <div className="flex flex-col gap-1">
                 <h2 className="text-lg font-semibold text-foreground">Content stage</h2>
                 <p className="text-sm text-muted-foreground">

@@ -116,7 +116,7 @@ export function BlockContentDetail({
     );
 
     return (
-        <div className="flex h-full flex-col gap-4 bg-card p-6">
+        <div className="flex flex-col gap-4 bg-card p-6">
             {/* Header */}
             <div className="flex items-start justify-between gap-4">
                 <div className="flex min-w-0 flex-1 flex-col gap-2">
