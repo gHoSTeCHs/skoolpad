@@ -25,16 +25,24 @@ function formatCost(cents: number): string {
     return `$${(cents / 100).toFixed(2)}`;
 }
 
-const ADAPTER_STYLES = {
-    openai_compatible: {
-        border: 'border-l-teal-500 dark:border-l-teal-400 reader:border-l-teal-400',
-        badge: 'bg-teal-100 text-teal-800 dark:bg-teal-900/40 dark:text-teal-300 reader:bg-teal-900/40 reader:text-teal-300',
+const PROVIDER_STYLES: Record<string, { border: string; badge: string }> = {
+    deepseek:  {
+        border: 'border-l-[var(--badge-primary-fg)]',
+        badge: 'bg-[var(--badge-primary-bg)] text-[var(--badge-primary-fg)]',
     },
     anthropic: {
-        border: 'border-l-amber-500 dark:border-l-amber-400 reader:border-l-amber-400',
-        badge: 'bg-amber-100 text-amber-800 dark:bg-amber-900/40 dark:text-amber-300 reader:bg-amber-900/40 reader:text-amber-300',
+        border: 'border-l-[var(--badge-reward-fg)]',
+        badge: 'bg-[var(--badge-reward-bg)] text-[var(--badge-reward-fg)]',
     },
-} as const;
+    google:    {
+        border: 'border-l-[var(--badge-danger-fg)]',
+        badge: 'bg-[var(--badge-danger-bg)] text-[var(--badge-danger-fg)]',
+    },
+    openai:    {
+        border: 'border-l-[var(--badge-neutral-fg)]',
+        badge: 'bg-[var(--badge-neutral-bg)] text-[var(--badge-neutral-fg)]',
+    },
+};
 
 const breadcrumbs = [{ title: 'AI Models', href: '#' }];
 
@@ -160,7 +168,8 @@ interface ModelCardProps {
 }
 
 function ModelCard({ model, isTesting, testResult, onTest, onDelete }: ModelCardProps) {
-    const styles = ADAPTER_STYLES[model.adapter_type];
+    const providerSlug = model.provider?.slug ?? 'openai';
+    const styles = PROVIDER_STYLES[providerSlug] ?? PROVIDER_STYLES.openai;
 
     return (
         <Card className={cn(
@@ -220,18 +229,23 @@ function ModelCard({ model, isTesting, testResult, onTest, onDelete }: ModelCard
 
                 <div className="flex flex-wrap items-center gap-2">
                     <Badge variant="secondary" className={cn('text-xs', styles.badge)}>
-                        {model.adapter_type_label}
+                        {model.provider?.name ?? '—'}
                     </Badge>
+                    {model.thinking_mode && model.thinking_mode !== 'none' && (
+                        <Badge variant="outline" className="text-[10px] font-mono uppercase tracking-wide">
+                            {model.thinking_mode === 'max' ? 'Think Max' : 'Think'}
+                        </Badge>
+                    )}
 
                     <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
                         <KeyRound className="size-3" />
                         <CircleDot className={cn(
                             'size-2.5',
-                            model.api_key
+                            (model as AIModel & { provider_api_key_set?: boolean }).provider_api_key_set
                                 ? 'fill-green-500 text-green-500 dark:fill-green-400 dark:text-green-400'
                                 : 'fill-muted-foreground/40 text-muted-foreground/40',
                         )} />
-                        <span>{model.api_key ? 'Configured' : 'Not set'}</span>
+                        <span>{(model as AIModel & { provider_api_key_set?: boolean }).provider_api_key_set ? 'Configured' : 'Not set'}</span>
                     </div>
 
                     <div className="ml-auto flex items-center gap-3 rounded-md bg-muted/50 px-2.5 py-1 text-xs tabular-nums">

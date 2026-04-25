@@ -17,7 +17,8 @@ class OpenAICompatibleAdapter implements ContentAIProvider
 
     public function generate(ContentPrompt $prompt): ContentResponse
     {
-        if (empty($this->model->api_key) && ! str_contains($this->model->base_url, 'localhost')) {
+        $provider = $this->model->provider;
+        if (empty($provider->api_key) && ! str_contains($provider->base_url, 'localhost')) {
             return new ContentResponse(
                 valid: false,
                 data: [],
@@ -32,13 +33,13 @@ class OpenAICompatibleAdapter implements ContentAIProvider
         try {
             $request = Http::timeout(120);
 
-            if (! empty($this->model->api_key)) {
+            if (! empty($provider->api_key)) {
                 $request = $request->withHeaders([
-                    'Authorization' => 'Bearer '.$this->model->api_key,
+                    'Authorization' => 'Bearer '.$provider->api_key,
                 ]);
             }
 
-            $response = $request->post(rtrim($this->model->base_url, '/').'/chat/completions', [
+            $body = [
                 'model' => $this->model->model_id,
                 'max_tokens' => $prompt->max_tokens,
                 'temperature' => $prompt->temperature,
@@ -46,7 +47,19 @@ class OpenAICompatibleAdapter implements ContentAIProvider
                     ['role' => 'system', 'content' => $prompt->system_prompt],
                     ['role' => 'user', 'content' => $prompt->user_prompt],
                 ],
-            ]);
+            ];
+
+            if ($provider->supports_thinking) {
+                if ($this->model->thinking_mode === \App\Enums\ThinkingMode::None) {
+                    $body['thinking'] = ['type' => 'disabled'];
+                } else {
+                    $budgetTokens = $this->model->thinking_mode === \App\Enums\ThinkingMode::Max ? 32000 : 8000;
+                    $body['thinking'] = ['type' => 'enabled', 'budget_tokens' => $budgetTokens];
+                    unset($body['temperature']);
+                }
+            }
+
+            $response = $request->post(rtrim($provider->base_url, '/').'/chat/completions', $body);
 
             $elapsedMs = (microtime(true) - $startTime) * 1000;
             $body = $response->json();

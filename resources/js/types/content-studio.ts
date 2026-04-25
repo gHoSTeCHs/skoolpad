@@ -179,23 +179,38 @@ export interface DisciplineOption {
     slug: string;
 }
 
+export type ThinkingMode = 'none' | 'standard' | 'max';
+export type AIAdapterType = 'openai_compatible' | 'anthropic';
+
 export interface AIModelOption {
     id: string;
     name: string;
     model_id: string;
+    thinking_mode: ThinkingMode;
+    provider_name: string;
+    provider_slug: string;
 }
 
-export type AIAdapterType = 'openai_compatible' | 'anthropic';
-
-export interface AIModel {
+export interface AIProvider {
     id: string;
     name: string;
     slug: string;
     adapter_type: AIAdapterType;
     adapter_type_label: string;
     base_url: string;
-    api_key: string | null;
+    supports_thinking: boolean;
+    is_active: boolean;
+    sort_order: number;
+}
+
+export interface AIModel {
+    id: string;
+    name: string;
+    slug: string;
     model_id: string;
+    thinking_mode: ThinkingMode;
+    provider_id: string;
+    provider?: AIProvider;
     max_tokens: number;
     input_cost_per_million: number;
     output_cost_per_million: number;

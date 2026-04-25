@@ -17,7 +17,8 @@ class AnthropicAdapter implements ContentAIProvider
 
     public function generate(ContentPrompt $prompt): ContentResponse
     {
-        if (empty($this->model->api_key)) {
+        $provider = $this->model->provider;
+        if (empty($provider->api_key)) {
             return new ContentResponse(
                 valid: false,
                 data: [],
@@ -31,9 +32,9 @@ class AnthropicAdapter implements ContentAIProvider
 
         try {
             $response = Http::withHeaders([
-                'x-api-key' => $this->model->api_key,
+                'x-api-key' => $provider->api_key,
                 'anthropic-version' => '2023-06-01',
-            ])->timeout(120)->post(rtrim($this->model->base_url, '/').'/messages', [
+            ])->timeout(120)->post(rtrim($provider->base_url, '/').'/messages', [
                 'model' => $this->model->model_id,
                 'max_tokens' => $prompt->max_tokens,
                 'temperature' => $prompt->temperature,

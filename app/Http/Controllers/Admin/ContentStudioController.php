@@ -127,8 +127,18 @@ class ContentStudioController extends Controller
 
         $aiModels = AIModel::query()
             ->active()
+            ->with('provider:id,name,slug,supports_thinking')
+            ->orderByRaw('(SELECT sort_order FROM ai_providers WHERE ai_providers.id = ai_models.provider_id)')
             ->orderBy('sort_order')
-            ->get(['id', 'name', 'model_id']);
+            ->get()
+            ->map(fn (AIModel $m) => [
+                'id' => $m->id,
+                'name' => $m->name,
+                'model_id' => $m->model_id,
+                'thinking_mode' => $m->thinking_mode->value,
+                'provider_name' => $m->provider->name,
+                'provider_slug' => $m->provider->slug,
+            ]);
 
         $platformDefaultValue = PlatformSetting::query()
             ->where('key', 'content_studio.default_model_id')

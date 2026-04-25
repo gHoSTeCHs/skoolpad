@@ -2,8 +2,9 @@
 
 namespace Database\Seeders;
 
-use App\Enums\AIAdapterType;
+use App\Enums\ThinkingMode;
 use App\Models\AIModel;
+use App\Models\AIProvider;
 use App\Models\PlatformSetting;
 use Illuminate\Database\Seeder;
 
@@ -11,50 +12,106 @@ class AIModelSeeder extends Seeder
 {
     public function run(): void
     {
+        $deepseek = AIProvider::query()->where('slug', 'deepseek')->firstOrFail();
+        $anthropic = AIProvider::query()->where('slug', 'anthropic')->firstOrFail();
+        $google = AIProvider::query()->where('slug', 'google')->firstOrFail();
+        $openai = AIProvider::query()->where('slug', 'openai')->firstOrFail();
+
         $models = [
+            // ── DeepSeek ──────────────────────────────────────────────────
             [
-                'name' => 'DeepSeek V3.2',
-                'slug' => 'deepseek-v3',
-                'adapter_type' => AIAdapterType::OpenAICompatible,
-                'base_url' => 'https://api.deepseek.com/v1',
-                'model_id' => 'deepseek-chat',
+                'provider_id' => $deepseek->id,
+                'name' => 'DeepSeek V4-Flash',
+                'slug' => 'deepseek-v4-flash',
+                'model_id' => 'deepseek-v4-flash',
+                'thinking_mode' => ThinkingMode::None,
                 'max_tokens' => 8192,
-                'input_cost_per_million' => 27,
-                'output_cost_per_million' => 110,
+                'input_cost_per_million' => 14,
+                'output_cost_per_million' => 28,
                 'sort_order' => 1,
             ],
             [
-                'name' => 'Claude Sonnet 4',
-                'slug' => 'claude-sonnet-4',
-                'adapter_type' => AIAdapterType::Anthropic,
-                'base_url' => 'https://api.anthropic.com/v1',
-                'model_id' => 'claude-sonnet-4-20250514',
+                'provider_id' => $deepseek->id,
+                'name' => 'DeepSeek V4-Flash (Think)',
+                'slug' => 'deepseek-v4-flash-think',
+                'model_id' => 'deepseek-v4-flash',
+                'thinking_mode' => ThinkingMode::Standard,
                 'max_tokens' => 8192,
-                'input_cost_per_million' => 300,
-                'output_cost_per_million' => 1500,
+                'input_cost_per_million' => 14,
+                'output_cost_per_million' => 28,
                 'sort_order' => 2,
             ],
             [
-                'name' => 'Gemini 2.5 Flash',
-                'slug' => 'gemini-flash',
-                'adapter_type' => AIAdapterType::OpenAICompatible,
-                'base_url' => 'https://generativelanguage.googleapis.com/v1beta/openai',
-                'model_id' => 'gemini-2.5-flash',
+                'provider_id' => $deepseek->id,
+                'name' => 'DeepSeek V4-Pro',
+                'slug' => 'deepseek-v4-pro',
+                'model_id' => 'deepseek-v4-pro',
+                'thinking_mode' => ThinkingMode::None,
                 'max_tokens' => 8192,
-                'input_cost_per_million' => 15,
-                'output_cost_per_million' => 60,
+                'input_cost_per_million' => 174,
+                'output_cost_per_million' => 348,
                 'sort_order' => 3,
             ],
             [
+                'provider_id' => $deepseek->id,
+                'name' => 'DeepSeek V4-Pro (Think)',
+                'slug' => 'deepseek-v4-pro-think',
+                'model_id' => 'deepseek-v4-pro',
+                'thinking_mode' => ThinkingMode::Standard,
+                'max_tokens' => 8192,
+                'input_cost_per_million' => 174,
+                'output_cost_per_million' => 348,
+                'sort_order' => 4,
+            ],
+            [
+                'provider_id' => $deepseek->id,
+                'name' => 'DeepSeek V4-Pro (Think Max)',
+                'slug' => 'deepseek-v4-pro-think-max',
+                'model_id' => 'deepseek-v4-pro',
+                'thinking_mode' => ThinkingMode::Max,
+                'max_tokens' => 8192,
+                'input_cost_per_million' => 174,
+                'output_cost_per_million' => 348,
+                'sort_order' => 5,
+            ],
+
+            // ── Anthropic ─────────────────────────────────────────────────
+            [
+                'provider_id' => $anthropic->id,
+                'name' => 'Claude Sonnet 4',
+                'slug' => 'claude-sonnet-4',
+                'model_id' => 'claude-sonnet-4-20250514',
+                'thinking_mode' => ThinkingMode::None,
+                'max_tokens' => 8192,
+                'input_cost_per_million' => 300,
+                'output_cost_per_million' => 1500,
+                'sort_order' => 10,
+            ],
+
+            // ── Google ────────────────────────────────────────────────────
+            [
+                'provider_id' => $google->id,
+                'name' => 'Gemini 2.5 Flash',
+                'slug' => 'gemini-flash',
+                'model_id' => 'gemini-2.5-flash',
+                'thinking_mode' => ThinkingMode::None,
+                'max_tokens' => 8192,
+                'input_cost_per_million' => 15,
+                'output_cost_per_million' => 60,
+                'sort_order' => 20,
+            ],
+
+            // ── OpenAI ────────────────────────────────────────────────────
+            [
+                'provider_id' => $openai->id,
                 'name' => 'GPT-4.1 Mini',
                 'slug' => 'gpt-4-1-mini',
-                'adapter_type' => AIAdapterType::OpenAICompatible,
-                'base_url' => 'https://api.openai.com/v1',
                 'model_id' => 'gpt-4.1-mini',
+                'thinking_mode' => ThinkingMode::None,
                 'max_tokens' => 8192,
                 'input_cost_per_million' => 40,
                 'output_cost_per_million' => 160,
-                'sort_order' => 4,
+                'sort_order' => 30,
             ],
         ];
 

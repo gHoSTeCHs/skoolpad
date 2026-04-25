@@ -28,17 +28,19 @@ class AIModelController extends Controller
         Gate::authorize('viewAny', AIModel::class);
 
         $models = AIModel::query()
+            ->with('provider')
             ->when($request->filled('search'), fn ($q) => $q->search($request->string('search')))
+            ->orderByRaw('(SELECT sort_order FROM ai_providers WHERE ai_providers.id = ai_models.provider_id)')
             ->orderBy('sort_order')
             ->orderBy('name')
             ->paginate(self::DEFAULT_PER_PAGE)
             ->withQueryString();
 
-        $modelsWithLabels = $models->through(fn ($model) => array_merge(
+        $modelsWithLabels = $models->through(fn (AIModel $model) => array_merge(
             $model->toArray(),
             [
-                'adapter_type_label' => $model->adapter_type->label(),
-                'api_key' => $model->api_key ? self::API_KEY_MASK : null,
+                'provider' => $model->provider?->toArray(),
+                'provider_api_key_set' => ! empty($model->provider?->api_key),
             ]
         ));
 
@@ -77,9 +79,10 @@ class AIModelController extends Controller
     {
         Gate::authorize('update', $aiModel);
 
+        $aiModel->loadMissing('provider');
         $data = $aiModel->toArray();
-        $data['adapter_type_label'] = $aiModel->adapter_type->label();
-        $data['api_key'] = $aiModel->api_key ? self::API_KEY_MASK : null;
+        $data['provider'] = $aiModel->provider?->toArray();
+        $data['provider_api_key_set'] = ! empty($aiModel->provider?->api_key);
 
         return Inertia::render('admin/ai-models/edit', [
             'aiModel' => $data,

@@ -157,7 +157,9 @@ class ContentGenerationService
 
     public function resolveAdapter(AIModel $model): ContentAIProvider
     {
-        return match ($model->adapter_type) {
+        $model->loadMissing('provider');
+
+        return match ($model->provider->adapter_type) {
             AIAdapterType::OpenAICompatible => new OpenAICompatibleAdapter($model),
             AIAdapterType::Anthropic => new AnthropicAdapter($model),
         };
@@ -284,7 +286,7 @@ class ContentGenerationService
             'is_valid' => $response->valid,
             'validation_errors' => $response->valid ? null : $response->validation_errors,
             'model_used' => $response->model_used,
-            'provider' => $model->adapter_type->value,
+            'provider' => $model->provider->adapter_type->value,
             'tokens_used' => $response->tokens_used,
             'input_tokens' => $response->input_tokens,
             'output_tokens' => $response->output_tokens,
