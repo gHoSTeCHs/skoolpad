@@ -30,7 +30,7 @@ CRITICAL RULES FOR CONTENT QUALITY
 2. Start with the core concept immediately. No filler intros.
 3. Use Nigerian context for examples where applicable (cities, currency in Naira, local scenarios). Avoid US/UK examples unless topic requires them.
 4. Bold each key term ONLY on its first appearance in this block.
-5. Use KaTeX for math. Inline: { "type": "math", "attrs": { "latex": "v = d/t" } }. Block: { "type": "mathBlock", "attrs": { "latex": "..." } }.
+5. Use KaTeX for math. Inline: { "type": "inlineMath", "attrs": { "latex": "v = d/t" } }. Block: { "type": "blockMath", "attrs": { "latex": "..." } }.
 6. Paragraphs are short: 2-4 sentences.
 7. Use bullet or numbered lists for 3+ related items.
 8. Include at least one concrete example or illustration.
@@ -54,9 +54,9 @@ Tiptap JSON FORMAT
 
 Top-level: { "type": "doc", "content": [ ...block nodes... ] }
 
-Allowed block node types: paragraph, heading (level 2 only), bulletList, orderedList, listItem, blockquote, codeBlock, horizontalRule, mathBlock, table, tableRow, tableHeader, tableCell.
+Allowed block node types: paragraph, heading (level 2 only), bulletList, orderedList, listItem, blockquote, codeBlock, horizontalRule, blockMath, table, tableRow, tableHeader, tableCell.
 
-Allowed inline node types: text, math, hardBreak.
+Allowed inline node types: text, inlineMath, hardBreak.
 
 Allowed marks (on text): bold, italic, underline, strike, code.
 
@@ -77,7 +77,7 @@ SYSTEM;
         $glossaryText = $this->renderGlossary($glossary);
         $priorText = empty($priorSummaries)
             ? '(none — this is the first leaf block of the topic)'
-            : '- ' . implode("\n- ", $priorSummaries);
+            : '- '.implode("\n- ", $priorSummaries);
 
         $prevText = $prev === null
             ? '(none — this is the first leaf block)'

@@ -6,12 +6,12 @@ final class TiptapAllowList
 {
     public const ALLOWED_BLOCK_NODES = [
         'doc', 'paragraph', 'heading', 'bulletList', 'orderedList', 'listItem',
-        'blockquote', 'codeBlock', 'horizontalRule', 'mathBlock',
+        'blockquote', 'codeBlock', 'horizontalRule', 'blockMath',
         'table', 'tableRow', 'tableHeader', 'tableCell',
     ];
 
     public const ALLOWED_INLINE_NODES = [
-        'text', 'math', 'hardBreak',
+        'text', 'inlineMath', 'hardBreak',
     ];
 
     public const ALLOWED_MARKS = [
@@ -46,8 +46,9 @@ final class TiptapAllowList
 
     private static function walkNode(mixed $node, string $path, array &$violations): void
     {
-        if (!is_array($node) || !isset($node['type'])) {
+        if (! is_array($node) || ! isset($node['type'])) {
             $violations[] = ['type' => 'malformed', 'path' => $path, 'kind' => 'structure'];
+
             return;
         }
 
@@ -55,12 +56,12 @@ final class TiptapAllowList
         $allowed = in_array($type, self::ALLOWED_BLOCK_NODES, true)
             || in_array($type, self::ALLOWED_INLINE_NODES, true);
 
-        if (!$allowed) {
+        if (! $allowed) {
             $violations[] = ['type' => $type, 'path' => $path, 'kind' => 'node'];
         }
 
         foreach ($node['marks'] ?? [] as $mi => $mark) {
-            if (!in_array($mark['type'] ?? '', self::ALLOWED_MARKS, true)) {
+            if (! in_array($mark['type'] ?? '', self::ALLOWED_MARKS, true)) {
                 $violations[] = ['type' => (string) ($mark['type'] ?? 'missing'), 'path' => "{$path}.marks[{$mi}]", 'kind' => 'mark'];
             }
         }
