@@ -1,4 +1,4 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 import { Head } from '@inertiajs/react';
 import ContentStudioController from '@/actions/App/Http/Controllers/Admin/ContentStudioController';
 import { GenerationLogPanel } from '@/components/admin/content-studio/generation-log-panel';
@@ -111,10 +111,13 @@ function StageWorkspace({ project, aiModels, resolvedModels, topicsWithBlocks, a
     );
 }
 
-export default function ContentStudioShow({ project: initialProject, generationLogs: initialLogs, aiModels, platformDefaultModelId, resolvedModels, topicsWithBlocks }: Props) {
+export default function ContentStudioShow({ project: initialProject, generationLogs: propLogs, aiModels, platformDefaultModelId, resolvedModels, topicsWithBlocks }: Props) {
     const [project, setProject] = useState(initialProject);
-    const [logs, setLogs] = useState(initialLogs);
+    const [logs, setLogs] = useState(propLogs);
     const [activeStep, setActiveStep] = useState(() => getDefaultStep(initialProject));
+
+    // Sync whenever Inertia updates generationLogs via a partial reload.
+    useEffect(() => { setLogs(propLogs); }, [propLogs]);
 
     const handleProjectUpdate = useCallback((updated: ContentProject) => {
         setProject(updated);
