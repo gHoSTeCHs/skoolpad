@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { router } from '@inertiajs/react';
 import {
     AlertTriangle,
     Check,
@@ -205,7 +206,7 @@ function ResearchReview({
     const [isApproving, setIsApproving] = useState(false);
     const [isRegenerating, setIsRegenerating] = useState(false);
 
-    function updateTopic(index: number, field: keyof ResearchTopic, value: unknown) {
+    function updateTopic<K extends keyof ResearchTopic>(index: number, field: K, value: ResearchTopic[K]) {
         setEditedTopics((prev) => prev.map((t, i) => (i === index ? { ...t, [field]: value } : t)));
     }
 
@@ -227,7 +228,7 @@ function ResearchReview({
 
     function handleRegenerate() {
         setIsRegenerating(true);
-        window.location.reload();
+        router.reload();
     }
 
     const termNumbers = [...new Set(editedTopics.map((t) => t.term_number))].sort();

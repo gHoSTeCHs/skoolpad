@@ -42,6 +42,24 @@ it('nulls is_published and published_at when resetting a previously-published to
     expect($topic->published_at)->toBeNull();
 });
 
+it('clears content_failed entries for the topic from project ai_context', function () {
+    $project = ContentProject::factory()->create();
+    $topic = CanonicalTopic::factory()->create();
+    $block = ContentBlock::factory()->leaf()->at('1.1')->for($topic, 'canonicalTopic')->generated()->create();
+
+    $project->updateAiContext('content_failed', [
+        $block->id => ['reason' => 'timeout'],
+        'other-block-id' => ['reason' => 'other'],
+    ]);
+
+    app(ContentProjectService::class)->resetTopicContent($project, $topic);
+
+    $project->refresh();
+    $failed = $project->ai_context['content_failed'] ?? [];
+    expect($failed)->not->toHaveKey($block->id)
+        ->and($failed)->toHaveKey('other-block-id');
+});
+
 it('rejects reset while the topic has an active generation lock', function () {
     $project = ContentProject::factory()->create();
     $topic = CanonicalTopic::factory()->create();

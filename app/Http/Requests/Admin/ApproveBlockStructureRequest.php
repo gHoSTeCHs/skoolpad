@@ -33,7 +33,7 @@ class ApproveBlockStructureRequest extends FormRequest
             'blocks.*.visualization.primitive_type' => ['nullable', 'string'],
             'blocks.*.visualization.interaction_mode' => ['nullable', 'string', 'in:watch,interactive,challenge'],
             'blocks.*.visualization.description' => ['nullable', 'string'],
-            'blocks.*.content_guidance' => ['required', 'string'],
+            'blocks.*.content_guidance' => ['nullable', 'string', 'max:2000'],
             'topic_title' => ['required', 'string', 'max:500'],
             'topic_slug' => ['required', 'string', 'max:500'],
             'topic_summary' => ['required', 'string', 'max:1000'],

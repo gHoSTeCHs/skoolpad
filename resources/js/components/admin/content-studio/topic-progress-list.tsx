@@ -13,7 +13,7 @@ interface TopicProgressListProps {
     topics: TopicEntry[];
     selectedKey: string | null;
     onSelect: (key: string) => void;
-    onGenerate: (key: string) => void;
+    onGenerate?: (key: string) => void;
     generatingKey: string | null;
 }
 
@@ -54,7 +54,7 @@ export function TopicProgressList({
                 <Progress value={progressPercent} />
             </div>
 
-            {nextPending && (
+            {nextPending && onGenerate && (
                 <Button
                     size="sm"
                     variant="outline"

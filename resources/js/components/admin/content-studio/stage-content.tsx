@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { router } from '@inertiajs/react';
 import { sileo } from 'sileo';
 import { ChevronLeft } from 'lucide-react';
@@ -19,6 +19,12 @@ interface StageContentProps {
 }
 
 export function StageContent({ project, topicsWithBlocks, aiModels, resolvedModels, onProjectUpdate }: StageContentProps) {
+    const mountedRef = useRef(true);
+    useEffect(() => {
+        mountedRef.current = true;
+        return () => { mountedRef.current = false; };
+    }, []);
+
     const [activeTopicId, setActiveTopicId] = useState<string | null>(null);
     const activeTopic = topicsWithBlocks.find((t) => t.id === activeTopicId) ?? null;
     const [busyBlockId, setBusyBlockId] = useState<string | null>(null);
@@ -95,9 +101,11 @@ export function StageContent({ project, topicsWithBlocks, aiModels, resolvedMode
             );
             onProjectUpdate(fresh);
             sileo.success({ title: 'Block saved' });
-            await new Promise<void>((resolve) =>
-                router.reload({ only: ['topicsWithBlocks'], onFinish: () => resolve() })
-            );
+            if (mountedRef.current) {
+                await new Promise<void>((resolve) =>
+                    router.reload({ only: ['topicsWithBlocks'], onFinish: () => resolve() })
+                );
+            }
         } catch (e: unknown) {
             sileo.error({ title: e instanceof Error ? e.message : 'Failed to save block' });
             throw e;
@@ -111,9 +119,11 @@ export function StageContent({ project, topicsWithBlocks, aiModels, resolvedMode
             );
             onProjectUpdate(fresh);
             sileo.success({ title: 'Block approved' });
-            await new Promise<void>((resolve) =>
-                router.reload({ only: ['topicsWithBlocks'], onFinish: () => resolve() })
-            );
+            if (mountedRef.current) {
+                await new Promise<void>((resolve) =>
+                    router.reload({ only: ['topicsWithBlocks'], onFinish: () => resolve() })
+                );
+            }
         } catch (e: unknown) {
             sileo.error({ title: e instanceof Error ? e.message : 'Failed to approve block' });
             throw e;
@@ -127,7 +137,7 @@ export function StageContent({ project, topicsWithBlocks, aiModels, resolvedMode
             );
             onProjectUpdate(fresh);
             sileo.success({ title: 'Advisory dismissed' });
-            router.reload({ only: ['topicsWithBlocks'] });
+            if (mountedRef.current) router.reload({ only: ['topicsWithBlocks'] });
         } catch (e: unknown) {
             sileo.error({ title: e instanceof Error ? e.message : 'Failed to dismiss advisory' });
         }
@@ -140,7 +150,7 @@ export function StageContent({ project, topicsWithBlocks, aiModels, resolvedMode
             );
             onProjectUpdate(fresh);
             sileo.success({ title: `Topic published: ${topic.title}` });
-            router.reload({ only: ['topicsWithBlocks'] });
+            if (mountedRef.current) router.reload({ only: ['topicsWithBlocks'] });
         } catch (e: unknown) {
             sileo.error({ title: e instanceof Error ? e.message : 'Failed to mark topic complete' });
         }
@@ -154,9 +164,11 @@ export function StageContent({ project, topicsWithBlocks, aiModels, resolvedMode
             );
             onProjectUpdate(fresh);
             sileo.success({ title: 'Guidance saved' });
-            await new Promise<void>((resolve) =>
-                router.reload({ only: ['topicsWithBlocks'], onFinish: () => resolve() })
-            );
+            if (mountedRef.current) {
+                await new Promise<void>((resolve) =>
+                    router.reload({ only: ['topicsWithBlocks'], onFinish: () => resolve() })
+                );
+            }
         } catch (e: unknown) {
             sileo.error({ title: e instanceof Error ? e.message : 'Failed to save guidance' });
             throw e;
@@ -171,7 +183,7 @@ export function StageContent({ project, topicsWithBlocks, aiModels, resolvedMode
             );
             onProjectUpdate(fresh);
             sileo.success({ title: `Topic reset: ${topic.title}` });
-            router.reload({ only: ['topicsWithBlocks'] });
+            if (mountedRef.current) router.reload({ only: ['topicsWithBlocks'] });
         } catch (e: unknown) {
             sileo.error({ title: e instanceof Error ? e.message : 'Failed to reset topic' });
         }

@@ -1,4 +1,4 @@
-import { useCallback, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { router } from '@inertiajs/react';
 import { echo } from '@laravel/echo-react';
 import type { ContentProject, GenerationLogEntry } from '@/types/content-studio';
@@ -125,6 +125,12 @@ export function useGenerationStream(): UseGenerationStreamReturn {
         },
         [teardown],
     );
+
+    useEffect(() => {
+        return () => {
+            teardown();
+        };
+    }, [teardown]);
 
     return { status, message, startStream, cancel };
 }

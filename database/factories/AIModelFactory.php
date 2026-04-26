@@ -2,7 +2,7 @@
 
 namespace Database\Factories;
 
-use App\Enums\AIAdapterType;
+use App\Models\AIProvider;
 use Illuminate\Database\Eloquent\Factories\Factory;
 
 /**
@@ -14,12 +14,11 @@ class AIModelFactory extends Factory
     public function definition(): array
     {
         return [
+            'provider_id' => AIProvider::factory(),
             'name' => fake()->unique()->words(3, true),
             'slug' => fake()->unique()->slug(3),
-            'adapter_type' => AIAdapterType::OpenAICompatible,
-            'base_url' => 'https://api.example.com/v1',
-            'api_key' => 'test-key-' . fake()->uuid(),
             'model_id' => 'test-model',
+            'thinking_mode' => 'none',
             'max_tokens' => 8192,
             'input_cost_per_million' => 100,
             'output_cost_per_million' => 300,
@@ -31,8 +30,7 @@ class AIModelFactory extends Factory
     public function anthropic(): static
     {
         return $this->state(fn (array $attributes) => [
-            'adapter_type' => AIAdapterType::Anthropic,
-            'base_url' => 'https://api.anthropic.com/v1',
+            'provider_id' => AIProvider::factory()->anthropic(),
             'model_id' => 'claude-sonnet-4-20250514',
         ]);
     }

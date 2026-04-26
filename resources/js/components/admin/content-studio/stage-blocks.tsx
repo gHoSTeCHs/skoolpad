@@ -457,7 +457,7 @@ export function StageBlocks({ project, aiModels, resolvedModel, isActive, onProj
                             topics={topics}
                             selectedKey={selectedKey}
                             onSelect={setSelectedKey}
-                            onGenerate={handleGenerate}
+                            onGenerate={isActive ? handleGenerate : undefined}
                             generatingKey={generatingTopic}
                         />
                     </div>

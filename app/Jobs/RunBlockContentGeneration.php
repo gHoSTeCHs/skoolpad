@@ -20,6 +20,8 @@ class RunBlockContentGeneration implements ShouldQueue
 
     public int $timeout = 300;
 
+    public int $tries = 1;
+
     public function __construct(
         public readonly ContentProject $project,
         public readonly ContentBlock $block,
@@ -84,12 +86,10 @@ class RunBlockContentGeneration implements ShouldQueue
         DB::transaction(function () use ($reason, $message) {
             $project = ContentProject::query()->lockForUpdate()->find($this->project->id);
             $context = $project->ai_context ?? [];
-            $context['content_failed'] = $context['content_failed'] ?? [];
-            $context['content_failed'][$this->block->id] = [
-                'reason' => $reason,
-                'error_message' => $message,
-                'attempted_at' => now()->toIso8601String(),
-            ];
+            $context['content_failed'] = array_merge(
+                $context['content_failed'] ?? [],
+                [$this->block->id => ['reason' => $reason, 'error_message' => $message, 'attempted_at' => now()->toIso8601String()]]
+            );
             $project->update(['ai_context' => $context]);
         });
     }

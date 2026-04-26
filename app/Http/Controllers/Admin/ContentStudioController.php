@@ -125,37 +125,49 @@ class ContentStudioController extends Controller
             ->limit(20)
             ->get();
 
-        $aiModels = AIModel::query()
+        $activeModels = AIModel::query()
             ->active()
             ->with('provider:id,name,slug,supports_thinking')
             ->orderByRaw('(SELECT sort_order FROM ai_providers WHERE ai_providers.id = ai_models.provider_id)')
             ->orderBy('sort_order')
-            ->get()
-            ->map(fn (AIModel $m) => [
-                'id' => $m->id,
-                'name' => $m->name,
-                'model_id' => $m->model_id,
-                'thinking_mode' => $m->thinking_mode->value,
-                'provider_name' => $m->provider->name,
-                'provider_slug' => $m->provider->slug,
-            ]);
+            ->get();
 
-        $platformDefaultValue = PlatformSetting::query()
-            ->where('key', 'content_studio.default_model_id')
-            ->value('value');
+        $aiModels = $activeModels->map(fn (AIModel $m) => [
+            'id' => $m->id,
+            'name' => $m->name,
+            'model_id' => $m->model_id,
+            'thinking_mode' => $m->thinking_mode->value,
+            'provider_name' => $m->provider->name,
+            'provider_slug' => $m->provider->slug,
+        ]);
+
+        $platformDefaultValue = \Illuminate\Support\Facades\Cache::remember(
+            'platform_setting.content_studio_default_model', 60,
+            fn () => PlatformSetting::query()->where('key', 'content_studio.default_model_id')->value('value')
+        );
         $platformDefaultModelId = is_array($platformDefaultValue)
             ? ($platformDefaultValue['model_id'] ?? null)
             : null;
 
-        $resolvedModels = $aiModels->isNotEmpty()
-            ? collect(['research', 'scheme', 'blocks', 'content'])->mapWithKeys(function (string $stage) use ($contentProject, $platformDefaultModelId) {
-                $model = $this->generationService->resolveModel(null, $stage, $contentProject);
-                $source = $this->describeResolutionSource($contentProject, $stage, $platformDefaultModelId);
+        $taskRouting = \Illuminate\Support\Facades\Cache::remember(
+            'platform_setting.ai_task_routing', 60,
+            fn () => PlatformSetting::query()->where('key', 'ai_task_routing')->value('value') ?? []
+        );
+
+        $activeModelIds = $activeModels->pluck('id')->flip();
+
+        $resolvedModels = $activeModels->isNotEmpty()
+            ? collect(['research', 'scheme', 'blocks', 'content'])->mapWithKeys(function (string $stage) use ($contentProject, $platformDefaultModelId, $taskRouting, $activeModelIds, $activeModels) {
+                $source = $this->describeResolutionSource($contentProject, $stage, $platformDefaultModelId, $activeModelIds);
+                $modelId = $this->resolveModelIdInMemory($contentProject, $stage, $platformDefaultModelId, $taskRouting, $activeModelIds);
+                $model = $modelId
+                    ? $activeModels->firstWhere('id', $modelId)
+                    : $activeModels->sortBy('sort_order')->first();
 
                 return [$stage => [
-                    'id' => $model->id,
-                    'name' => $model->name,
-                    'model_id' => $model->model_id,
+                    'id' => $model?->id,
+                    'name' => $model?->name,
+                    'model_id' => $model?->model_id,
                     'source' => $source,
                 ]];
             })->all()
@@ -236,7 +248,39 @@ class ContentStudioController extends Controller
         ]);
     }
 
-    private function describeResolutionSource(ContentProject $project, string $stage, ?string $platformModelId = null): string
+    private function resolveModelIdInMemory(
+        ContentProject $project,
+        string $stage,
+        ?string $platformDefaultModelId,
+        mixed $taskRouting,
+        \Illuminate\Support\Collection $activeModelIds
+    ): ?string {
+        $stageColumn = match ($stage) {
+            'research' => 'research_model_id',
+            'scheme' => 'scheme_model_id',
+            'blocks' => 'blocks_model_id',
+            'content' => 'content_model_id',
+            default => null,
+        };
+
+        if ($stageColumn && $project->{$stageColumn} && $activeModelIds->has($project->{$stageColumn})) {
+            return $project->{$stageColumn};
+        }
+        if ($project->default_ai_model_id && $activeModelIds->has($project->default_ai_model_id)) {
+            return $project->default_ai_model_id;
+        }
+        $routedId = is_array($taskRouting) ? ($taskRouting[$stage] ?? null) : null;
+        if ($routedId && $activeModelIds->has($routedId)) {
+            return $routedId;
+        }
+        if ($platformDefaultModelId && $activeModelIds->has($platformDefaultModelId)) {
+            return $platformDefaultModelId;
+        }
+
+        return null;
+    }
+
+    private function describeResolutionSource(ContentProject $project, string $stage, ?string $platformModelId = null, ?\Illuminate\Support\Collection $activeModelIds = null): string
     {
         $stageColumn = match ($stage) {
             'research' => 'research_model_id',
@@ -246,15 +290,15 @@ class ContentStudioController extends Controller
             default => null,
         };
 
-        if ($stageColumn && $this->activeModelExists($project->{$stageColumn})) {
+        if ($stageColumn && $this->activeModelExists($project->{$stageColumn}, $activeModelIds)) {
             return 'stage_override';
         }
 
-        if ($this->activeModelExists($project->default_ai_model_id)) {
+        if ($this->activeModelExists($project->default_ai_model_id, $activeModelIds)) {
             return 'project_default';
         }
 
-        if ($this->activeModelExists($platformModelId)) {
+        if ($this->activeModelExists($platformModelId, $activeModelIds)) {
             return 'platform_default';
         }
 
@@ -281,10 +325,14 @@ class ContentStudioController extends Controller
         abort_unless(in_array($block->canonical_topic_id, $approvedTopicIds, true), 403, 'Block does not belong to this project.');
     }
 
-    private function activeModelExists(?string $modelId): bool
+    private function activeModelExists(?string $modelId, ?\Illuminate\Support\Collection $activeModelIds = null): bool
     {
         if (! $modelId) {
             return false;
+        }
+
+        if ($activeModelIds !== null) {
+            return $activeModelIds->has($modelId);
         }
 
         return AIModel::query()->active()->whereKey($modelId)->exists();
@@ -463,6 +511,7 @@ class ContentStudioController extends Controller
         ContentBlock $contentBlock,
     ): JsonResponse {
         Gate::authorize('update', $contentProject);
+        $this->assertBlockBelongsToProject($contentProject, $contentBlock);
 
         return $this->runBlockContent($request, $contentProject, $contentBlock);
     }

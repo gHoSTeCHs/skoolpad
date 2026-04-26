@@ -31,10 +31,7 @@ class AnthropicAdapter implements ContentAIProvider
         $startTime = microtime(true);
 
         try {
-            $response = Http::withHeaders([
-                'x-api-key' => $provider->api_key,
-                'anthropic-version' => '2023-06-01',
-            ])->timeout(120)->post(rtrim($provider->base_url, '/').'/messages', [
+            $body = [
                 'model' => $this->model->model_id,
                 'max_tokens' => $prompt->max_tokens,
                 'temperature' => $prompt->temperature,
@@ -42,16 +39,31 @@ class AnthropicAdapter implements ContentAIProvider
                 'messages' => [
                     ['role' => 'user', 'content' => $prompt->user_prompt],
                 ],
-            ]);
+            ];
+
+            if ($provider->supports_thinking) {
+                if ($this->model->thinking_mode === \App\Enums\ThinkingMode::None) {
+                    $body['thinking'] = ['type' => 'disabled'];
+                } else {
+                    $budgetTokens = $this->model->thinking_mode === \App\Enums\ThinkingMode::Max ? 32000 : 8000;
+                    $body['thinking'] = ['type' => 'enabled', 'budget_tokens' => $budgetTokens];
+                    unset($body['temperature']);
+                }
+            }
+
+            $response = Http::withHeaders([
+                'x-api-key' => $provider->api_key,
+                'anthropic-version' => '2023-06-01',
+            ])->timeout(120)->post(rtrim($provider->base_url, '/').'/messages', $body);
 
             $elapsedMs = (microtime(true) - $startTime) * 1000;
-            $body = $response->json();
+            $responseBody = $response->json();
 
             if ($response->failed()) {
                 return new ContentResponse(
                     valid: false,
                     data: [],
-                    validation_errors: ['api_error' => $this->extractErrorMessage($body, $response->body())],
+                    validation_errors: ['api_error' => $this->extractErrorMessage($responseBody, $response->body())],
                     raw_response: $response->body(),
                     model_used: $this->model->model_id,
                     tokens_used: 0,
@@ -59,9 +71,9 @@ class AnthropicAdapter implements ContentAIProvider
                 );
             }
 
-            $rawText = $body['content'][0]['text'] ?? '';
-            $inputTokens = $body['usage']['input_tokens'] ?? 0;
-            $outputTokens = $body['usage']['output_tokens'] ?? 0;
+            $rawText = $responseBody['content'][0]['text'] ?? '';
+            $inputTokens = $responseBody['usage']['input_tokens'] ?? 0;
+            $outputTokens = $responseBody['usage']['output_tokens'] ?? 0;
             $tokensUsed = $inputTokens + $outputTokens;
 
             return $this->parseResponse($rawText, $tokensUsed, $inputTokens, $outputTokens, $elapsedMs);

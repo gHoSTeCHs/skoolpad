@@ -9,13 +9,14 @@ use App\Http\Requests\Student\ToggleBlockCompleteRequest;
 use App\Models\BlockCompletion;
 use App\Models\CanonicalTopic;
 use App\Models\ContentBlock;
-use App\Models\CourseTopicMapping;
 use App\Models\Discipline;
 use App\Models\InstitutionCourse;
 use App\Models\StudentNote;
 use App\Models\TopicCompletion;
 use App\Services\Student\PrerequisiteGapService;
 use App\Services\Student\TopicBrowseService;
+use App\Services\Student\TopicContentService;
+use App\Services\Student\TopicProgressService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
@@ -27,10 +28,10 @@ class TopicController extends Controller
 
     public function __construct(
         private readonly PrerequisiteGapService $prerequisiteService,
-        private TopicBrowseService              $topicBrowseService,
-    )
-    {
-    }
+        private readonly TopicBrowseService $topicBrowseService,
+        private readonly TopicContentService $topicContentService,
+        private readonly TopicProgressService $topicProgressService,
+    ) {}
 
     public function browse(Request $request): Response
     {
@@ -70,7 +71,7 @@ class TopicController extends Controller
             ->get();
 
         $disciplines = Discipline::query()
-            ->whereHas('canonicalTopics', fn($q) => $q->published()
+            ->whereHas('canonicalTopics', fn ($q) => $q->published()
                 ->whereIn('id', $scope['topic_ids']))
             ->select('id', 'name')
             ->orderBy('name')
@@ -106,43 +107,13 @@ class TopicController extends Controller
 
         if ($courseId) {
             $profile = $user->studentProfile;
-            $isEnrolled = $profile?->studentCourses()->where('institution_course_id', $courseId)->exists();
-            $course = $isEnrolled ? InstitutionCourse::query()->find($courseId) : null;
-            if ($course) {
-                $courseContext = [
-                    'id' => $course->id,
-                    'course_code' => $course->course_code,
-                    'course_title' => $course->course_title,
-                ];
+            $nav = $profile
+                ? $this->topicContentService->getCourseContext($topic, $courseId, $profile)
+                : ['course' => null, 'prev_topic' => null, 'next_topic' => null];
 
-                $currentMapping = CourseTopicMapping::query()->where('institution_course_id', $courseId)
-                    ->where('canonical_topic_id', $topic->id)
-                    ->first();
-
-                if ($currentMapping) {
-                    $prevMapping = CourseTopicMapping::query()->where('institution_course_id', $courseId)
-                        ->where('sequence_order', '<', $currentMapping->sequence_order)
-                        ->orderByDesc('sequence_order')
-                        ->with('topic:id,title,slug')
-                        ->first();
-
-                    $nextMapping = CourseTopicMapping::query()->where('institution_course_id', $courseId)
-                        ->where('sequence_order', '>', $currentMapping->sequence_order)
-                        ->orderBy('sequence_order')
-                        ->with('topic:id,title,slug')
-                        ->first();
-
-                    $prevTopic = $prevMapping ? [
-                        'id' => $prevMapping->topic->id,
-                        'title' => $prevMapping->topic->title,
-                    ] : null;
-
-                    $nextTopic = $nextMapping ? [
-                        'id' => $nextMapping->topic->id,
-                        'title' => $nextMapping->topic->title,
-                    ] : null;
-                }
-            }
+            $courseContext = $nav['course'];
+            $prevTopic = $nav['prev_topic'];
+            $nextTopic = $nav['next_topic'];
         }
 
         $hasBlocks = $topic->contentBlocks()->exists();
@@ -162,27 +133,8 @@ class TopicController extends Controller
 
         $prerequisiteStatus = $this->prerequisiteService->getPrerequisiteStatus($user, $topic);
 
-        $baseQuestionQuery = \App\Models\Question::query()
-            ->published()
-            ->whereNull('parent_question_id')
-            ->whereHas('topicLinks', fn($q) => $q->where('canonical_topic_id', $topic->id));
-
-        $relatedQuestions = (clone $baseQuestionQuery)
-            ->when($courseId, fn($q) => $q->where('institution_course_id', $courseId))
-            ->with([
-                'topicLinks.canonicalTopic:id,title',
-                'answers' => fn($q) => $q->where('is_published', true),
-                'children' => fn($q) => $q->published()->orderBy('sort_order'),
-                'children.answers' => fn($q) => $q->where('is_published', true),
-                'children.children' => fn($q) => $q->published()->orderBy('sort_order'),
-                'children.children.answers' => fn($q) => $q->where('is_published', true),
-                'children.children.children' => fn($q) => $q->published()->orderBy('sort_order'),
-                'children.children.children.answers' => fn($q) => $q->where('is_published', true),
-            ])
-            ->limit(10)
-            ->get();
-
-        $crossInstitutionCount = (clone $baseQuestionQuery)->count();
+        $relatedQuestions = $this->topicContentService->getRelatedQuestions($topic, $courseId);
+        $crossInstitutionCount = $this->topicContentService->countCrossInstitutionQuestions($topic);
 
         $isTopicCompleted = TopicCompletion::query()->where('user_id', $user->id)
             ->where('canonical_topic_id', $topic->id)
@@ -192,14 +144,14 @@ class TopicController extends Controller
         $isSecondary = $profile?->isSecondary() ?? false;
 
         $topicNotes = [];
-        if (!$isSecondary) {
+        if (! $isSecondary) {
             $topicNotes = StudentNote::query()
                 ->where('user_id', $user->id)
                 ->where('canonical_topic_id', $topic->id)
                 ->orderByDesc('is_pinned')
                 ->orderByDesc('updated_at')
                 ->get(['id', 'title', 'is_pinned', 'updated_at'])
-                ->map(fn($n) => [
+                ->map(fn ($n) => [
                     'id' => $n->id,
                     'title' => $n->title,
                     'is_pinned' => $n->is_pinned,
@@ -306,43 +258,22 @@ class TopicController extends Controller
     {
         abort_unless($topic->is_published, 404);
 
-        $user = $request->user();
-
-        $existing = TopicCompletion::query()->where('user_id', $user->id)
-            ->where('canonical_topic_id', $topic->id)
-            ->first();
-
-        if ($existing) {
-            $existing->delete();
-        } else {
-            TopicCompletion::query()->create([
-                'user_id' => $user->id,
-                'canonical_topic_id' => $topic->id,
-                'completed_at' => now(),
-            ]);
-        }
+        $this->topicProgressService->toggleTopicCompletion($request->user(), $topic);
 
         return back();
     }
 
     public function toggleBlockComplete(ContentBlock $block, ToggleBlockCompleteRequest $request): RedirectResponse
     {
-        $user = $request->user();
+        abort_unless($block->is_published, 404);
+        $block->loadMissing('canonicalTopic');
+        abort_unless($block->canonicalTopic?->is_published, 404);
 
-        $existing = BlockCompletion::query()->where('user_id', $user->id)
-            ->where('content_block_id', $block->id)
-            ->first();
-
-        if ($existing) {
-            $existing->delete();
-        } else {
-            BlockCompletion::query()->create([
-                'user_id' => $user->id,
-                'content_block_id' => $block->id,
-                'completed_at' => now(),
-                'reading_time_seconds' => $request->validated('reading_time_seconds'),
-            ]);
-        }
+        $this->topicProgressService->toggleBlockCompletion(
+            $request->user(),
+            $block,
+            $request->validated('reading_time_seconds'),
+        );
 
         return back();
     }
@@ -356,20 +287,20 @@ class TopicController extends Controller
             ->orderBy('sort_order')
             ->get();
 
-        $blocksByParent = $blocks->groupBy(fn($b) => $b->parent_block_id ?? 'root');
+        $blocksByParent = $blocks->groupBy(fn ($b) => $b->parent_block_id ?? 'root');
 
         return $this->nestBlocks($blocksByParent, 'root');
     }
 
     /**
-     * @param \Illuminate\Support\Collection<string, \Illuminate\Support\Collection<int, ContentBlock>> $blocksByParent
+     * @param  \Illuminate\Support\Collection<string, \Illuminate\Support\Collection<int, ContentBlock>>  $blocksByParent
      * @return array<int, array<string, mixed>>
      */
     private function nestBlocks($blocksByParent, string $parentId): array
     {
         $children = $blocksByParent->get($parentId, collect());
 
-        return $children->map(fn(ContentBlock $block) => [
+        return $children->map(fn (ContentBlock $block) => [
             'id' => $block->id,
             'title' => $block->title,
             'path' => $block->path,
@@ -380,10 +311,10 @@ class TopicController extends Controller
             'content' => $block->content,
             'simplifiedContent' => $block->simplified_content,
             'isContainer' => $block->is_container,
-            'prerequisites' => $block->prerequisites->map(fn($prereq) => [
+            'prerequisites' => $block->prerequisites->map(fn ($prereq) => [
                 'id' => $prereq->id,
                 'title' => $prereq->title,
-                'isHard' => (bool)$prereq->pivot->is_hard_prerequisite,
+                'isHard' => (bool) $prereq->pivot->is_hard_prerequisite,
             ])->values()->all(),
             'children' => $this->nestBlocks($blocksByParent, $block->id),
         ])->values()->all();

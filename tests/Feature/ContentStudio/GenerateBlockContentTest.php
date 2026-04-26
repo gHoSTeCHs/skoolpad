@@ -117,6 +117,45 @@ it('regeneration with changed contract flags downstream blocks', function () {
         ->and($b2->fresh()->drift_advisory['source_block_id'])->toBe($b1->id);
 });
 
+it('throws DomainException when AI returns content with disallowed Tiptap nodes', function () {
+    $project = ContentProject::factory()->create();
+    $topic = CanonicalTopic::factory()->create();
+    $block = ContentBlock::factory()->leaf()->at('1.1')->for($topic, 'canonicalTopic')
+        ->withGuidance('x')->notStarted()->create();
+
+    $fakeLogId = (string) \Illuminate\Support\Str::uuid();
+    $gen = m::mock(ContentGenerationService::class);
+    $gen->shouldReceive('generate')->andReturn(new ContentResponse(
+        valid: true,
+        data: array_merge(happyAIResponse($fakeLogId)->data, [
+            'content' => ['type' => 'doc', 'content' => [['type' => 'script', 'content' => []]]],
+        ]),
+        validation_errors: [],
+        raw_response: '...',
+        model_used: 'test',
+        tokens_used: 100,
+        generation_time_ms: 100.0,
+        input_tokens: 50,
+        output_tokens: 50,
+        generation_log_id: $fakeLogId,
+    ));
+    app()->instance(ContentGenerationService::class, $gen);
+
+    app(ContentBlockGenerationService::class)->generateBlockContent($block, $project);
+})->throws(\DomainException::class, 'disallowed');
+
+it('throws DomainException when attempting to regenerate an already approved block', function () {
+    $project = ContentProject::factory()->create();
+    $topic = CanonicalTopic::factory()->create();
+    $block = ContentBlock::factory()->leaf()->at('1.1')->for($topic, 'canonicalTopic')
+        ->withGuidance('x')->approved()->create();
+
+    $gen = m::mock(ContentGenerationService::class);
+    app()->instance(ContentGenerationService::class, $gen);
+
+    app(ContentBlockGenerationService::class)->generateBlockContent($block, $project);
+})->throws(\DomainException::class, 'approved');
+
 it('invalid AI response throws DomainException and does not alter block or glossary', function () {
     $project = ContentProject::factory()->create();
     $topic = CanonicalTopic::factory()->create();

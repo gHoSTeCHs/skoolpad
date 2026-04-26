@@ -5,7 +5,6 @@ use App\ContentStudio\Adapters\OpenAICompatibleAdapter;
 use App\ContentStudio\Prompts\ContentPromptTemplate;
 use App\DataTransferObjects\ContentPrompt;
 use App\DataTransferObjects\ContentResponse;
-use App\Enums\AIAdapterType;
 use App\Models\AIModel;
 use App\Models\ContentProject;
 use App\Models\PlatformSetting;
@@ -15,8 +14,8 @@ use Illuminate\Foundation\Testing\RefreshDatabase;
 uses(RefreshDatabase::class);
 
 it('resolves the correct adapter for openai_compatible models', function () {
-    $model = AIModel::factory()->create(['adapter_type' => AIAdapterType::OpenAICompatible]);
-    $service = new ContentGenerationService();
+    $model = AIModel::factory()->create();
+    $service = new ContentGenerationService;
 
     $adapter = $service->resolveAdapter($model);
 
@@ -25,7 +24,7 @@ it('resolves the correct adapter for openai_compatible models', function () {
 
 it('resolves the correct adapter for anthropic models', function () {
     $model = AIModel::factory()->anthropic()->create();
-    $service = new ContentGenerationService();
+    $service = new ContentGenerationService;
 
     $adapter = $service->resolveAdapter($model);
 
@@ -36,7 +35,7 @@ it('resolves model by explicit ID', function () {
     $model = AIModel::factory()->create(['name' => 'Target Model']);
     AIModel::factory()->create(['name' => 'Other Model']);
 
-    $service = new ContentGenerationService();
+    $service = new ContentGenerationService;
     $resolved = $service->resolveModel($model->id);
 
     expect($resolved->id)->toBe($model->id);
@@ -50,7 +49,7 @@ it('resolves model by task routing', function () {
         'value' => ['scheme' => $model->id, 'blocks' => $model->id],
     ]);
 
-    $service = new ContentGenerationService();
+    $service = new ContentGenerationService;
     $resolved = $service->resolveModel(null, 'scheme');
 
     expect($resolved->id)->toBe($model->id);
@@ -71,7 +70,7 @@ it('resolves model from project stage override when project and stage provided',
         'value' => ['model_id' => $platformDefault->id],
     ]);
 
-    $service = new ContentGenerationService();
+    $service = new ContentGenerationService;
     $resolved = $service->resolveModel(null, 'scheme', $project);
 
     expect($resolved->id)->toBe($stageModel->id);
@@ -90,7 +89,7 @@ it('falls back to project default when stage override not set', function () {
         'value' => ['model_id' => $platformDefault->id],
     ]);
 
-    $service = new ContentGenerationService();
+    $service = new ContentGenerationService;
     $resolved = $service->resolveModel(null, 'scheme', $project);
 
     expect($resolved->id)->toBe($projectDefault->id);
@@ -106,7 +105,7 @@ it('prefers explicit request override over all project and platform defaults', f
         'default_ai_model_id' => $projectDefault->id,
     ]);
 
-    $service = new ContentGenerationService();
+    $service = new ContentGenerationService;
     $resolved = $service->resolveModel($override->id, 'scheme', $project);
 
     expect($resolved->id)->toBe($override->id);
@@ -121,7 +120,7 @@ it('skips inactive project stage model and falls through', function () {
         'default_ai_model_id' => $projectDefault->id,
     ]);
 
-    $service = new ContentGenerationService();
+    $service = new ContentGenerationService;
     $resolved = $service->resolveModel(null, 'scheme', $project);
 
     expect($resolved->id)->toBe($projectDefault->id);
@@ -136,7 +135,7 @@ it('resolves model from platform default when no routing matches', function () {
         'value' => ['model_id' => $platformDefault->id],
     ]);
 
-    $service = new ContentGenerationService();
+    $service = new ContentGenerationService;
     $resolved = $service->resolveModel();
 
     expect($resolved->id)->toBe($platformDefault->id);
@@ -156,7 +155,7 @@ it('prefers task routing over platform default', function () {
         'value' => ['model_id' => $platformDefault->id],
     ]);
 
-    $service = new ContentGenerationService();
+    $service = new ContentGenerationService;
     $resolved = $service->resolveModel(null, 'scheme');
 
     expect($resolved->id)->toBe($routed->id);
@@ -176,7 +175,7 @@ it('falls back to platform default when task routing has no match for stage', fu
         'value' => ['model_id' => $platformDefault->id],
     ]);
 
-    $service = new ContentGenerationService();
+    $service = new ContentGenerationService;
     $resolved = $service->resolveModel(null, 'scheme');
 
     expect($resolved->id)->toBe($platformDefault->id);
@@ -186,7 +185,7 @@ it('falls back to first active model when no routing exists', function () {
     $first = AIModel::factory()->create(['sort_order' => 1, 'name' => 'First']);
     AIModel::factory()->create(['sort_order' => 2, 'name' => 'Second']);
 
-    $service = new ContentGenerationService();
+    $service = new ContentGenerationService;
     $resolved = $service->resolveModel();
 
     expect($resolved->id)->toBe($first->id);
@@ -201,7 +200,7 @@ it('skips inactive platform default and falls through to sort order', function (
         'value' => ['model_id' => $inactive->id],
     ]);
 
-    $service = new ContentGenerationService();
+    $service = new ContentGenerationService;
     $resolved = $service->resolveModel();
 
     expect($resolved->id)->toBe($active->id);
@@ -211,21 +210,22 @@ it('skips inactive models in fallback', function () {
     AIModel::factory()->inactive()->create(['sort_order' => 1, 'name' => 'Inactive']);
     $active = AIModel::factory()->create(['sort_order' => 2, 'name' => 'Active']);
 
-    $service = new ContentGenerationService();
+    $service = new ContentGenerationService;
     $resolved = $service->resolveModel();
 
     expect($resolved->id)->toBe($active->id);
 });
 
 it('throws when no active models exist', function () {
-    $service = new ContentGenerationService();
+    $service = new ContentGenerationService;
 
     expect(fn () => $service->resolveModel())
         ->toThrow(RuntimeException::class, 'No active AI models configured');
 });
 
 it('creates a valid ContentPrompt from template', function () {
-    $template = new class extends ContentPromptTemplate {
+    $template = new class extends ContentPromptTemplate
+    {
         public function promptType(): string
         {
             return 'P-01';

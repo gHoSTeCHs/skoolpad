@@ -99,6 +99,18 @@ it('rejects research approval when no research exists', function () {
     $service->approveResearch($project, [['title' => 'Test']]);
 })->throws(\DomainException::class, 'No research results');
 
+it('rejects a second call to approveResearch when research is already approved', function () {
+    $project = ContentProject::factory()->withResearch()->create([
+        'ai_context' => array_merge(
+            ContentProject::factory()->withResearch()->make()->ai_context ?? [],
+            ['research_approved' => [['title' => 'First approval']]]
+        ),
+    ]);
+    $service = makeService();
+
+    $service->approveResearch($project, [['title' => 'Second approval']]);
+})->throws(\DomainException::class, 'already been approved');
+
 it('rejects scheme generation when research is not approved', function () {
     $project = ContentProject::factory()->withResearch()->create();
     $service = makeService();
@@ -376,7 +388,7 @@ it('persists research_model_id on successful research run', function () {
         'raw_response' => '{}',
         'is_valid' => true,
         'model_used' => $model->model_id,
-        'provider' => $model->adapter_type->value,
+        'provider' => $model->provider->adapter_type->value,
     ]);
 
     $mock = Mockery::mock(ContentGenerationService::class);

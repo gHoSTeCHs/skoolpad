@@ -6,7 +6,7 @@ use Illuminate\Support\Facades\Cache;
 
 final class TopicGenerationLock
 {
-    private const TTL_SECONDS = 3600;
+    private const TTL_SECONDS = 960;
 
     public static function acquire(string $topicId): bool
     {
@@ -21,6 +21,11 @@ final class TopicGenerationLock
     public static function isHeld(string $topicId): bool
     {
         return Cache::has(self::key($topicId));
+    }
+
+    public static function forceRelease(string $topicId): void
+    {
+        Cache::forget(self::key($topicId));
     }
 
     public static function key(string $topicId): string

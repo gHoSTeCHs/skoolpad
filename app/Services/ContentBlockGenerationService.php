@@ -31,13 +31,16 @@ class ContentBlockGenerationService
 
     public function assembleContext(ContentBlock $block, ContentProject $project): array
     {
+        $block->loadMissing('canonicalTopic');
         $topic = $block->canonicalTopic;
-        $leaves = ContentBlock::query()
+
+        $allBlocks = ContentBlock::query()
             ->where('canonical_topic_id', $topic->id)
-            ->where('is_container', false)
             ->get()
             ->sortBy(fn (ContentBlock $b) => self::pathKey($b->path))
             ->values();
+
+        $leaves = $allBlocks->where('is_container', false)->values();
 
         $blockKey = self::pathKey($block->path);
 
@@ -78,7 +81,7 @@ class ContentBlockGenerationService
                 'bloom' => optional($block->bloom_level)->value ?? 'understand',
                 'read_time' => (int) ($block->estimated_read_time ?? 6),
             ],
-            'hierarchy_breadcrumbs' => $this->ancestorContainerTitles($block),
+            'hierarchy_breadcrumbs' => $this->ancestorContainerTitles($block, $allBlocks),
             'previous_leaf' => $previous ? [
                 'title' => $previous->title,
                 'summary_sentence' => $previous->summary_sentence,
@@ -92,10 +95,11 @@ class ContentBlockGenerationService
             'prior_block_summaries' => $prior
                 ->filter(fn (ContentBlock $b) => filled($b->summary_sentence))
                 ->pluck('summary_sentence')->values()->all(),
+            '_leaves' => $leaves,
         ];
     }
 
-    private function ancestorContainerTitles(ContentBlock $block): array
+    private function ancestorContainerTitles(ContentBlock $block, ?\Illuminate\Support\Collection $allBlocks = null): array
     {
         $parts = explode('.', $block->path);
         if (count($parts) <= 1) {
@@ -107,11 +111,15 @@ class ContentBlockGenerationService
             $ancestorPaths[] = implode('.', array_slice($parts, 0, $i));
         }
 
-        return ContentBlock::query()
-            ->where('canonical_topic_id', $block->canonical_topic_id)
-            ->whereIn('path', $ancestorPaths)
-            ->where('is_container', true)
-            ->get(['path', 'title'])
+        $source = $allBlocks
+            ? $allBlocks->whereIn('path', $ancestorPaths)->where('is_container', true)
+            : ContentBlock::query()
+                ->where('canonical_topic_id', $block->canonical_topic_id)
+                ->whereIn('path', $ancestorPaths)
+                ->where('is_container', true)
+                ->get(['path', 'title']);
+
+        return $source
             ->sortBy(fn (ContentBlock $b) => count(explode('.', $b->path)))
             ->pluck('title')
             ->all();
@@ -240,15 +248,18 @@ class ContentBlockGenerationService
         ];
     }
 
-    public function flagDownstream(ContentBlock $source, array $diff): void
+    public function flagDownstream(ContentBlock $source, array $diff, ?\Illuminate\Support\Collection $leaves = null): void
     {
         $sourceKey = self::pathKey($source->path);
-        $downstreamIds = ContentBlock::query()
-            ->where('canonical_topic_id', $source->canonical_topic_id)
-            ->where('is_container', false)
-            ->where('id', '!=', $source->id)
-            ->get(['id', 'path'])
-            ->filter(fn (ContentBlock $b) => self::pathKey($b->path) > $sourceKey)
+        $candidates = $leaves
+            ?? ContentBlock::query()
+                ->where('canonical_topic_id', $source->canonical_topic_id)
+                ->where('is_container', false)
+                ->where('id', '!=', $source->id)
+                ->get(['id', 'path']);
+
+        $downstreamIds = $candidates
+            ->filter(fn (ContentBlock $b) => $b->id !== $source->id && self::pathKey($b->path) > $sourceKey)
             ->pluck('id')
             ->all();
 
@@ -276,6 +287,9 @@ class ContentBlockGenerationService
         if ($block->is_container) {
             throw new \DomainException('Cannot generate content for a container block.');
         }
+        if ($block->generation_status === BlockGenerationStatus::Approved) {
+            throw new \DomainException("Block {$block->id} is already approved and cannot be regenerated without resetting it first.");
+        }
         if (blank($block->content_guidance)) {
             throw new \DomainException("Block {$block->id} has no content_guidance; cannot generate.");
         }
@@ -296,6 +310,13 @@ class ContentBlockGenerationService
             );
         }
 
+        $violations = \App\ContentStudio\Support\TiptapAllowList::findViolations($response->data['content'] ?? []);
+        if (! empty($violations)) {
+            throw new \DomainException(
+                'AI-generated content contains disallowed Tiptap nodes: '.json_encode($violations)
+            );
+        }
+
         $prior = [
             'key_terms' => $block->key_terms_introduced ?? [],
             'symbols' => $block->symbols_used ?? [],
@@ -305,7 +326,7 @@ class ContentBlockGenerationService
 
         $data = $response->data;
 
-        DB::transaction(function () use ($block, $data, $response, $hadPrior, $prior) {
+        DB::transaction(function () use ($block, $data, $response, $hadPrior, $prior, $context) {
             $block->update([
                 'content' => $data['content'],
                 'generation_status' => BlockGenerationStatus::Generated->value,
@@ -341,7 +362,7 @@ class ContentBlockGenerationService
                 $diff = self::compareContract($prior, $new);
 
                 if ($diff !== null) {
-                    $this->flagDownstream($block, $diff);
+                    $this->flagDownstream($block, $diff, $context['_leaves'] ?? null);
                 }
             }
         });
@@ -413,6 +434,7 @@ class ContentBlockGenerationService
                 $this->flagDownstream($block, $diff);
             }
         });
+
     }
 
     public function updateBlockGuidance(ContentBlock $block, string $guidance): void

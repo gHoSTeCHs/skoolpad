@@ -49,6 +49,8 @@ class RunTopicContentGeneration implements ShouldQueue
             return;
         }
 
+        $pendingFailures = [];
+
         try {
             $this->broadcastUpdate('status', [
                 'message' => "Starting content generation for topic: {$this->topic->title}",
@@ -69,14 +71,19 @@ class RunTopicContentGeneration implements ShouldQueue
                 ->sortBy(fn (ContentBlock $b) => ContentBlockGenerationService::pathKey($b->path))
                 ->values();
 
-            // Stamp the already-loaded topic onto each block to avoid a lazy query per block
-            // inside assembleContext.
+            // Set the initial topic relation; refreshed before each block in the loop below
+            // so assembleContext always has the latest glossary after each generation.
             $blocks->each(fn (ContentBlock $b) => $b->setRelation('canonicalTopic', $this->topic));
 
             $service = $container->make(ContentBlockGenerationService::class);
             $total = $blocks->count();
 
             foreach ($blocks as $i => $block) {
+                // Refresh the topic before each block so assembleContext sees the latest glossary
+                // (generateBlockContent updates the glossary in the DB after each block).
+                $this->topic->refresh();
+                $block->setRelation('canonicalTopic', $this->topic);
+
                 $this->broadcastUpdate('status', [
                     'block_id' => $block->id,
                     'message' => 'Generating block '.($i + 1)."/{$total}: {$block->title}",
@@ -92,7 +99,7 @@ class RunTopicContentGeneration implements ShouldQueue
                     Log::warning('Supervisor continued past per-block failure', [
                         'project_id' => $this->project->id, 'block_id' => $block->id, 'error' => $e->getMessage(),
                     ]);
-                    $this->appendFailure($block, 'validation_exhausted', $e->getMessage());
+                    $pendingFailures[$block->id] = ['reason' => 'validation_exhausted', 'error_message' => $e->getMessage(), 'attempted_at' => now()->toIso8601String()];
                     $this->broadcastUpdate('error', [
                         'block_id' => $block->id,
                         'message' => 'Block generation failed. Check project logs for details.',
@@ -101,12 +108,16 @@ class RunTopicContentGeneration implements ShouldQueue
                     Log::error('Unexpected per-block error in topic supervisor', [
                         'project_id' => $this->project->id, 'block_id' => $block->id, 'exception' => $e,
                     ]);
-                    $this->appendFailure($block, 'unknown', 'Unexpected error during generation');
+                    $pendingFailures[$block->id] = ['reason' => 'unknown', 'error_message' => 'Unexpected error during generation', 'attempted_at' => now()->toIso8601String()];
                     $this->broadcastUpdate('error', [
                         'block_id' => $block->id,
                         'message' => 'Unexpected error. Check project logs for details.',
                     ]);
                 }
+            }
+
+            if (! empty($pendingFailures)) {
+                $this->flushFailures($pendingFailures);
             }
 
             $this->broadcastUpdate('complete', ['message' => 'Topic content generation finished']);
@@ -128,17 +139,12 @@ class RunTopicContentGeneration implements ShouldQueue
         ));
     }
 
-    private function appendFailure(ContentBlock $block, string $reason, string $message): void
+    private function flushFailures(array $failures): void
     {
-        DB::transaction(function () use ($block, $reason, $message) {
+        DB::transaction(function () use ($failures) {
             $project = ContentProject::query()->lockForUpdate()->find($this->project->id);
             $context = $project->ai_context ?? [];
-            $context['content_failed'] = $context['content_failed'] ?? [];
-            $context['content_failed'][$block->id] = [
-                'reason' => $reason,
-                'error_message' => $message,
-                'attempted_at' => now()->toIso8601String(),
-            ];
+            $context['content_failed'] = array_merge($context['content_failed'] ?? [], $failures);
             $project->update(['ai_context' => $context]);
         });
     }

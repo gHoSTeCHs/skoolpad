@@ -13,6 +13,7 @@ use App\Models\AIGenerationLog;
 use App\Models\AIModel;
 use App\Models\ContentProject;
 use App\Models\PlatformSetting;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Validator;
 
 class ContentGenerationService
@@ -118,25 +119,24 @@ class ContentGenerationService
         }
 
         if ($taskType) {
-            $routing = PlatformSetting::query()->where('key', 'ai_task_routing')->first();
+            $routingMap = Cache::remember('platform_setting.ai_task_routing', 60, function () {
+                return PlatformSetting::query()->where('key', 'ai_task_routing')->value('value') ?? [];
+            });
 
-            if ($routing) {
-                $routingMap = $routing->value;
-                $routedModelId = $routingMap[$taskType] ?? null;
+            $routedModelId = is_array($routingMap) ? ($routingMap[$taskType] ?? null) : null;
 
-                if ($routedModelId) {
-                    $model = AIModel::query()->active()->find($routedModelId);
+            if ($routedModelId) {
+                $model = AIModel::query()->active()->find($routedModelId);
 
-                    if ($model) {
-                        return $model;
-                    }
+                if ($model) {
+                    return $model;
                 }
             }
         }
 
-        $platformDefault = PlatformSetting::query()
-            ->where('key', 'content_studio.default_model_id')
-            ->value('value');
+        $platformDefault = Cache::remember('platform_setting.content_studio_default_model', 60, function () {
+            return PlatformSetting::query()->where('key', 'content_studio.default_model_id')->value('value');
+        });
 
         if (is_array($platformDefault) && ! empty($platformDefault['model_id'])) {
             $model = AIModel::query()->active()->find($platformDefault['model_id']);
@@ -206,21 +206,22 @@ class ContentGenerationService
     private function retryWithCorrection(ContentAIProvider $adapter, ContentPrompt $originalPrompt, ContentResponse $failedResponse): ContentResponse
     {
         $maxAttempts = config('content-studio.retry.max_attempts', 2);
+        $lastResponse = $failedResponse;
 
         for ($attempt = 1; $attempt < $maxAttempts; $attempt++) {
-            $correctionPrompt = $this->buildCorrectionPrompt($originalPrompt, $failedResponse);
-            $response = $adapter->generate($correctionPrompt);
+            $correctionPrompt = $this->buildCorrectionPrompt($originalPrompt, $lastResponse);
+            $lastResponse = $adapter->generate($correctionPrompt);
 
-            if ($response->valid && ! empty($originalPrompt->json_schema)) {
-                $response = $this->validateSchema($response, $originalPrompt->json_schema);
+            if ($lastResponse->valid && ! empty($originalPrompt->json_schema)) {
+                $lastResponse = $this->validateSchema($lastResponse, $originalPrompt->json_schema);
             }
 
-            if ($response->valid) {
-                return $response;
+            if ($lastResponse->valid) {
+                return $lastResponse;
             }
         }
 
-        return $failedResponse;
+        return $lastResponse;
     }
 
     private function buildCorrectionPrompt(ContentPrompt $original, ContentResponse $failed): ContentPrompt

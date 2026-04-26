@@ -6,24 +6,24 @@ use Illuminate\Support\Facades\Validator;
 uses(Tests\TestCase::class);
 
 it('reports promptType as content', function () {
-    expect((new ContentBlockPrompt())->promptType())->toBe('content');
+    expect((new ContentBlockPrompt)->promptType())->toBe('content');
 });
 
 it('uses temperature 0.5 by default or from config', function () {
     config()->set('content-studio.temperature.content', 0.5);
-    expect((new ContentBlockPrompt())->temperature())->toBe(0.5);
+    expect((new ContentBlockPrompt)->temperature())->toBe(0.5);
 });
 
 it('uses maxTokens 8192', function () {
-    expect((new ContentBlockPrompt())->maxTokens())->toBe(8192);
+    expect((new ContentBlockPrompt)->maxTokens())->toBe(8192);
 });
 
 it('systemPrompt includes Nigerian context, Tiptap allow-list, hierarchy rules, drift discipline', function () {
-    $sys = (new ContentBlockPrompt())->systemPrompt();
+    $sys = (new ContentBlockPrompt)->systemPrompt();
 
     expect($sys)->toContain('Nigerian')
         ->and($sys)->toContain('Tiptap')
-        ->and($sys)->toContain('mathBlock')
+        ->and($sys)->toContain('blockMath')
         ->and($sys)->toContain('paragraph')
         ->and($sys)->toContain('bold')
         ->toContain('key_terms_introduced')
@@ -43,7 +43,7 @@ it('userPrompt renders all context fields', function () {
         'prior_block_summaries' => ['Motion is the change of position.'],
     ];
 
-    $prompt = (new ContentBlockPrompt())->userPrompt($context);
+    $prompt = (new ContentBlockPrompt)->userPrompt($context);
 
     expect($prompt)->toContain('Motion')
         ->and($prompt)->toContain('What is Speed?')
@@ -68,11 +68,11 @@ it('userPrompt handles null previous_leaf and next_leaf gracefully', function ()
         'prior_block_summaries' => [],
     ];
 
-    expect((new ContentBlockPrompt())->userPrompt($context))->toContain('B');
+    expect((new ContentBlockPrompt)->userPrompt($context))->toContain('B');
 });
 
 it('validates a well-formed P-04 response', function () {
-    $schema = (new ContentBlockPrompt())->jsonSchema();
+    $schema = (new ContentBlockPrompt)->jsonSchema();
     $ok = [
         'block_title' => 'What is Speed?',
         'content' => ['type' => 'doc', 'content' => [['type' => 'paragraph', 'content' => [['type' => 'text', 'text' => 'x']]]]],
@@ -88,7 +88,7 @@ it('validates a well-formed P-04 response', function () {
 });
 
 it('rejects missing summary_sentence', function () {
-    $schema = (new ContentBlockPrompt())->jsonSchema();
+    $schema = (new ContentBlockPrompt)->jsonSchema();
     $bad = [
         'block_title' => 'x',
         'content' => ['type' => 'doc', 'content' => []],
@@ -103,7 +103,7 @@ it('rejects missing summary_sentence', function () {
 });
 
 it('rejects content.type that is not doc', function () {
-    $schema = (new ContentBlockPrompt())->jsonSchema();
+    $schema = (new ContentBlockPrompt)->jsonSchema();
     $bad = [
         'block_title' => 'x',
         'content' => ['type' => 'paragraph', 'content' => []],
@@ -119,7 +119,7 @@ it('rejects content.type that is not doc', function () {
 });
 
 it('requires key_terms_introduced entries to have term and definition', function () {
-    $schema = (new ContentBlockPrompt())->jsonSchema();
+    $schema = (new ContentBlockPrompt)->jsonSchema();
     $bad = [
         'block_title' => 'x',
         'content' => ['type' => 'doc', 'content' => [['type' => 'paragraph', 'content' => [['type' => 'text', 'text' => 'x']]]]],
