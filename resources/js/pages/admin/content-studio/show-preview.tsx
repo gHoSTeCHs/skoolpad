@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from 'react';
 import ContentStudioLayout from '@/layouts/content-studio-layout';
+import { StageContentPreview } from '@/components/admin/content-studio/stage-content-preview';
 import type { StageKey } from '@/components/admin/content-studio/stage-rail';
 import type { InspectorTab } from '@/components/admin/content-studio/inspector-peek';
 import type {
@@ -34,6 +35,7 @@ function getDefaultStep(project: ContentProject): StageKey {
 export default function ContentStudioShowPreview({
     project: initialProject,
     generationLogs: propLogs,
+    aiModels,
     resolvedModels,
     topicsWithBlocks,
 }: Props) {
@@ -46,6 +48,8 @@ export default function ContentStudioShowPreview({
     useEffect(() => {
         setLogs(propLogs);
     }, [propLogs]);
+
+    const handleProjectUpdate = useCallback((updated: ContentProject) => setProject(updated), []);
 
     const handleInspectorTabClick = useCallback((tab: InspectorTab) => {
         setInspectorTab((prev) => (prev === tab ? null : tab));
@@ -64,25 +68,36 @@ export default function ContentStudioShowPreview({
             onLogClick={() => setLogDrawerOpen((v) => !v)}
             inspectorTab={inspectorTab}
             onInspectorTabClick={handleInspectorTabClick}
-            inspectorEnabled={false}
+            inspectorEnabled={activeStep === 'content'}
             pageTitle={pageTitle ?? undefined}
         >
-            <div className="flex h-full flex-col items-center justify-center gap-3 p-12 text-center">
-                <p className="font-display text-[18px] font-semibold tracking-tight">
-                    {activeStep} stage placeholder
-                </p>
-                <p className="max-w-[48ch] text-[13.5px] text-muted-foreground">
-                    Phase 5 onwards fills this in brick by brick. Use the rail tooltips to switch stages.
-                </p>
-                <div className="mt-4 flex flex-wrap items-center justify-center gap-3 text-[12px] text-muted-foreground">
-                    <span className="tech">project: {project.id}</span>
-                    <span className="tech">topics: {topicsWithBlocks.length}</span>
-                    <span className="tech">logs: {logs.length}</span>
+            {activeStep === 'content' ? (
+                <StageContentPreview
+                    project={project}
+                    topicsWithBlocks={topicsWithBlocks}
+                    aiModels={aiModels}
+                    resolvedModels={resolvedModels}
+                    generationLogs={logs}
+                    inspectorTab={inspectorTab}
+                    onInspectorTabClick={handleInspectorTabClick}
+                    onProjectUpdate={handleProjectUpdate}
+                />
+            ) : (
+                <div className="flex h-full flex-col items-center justify-center gap-3 p-12 text-center">
+                    <p className="font-display text-[18px] font-semibold tracking-tight">
+                        {activeStep} stage placeholder
+                    </p>
+                    <p className="max-w-[48ch] text-[13.5px] text-muted-foreground">
+                        Phase 9 fills this in. The redesigned content stage is live above — switch the rail icon to
+                        Content.
+                    </p>
                 </div>
-                {logDrawerOpen && (
-                    <p className="text-[12px] text-[color:var(--honey)]">Log drawer toggled (drawer ships in Phase 8)</p>
-                )}
-            </div>
+            )}
+            {logDrawerOpen && (
+                <p className="fixed bottom-4 right-4 rounded bg-foreground/90 px-3 py-1 text-[11px] text-background">
+                    Log drawer toggled (drawer ships in Phase 8)
+                </p>
+            )}
         </ContentStudioLayout>
     );
 }

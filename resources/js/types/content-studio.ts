@@ -153,6 +153,8 @@ export interface VisualizationFlag {
 
 export interface GenerationLogEntry {
     id: string;
+    content_block_id: string | null;
+    canonical_topic_id: string | null;
     prompt_type: string;
     model_used: string;
     is_valid: boolean;
