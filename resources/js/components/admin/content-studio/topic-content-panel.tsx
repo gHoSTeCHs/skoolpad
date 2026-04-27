@@ -4,6 +4,7 @@ import { BlockContentDetail, type SaveContentPayload } from './block-content-det
 import { GenerateAllBlocksDialog } from './generate-all-blocks-dialog';
 import { MarkTopicCompleteDialog } from './mark-topic-complete-dialog';
 import { ResetTopicDialog } from './reset-topic-dialog';
+import { comparePaths } from '@/lib/content-studio';
 import type { AIModelOption, ContentBlock, ContentProject, ResolvedStageModels, TopicWithBlocks } from '@/types/content-studio';
 
 interface TopicContentPanelProps {
@@ -180,14 +181,3 @@ function BlockStatusIcon({ block, isBusy }: { block: ContentBlock; isBusy: boole
     return <span className={`mt-1.5 h-1.5 w-1.5 flex-none rounded-full ${tone}`} aria-hidden />;
 }
 
-function comparePaths(a: string, b: string): number {
-    const pa = a.split('.').map(Number);
-    const pb = b.split('.').map(Number);
-    const len = Math.max(pa.length, pb.length);
-    for (let i = 0; i < len; i++) {
-        const av = pa[i] ?? 0;
-        const bv = pb[i] ?? 0;
-        if (av !== bv) return av - bv;
-    }
-    return 0;
-}

@@ -21,6 +21,9 @@ interface GenerateAllBlocksDialogProps {
     resolvedModel: ResolvedStageModel;
     onConfirm: (forceRegenerate: boolean) => void;
     disabled?: boolean;
+    open?: boolean;
+    onOpenChange?: (open: boolean) => void;
+    hideTrigger?: boolean;
 }
 
 export function GenerateAllBlocksDialog({
@@ -30,15 +33,20 @@ export function GenerateAllBlocksDialog({
     resolvedModel,
     onConfirm,
     disabled,
+    open,
+    onOpenChange,
+    hideTrigger,
 }: GenerateAllBlocksDialogProps) {
     const [force, setForce] = useState(false);
     const estimatedMinutes = Math.ceil((force ? blockCount : notStartedCount) * 0.75);
 
     return (
-        <AlertDialog>
-            <AlertDialogTrigger asChild>
-                <Button disabled={disabled || (notStartedCount === 0 && !force)}>Generate All Blocks</Button>
-            </AlertDialogTrigger>
+        <AlertDialog open={open} onOpenChange={onOpenChange}>
+            {!hideTrigger && (
+                <AlertDialogTrigger asChild>
+                    <Button disabled={disabled || (notStartedCount === 0 && !force)}>Generate All Blocks</Button>
+                </AlertDialogTrigger>
+            )}
             <AlertDialogContent>
                 <AlertDialogHeader>
                     <AlertDialogTitle>Generate content for all blocks in {topicTitle}?</AlertDialogTitle>
