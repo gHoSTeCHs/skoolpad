@@ -24,6 +24,11 @@ abstract class ContentPromptTemplate
         return 8192;
     }
 
+    public function normalize(array $data): array
+    {
+        return $data;
+    }
+
     public function build(array $context): ContentPrompt
     {
         return new ContentPrompt(

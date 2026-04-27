@@ -29,25 +29,32 @@ class AIModelController extends Controller
     {
         Gate::authorize('viewAny', AIModel::class);
 
-        $models = AIModel::query()
-            ->with('provider')
-            ->when($request->filled('search'), fn ($q) => $q->search($request->string('search')))
-            ->orderByRaw('(SELECT sort_order FROM ai_providers WHERE ai_providers.id = ai_models.provider_id)')
-            ->orderBy('sort_order')
-            ->orderBy('name')
-            ->paginate(self::DEFAULT_PER_PAGE)
-            ->withQueryString();
+        $search = $request->string('search');
 
-        $modelsWithLabels = $models->through(fn (AIModel $model) => array_merge(
-            $model->toArray(),
-            [
-                'provider' => $model->provider?->makeHidden('api_key')->toArray(),
-                'provider_api_key_set' => ! empty($model->provider?->api_key),
-            ]
-        ));
+        $providers = AIProvider::query()
+            ->with(['aiModels' => function ($q) use ($search) {
+                $q->orderBy('sort_order')->orderBy('name');
+                if ($search->isNotEmpty()) {
+                    $q->search($search);
+                }
+            }])
+            ->orderBy('sort_order')
+            ->get()
+            ->map(fn (AIProvider $provider) => array_merge(
+                $provider->toArray(),
+                [
+                    'adapter_type_label' => $provider->adapter_type->label(),
+                    'api_key_set' => ! empty($provider->api_key),
+                    'models' => $provider->aiModels->map(fn (AIModel $model) => array_merge(
+                        $model->toArray(),
+                        ['provider_api_key_set' => ! empty($provider->api_key)],
+                    ))->values()->all(),
+                ],
+            ))
+            ->values();
 
         return Inertia::render('admin/ai-models/index', [
-            'models' => $this->paginated($modelsWithLabels),
+            'providers' => $providers,
             'filters' => $request->only(['search']),
         ]);
     }

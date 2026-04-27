@@ -220,6 +220,11 @@ export interface AIModel {
     updated_at: string;
 }
 
+export interface ProviderWithModels extends AIProvider {
+    api_key_set: boolean;
+    models: (AIModel & { provider_api_key_set: boolean })[];
+}
+
 export type { EnumOption } from '@/types/questions';
 
 export type BlockGenerationStatus = 'not_started' | 'generated' | 'approved';
