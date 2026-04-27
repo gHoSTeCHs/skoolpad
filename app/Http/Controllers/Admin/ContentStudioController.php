@@ -119,10 +119,25 @@ class ContentStudioController extends Controller
     {
         Gate::authorize('view', $contentProject);
 
+        return Inertia::render('admin/content-studio/show', $this->buildShowProps($contentProject, 20));
+    }
+
+    public function preview(ContentProject $contentProject): Response
+    {
+        Gate::authorize('view', $contentProject);
+
+        return Inertia::render('admin/content-studio/show-preview', $this->buildShowProps($contentProject, 100));
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    private function buildShowProps(ContentProject $contentProject, int $logLimit): array
+    {
         $generationLogs = $contentProject->aiGenerationLogs()
             ->select(['id', 'prompt_type', 'model_used', 'is_valid', 'tokens_used', 'estimated_cost_cents', 'created_at'])
             ->latest()
-            ->limit(20)
+            ->limit($logLimit)
             ->get();
 
         $activeModels = AIModel::query()
@@ -226,14 +241,14 @@ class ContentStudioController extends Controller
                     ])->values()->all(),
             ])->values()->all();
 
-        return Inertia::render('admin/content-studio/show', [
+        return [
             'project' => $contentProject->toShowArray(),
             'generationLogs' => $generationLogs,
             'aiModels' => $aiModels,
             'platformDefaultModelId' => $platformDefaultModelId,
             'resolvedModels' => $resolvedModels,
             'topicsWithBlocks' => $topicsWithBlocks,
-        ]);
+        ];
     }
 
     public function updateModels(UpdateContentProjectModelsRequest $request, ContentProject $contentProject): JsonResponse

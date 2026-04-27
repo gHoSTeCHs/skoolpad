@@ -225,6 +225,7 @@ Route::middleware(['auth', 'verified', 'staff'])->prefix('admin')->name('admin.'
     Route::get('content-studio/create', [ContentStudioController::class, 'create'])->name('content-studio.create');
     Route::post('content-studio', [ContentStudioController::class, 'store'])->name('content-studio.store');
     Route::get('content-studio/{contentProject}', [ContentStudioController::class, 'show'])->name('content-studio.show');
+    Route::get('content-studio/{contentProject}/preview', [ContentStudioController::class, 'preview'])->name('content-studio.preview');
     Route::put('content-studio/{contentProject}/models', [ContentStudioController::class, 'updateModels'])->name('content-studio.update-models');
     Route::post('content-studio/{contentProject}/research', [ContentStudioController::class, 'runResearch'])->name('content-studio.run-research')->middleware('throttle:10,1');
     Route::post('content-studio/{contentProject}/research/approve', [ContentStudioController::class, 'approveResearch'])->name('content-studio.approve-research');
