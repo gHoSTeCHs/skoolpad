@@ -239,6 +239,10 @@
     --scrollbar-thumb-hover: rgba(0, 0, 0, 0.26);
     --scrollbar-sidebar-thumb: rgba(255, 255, 255, 0.15);
     --scrollbar-sidebar-thumb-hover: rgba(255, 255, 255, 0.28);
+
+    --honey: #B8862F;
+    --honey-soft: #F4E8CC;
+    --honey-line: #E0C679;
 }
 
 /* =============================================================================
@@ -371,6 +375,10 @@
     --scrollbar-thumb-hover: rgba(255, 255, 255, 0.22);
     --scrollbar-sidebar-thumb: rgba(255, 255, 255, 0.15);
     --scrollbar-sidebar-thumb-hover: rgba(255, 255, 255, 0.28);
+
+    --honey: #E8B763;
+    --honey-soft: #2B2316;
+    --honey-line: #6B5D38;
 }
 
 /* =============================================================================
@@ -503,6 +511,10 @@
     --scrollbar-thumb-hover: rgba(255, 255, 255, 0.20);
     --scrollbar-sidebar-thumb: rgba(255, 255, 255, 0.12);
     --scrollbar-sidebar-thumb-hover: rgba(255, 255, 255, 0.22);
+
+    --honey: #D4A859;
+    --honey-soft: #1F1A0F;
+    --honey-line: #5A5233;
 }
 
 /* =============================================================================
@@ -657,4 +669,62 @@ html {
 
 [data-sidebar="content"]::-webkit-scrollbar-thumb:hover {
     background-color: var(--scrollbar-sidebar-thumb-hover);
+}
+
+/* =============================================================================
+   COMPONENT UTILITIES
+   ============================================================================= */
+
+/*
+ * Content Studio status mapping intent:
+ *   approved / published         → --badge-primary-* (deep canopy green)
+ *   generated / awaiting / ready → --badge-reward-* (amber)
+ *   not started / draft          → --badge-neutral-*
+ *   advisory / error             → --badge-danger-*
+ *   AI generation moment         → --honey-* (new, see below)
+ *
+ * Visually verify these read correctly in light/dark/reader during QA.
+ */
+
+@layer components {
+    .section-label {
+        font-size: 12.5px;
+        font-weight: 600;
+        color: var(--muted-foreground);
+        letter-spacing: -0.002em;
+    }
+
+    .tech {
+        font-family: var(--font-mono, ui-monospace, monospace);
+        font-size: 11px;
+        color: var(--muted-foreground);
+        letter-spacing: 0;
+        opacity: 0.85;
+    }
+
+    .paper-surface {
+        background: var(--card);
+        background-image: radial-gradient(rgb(31 26 18 / 0.018) 1px, transparent 1px);
+        background-size: 16px 16px;
+    }
+
+    .gen-pulse {
+        animation: gen-pulse 1.4s ease-in-out infinite;
+    }
+
+    .gen-shimmer-bar {
+        background: linear-gradient(90deg, transparent, var(--honey), transparent);
+        background-size: 200% 100%;
+        animation: gen-shimmer 2.4s linear infinite;
+    }
+}
+
+@keyframes gen-pulse {
+    0%, 100% { box-shadow: 0 0 0 0 rgb(184 134 47 / 0.32); }
+    50%      { box-shadow: 0 0 0 6px rgb(184 134 47 / 0.06); }
+}
+
+@keyframes gen-shimmer {
+    0%   { background-position: -100% 0; }
+    100% { background-position: 100% 0; }
 }
