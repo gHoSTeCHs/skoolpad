@@ -115,7 +115,7 @@ it('broadcasts error event when generation fails', function () {
     Event::assertDispatched(
         ContentGenerationUpdate::class,
         fn ($event) => $event->type === 'error'
-            && str_contains($event->data['message'], 'Rate limit exceeded'),
+            && str_contains($event->data['message'], 'AI provider returned an error for research'),
     );
 });
 

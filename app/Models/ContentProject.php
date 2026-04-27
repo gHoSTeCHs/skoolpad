@@ -26,6 +26,7 @@ class ContentProject extends Model
         'research_model_id',
         'scheme_model_id',
         'blocks_model_id',
+        'content_model_id',
         'created_by',
         'progress_data',
         'ai_context',
@@ -85,6 +86,11 @@ class ContentProject extends Model
     public function blocksModel(): BelongsTo
     {
         return $this->belongsTo(AIModel::class, 'blocks_model_id');
+    }
+
+    public function contentModel(): BelongsTo
+    {
+        return $this->belongsTo(AIModel::class, 'content_model_id');
     }
 
     public function isSecondary(): bool

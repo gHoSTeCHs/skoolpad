@@ -8,18 +8,28 @@ use App\Http\Controllers\Controller;
 use App\Http\Requests\Admin\ApproveBlockStructureRequest;
 use App\Http\Requests\Admin\ApproveResearchRequest;
 use App\Http\Requests\Admin\ApproveSchemeRequest;
+use App\Http\Requests\Admin\GenerateBlockContentRequest;
+use App\Http\Requests\Admin\GenerateTopicContentRequest;
+use App\Http\Requests\Admin\ResetTopicContentRequest;
 use App\Http\Requests\Admin\RunBlockStructureRequest;
 use App\Http\Requests\Admin\RunCurriculumResearchRequest;
 use App\Http\Requests\Admin\RunSchemeGenerationRequest;
+use App\Http\Requests\Admin\SaveBlockContentRequest;
 use App\Http\Requests\Admin\StoreContentProjectRequest;
+use App\Http\Requests\Admin\UpdateBlockGuidanceRequest;
 use App\Http\Requests\Admin\UpdateContentProjectModelsRequest;
+use App\Jobs\RunBlockContentGeneration;
 use App\Jobs\RunContentGeneration;
+use App\Jobs\RunTopicContentGeneration;
 use App\Models\AIModel;
+use App\Models\CanonicalTopic;
+use App\Models\ContentBlock;
 use App\Models\ContentProject;
 use App\Models\CurriculumSubject;
 use App\Models\Discipline;
 use App\Models\EducationLevel;
 use App\Models\PlatformSetting;
+use App\Services\ContentBlockGenerationService;
 use App\Services\ContentGenerationService;
 use App\Services\ContentProjectService;
 use Illuminate\Http\JsonResponse;
@@ -37,6 +47,7 @@ class ContentStudioController extends Controller
     public function __construct(
         private readonly ContentProjectService $projectService,
         private readonly ContentGenerationService $generationService,
+        private readonly ContentBlockGenerationService $blockGenerationService,
     ) {}
 
     public function index(Request $request): Response
@@ -114,31 +125,106 @@ class ContentStudioController extends Controller
             ->limit(20)
             ->get();
 
-        $aiModels = AIModel::query()
+        $activeModels = AIModel::query()
             ->active()
+            ->with('provider:id,name,slug,supports_thinking')
+            ->orderByRaw('(SELECT sort_order FROM ai_providers WHERE ai_providers.id = ai_models.provider_id)')
             ->orderBy('sort_order')
-            ->get(['id', 'name', 'model_id']);
+            ->get();
 
-        $platformDefaultValue = PlatformSetting::query()
-            ->where('key', 'content_studio.default_model_id')
-            ->value('value');
+        $aiModels = $activeModels->map(fn (AIModel $m) => [
+            'id' => $m->id,
+            'name' => $m->name,
+            'model_id' => $m->model_id,
+            'thinking_mode' => $m->thinking_mode->value,
+            'provider_name' => $m->provider->name,
+            'provider_slug' => $m->provider->slug,
+        ]);
+
+        $platformDefaultValue = \Illuminate\Support\Facades\Cache::remember(
+            'platform_setting.content_studio_default_model', 60,
+            fn () => PlatformSetting::query()->where('key', 'content_studio.default_model_id')->value('value')
+        );
         $platformDefaultModelId = is_array($platformDefaultValue)
             ? ($platformDefaultValue['model_id'] ?? null)
             : null;
 
-        $resolvedModels = $aiModels->isNotEmpty()
-            ? collect(['research', 'scheme', 'blocks'])->mapWithKeys(function (string $stage) use ($contentProject) {
-                $model = $this->generationService->resolveModel(null, $stage, $contentProject);
-                $source = $this->describeResolutionSource($contentProject, $stage);
+        $taskRouting = \Illuminate\Support\Facades\Cache::remember(
+            'platform_setting.ai_task_routing', 60,
+            fn () => PlatformSetting::query()->where('key', 'ai_task_routing')->value('value') ?? []
+        );
+
+        $activeModelIds = $activeModels->pluck('id')->flip();
+
+        $resolvedModels = $activeModels->isNotEmpty()
+            ? collect(['research', 'scheme', 'blocks', 'content'])->mapWithKeys(function (string $stage) use ($contentProject, $platformDefaultModelId, $taskRouting, $activeModelIds, $activeModels) {
+                $source = $this->describeResolutionSource($contentProject, $stage, $platformDefaultModelId, $activeModelIds);
+                $modelId = $this->resolveModelIdInMemory($contentProject, $stage, $platformDefaultModelId, $taskRouting, $activeModelIds);
+                $model = $modelId
+                    ? $activeModels->firstWhere('id', $modelId)
+                    : $activeModels->sortBy('sort_order')->first();
 
                 return [$stage => [
-                    'id' => $model->id,
-                    'name' => $model->name,
-                    'model_id' => $model->model_id,
+                    'id' => $model?->id,
+                    'name' => $model?->name,
+                    'model_id' => $model?->model_id,
                     'source' => $source,
                 ]];
             })->all()
             : [];
+
+        $approvedTopicIds = collect($contentProject->progress_data['blocks_approved'] ?? [])
+            ->pluck('topic_id')->filter()->values()->all();
+
+        $topicsWithBlocks = \App\Models\CanonicalTopic::query()
+            ->whereIn('id', $approvedTopicIds)
+            ->with('contentBlocks')
+            ->get()
+            ->map(fn (\App\Models\CanonicalTopic $topic) => [
+                'id' => $topic->id,
+                'title' => $topic->title,
+                'slug' => $topic->slug,
+                'summary' => $topic->summary,
+                'estimated_read_minutes' => $topic->estimated_read_minutes,
+                'education_level' => $topic->education_level,
+                'is_published' => $topic->is_published,
+                'published_at' => $topic->published_at?->toIso8601String(),
+                'glossary' => $topic->glossary,
+                'blocks' => $topic->contentBlocks
+                    ->sortBy(fn (\App\Models\ContentBlock $b) => \App\Services\ContentBlockGenerationService::pathKey($b->path))
+                    ->map(fn (\App\Models\ContentBlock $b) => [
+                        'id' => $b->id,
+                        'canonical_topic_id' => $b->canonical_topic_id,
+                        'parent_block_id' => $b->parent_block_id,
+                        'title' => $b->title,
+                        'slug' => $b->slug,
+                        'block_type' => $b->block_type->value,
+                        'path' => $b->path,
+                        'depth_level' => $b->depth_level,
+                        'sort_order' => $b->sort_order,
+                        'is_container' => $b->is_container,
+                        'content' => $b->content,
+                        'simplified_content' => $b->simplified_content,
+                        'estimated_read_time' => $b->estimated_read_time,
+                        'difficulty_level' => $b->difficulty_level?->value,
+                        'bloom_level' => $b->bloom_level?->value,
+                        'visualization_config' => $b->visualization_config,
+                        'is_published' => $b->is_published,
+                        'content_guidance' => $b->content_guidance,
+                        'generation_status' => $b->generation_status->value,
+                        'summary_sentence' => $b->summary_sentence,
+                        'key_terms_introduced' => $b->key_terms_introduced,
+                        'symbols_used' => $b->symbols_used,
+                        'formulas_used' => $b->formulas_used,
+                        'word_count' => $b->word_count,
+                        'nigerian_context_used' => $b->nigerian_context_used,
+                        'last_generated_at' => $b->last_generated_at?->toIso8601String(),
+                        'last_generation_log_id' => $b->last_generation_log_id,
+                        'drift_advisory' => $b->drift_advisory
+                            ? array_diff_key($b->drift_advisory, ['source_block_id' => null])
+                            : null,
+                    ])->values()->all(),
+            ])->values()->all();
 
         return Inertia::render('admin/content-studio/show', [
             'project' => $contentProject->toShowArray(),
@@ -146,6 +232,7 @@ class ContentStudioController extends Controller
             'aiModels' => $aiModels,
             'platformDefaultModelId' => $platformDefaultModelId,
             'resolvedModels' => $resolvedModels,
+            'topicsWithBlocks' => $topicsWithBlocks,
         ]);
     }
 
@@ -161,40 +248,91 @@ class ContentStudioController extends Controller
         ]);
     }
 
-    private function describeResolutionSource(ContentProject $project, string $stage): string
+    private function resolveModelIdInMemory(
+        ContentProject $project,
+        string $stage,
+        ?string $platformDefaultModelId,
+        mixed $taskRouting,
+        \Illuminate\Support\Collection $activeModelIds
+    ): ?string {
+        $stageColumn = match ($stage) {
+            'research' => 'research_model_id',
+            'scheme' => 'scheme_model_id',
+            'blocks' => 'blocks_model_id',
+            'content' => 'content_model_id',
+            default => null,
+        };
+
+        if ($stageColumn && $project->{$stageColumn} && $activeModelIds->has($project->{$stageColumn})) {
+            return $project->{$stageColumn};
+        }
+        if ($project->default_ai_model_id && $activeModelIds->has($project->default_ai_model_id)) {
+            return $project->default_ai_model_id;
+        }
+        $routedId = is_array($taskRouting) ? ($taskRouting[$stage] ?? null) : null;
+        if ($routedId && $activeModelIds->has($routedId)) {
+            return $routedId;
+        }
+        if ($platformDefaultModelId && $activeModelIds->has($platformDefaultModelId)) {
+            return $platformDefaultModelId;
+        }
+
+        return null;
+    }
+
+    private function describeResolutionSource(ContentProject $project, string $stage, ?string $platformModelId = null, ?\Illuminate\Support\Collection $activeModelIds = null): string
     {
         $stageColumn = match ($stage) {
             'research' => 'research_model_id',
             'scheme' => 'scheme_model_id',
             'blocks' => 'blocks_model_id',
+            'content' => 'content_model_id',
             default => null,
         };
 
-        if ($stageColumn && $this->activeModelExists($project->{$stageColumn})) {
+        if ($stageColumn && $this->activeModelExists($project->{$stageColumn}, $activeModelIds)) {
             return 'stage_override';
         }
 
-        if ($this->activeModelExists($project->default_ai_model_id)) {
+        if ($this->activeModelExists($project->default_ai_model_id, $activeModelIds)) {
             return 'project_default';
         }
 
-        $platformValue = PlatformSetting::query()
-            ->where('key', 'content_studio.default_model_id')
-            ->value('value');
-
-        $platformModelId = is_array($platformValue) ? ($platformValue['model_id'] ?? null) : null;
-
-        if ($this->activeModelExists($platformModelId)) {
+        if ($this->activeModelExists($platformModelId, $activeModelIds)) {
             return 'platform_default';
         }
 
         return 'fallback';
     }
 
-    private function activeModelExists(?string $modelId): bool
+    private function assertTopicBelongsToProject(ContentProject $project, CanonicalTopic $topic): void
+    {
+        $approvedTopicIds = collect($project->progress_data['blocks_approved'] ?? [])
+            ->pluck('topic_id')
+            ->filter()
+            ->all();
+
+        abort_unless(in_array($topic->id, $approvedTopicIds, true), 403, 'Topic does not belong to this project.');
+    }
+
+    private function assertBlockBelongsToProject(ContentProject $project, ContentBlock $block): void
+    {
+        $approvedTopicIds = collect($project->progress_data['blocks_approved'] ?? [])
+            ->pluck('topic_id')
+            ->filter()
+            ->all();
+
+        abort_unless(in_array($block->canonical_topic_id, $approvedTopicIds, true), 403, 'Block does not belong to this project.');
+    }
+
+    private function activeModelExists(?string $modelId, ?\Illuminate\Support\Collection $activeModelIds = null): bool
     {
         if (! $modelId) {
             return false;
+        }
+
+        if ($activeModelIds !== null) {
+            return $activeModelIds->has($modelId);
         }
 
         return AIModel::query()->active()->whereKey($modelId)->exists();
@@ -317,6 +455,177 @@ class ContentStudioController extends Controller
         return response()->json([
             'project' => $contentProject->refresh()->toShowArray(),
             'message' => 'Scheme of work skipped.',
+        ]);
+    }
+
+    public function runTopicContent(
+        GenerateTopicContentRequest $request,
+        ContentProject $contentProject,
+        CanonicalTopic $canonicalTopic,
+    ): JsonResponse {
+        Gate::authorize('update', $contentProject);
+        $this->assertTopicBelongsToProject($contentProject, $canonicalTopic);
+
+        if (\App\ContentStudio\Support\TopicGenerationLock::isHeld($canonicalTopic->id)) {
+            return response()->json(['message' => 'Content generation already in progress for this topic.'], 409);
+        }
+
+        $jobId = Str::uuid()->toString();
+        RunTopicContentGeneration::dispatch(
+            $contentProject,
+            $canonicalTopic,
+            $jobId,
+            $request->validated()['model_id'] ?? null,
+            (bool) ($request->validated()['only_unstarted'] ?? true),
+        );
+
+        return response()->json(['job_id' => $jobId], 202);
+    }
+
+    public function runBlockContent(
+        GenerateBlockContentRequest $request,
+        ContentProject $contentProject,
+        ContentBlock $contentBlock,
+    ): JsonResponse {
+        Gate::authorize('update', $contentProject);
+        $this->assertBlockBelongsToProject($contentProject, $contentBlock);
+
+        if (\App\ContentStudio\Support\TopicGenerationLock::isHeld($contentBlock->canonical_topic_id)) {
+            return response()->json(['message' => 'A topic-wide generation is currently running.'], 409);
+        }
+
+        $jobId = Str::uuid()->toString();
+        RunBlockContentGeneration::dispatch(
+            $contentProject,
+            $contentBlock,
+            $jobId,
+            $request->validated()['model_id'] ?? null,
+        );
+
+        return response()->json(['job_id' => $jobId], 202);
+    }
+
+    public function regenerateBlockContent(
+        GenerateBlockContentRequest $request,
+        ContentProject $contentProject,
+        ContentBlock $contentBlock,
+    ): JsonResponse {
+        Gate::authorize('update', $contentProject);
+        $this->assertBlockBelongsToProject($contentProject, $contentBlock);
+
+        return $this->runBlockContent($request, $contentProject, $contentBlock);
+    }
+
+    public function saveBlockContent(
+        SaveBlockContentRequest $request,
+        ContentProject $contentProject,
+        ContentBlock $contentBlock,
+    ): JsonResponse {
+        Gate::authorize('update', $contentProject);
+        $this->assertBlockBelongsToProject($contentProject, $contentBlock);
+
+        try {
+            $this->blockGenerationService->saveBlockContent($contentBlock, $request->validated());
+        } catch (\DomainException $e) {
+            return response()->json(['message' => $e->getMessage()], 422);
+        }
+
+        return response()->json([
+            'project' => $contentProject->refresh()->toShowArray(),
+            'message' => 'Block content saved.',
+        ]);
+    }
+
+    public function approveBlockContent(
+        ContentProject $contentProject,
+        ContentBlock $contentBlock,
+    ): JsonResponse {
+        Gate::authorize('update', $contentProject);
+        $this->assertBlockBelongsToProject($contentProject, $contentBlock);
+
+        try {
+            $this->blockGenerationService->approveBlockContent($contentBlock);
+        } catch (\DomainException $e) {
+            return response()->json(['message' => $e->getMessage()], 422);
+        }
+
+        return response()->json([
+            'project' => $contentProject->refresh()->toShowArray(),
+            'message' => 'Block approved.',
+        ]);
+    }
+
+    public function dismissBlockAdvisory(
+        ContentProject $contentProject,
+        ContentBlock $contentBlock,
+    ): JsonResponse {
+        Gate::authorize('update', $contentProject);
+        $this->assertBlockBelongsToProject($contentProject, $contentBlock);
+
+        $this->blockGenerationService->dismissBlockAdvisory($contentBlock);
+
+        return response()->json([
+            'project' => $contentProject->refresh()->toShowArray(),
+            'message' => 'Advisory dismissed.',
+        ]);
+    }
+
+    public function updateBlockGuidance(
+        UpdateBlockGuidanceRequest $request,
+        ContentProject $contentProject,
+        ContentBlock $contentBlock,
+    ): JsonResponse {
+        Gate::authorize('update', $contentProject);
+        $this->assertBlockBelongsToProject($contentProject, $contentBlock);
+
+        try {
+            $this->blockGenerationService->updateBlockGuidance($contentBlock, $request->validated()['content_guidance']);
+        } catch (\DomainException $e) {
+            return response()->json(['message' => $e->getMessage()], 422);
+        }
+
+        return response()->json([
+            'project' => $contentProject->refresh()->toShowArray(),
+            'message' => 'Guidance updated.',
+        ]);
+    }
+
+    public function markTopicComplete(
+        ContentProject $contentProject,
+        CanonicalTopic $canonicalTopic,
+    ): JsonResponse {
+        Gate::authorize('update', $contentProject);
+        $this->assertTopicBelongsToProject($contentProject, $canonicalTopic);
+
+        try {
+            $this->projectService->markTopicComplete($contentProject, $canonicalTopic);
+        } catch (\DomainException $e) {
+            return response()->json(['message' => $e->getMessage()], 422);
+        }
+
+        return response()->json([
+            'project' => $contentProject->refresh()->toShowArray(),
+            'message' => 'Topic marked complete and published.',
+        ]);
+    }
+
+    public function resetTopicContent(
+        ResetTopicContentRequest $request,
+        ContentProject $contentProject,
+        CanonicalTopic $canonicalTopic,
+    ): JsonResponse {
+        Gate::authorize('update', $contentProject);
+        $this->assertTopicBelongsToProject($contentProject, $canonicalTopic);
+
+        try {
+            $this->projectService->resetTopicContent($contentProject, $canonicalTopic);
+        } catch (\DomainException $e) {
+            return response()->json(['message' => $e->getMessage()], 422);
+        }
+
+        return response()->json([
+            'project' => $contentProject->refresh()->toShowArray(),
+            'message' => 'Topic content reset.',
         ]);
     }
 }

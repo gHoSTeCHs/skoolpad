@@ -21,6 +21,7 @@ class UpdateContentProjectModelsRequest extends FormRequest
             'research_model_id' => ['nullable', 'uuid', 'exists:ai_models,id'],
             'scheme_model_id' => ['nullable', 'uuid', 'exists:ai_models,id'],
             'blocks_model_id' => ['nullable', 'uuid', 'exists:ai_models,id'],
+            'content_model_id' => ['nullable', 'uuid', 'exists:ai_models,id'],
         ];
     }
 }

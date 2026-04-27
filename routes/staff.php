@@ -234,6 +234,16 @@ Route::middleware(['auth', 'verified', 'staff'])->prefix('admin')->name('admin.'
     Route::post('content-studio/{contentProject}/blocks', [ContentStudioController::class, 'runBlocks'])->name('content-studio.run-blocks')->middleware('throttle:20,1');
     Route::post('content-studio/{contentProject}/blocks/approve', [ContentStudioController::class, 'approveBlocks'])->name('content-studio.approve-blocks');
 
+    Route::post('content-studio/{contentProject}/topics/{canonicalTopic}/content', [ContentStudioController::class, 'runTopicContent'])->name('content-studio.content.run-topic')->middleware('throttle:10,1');
+    Route::post('content-studio/{contentProject}/topics/{canonicalTopic}/content/mark-complete', [ContentStudioController::class, 'markTopicComplete'])->name('content-studio.content.mark-topic-complete');
+    Route::post('content-studio/{contentProject}/topics/{canonicalTopic}/content/reset', [ContentStudioController::class, 'resetTopicContent'])->name('content-studio.content.reset-topic');
+    Route::post('content-studio/{contentProject}/blocks/{contentBlock}/content', [ContentStudioController::class, 'runBlockContent'])->name('content-studio.content.run-block')->middleware('throttle:20,1');
+    Route::post('content-studio/{contentProject}/blocks/{contentBlock}/content/regenerate', [ContentStudioController::class, 'regenerateBlockContent'])->name('content-studio.content.regenerate-block')->middleware('throttle:20,1');
+    Route::put('content-studio/{contentProject}/blocks/{contentBlock}/content', [ContentStudioController::class, 'saveBlockContent'])->name('content-studio.content.save-block');
+    Route::post('content-studio/{contentProject}/blocks/{contentBlock}/content/approve', [ContentStudioController::class, 'approveBlockContent'])->name('content-studio.content.approve-block');
+    Route::post('content-studio/{contentProject}/blocks/{contentBlock}/advisory/dismiss', [ContentStudioController::class, 'dismissBlockAdvisory'])->name('content-studio.content.dismiss-advisory');
+    Route::put('content-studio/{contentProject}/blocks/{contentBlock}/guidance', [ContentStudioController::class, 'updateBlockGuidance'])->name('content-studio.content.update-guidance');
+
     Route::get('ai-models', [AIModelController::class, 'index'])->name('ai-models.index');
     Route::get('ai-models/create', [AIModelController::class, 'create'])->name('ai-models.create');
     Route::post('ai-models', [AIModelController::class, 'store'])->name('ai-models.store');

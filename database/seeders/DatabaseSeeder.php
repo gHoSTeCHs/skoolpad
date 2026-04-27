@@ -739,6 +739,8 @@ class DatabaseSeeder extends Seeder
 
         $this->call(Csc302Seeder::class);
         $this->call(SecondaryPracticeSeeder::class);
+        $this->call(AIProviderSeeder::class);
+        $this->call(AIModelSeeder::class);
 
         ContentProject::query()->create([
             'mode' => ContentProjectMode::Secondary,

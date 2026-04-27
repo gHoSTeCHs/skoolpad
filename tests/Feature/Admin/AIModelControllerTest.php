@@ -1,8 +1,8 @@
 <?php
 
-use App\Enums\AIAdapterType;
 use App\Enums\UserRole;
 use App\Models\AIModel;
+use App\Models\AIProvider;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 
@@ -72,8 +72,12 @@ it('creates an AI model with valid data', function () {
     $this->assertDatabaseHas('ai_models', [
         'name' => 'Test Model',
         'slug' => 'test-model',
-        'adapter_type' => 'openai_compatible',
         'model_id' => 'test-chat',
+    ]);
+
+    $this->assertDatabaseHas('ai_providers', [
+        'adapter_type' => 'openai_compatible',
+        'base_url' => 'https://api.example.com/v1',
     ]);
 });
 
@@ -94,6 +98,27 @@ it('auto-generates slug when not provided', function () {
     $this->assertDatabaseHas('ai_models', [
         'slug' => 'my-custom-model',
     ]);
+});
+
+it('reuses existing provider when base_url and adapter_type match', function () {
+    $user = User::factory()->admin()->create();
+    AIProvider::factory()->create([
+        'adapter_type' => 'openai_compatible',
+        'base_url' => 'https://api.example.com/v1',
+    ]);
+
+    $this->actingAs($user)
+        ->post(route('admin.ai-models.store'), [
+            'name' => 'Second Model',
+            'adapter_type' => 'openai_compatible',
+            'base_url' => 'https://api.example.com/v1',
+            'model_id' => 'second-model',
+            'max_tokens' => 4096,
+            'input_cost_per_million' => 50,
+            'output_cost_per_million' => 200,
+        ]);
+
+    expect(AIProvider::query()->where('base_url', 'https://api.example.com/v1')->count())->toBe(1);
 });
 
 it('rejects invalid adapter type', function () {
@@ -136,7 +161,9 @@ it('rejects duplicate slugs', function () {
 
 it('shows the edit form with masked API key', function () {
     $user = User::factory()->admin()->create();
-    $model = AIModel::factory()->create(['api_key' => 'real-secret-key']);
+    $model = AIModel::factory()
+        ->for(AIProvider::factory()->state(['api_key' => 'real-secret-key']), 'provider')
+        ->create();
 
     $response = $this->actingAs($user)
         ->get(route('admin.ai-models.edit', $model));
@@ -150,14 +177,15 @@ it('shows the edit form with masked API key', function () {
 
 it('updates a model without overwriting API key when placeholder submitted', function () {
     $user = User::factory()->admin()->create();
-    $model = AIModel::factory()->create(['name' => 'Old Name', 'api_key' => 'real-key']);
+    $provider = AIProvider::factory()->state(['api_key' => 'real-key'])->create();
+    $model = AIModel::factory()->for($provider, 'provider')->create(['name' => 'Old Name']);
 
     $this->actingAs($user)
         ->put(route('admin.ai-models.update', $model), [
             'name' => 'New Name',
             'slug' => $model->slug,
-            'adapter_type' => $model->adapter_type->value,
-            'base_url' => $model->base_url,
+            'adapter_type' => $provider->adapter_type->value,
+            'base_url' => $provider->base_url,
             'api_key' => '••••••••',
             'model_id' => $model->model_id,
             'max_tokens' => $model->max_tokens,
@@ -167,19 +195,20 @@ it('updates a model without overwriting API key when placeholder submitted', fun
 
     $model->refresh();
     expect($model->name)->toBe('New Name');
-    expect($model->api_key)->toBe('real-key');
+    expect($provider->fresh()->api_key)->toBe('real-key');
 });
 
 it('clears API key when empty string submitted', function () {
     $user = User::factory()->admin()->create();
-    $model = AIModel::factory()->create(['api_key' => 'real-key']);
+    $provider = AIProvider::factory()->state(['api_key' => 'real-key'])->create();
+    $model = AIModel::factory()->for($provider, 'provider')->create();
 
     $this->actingAs($user)
         ->put(route('admin.ai-models.update', $model), [
             'name' => $model->name,
             'slug' => $model->slug,
-            'adapter_type' => $model->adapter_type->value,
-            'base_url' => $model->base_url,
+            'adapter_type' => $provider->adapter_type->value,
+            'base_url' => $provider->base_url,
             'api_key' => '',
             'model_id' => $model->model_id,
             'max_tokens' => $model->max_tokens,
@@ -187,8 +216,7 @@ it('clears API key when empty string submitted', function () {
             'output_cost_per_million' => $model->output_cost_per_million,
         ]);
 
-    $model->refresh();
-    expect($model->api_key)->toBeNull();
+    expect($provider->fresh()->api_key)->toBeNull();
 });
 
 it('deletes a model', function () {

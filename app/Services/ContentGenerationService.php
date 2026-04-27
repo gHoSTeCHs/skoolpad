@@ -13,6 +13,7 @@ use App\Models\AIGenerationLog;
 use App\Models\AIModel;
 use App\Models\ContentProject;
 use App\Models\PlatformSetting;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Validator;
 
 class ContentGenerationService
@@ -27,11 +28,12 @@ class ContentGenerationService
         $response = $adapter->generate($prompt);
 
         if ($response->valid) {
+            $response = $this->normalizeResponse($response, $template);
             $response = $this->validateSchema($response, $template->jsonSchema());
         }
 
         if (! $response->valid && $this->shouldRetry($response) && config('content-studio.retry.validation_correction')) {
-            $response = $this->retryWithCorrection($adapter, $prompt, $response);
+            $response = $this->retryWithCorrection($adapter, $prompt, $response, fn (array $data) => $template->normalize($data));
         }
 
         $log = $this->logGeneration($project, $model, $template, $prompt, $response);
@@ -118,25 +120,24 @@ class ContentGenerationService
         }
 
         if ($taskType) {
-            $routing = PlatformSetting::query()->where('key', 'ai_task_routing')->first();
+            $routingMap = Cache::remember('platform_setting.ai_task_routing', 60, function () {
+                return PlatformSetting::query()->where('key', 'ai_task_routing')->value('value') ?? [];
+            });
 
-            if ($routing) {
-                $routingMap = $routing->value;
-                $routedModelId = $routingMap[$taskType] ?? null;
+            $routedModelId = is_array($routingMap) ? ($routingMap[$taskType] ?? null) : null;
 
-                if ($routedModelId) {
-                    $model = AIModel::query()->active()->find($routedModelId);
+            if ($routedModelId) {
+                $model = AIModel::query()->active()->find($routedModelId);
 
-                    if ($model) {
-                        return $model;
-                    }
+                if ($model) {
+                    return $model;
                 }
             }
         }
 
-        $platformDefault = PlatformSetting::query()
-            ->where('key', 'content_studio.default_model_id')
-            ->value('value');
+        $platformDefault = Cache::remember('platform_setting.content_studio_default_model', 60, function () {
+            return PlatformSetting::query()->where('key', 'content_studio.default_model_id')->value('value');
+        });
 
         if (is_array($platformDefault) && ! empty($platformDefault['model_id'])) {
             $model = AIModel::query()->active()->find($platformDefault['model_id']);
@@ -157,7 +158,9 @@ class ContentGenerationService
 
     public function resolveAdapter(AIModel $model): ContentAIProvider
     {
-        return match ($model->adapter_type) {
+        $model->loadMissing('provider');
+
+        return match ($model->provider->adapter_type) {
             AIAdapterType::OpenAICompatible => new OpenAICompatibleAdapter($model),
             AIAdapterType::Anthropic => new AnthropicAdapter($model),
         };
@@ -201,24 +204,57 @@ class ContentGenerationService
         return $response;
     }
 
-    private function retryWithCorrection(ContentAIProvider $adapter, ContentPrompt $originalPrompt, ContentResponse $failedResponse): ContentResponse
+    private function retryWithCorrection(ContentAIProvider $adapter, ContentPrompt $originalPrompt, ContentResponse $failedResponse, ?callable $normalizer = null): ContentResponse
     {
         $maxAttempts = config('content-studio.retry.max_attempts', 2);
+        $lastResponse = $failedResponse;
 
         for ($attempt = 1; $attempt < $maxAttempts; $attempt++) {
-            $correctionPrompt = $this->buildCorrectionPrompt($originalPrompt, $failedResponse);
-            $response = $adapter->generate($correctionPrompt);
+            $correctionPrompt = $this->buildCorrectionPrompt($originalPrompt, $lastResponse);
+            $lastResponse = $adapter->generate($correctionPrompt);
 
-            if ($response->valid && ! empty($originalPrompt->json_schema)) {
-                $response = $this->validateSchema($response, $originalPrompt->json_schema);
+            if ($lastResponse->valid) {
+                if ($normalizer !== null) {
+                    $lastResponse = $this->applyNormalizer($lastResponse, $normalizer);
+                }
+
+                if (! empty($originalPrompt->json_schema)) {
+                    $lastResponse = $this->validateSchema($lastResponse, $originalPrompt->json_schema);
+                }
             }
 
-            if ($response->valid) {
-                return $response;
+            if ($lastResponse->valid) {
+                return $lastResponse;
             }
         }
 
-        return $failedResponse;
+        return $lastResponse;
+    }
+
+    private function normalizeResponse(ContentResponse $response, ContentPromptTemplate $template): ContentResponse
+    {
+        return $this->applyNormalizer($response, fn (array $data) => $template->normalize($data));
+    }
+
+    private function applyNormalizer(ContentResponse $response, callable $normalizer): ContentResponse
+    {
+        $normalized = $normalizer($response->data);
+
+        if ($normalized === $response->data) {
+            return $response;
+        }
+
+        return new ContentResponse(
+            valid: $response->valid,
+            data: $normalized,
+            validation_errors: $response->validation_errors,
+            raw_response: $response->raw_response,
+            model_used: $response->model_used,
+            tokens_used: $response->tokens_used,
+            generation_time_ms: $response->generation_time_ms,
+            input_tokens: $response->input_tokens,
+            output_tokens: $response->output_tokens,
+        );
     }
 
     private function buildCorrectionPrompt(ContentPrompt $original, ContentResponse $failed): ContentPrompt
@@ -230,13 +266,13 @@ class ContentGenerationService
             )
             ->implode("\n");
 
-        $correctionText = "Your previous response had the following validation errors:\n{$errorSummary}\n\n"
-            ."Please fix these errors and return the corrected JSON. Keep all other fields unchanged.\n\n"
+        $correctionText = "---\nYour previous response had the following validation errors:\n{$errorSummary}\n\n"
+            ."Fix only these errors and return the corrected JSON. All other fields must remain unchanged.\n\n"
             ."Your previous response for reference:\n{$failed->raw_response}";
 
         return new ContentPrompt(
             system_prompt: $original->system_prompt,
-            user_prompt: $correctionText,
+            user_prompt: $original->user_prompt."\n\n".$correctionText,
             expected_format: $original->expected_format,
             json_schema: $original->json_schema,
             temperature: $original->temperature,
@@ -284,7 +320,7 @@ class ContentGenerationService
             'is_valid' => $response->valid,
             'validation_errors' => $response->valid ? null : $response->validation_errors,
             'model_used' => $response->model_used,
-            'provider' => $model->adapter_type->value,
+            'provider' => $model->provider->adapter_type->value,
             'tokens_used' => $response->tokens_used,
             'input_tokens' => $response->input_tokens,
             'output_tokens' => $response->output_tokens,

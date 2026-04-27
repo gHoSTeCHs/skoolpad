@@ -13,24 +13,30 @@ class ContentBlockService
         $data['canonical_topic_id'] = $topic->id;
         $parentId = $data['parent_block_id'] ?? null;
 
-        if ($parentId) {
-            $parent = ContentBlock::query()->findOrFail($parentId);
-            $siblingCount = ContentBlock::query()->where('parent_block_id', $parentId)->count();
-            $data['depth_level'] = $parent->depth_level + 1;
-            $data['path'] = $parent->path.'.'.($siblingCount + 1);
-            $data['sort_order'] = $siblingCount + 1;
+        return DB::transaction(function () use ($topic, $data, $parentId) {
+            if ($parentId) {
+                $parent = ContentBlock::query()->lockForUpdate()->findOrFail($parentId);
+                $siblingCount = ContentBlock::query()->where('parent_block_id', $parentId)->count();
+                $data['depth_level'] = $parent->depth_level + 1;
+                $data['path'] = $parent->path.'.'.($siblingCount + 1);
+                $data['sort_order'] = $siblingCount + 1;
 
-            if (! $parent->is_container) {
-                $parent->update(['is_container' => true, 'content' => null, 'estimated_read_time' => null]);
+                if (! $parent->is_container) {
+                    $parent->update(['is_container' => true, 'content' => null, 'estimated_read_time' => null]);
+                }
+            } else {
+                CanonicalTopic::query()->lockForUpdate()->find($topic->id);
+                $siblingCount = ContentBlock::query()
+                    ->where('canonical_topic_id', $topic->id)
+                    ->whereNull('parent_block_id')
+                    ->count();
+                $data['depth_level'] = 0;
+                $data['path'] = (string) ($siblingCount + 1);
+                $data['sort_order'] = $siblingCount + 1;
             }
-        } else {
-            $siblingCount = $topic->contentBlocks()->whereNull('parent_block_id')->count();
-            $data['depth_level'] = 0;
-            $data['path'] = (string) ($siblingCount + 1);
-            $data['sort_order'] = $siblingCount + 1;
-        }
 
-        return ContentBlock::query()->create($data);
+            return ContentBlock::query()->create($data);
+        });
     }
 
     public function deleteBlock(ContentBlock $block): void
@@ -100,17 +106,57 @@ class ContentBlockService
 
     private function recalculateChildPaths(ContentBlock $block): void
     {
-        $children = $block->children()->orderBy('sort_order')->get();
-        foreach ($children as $index => $child) {
-            $newOrder = $index + 1;
-            $newPath = "{$block->path}.{$newOrder}";
-            $child->update([
-                'sort_order' => $newOrder,
-                'path' => $newPath,
-                'depth_level' => $block->depth_level + 1,
-            ]);
-            $this->recalculateChildPaths($child);
+        $descendants = ContentBlock::query()
+            ->where('canonical_topic_id', $block->canonical_topic_id)
+            ->where('path', 'like', $block->path.'.%')
+            ->orderByRaw("array_length(string_to_array(path, '.'), 1)")
+            ->orderBy('sort_order')
+            ->get(['id', 'parent_block_id', 'path', 'sort_order', 'depth_level']);
+
+        if ($descendants->isEmpty()) {
+            return;
         }
+
+        $byParent = $descendants->groupBy('parent_block_id');
+        $resolvedPath = [$block->id => $block->path];
+        $resolvedDepth = [$block->id => $block->depth_level];
+
+        $updates = [];
+        $queue = [$block->id];
+
+        while (! empty($queue)) {
+            $parentId = array_shift($queue);
+            $children = $byParent->get($parentId, collect())->sortBy('sort_order')->values();
+
+            foreach ($children as $i => $child) {
+                $newOrder = $i + 1;
+                $newPath = $resolvedPath[$parentId].'.'.$newOrder;
+                $newDepth = $resolvedDepth[$parentId] + 1;
+                $updates[] = [$child->id, $newPath, $newDepth, $newOrder];
+                $resolvedPath[$child->id] = $newPath;
+                $resolvedDepth[$child->id] = $newDepth;
+                $queue[] = $child->id;
+            }
+        }
+
+        if (empty($updates)) {
+            return;
+        }
+
+        $valueSets = [];
+        $params = [];
+        foreach ($updates as [$id, $path, $depth, $order]) {
+            $valueSets[] = '(?::uuid, ?, ?::int, ?::int)';
+            array_push($params, $id, $path, $depth, $order);
+        }
+
+        DB::statement(
+            'UPDATE content_blocks AS cb
+             SET path = v.path, depth_level = v.depth_level, sort_order = v.sort_order
+             FROM (VALUES '.implode(', ', $valueSets).') AS v(id, path, depth_level, sort_order)
+             WHERE cb.id = v.id',
+            $params
+        );
     }
 
     private function recalculateAllPaths(CanonicalTopic $topic): void

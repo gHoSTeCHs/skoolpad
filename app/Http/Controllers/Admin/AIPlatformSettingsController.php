@@ -20,9 +20,10 @@ class AIPlatformSettingsController extends Controller
         Gate::authorize('viewSettings', PlatformSetting::class);
 
         $aiModels = AIModel::query()
+            ->with('provider:id,adapter_type')
             ->orderBy('sort_order')
             ->orderBy('name')
-            ->get(['id', 'name', 'model_id', 'adapter_type', 'is_active', 'input_cost_per_million', 'output_cost_per_million']);
+            ->get(['id', 'provider_id', 'name', 'model_id', 'is_active', 'input_cost_per_million', 'output_cost_per_million']);
 
         $defaultValue = PlatformSetting::query()
             ->where('key', self::DEFAULT_KEY)
@@ -35,8 +36,8 @@ class AIPlatformSettingsController extends Controller
                 'id' => $m->id,
                 'name' => $m->name,
                 'model_id' => $m->model_id,
-                'adapter_type' => $m->adapter_type->value,
-                'adapter_type_label' => $m->adapter_type->label(),
+                'adapter_type' => $m->provider->adapter_type->value,
+                'adapter_type_label' => $m->provider->adapter_type->label(),
                 'is_active' => $m->is_active,
                 'input_cost_per_million' => (float) $m->input_cost_per_million,
                 'output_cost_per_million' => (float) $m->output_cost_per_million,

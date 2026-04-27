@@ -89,6 +89,32 @@ VERIFY before returning: Count the topics in your output and compare to the inpu
 PROMPT;
     }
 
+    public function normalize(array $data): array
+    {
+        if (! isset($data['terms']) || ! is_array($data['terms'])) {
+            return $data;
+        }
+
+        $totalTopics = 0;
+
+        $data['terms'] = array_map(function (array $term) use (&$totalTopics) {
+            $topics = is_array($term['topics'] ?? null) ? $term['topics'] : [];
+            $totalTopics += count($topics);
+
+            if (! isset($term['total_periods'])) {
+                $term['total_periods'] = (int) array_sum(array_column($topics, 'periods'));
+            }
+
+            return $term;
+        }, $data['terms']);
+
+        if (! isset($data['total_topics_allocated'])) {
+            $data['total_topics_allocated'] = $totalTopics;
+        }
+
+        return $data;
+    }
+
     public function jsonSchema(): array
     {
         return [

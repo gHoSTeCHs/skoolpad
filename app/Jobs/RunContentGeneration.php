@@ -161,7 +161,13 @@ class RunContentGeneration implements ShouldQueue
         $stage = self::STAGE_LABELS[$this->promptType] ?? $this->promptType;
 
         if (isset($errors['api_error'])) {
-            return "AI provider error: {$errors['api_error']}";
+            Log::warning('Content generation API error', [
+                'project_id' => $this->project->id,
+                'stage' => $this->promptType,
+                'api_error' => $errors['api_error'],
+            ]);
+
+            return "AI provider returned an error for {$stage}. Check the generation log for details.";
         }
 
         if (isset($errors['connection_error'])) {

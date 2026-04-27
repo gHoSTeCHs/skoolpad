@@ -8,10 +8,12 @@ use App\Http\Controllers\Controller;
 use App\Http\Requests\Admin\StoreAIModelRequest;
 use App\Http\Requests\Admin\UpdateAIModelRequest;
 use App\Models\AIModel;
+use App\Models\AIProvider;
 use App\Services\ContentGenerationService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Str;
 use Inertia\Inertia;
@@ -27,23 +29,32 @@ class AIModelController extends Controller
     {
         Gate::authorize('viewAny', AIModel::class);
 
-        $models = AIModel::query()
-            ->when($request->filled('search'), fn ($q) => $q->search($request->string('search')))
-            ->orderBy('sort_order')
-            ->orderBy('name')
-            ->paginate(self::DEFAULT_PER_PAGE)
-            ->withQueryString();
+        $search = $request->string('search');
 
-        $modelsWithLabels = $models->through(fn ($model) => array_merge(
-            $model->toArray(),
-            [
-                'adapter_type_label' => $model->adapter_type->label(),
-                'api_key' => $model->api_key ? self::API_KEY_MASK : null,
-            ]
-        ));
+        $providers = AIProvider::query()
+            ->with(['aiModels' => function ($q) use ($search) {
+                $q->orderBy('sort_order')->orderBy('name');
+                if ($search->isNotEmpty()) {
+                    $q->search($search);
+                }
+            }])
+            ->orderBy('sort_order')
+            ->get()
+            ->map(fn (AIProvider $provider) => array_merge(
+                $provider->toArray(),
+                [
+                    'adapter_type_label' => $provider->adapter_type->label(),
+                    'api_key_set' => ! empty($provider->api_key),
+                    'models' => $provider->aiModels->map(fn (AIModel $model) => array_merge(
+                        $model->toArray(),
+                        ['provider_api_key_set' => ! empty($provider->api_key)],
+                    ))->values()->all(),
+                ],
+            ))
+            ->values();
 
         return Inertia::render('admin/ai-models/index', [
-            'models' => $this->paginated($modelsWithLabels),
+            'providers' => $providers,
             'filters' => $request->only(['search']),
         ]);
     }
@@ -67,7 +78,22 @@ class AIModelController extends Controller
             $data['slug'] = Str::slug($data['name']);
         }
 
-        AIModel::query()->create($data);
+        DB::transaction(function () use ($data) {
+            $provider = $this->resolveOrCreateProvider($data);
+
+            AIModel::query()->create([
+                'provider_id' => $provider->id,
+                'name' => $data['name'],
+                'slug' => $data['slug'],
+                'model_id' => $data['model_id'],
+                'thinking_mode' => $data['thinking_mode'] ?? 'none',
+                'max_tokens' => $data['max_tokens'],
+                'input_cost_per_million' => $data['input_cost_per_million'],
+                'output_cost_per_million' => $data['output_cost_per_million'],
+                'is_active' => $data['is_active'] ?? true,
+                'sort_order' => $data['sort_order'] ?? 0,
+            ]);
+        });
 
         return to_route('admin.ai-models.index')
             ->with('success', 'AI model added successfully.');
@@ -77,9 +103,13 @@ class AIModelController extends Controller
     {
         Gate::authorize('update', $aiModel);
 
+        $aiModel->loadMissing('provider');
         $data = $aiModel->toArray();
-        $data['adapter_type_label'] = $aiModel->adapter_type->label();
-        $data['api_key'] = $aiModel->api_key ? self::API_KEY_MASK : null;
+        $provider = $aiModel->provider;
+        $data['adapter_type'] = $provider?->adapter_type->value;
+        $data['base_url'] = $provider?->base_url;
+        $data['api_key'] = ! empty($provider?->api_key) ? self::API_KEY_MASK : null;
+        $data['provider_api_key_set'] = ! empty($provider?->api_key);
 
         return Inertia::render('admin/ai-models/edit', [
             'aiModel' => $data,
@@ -93,15 +123,36 @@ class AIModelController extends Controller
 
         $data = $request->validated();
 
-        if (isset($data['api_key']) && $data['api_key'] === self::API_KEY_MASK) {
-            unset($data['api_key']);
-        }
+        DB::transaction(function () use ($aiModel, $data) {
+            $apiKey = $data['api_key'] ?? null;
+            $keepExistingKey = $apiKey === self::API_KEY_MASK;
 
-        if (array_key_exists('api_key', $data) && empty($data['api_key'])) {
-            $data['api_key'] = null;
-        }
+            $aiModel->loadMissing('provider');
+            $provider = $aiModel->provider;
 
-        $aiModel->update($data);
+            if ($provider) {
+                $providerUpdates = [
+                    'adapter_type' => $data['adapter_type'],
+                    'base_url' => rtrim($data['base_url'], '/'),
+                ];
+                if (! $keepExistingKey) {
+                    $providerUpdates['api_key'] = empty($apiKey) ? null : $apiKey;
+                }
+                $provider->update($providerUpdates);
+            }
+
+            $aiModel->update([
+                'name' => $data['name'],
+                'slug' => $data['slug'],
+                'model_id' => $data['model_id'],
+                'thinking_mode' => $data['thinking_mode'] ?? 'none',
+                'max_tokens' => $data['max_tokens'],
+                'input_cost_per_million' => $data['input_cost_per_million'],
+                'output_cost_per_million' => $data['output_cost_per_million'],
+                'is_active' => $data['is_active'] ?? $aiModel->is_active,
+                'sort_order' => $data['sort_order'] ?? $aiModel->sort_order,
+            ]);
+        });
 
         return to_route('admin.ai-models.index')
             ->with('success', 'AI model updated successfully.');
@@ -115,6 +166,45 @@ class AIModelController extends Controller
 
         return to_route('admin.ai-models.index')
             ->with('success', 'AI model deleted.');
+    }
+
+    private function resolveOrCreateProvider(array $data): AIProvider
+    {
+        $baseUrl = rtrim($data['base_url'], '/');
+
+        $provider = AIProvider::query()
+            ->where('adapter_type', $data['adapter_type'])
+            ->where('base_url', $baseUrl)
+            ->first();
+
+        if ($provider) {
+            if (! empty($data['api_key'])) {
+                $provider->update(['api_key' => $data['api_key']]);
+                $provider->refresh();
+            }
+
+            return $provider;
+        }
+
+        $host = parse_url($baseUrl, PHP_URL_HOST) ?? 'unknown';
+        $baseSlug = Str::slug($host);
+        $slug = $baseSlug;
+        $suffix = 2;
+        while (AIProvider::query()->where('slug', $slug)->exists()) {
+            $slug = "{$baseSlug}-{$suffix}";
+            $suffix++;
+        }
+
+        return AIProvider::query()->create([
+            'name' => ucwords(str_replace(['-', '.'], ' ', $host)),
+            'slug' => $slug,
+            'adapter_type' => $data['adapter_type'],
+            'base_url' => $baseUrl,
+            'api_key' => $data['api_key'] ?? null,
+            'supports_thinking' => false,
+            'is_active' => true,
+            'sort_order' => 99,
+        ]);
     }
 
     public function testConnection(AIModel $aiModel, ContentGenerationService $service): JsonResponse

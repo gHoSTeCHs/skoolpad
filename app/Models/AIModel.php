@@ -2,11 +2,12 @@
 
 namespace App\Models;
 
-use App\Enums\AIAdapterType;
+use App\Enums\ThinkingMode;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class AIModel extends Model
@@ -17,12 +18,11 @@ class AIModel extends Model
     protected $table = 'ai_models';
 
     protected $fillable = [
+        'provider_id',
         'name',
         'slug',
-        'adapter_type',
-        'base_url',
-        'api_key',
         'model_id',
+        'thinking_mode',
         'max_tokens',
         'input_cost_per_million',
         'output_cost_per_million',
@@ -34,14 +34,18 @@ class AIModel extends Model
     protected function casts(): array
     {
         return [
-            'adapter_type' => AIAdapterType::class,
-            'api_key' => 'encrypted',
+            'thinking_mode' => ThinkingMode::class,
             'max_tokens' => 'integer',
             'input_cost_per_million' => 'integer',
             'output_cost_per_million' => 'integer',
             'is_active' => 'boolean',
             'sort_order' => 'integer',
         ];
+    }
+
+    public function provider(): BelongsTo
+    {
+        return $this->belongsTo(AIProvider::class, 'provider_id');
     }
 
     public function aiGenerationLogs(): HasMany

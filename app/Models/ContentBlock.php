@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use App\Enums\BlockDifficultyLevel;
+use App\Enums\BlockGenerationStatus;
 use App\Enums\BlockType;
 use App\Enums\BloomLevel;
 use Illuminate\Database\Eloquent\Builder;
@@ -35,6 +36,17 @@ class ContentBlock extends Model
         'is_container',
         'is_published',
         'visualization_config',
+        'content_guidance',
+        'generation_status',
+        'summary_sentence',
+        'key_terms_introduced',
+        'symbols_used',
+        'formulas_used',
+        'word_count',
+        'nigerian_context_used',
+        'last_generated_at',
+        'last_generation_log_id',
+        'drift_advisory',
     ];
 
     /** @return array<string, string> */
@@ -52,6 +64,14 @@ class ContentBlock extends Model
             'is_container' => 'boolean',
             'is_published' => 'boolean',
             'visualization_config' => 'array',
+            'generation_status' => BlockGenerationStatus::class,
+            'key_terms_introduced' => 'array',
+            'symbols_used' => 'array',
+            'formulas_used' => 'array',
+            'word_count' => 'integer',
+            'nigerian_context_used' => 'boolean',
+            'last_generated_at' => 'datetime',
+            'drift_advisory' => 'array',
         ];
     }
 
@@ -120,5 +140,10 @@ class ContentBlock extends Model
     public function scopeSearch(Builder $query, string $term): Builder
     {
         return $query->where('title', 'ilike', "%{$term}%");
+    }
+
+    public function lastGenerationLog(): BelongsTo
+    {
+        return $this->belongsTo(\App\Models\AIGenerationLog::class, 'last_generation_log_id');
     }
 }

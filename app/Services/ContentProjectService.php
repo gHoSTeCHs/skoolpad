@@ -61,6 +61,10 @@ class ContentProjectService
             throw new \DomainException('No research results to approve. Run curriculum research first.');
         }
 
+        if ($project->hasApprovedResearch()) {
+            throw new \DomainException('Research has already been approved. Cannot approve twice.');
+        }
+
         DB::transaction(function () use ($project, $editedTopics) {
             $project->updateAiContext('research_approved', $editedTopics);
             $project->updateProgressData('research_approved_at', now()->toISOString());
@@ -267,7 +271,12 @@ class ContentProjectService
         }
 
         DB::transaction(function () use ($project, $topicKey, $data) {
-            $discipline = $project->discipline ?? $project->curriculumSubject?->discipline;
+            $fresh = ContentProject::query()->lockForUpdate()->find($project->id);
+            if ($fresh->isBlockApproved($topicKey)) {
+                throw new \DomainException("Topic '{$topicKey}' has already been approved.");
+            }
+
+            $discipline = $fresh->discipline ?? $fresh->curriculumSubject?->discipline;
 
             if (! $discipline) {
                 throw new \DomainException('Cannot determine discipline for this project.');
@@ -287,53 +296,74 @@ class ContentProjectService
                 'slug' => $slug,
                 'summary' => $data['topic_summary'] ?? null,
                 'estimated_read_minutes' => $data['estimated_total_minutes'] ?? null,
-                'education_level' => $project->isSecondary() ? 'secondary' : 'tertiary',
+                'education_level' => $fresh->isSecondary() ? 'secondary' : 'tertiary',
                 'is_published' => false,
             ]);
 
             $this->createBlocksFromStructure($topic, $data['blocks']);
 
-            $this->linkSchemeOfWorkItems($project, $topicKey, $topic);
+            $this->linkSchemeOfWorkItems($fresh, $topicKey, $topic);
 
-            $approved = $project->progress_data['blocks_approved'] ?? [];
+            $approved = $fresh->progress_data['blocks_approved'] ?? [];
             $approved[$topicKey] = [
                 'topic_id' => $topic->id,
                 'approved_at' => now()->toISOString(),
             ];
-            $project->updateProgressData('blocks_approved', $approved);
+            $fresh->updateProgressData('blocks_approved', $approved);
         });
     }
 
     private function createBlocksFromStructure(CanonicalTopic $topic, array $blocks): void
     {
-        $createdBlocks = [];
-
         $processingOrder = array_keys($blocks);
         usort($processingOrder, fn ($a, $b) => ($blocks[$a]['depth_level'] ?? 0) <=> ($blocks[$b]['depth_level'] ?? 0));
 
+        $createdBlocks = [];
+        $siblingCounts = [];
+
         foreach ($processingOrder as $index) {
             $blockData = $blocks[$index];
-            $parentBlockId = null;
 
-            if ($blockData['parent_index'] !== null && isset($createdBlocks[$blockData['parent_index']])) {
-                $parentBlockId = $createdBlocks[$blockData['parent_index']]->id;
+            $parentIndex = $blockData['parent_index'] ?? null;
+            $parentBlock = ($parentIndex !== null && isset($createdBlocks[$parentIndex]))
+                ? $createdBlocks[$parentIndex]
+                : null;
+
+            $siblingKey = $parentBlock ? $parentBlock->id : '__root__';
+            $siblingCounts[$siblingKey] = ($siblingCounts[$siblingKey] ?? 0) + 1;
+            $position = $siblingCounts[$siblingKey];
+
+            if ($parentBlock) {
+                $depth = $parentBlock->depth_level + 1;
+                $path = $parentBlock->path.'.'.$position;
+                if (! $parentBlock->is_container) {
+                    $parentBlock->update(['is_container' => true, 'content' => null, 'estimated_read_time' => null, 'content_guidance' => null]);
+                    $parentBlock->is_container = true;
+                }
+            } else {
+                $depth = 0;
+                $path = (string) $position;
             }
 
-            $vizConfig = null;
-            if (! empty($blockData['visualization']['recommended'])) {
-                $vizConfig = $blockData['visualization'];
-            }
+            $vizConfig = ! empty($blockData['visualization']['recommended'])
+                ? $blockData['visualization']
+                : null;
 
-            $block = $this->blockService->createBlock($topic, [
+            $block = \App\Models\ContentBlock::query()->create([
+                'canonical_topic_id' => $topic->id,
+                'parent_block_id' => $parentBlock?->id,
                 'title' => $blockData['title'],
                 'slug' => $blockData['slug'] ?? Str::slug($blockData['title']),
                 'block_type' => $blockData['block_type'],
                 'is_container' => $blockData['is_container'],
-                'parent_block_id' => $parentBlockId,
+                'depth_level' => $depth,
+                'path' => $path,
+                'sort_order' => $position,
                 'estimated_read_time' => $blockData['estimated_read_time'] ?? null,
                 'difficulty_level' => $blockData['difficulty_level'] ?? null,
                 'bloom_level' => $blockData['bloom_level'] ?? null,
                 'visualization_config' => $vizConfig,
+                'content_guidance' => $blockData['is_container'] ? null : ($blockData['content_guidance'] ?? null),
             ]);
 
             $createdBlocks[$index] = $block;
@@ -408,11 +438,13 @@ class ContentProjectService
 
         if ($approvedScheme) {
             $topics = [];
+            $usedKeys = [];
             foreach ($approvedScheme as $term) {
                 foreach ($term['topics'] as $topic) {
+                    $key = $this->uniqueTopicKey($topic['title'], $usedKeys);
                     $researchTopic = $this->findResearchTopic($approvedResearch, $topic['title']);
                     $topics[] = [
-                        'key' => Str::slug($topic['title']),
+                        'key' => $key,
                         'title' => $topic['title'],
                         'term_number' => $term['term_number'],
                         'week_start' => $topic['week_start'],
@@ -427,15 +459,19 @@ class ContentProjectService
         }
 
         if ($approvedResearch) {
-            return array_map(fn ($topic) => [
-                'key' => Str::slug($topic['title']),
-                'title' => $topic['title'],
-                'term_number' => $topic['term_number'] ?? null,
-                'week_start' => null,
-                'periods' => null,
-                'sub_topics' => $topic['sub_topics'] ?? [],
-                'waec_alignment_note' => $topic['waec_alignment_note'] ?? null,
-            ], $approvedResearch);
+            $usedKeys = [];
+
+            return array_map(function ($topic) use (&$usedKeys) {
+                return [
+                    'key' => $this->uniqueTopicKey($topic['title'], $usedKeys),
+                    'title' => $topic['title'],
+                    'term_number' => $topic['term_number'] ?? null,
+                    'week_start' => null,
+                    'periods' => null,
+                    'sub_topics' => $topic['sub_topics'] ?? [],
+                    'waec_alignment_note' => $topic['waec_alignment_note'] ?? null,
+                ];
+            }, $approvedResearch);
         }
 
         return [];
@@ -452,6 +488,20 @@ class ContentProjectService
         }
 
         throw new \DomainException("Topic '{$topicKey}' not found in project.");
+    }
+
+    private function uniqueTopicKey(string $title, array &$usedKeys): string
+    {
+        $base = Str::slug($title);
+        $key = $base;
+        $suffix = 2;
+        while (in_array($key, $usedKeys, true)) {
+            $key = "{$base}-{$suffix}";
+            $suffix++;
+        }
+        $usedKeys[] = $key;
+
+        return $key;
     }
 
     private function findResearchTopic(?array $approvedResearch, string $title): ?array
@@ -519,7 +569,7 @@ class ContentProjectService
      * If no roots remain, promotes minimum-depth blocks to roots.
      *
      * @param  array<string, mixed>  $data
-     * @return array<string, mixed>|null  Normalized data, or null if no valid root candidates exist
+     * @return array<string, mixed>|null Normalized data, or null if no valid root candidates exist
      */
     public static function normalizeBlockStructure(array $data): ?array
     {
@@ -582,5 +632,89 @@ class ContentProjectService
         $data['blocks'] = $blocks;
 
         return $data;
+    }
+
+    public function markTopicComplete(\App\Models\ContentProject $project, \App\Models\CanonicalTopic $topic): void
+    {
+        DB::transaction(function () use ($topic) {
+            $leaves = \App\Models\ContentBlock::query()
+                ->where('canonical_topic_id', $topic->id)
+                ->where('is_container', false)
+                ->lockForUpdate()
+                ->get();
+
+            if ($leaves->isEmpty()) {
+                throw new \DomainException("Topic '{$topic->title}' has no leaf blocks to publish.");
+            }
+
+            $unapproved = $leaves->filter(
+                fn (\App\Models\ContentBlock $b) => $b->generation_status !== \App\Enums\BlockGenerationStatus::Approved
+            );
+
+            if ($unapproved->isNotEmpty()) {
+                throw new \DomainException(
+                    "Cannot mark topic complete — {$unapproved->count()} block(s) are not approved."
+                );
+            }
+
+            $topic->update(['is_published' => true, 'published_at' => now()]);
+            \App\Models\ContentBlock::query()
+                ->where('canonical_topic_id', $topic->id)
+                ->where('is_container', false)
+                ->update(['is_published' => true]);
+        });
+    }
+
+    public function resetTopicContent(\App\Models\ContentProject $project, \App\Models\CanonicalTopic $topic): void
+    {
+        // Acquire the same lock generation jobs use so no job can start during the
+        // reset. If the lock is already held, generation is in progress — reject.
+        if (! \App\ContentStudio\Support\TopicGenerationLock::acquire($topic->id)) {
+            throw new \DomainException('Cannot reset — content generation is in progress for this topic.');
+        }
+
+        try {
+            DB::transaction(function () use ($project, $topic) {
+                $blockIds = \App\Models\ContentBlock::query()
+                    ->where('canonical_topic_id', $topic->id)
+                    ->where('is_container', false)
+                    ->pluck('id')
+                    ->all();
+
+                \App\Models\ContentBlock::query()
+                    ->whereIn('id', $blockIds)
+                    ->update([
+                        'generation_status' => \App\Enums\BlockGenerationStatus::NotStarted->value,
+                        'content' => null,
+                        'summary_sentence' => null,
+                        'key_terms_introduced' => null,
+                        'symbols_used' => null,
+                        'formulas_used' => null,
+                        'word_count' => null,
+                        'nigerian_context_used' => null,
+                        'last_generated_at' => null,
+                        'last_generation_log_id' => null,
+                        'drift_advisory' => null,
+                        'is_published' => false,
+                    ]);
+
+                $topic->update([
+                    'glossary' => null,
+                    'is_published' => false,
+                    'published_at' => null,
+                ]);
+
+                if (! empty($blockIds)) {
+                    $project->updateAiContext(
+                        'content_failed',
+                        collect($project->ai_context['content_failed'] ?? [])
+                            ->except($blockIds)
+                            ->all()
+                    );
+                }
+            });
+        } finally {
+            \App\ContentStudio\Support\TopicGenerationLock::release($topic->id);
+        }
     }
 }

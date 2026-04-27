@@ -1,4 +1,4 @@
-import { useCallback, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { router } from '@inertiajs/react';
 import { echo } from '@laravel/echo-react';
 import type { ContentProject, GenerationLogEntry } from '@/types/content-studio';
@@ -13,6 +13,8 @@ interface EventPayload {
         state?: StreamStatus;
         message?: string;
         generation_log_id?: string | null;
+        block_id?: string;
+        topic_id?: string;
     };
 }
 
@@ -99,7 +101,7 @@ export function useGenerationStream(): UseGenerationStreamReturn {
                         teardown();
 
                         router.reload({
-                            only: ['project', 'generationLogs', 'resolvedModels'],
+                            only: ['project', 'generationLogs', 'resolvedModels', 'topicsWithBlocks'],
                             onSuccess: (page) => {
                                 const props = page.props as unknown as ReloadedProps;
                                 const logEntry = props.generationLogs[0] ?? null;
@@ -113,7 +115,7 @@ export function useGenerationStream(): UseGenerationStreamReturn {
                         teardown();
 
                         router.reload({
-                            only: ['project', 'generationLogs', 'resolvedModels'],
+                            only: ['project', 'generationLogs', 'resolvedModels', 'topicsWithBlocks'],
                             onSuccess: () => {
                                 onError(errorMsg);
                             },
@@ -123,6 +125,12 @@ export function useGenerationStream(): UseGenerationStreamReturn {
         },
         [teardown],
     );
+
+    useEffect(() => {
+        return () => {
+            teardown();
+        };
+    }, [teardown]);
 
     return { status, message, startStream, cancel };
 }

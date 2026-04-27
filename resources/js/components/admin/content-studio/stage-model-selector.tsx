@@ -3,7 +3,7 @@ import { Check, ChevronDown, Loader2, Zap } from 'lucide-react';
 import { sileo } from 'sileo';
 import { updateModels } from '@/actions/App/Http/Controllers/Admin/ContentStudioController';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Select, SelectContent, SelectGroup, SelectItem, SelectLabel, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { csPut } from '@/lib/content-studio';
 import { cn } from '@/lib/utils';
 import type {
@@ -11,9 +11,10 @@ import type {
     ContentProject,
     ModelResolutionSource,
     ResolvedStageModel,
+    ThinkingMode,
 } from '@/types/content-studio';
 
-type Stage = 'research' | 'scheme' | 'blocks';
+type Stage = 'research' | 'scheme' | 'blocks' | 'content';
 type Mode = 'default' | 'stage' | 'run';
 
 interface StageModelSelectorProps {
@@ -28,16 +29,18 @@ interface StageModelSelectorProps {
     disabled?: boolean;
 }
 
-const STAGE_COLUMN: Record<Stage, 'research_model_id' | 'scheme_model_id' | 'blocks_model_id'> = {
+const STAGE_COLUMN: Record<Stage, 'research_model_id' | 'scheme_model_id' | 'blocks_model_id' | 'content_model_id'> = {
     research: 'research_model_id',
     scheme: 'scheme_model_id',
     blocks: 'blocks_model_id',
+    content: 'content_model_id',
 };
 
 const STAGE_LABEL: Record<Stage, string> = {
     research: 'research',
     scheme: 'scheme of work',
     blocks: 'block structure',
+    content: 'content',
 };
 
 const SOURCE_LABEL: Record<ModelResolutionSource, string> = {
@@ -201,16 +204,7 @@ export function StageModelSelector({
                                         <SelectValue />
                                     </SelectTrigger>
                                     <SelectContent>
-                                        {aiModels.map((m) => (
-                                            <SelectItem key={m.id} value={m.id} className="text-xs">
-                                                <span className="flex items-baseline gap-2">
-                                                    <span>{m.name}</span>
-                                                    <span className="font-mono text-[10px] text-muted-foreground">
-                                                        {m.model_id}
-                                                    </span>
-                                                </span>
-                                            </SelectItem>
-                                        ))}
+                                        <GroupedModelList aiModels={aiModels} />
                                     </SelectContent>
                                 </Select>
                                 <button
@@ -249,16 +243,7 @@ export function StageModelSelector({
                                         <SelectValue />
                                     </SelectTrigger>
                                     <SelectContent>
-                                        {aiModels.map((m) => (
-                                            <SelectItem key={m.id} value={m.id} className="text-xs">
-                                                <span className="flex items-baseline gap-2">
-                                                    <span>{m.name}</span>
-                                                    <span className="font-mono text-[10px] text-muted-foreground">
-                                                        {m.model_id}
-                                                    </span>
-                                                </span>
-                                            </SelectItem>
-                                        ))}
+                                        <GroupedModelList aiModels={aiModels} />
                                     </SelectContent>
                                 </Select>
                                 <button
@@ -392,4 +377,51 @@ function deriveChip(
         name: resolved.name,
         source: SOURCE_LABEL[resolved.source],
     };
+}
+
+function ThinkingChip({ mode }: { mode: ThinkingMode }) {
+    if (mode === 'none') return null;
+
+    const styles =
+        mode === 'max'
+            ? 'border-[color:var(--badge-danger-bg)] bg-[color:var(--badge-danger-bg)] text-[color:var(--badge-danger-fg)]'
+            : 'border-[color:var(--badge-reward-bg)] bg-[color:var(--badge-reward-bg)] text-[color:var(--badge-reward-fg)]';
+
+    return (
+        <span className={`inline-flex items-center rounded-sm border px-1 font-mono text-[9px] uppercase tracking-[0.14em] ${styles}`}>
+            {mode === 'max' ? 'Think Max' : 'Think'}
+        </span>
+    );
+}
+
+function GroupedModelList({ aiModels }: { aiModels: AIModelOption[] }) {
+    const groups = useMemo(() => {
+        const map = new Map<string, AIModelOption[]>();
+        for (const m of aiModels) {
+            const key = m.provider_name;
+            if (!map.has(key)) map.set(key, []);
+            map.get(key)!.push(m);
+        }
+        return map;
+    }, [aiModels]);
+
+    return (
+        <>
+            {[...groups.entries()].map(([providerName, models]) => (
+                <SelectGroup key={providerName}>
+                    <SelectLabel className="font-mono text-[9px] uppercase tracking-[0.18em] text-muted-foreground/70 px-2 pt-2 pb-0.5">
+                        {providerName}
+                    </SelectLabel>
+                    {models.map((m) => (
+                        <SelectItem key={m.id} value={m.id} className="text-xs">
+                            <span className="flex items-center gap-2">
+                                <span className="truncate">{m.name}</span>
+                                <ThinkingChip mode={m.thinking_mode} />
+                            </span>
+                        </SelectItem>
+                    ))}
+                </SelectGroup>
+            ))}
+        </>
+    );
 }

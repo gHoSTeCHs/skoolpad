@@ -1,15 +1,29 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 import { Head } from '@inertiajs/react';
 import ContentStudioController from '@/actions/App/Http/Controllers/Admin/ContentStudioController';
 import { GenerationLogPanel } from '@/components/admin/content-studio/generation-log-panel';
 import { ProjectModelSummary } from '@/components/admin/content-studio/project-model-summary';
 import { ProjectStepper } from '@/components/admin/content-studio/project-stepper';
 import { StageBlocks } from '@/components/admin/content-studio/stage-blocks';
+import { StageContent } from '@/components/admin/content-studio/stage-content';
 import { StageResearch } from '@/components/admin/content-studio/stage-research';
 import { StageScheme } from '@/components/admin/content-studio/stage-scheme';
 import { Badge } from '@/components/ui/badge';
 import AdminLayout from '@/layouts/admin-layout';
-import type { AIModelOption, ContentProject, ContentProjectStatus, GenerationLogEntry, ResolvedStageModels } from '@/types/content-studio';
+import type { AIModelOption, ContentProject, ContentProjectStatus, GenerationLogEntry, ResolvedStageModels, TopicWithBlocks } from '@/types/content-studio';
+
+
+function getDefaultStep(project: ContentProject): string {
+    const anyTopicApproved = Object.keys(project.progress_data?.blocks_approved ?? {}).length > 0;
+    const schemeApproved = !!project.progress_data?.scheme_approved_at;
+    const schemeSkipped = !!project.progress_data?.scheme_skipped;
+    const researchComplete = !!project.progress_data?.research_approved_at;
+
+    if (anyTopicApproved) return 'content';
+    if (schemeApproved || schemeSkipped) return 'blocks';
+    if (researchComplete) return 'scheme';
+    return 'research';
+}
 
 interface Props {
     project: ContentProject;
@@ -17,14 +31,15 @@ interface Props {
     aiModels: AIModelOption[];
     platformDefaultModelId: string | null;
     resolvedModels: ResolvedStageModels;
+    topicsWithBlocks: TopicWithBlocks[];
 }
 
 const STATUS_STYLES: Record<ContentProjectStatus, string> = {
     draft: 'bg-[var(--badge-neutral-bg)] text-[var(--badge-neutral-fg)]',
-    research: 'bg-blue-100 text-blue-800 dark:bg-blue-900/40 dark:text-blue-300 reader:bg-blue-900/40 reader:text-blue-300',
-    structuring: 'bg-amber-100 text-amber-800 dark:bg-amber-900/40 dark:text-amber-300 reader:bg-amber-900/40 reader:text-amber-300',
-    generating: 'bg-purple-100 text-purple-800 dark:bg-purple-900/40 dark:text-purple-300 reader:bg-purple-900/40 reader:text-purple-300',
-    reviewing: 'bg-orange-100 text-orange-800 dark:bg-orange-900/40 dark:text-orange-300 reader:bg-orange-900/40 reader:text-orange-300',
+    research: 'bg-[var(--badge-primary-bg)] text-[var(--badge-primary-fg)]',
+    structuring: 'bg-[var(--badge-reward-bg)] text-[var(--badge-reward-fg)]',
+    generating: 'bg-[var(--badge-primary-bg)] text-[var(--badge-primary-fg)]',
+    reviewing: 'bg-[var(--badge-danger-bg)] text-[var(--badge-danger-fg)]',
     complete: 'bg-[var(--badge-reward-bg)] text-[var(--badge-reward-fg)]',
 };
 
@@ -32,56 +47,77 @@ interface StageWorkspaceProps {
     project: ContentProject;
     aiModels: AIModelOption[];
     resolvedModels: ResolvedStageModels;
+    topicsWithBlocks: TopicWithBlocks[];
+    activeStep: string;
     onProjectUpdate: (project: ContentProject) => void;
     onLogAppend: (entry: GenerationLogEntry) => void;
 }
 
-function StageWorkspace({ project, aiModels, resolvedModels, onProjectUpdate, onLogAppend }: StageWorkspaceProps) {
+function StageWorkspace({ project, aiModels, resolvedModels, topicsWithBlocks, activeStep, onProjectUpdate, onLogAppend }: StageWorkspaceProps) {
     const status = project.status;
-    const aiContext = project.ai_context;
-    const researchApproved = !!aiContext?.research_approved;
-    const schemeApproved = !!aiContext?.scheme_approved;
+    const schemeApproved = !!project.progress_data?.scheme_approved_at;
     const schemeSkipped = !!project.progress_data?.scheme_skipped;
+    const anyTopicApproved = Object.keys(project.progress_data?.blocks_approved ?? {}).length > 0;
 
-    return (
-        <div className="space-y-4">
-            <StageResearch
+    if (activeStep === 'content' && anyTopicApproved) {
+        return (
+            <div className="overflow-hidden rounded-lg border border-border" style={{ height: 'calc(100vh - 22rem)' }}>
+                <StageContent
+                    project={project}
+                    topicsWithBlocks={topicsWithBlocks}
+                    aiModels={aiModels}
+                    resolvedModels={resolvedModels}
+                    onProjectUpdate={onProjectUpdate}
+                />
+            </div>
+        );
+    }
+
+    if (activeStep === 'blocks' && (schemeApproved || schemeSkipped)) {
+        return (
+            <StageBlocks
                 project={project}
                 aiModels={aiModels}
-                resolvedModel={resolvedModels.research}
-                isActive={status === 'draft' || status === 'research'}
+                resolvedModel={resolvedModels.blocks}
+                isActive={status === 'structuring'}
                 onProjectUpdate={onProjectUpdate}
                 onLogAppend={onLogAppend}
             />
+        );
+    }
 
-            {researchApproved && (
-                <StageScheme
-                    project={project}
-                    aiModels={aiModels}
-                    resolvedModel={resolvedModels.scheme}
-                    isActive={status === 'research' || (status === 'structuring' && !schemeApproved && !schemeSkipped)}
-                    onProjectUpdate={onProjectUpdate}
-                    onLogAppend={onLogAppend}
-                />
-            )}
+    if (activeStep === 'scheme') {
+        return (
+            <StageScheme
+                project={project}
+                aiModels={aiModels}
+                resolvedModel={resolvedModels.scheme}
+                isActive={status === 'research' || (status === 'structuring' && !schemeApproved && !schemeSkipped)}
+                onProjectUpdate={onProjectUpdate}
+                onLogAppend={onLogAppend}
+            />
+        );
+    }
 
-            {(schemeApproved || schemeSkipped) && (
-                <StageBlocks
-                    project={project}
-                    aiModels={aiModels}
-                    resolvedModel={resolvedModels.blocks}
-                    isActive={status === 'structuring'}
-                    onProjectUpdate={onProjectUpdate}
-                    onLogAppend={onLogAppend}
-                />
-            )}
-        </div>
+    return (
+        <StageResearch
+            project={project}
+            aiModels={aiModels}
+            resolvedModel={resolvedModels.research}
+            isActive={status === 'draft' || status === 'research'}
+            onProjectUpdate={onProjectUpdate}
+            onLogAppend={onLogAppend}
+        />
     );
 }
 
-export default function ContentStudioShow({ project: initialProject, generationLogs: initialLogs, aiModels, platformDefaultModelId, resolvedModels }: Props) {
+export default function ContentStudioShow({ project: initialProject, generationLogs: propLogs, aiModels, platformDefaultModelId, resolvedModels, topicsWithBlocks }: Props) {
     const [project, setProject] = useState(initialProject);
-    const [logs, setLogs] = useState(initialLogs);
+    const [logs, setLogs] = useState(propLogs);
+    const [activeStep, setActiveStep] = useState(() => getDefaultStep(initialProject));
+
+    // Sync whenever Inertia updates generationLogs via a partial reload.
+    useEffect(() => { setLogs(propLogs); }, [propLogs]);
 
     const handleProjectUpdate = useCallback((updated: ContentProject) => {
         setProject(updated);
@@ -134,12 +170,16 @@ export default function ContentStudioShow({ project: initialProject, generationL
                     status={project.status}
                     progressData={project.progress_data}
                     mode={project.mode}
+                    selectedStep={activeStep}
+                    onStepClick={setActiveStep}
                 />
 
                 <StageWorkspace
                     project={project}
                     aiModels={aiModels}
                     resolvedModels={resolvedModels}
+                    topicsWithBlocks={topicsWithBlocks}
+                    activeStep={activeStep}
                     onProjectUpdate={handleProjectUpdate}
                     onLogAppend={handleLogAppend}
                 />
