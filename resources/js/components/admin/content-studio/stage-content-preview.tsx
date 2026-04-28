@@ -312,7 +312,7 @@ export function StageContentPreview({
 
     return (
         <>
-            <div className="grid h-full min-h-0 grid-cols-[240px_300px_1fr] overflow-hidden">
+            <div className="grid h-full min-h-0 grid-cols-[240px_300px_1fr] grid-rows-[minmax(0,1fr)] overflow-hidden">
                 <TopicsColumn
                     topics={topicsWithBlocks}
                     activeTopicId={activeTopic.id}
