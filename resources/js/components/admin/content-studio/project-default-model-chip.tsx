@@ -40,6 +40,17 @@ export function ProjectDefaultModelChip({
     const platformDefault = aiModels.find((m) => m.id === platformDefaultModelId) ?? null;
     const isProjectOverride = currentDefaultId !== null;
 
+    const liveDefault = useMemo<{ id: string | null; name: string; source: 'project_default' | 'platform_default' | 'fallback' }>(() => {
+        if (currentDefaultId) {
+            const m = aiModels.find((x) => x.id === currentDefaultId);
+            if (m) return { id: m.id, name: m.name, source: 'project_default' };
+        }
+        if (platformDefault) {
+            return { id: platformDefault.id, name: platformDefault.name, source: 'platform_default' };
+        }
+        return { id: resolvedDefaultModel.id, name: resolvedDefaultModel.name, source: 'fallback' };
+    }, [currentDefaultId, aiModels, platformDefault, resolvedDefaultModel]);
+
     async function persist(modelId: string | null) {
         setSaving(true);
         try {
@@ -58,11 +69,11 @@ export function ProjectDefaultModelChip({
     }
 
     const sourceLabel =
-        resolvedDefaultModel.source === 'project_default'
+        liveDefault.source === 'project_default'
             ? 'project default'
-            : resolvedDefaultModel.source === 'platform_default'
+            : liveDefault.source === 'platform_default'
               ? 'platform default'
-              : resolvedDefaultModel.source;
+              : liveDefault.source;
 
     return (
         <Popover open={open} onOpenChange={setOpen}>
@@ -70,10 +81,10 @@ export function ProjectDefaultModelChip({
                 <button
                     type="button"
                     className="inline-flex h-8 items-center gap-2 rounded-md border border-border bg-card px-3 text-[12.5px] font-medium transition-colors hover:border-border/70"
-                    title={`Default model · resolved via ${resolvedDefaultModel.source}`}
+                    title={`Default model · resolved via ${liveDefault.source}`}
                 >
                     <span className={cn('h-1.5 w-1.5 rounded-full', isProjectOverride ? 'bg-primary' : 'bg-muted-foreground/60')} />
-                    <span>{resolvedDefaultModel.name}</span>
+                    <span>{liveDefault.name}</span>
                     <ChevronDown className="h-3 w-3 text-muted-foreground/60" />
                 </button>
             </PopoverTrigger>
@@ -97,7 +108,7 @@ export function ProjectDefaultModelChip({
                                 </div>
                             </div>
                             {models.map((m) => {
-                                const isActive = m.id === resolvedDefaultModel.id;
+                                const isActive = m.id === liveDefault.id;
                                 return (
                                     <button
                                         key={m.id}
@@ -138,7 +149,7 @@ export function ProjectDefaultModelChip({
                     </div>
                 )}
 
-                {!isProjectOverride && resolvedDefaultModel.id && (
+                {!isProjectOverride && liveDefault.id && (
                     <div className="flex items-center gap-1.5 border-t border-border bg-background/40 px-4 py-2 text-[11.5px] text-muted-foreground">
                         <Bookmark className="h-3 w-3" />
                         Selecting a model saves it as the project default.
