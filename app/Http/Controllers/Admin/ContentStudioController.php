@@ -119,20 +119,20 @@ class ContentStudioController extends Controller
     {
         Gate::authorize('view', $contentProject);
 
-        return Inertia::render('admin/content-studio/show', $this->buildShowProps($contentProject, 20));
+        return Inertia::render('admin/content-studio/show', $this->buildShowProps($contentProject));
     }
 
     public function preview(ContentProject $contentProject): Response
     {
         Gate::authorize('view', $contentProject);
 
-        return Inertia::render('admin/content-studio/show-preview', $this->buildShowProps($contentProject, 100));
+        return Inertia::render('admin/content-studio/show-preview', $this->buildShowProps($contentProject));
     }
 
     /**
      * @return array<string, mixed>
      */
-    private function buildShowProps(ContentProject $contentProject, int $logLimit): array
+    private function buildShowProps(ContentProject $contentProject): array
     {
         $generationLogs = $contentProject->aiGenerationLogs()
             ->select([
@@ -147,7 +147,7 @@ class ContentStudioController extends Controller
                 'created_at',
             ])
             ->latest()
-            ->limit($logLimit)
+            ->limit(100)
             ->get();
 
         $activeModels = AIModel::query()
