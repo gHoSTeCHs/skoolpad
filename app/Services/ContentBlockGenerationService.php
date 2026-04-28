@@ -301,6 +301,8 @@ class ContentBlockGenerationService
             $context,
             $project,
             $modelId ?? $project->content_model_id,
+            contentBlockId: $block->id,
+            canonicalTopicId: $block->canonical_topic_id,
         );
 
         if (! $response->valid) {

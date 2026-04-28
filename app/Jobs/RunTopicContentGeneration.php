@@ -91,7 +91,7 @@ class RunTopicContentGeneration implements ShouldQueue
 
                 try {
                     $response = $service->generateBlockContent($block, $this->project, $this->modelId);
-                    $this->broadcastUpdate('complete', [
+                    $this->broadcastUpdate('item_complete', [
                         'block_id' => $block->id,
                         'generation_log_id' => $response->generation_log_id,
                     ]);
@@ -100,7 +100,7 @@ class RunTopicContentGeneration implements ShouldQueue
                         'project_id' => $this->project->id, 'block_id' => $block->id, 'error' => $e->getMessage(),
                     ]);
                     $pendingFailures[$block->id] = ['reason' => 'validation_exhausted', 'error_message' => $e->getMessage(), 'attempted_at' => now()->toIso8601String()];
-                    $this->broadcastUpdate('error', [
+                    $this->broadcastUpdate('item_error', [
                         'block_id' => $block->id,
                         'message' => 'Block generation failed. Check project logs for details.',
                     ]);
@@ -109,7 +109,7 @@ class RunTopicContentGeneration implements ShouldQueue
                         'project_id' => $this->project->id, 'block_id' => $block->id, 'exception' => $e,
                     ]);
                     $pendingFailures[$block->id] = ['reason' => 'unknown', 'error_message' => 'Unexpected error during generation', 'attempted_at' => now()->toIso8601String()];
-                    $this->broadcastUpdate('error', [
+                    $this->broadcastUpdate('item_error', [
                         'block_id' => $block->id,
                         'message' => 'Unexpected error. Check project logs for details.',
                     ]);

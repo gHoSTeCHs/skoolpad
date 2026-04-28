@@ -135,7 +135,17 @@ class ContentStudioController extends Controller
     private function buildShowProps(ContentProject $contentProject, int $logLimit): array
     {
         $generationLogs = $contentProject->aiGenerationLogs()
-            ->select(['id', 'prompt_type', 'model_used', 'is_valid', 'tokens_used', 'estimated_cost_cents', 'created_at'])
+            ->select([
+                'id',
+                'content_block_id',
+                'canonical_topic_id',
+                'prompt_type',
+                'model_used',
+                'is_valid',
+                'tokens_used',
+                'estimated_cost_cents',
+                'created_at',
+            ])
             ->latest()
             ->limit($logLimit)
             ->get();
