@@ -57,7 +57,7 @@ interface TopicEntry {
 
 function PaperShell({ children }: { children: React.ReactNode }) {
     return (
-        <div className="paper-surface min-h-full">
+        <div className="paper-surface h-full overflow-y-auto">
             <div className="mx-auto max-w-[1100px] px-10 py-8">{children}</div>
         </div>
     );
