@@ -26,10 +26,10 @@ function uiStatusFor(block: ContentBlock, isBusy: boolean): BlockUiStatus {
 }
 
 const STATUS_DOT_CLASS: Record<BlockUiStatus, string> = {
-    approved: 'bg-[var(--badge-primary-bg)]',
-    generated: 'bg-[var(--badge-reward-bg)]',
+    approved: 'bg-primary',
+    generated: 'bg-[color:var(--honey)]',
     generating: 'bg-[color:var(--honey)] gen-pulse',
-    advisory: 'bg-[var(--badge-danger-bg)]',
+    advisory: 'bg-destructive',
     not_started: 'bg-muted-foreground/30',
 };
 
