@@ -1,6 +1,7 @@
 'use no memo';
 import { useCallback, useEffect, useState } from 'react';
-import { ChevronLeft, ChevronRight, FileText } from 'lucide-react';
+import { ChevronLeft, ChevronRight, FileText, PenLine } from 'lucide-react';
+import { Button } from '@/components/ui/button';
 import { ContentRenderer } from '@/components/shared/content-renderer';
 import { TiptapEditor } from '@/components/shared/tiptap-editor';
 import { CompoundGenerateButton } from './compound-generate-button';
@@ -26,6 +27,7 @@ interface BlockEditorProps {
     onRegenerate: (modelId: string | null) => void;
     onSave: (payload: SaveContentPayload) => Promise<void>;
     onProjectUpdate: (project: ContentProject) => void;
+    onRequestGuidance: () => void;
     onPrevBlock: (() => void) | null;
     onNextBlock: (() => void) | null;
 }
@@ -41,6 +43,7 @@ export function BlockEditor({
     onRegenerate,
     onSave,
     onProjectUpdate,
+    onRequestGuidance,
     onPrevBlock,
     onNextBlock,
 }: BlockEditorProps) {
@@ -121,6 +124,7 @@ export function BlockEditor({
                             setRunOverrideId={setRunOverrideId}
                             onGenerate={() => onGenerate(runOverrideId)}
                             onProjectUpdate={onProjectUpdate}
+                            onRequestGuidance={onRequestGuidance}
                         />
                     )}
 
@@ -172,6 +176,7 @@ interface EmptyGenerateStateProps {
     setRunOverrideId: (id: string | null) => void;
     onGenerate: () => void;
     onProjectUpdate: (project: ContentProject) => void;
+    onRequestGuidance: () => void;
 }
 
 function EmptyGenerateState({
@@ -183,8 +188,28 @@ function EmptyGenerateState({
     setRunOverrideId,
     onGenerate,
     onProjectUpdate,
+    onRequestGuidance,
 }: EmptyGenerateStateProps) {
     const hasGuidance = !!block.content_guidance;
+
+    if (!hasGuidance) {
+        return (
+            <div className="flex flex-col items-start gap-4 rounded-md border border-dashed border-border bg-card/50 p-8">
+                <div className="flex items-center gap-2 text-muted-foreground">
+                    <FileText className="h-4 w-4" />
+                    <span className="text-[14px]">This block needs guidance before content can be generated.</span>
+                </div>
+                <Button onClick={onRequestGuidance}>
+                    <PenLine className="mr-1.5 h-3.5 w-3.5" />
+                    Add guidance
+                </Button>
+                <p className="text-[12px] text-muted-foreground">
+                    Describe scope, key concepts, examples, and depth level. Opens in the Inspector panel.
+                </p>
+            </div>
+        );
+    }
+
     return (
         <div className="flex flex-col items-start gap-4 rounded-md border border-dashed border-border bg-card/50 p-8">
             <div className="flex items-center gap-2 text-muted-foreground">
@@ -202,13 +227,14 @@ function EmptyGenerateState({
                 onRunOverrideChange={setRunOverrideId}
                 label="Generate content"
                 onGenerate={onGenerate}
-                disabled={!hasGuidance}
             />
-            {!hasGuidance && (
-                <p className="text-[12px] text-muted-foreground">
-                    Add guidance via the Inspector → Guidance tab before generating.
-                </p>
-            )}
+            <button
+                type="button"
+                onClick={onRequestGuidance}
+                className="text-[12px] text-muted-foreground underline-offset-2 hover:text-foreground hover:underline"
+            >
+                Edit guidance
+            </button>
         </div>
     );
 }

@@ -11,6 +11,7 @@ interface InspectorPanelProps {
     tab: InspectorTab | null;
     block: ContentBlock | null;
     blockHistory: GenerationLogEntry[];
+    historyLinkageAvailable: boolean;
     onClose: () => void;
     onUpdateGuidance: (guidance: string) => Promise<void>;
     onDismissAdvisory: () => void;
@@ -23,6 +24,7 @@ export function InspectorPanel({
     tab,
     block,
     blockHistory,
+    historyLinkageAvailable,
     onClose,
     onUpdateGuidance,
     onDismissAdvisory,
@@ -49,7 +51,9 @@ export function InspectorPanel({
                             isBusy={isBusy}
                         />
                     )}
-                    {tab === 'history' && <HistorySection entries={blockHistory} />}
+                    {tab === 'history' && (
+                        <HistorySection entries={blockHistory} linkageAvailable={historyLinkageAvailable} />
+                    )}
                 </div>
             </SheetContent>
         </Sheet>
@@ -130,7 +134,15 @@ function AdvisorySection({
     );
 }
 
-function HistorySection({ entries }: { entries: GenerationLogEntry[] }) {
+function HistorySection({ entries, linkageAvailable }: { entries: GenerationLogEntry[]; linkageAvailable: boolean }) {
+    if (!linkageAvailable) {
+        return (
+            <p className="text-[13px] text-muted-foreground">
+                Per-block history activates after the next backend update. Older logs aren&rsquo;t linked to specific
+                blocks yet.
+            </p>
+        );
+    }
     if (entries.length === 0) {
         return <p className="text-[13px] text-muted-foreground">No generation history for this block.</p>;
     }

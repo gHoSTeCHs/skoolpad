@@ -104,6 +104,12 @@ export function StageContentPreview({
         [generationLogs, activeBlock],
     );
 
+    const historyLinkageAvailable = useMemo(
+        () => generationLogs.some((l) => l.content_block_id !== undefined && l.content_block_id !== null)
+            || generationLogs.length === 0,
+        [generationLogs],
+    );
+
     const handleRunTopic = useCallback(
         async (topic: TopicWithBlocks, forceRegenerate: boolean) => {
             try {
@@ -340,6 +346,9 @@ export function StageContentPreview({
                         onRegenerate={(modelId) => handleRegenerateBlock(activeBlock, modelId)}
                         onSave={(payload) => handleSaveBlock(activeBlock, payload)}
                         onProjectUpdate={onProjectUpdate}
+                        onRequestGuidance={() => {
+                            if (inspectorTab !== 'guidance') onInspectorTabClick('guidance');
+                        }}
                         onPrevBlock={
                             activeBlockIndex > 0
                                 ? () => setActiveBlockId(leafBlocks[activeBlockIndex - 1].id)
@@ -363,6 +372,7 @@ export function StageContentPreview({
                 tab={inspectorTab}
                 block={activeBlock}
                 blockHistory={blockHistory}
+                historyLinkageAvailable={historyLinkageAvailable}
                 onClose={() => inspectorTab && onInspectorTabClick(inspectorTab)}
                 onUpdateGuidance={(g) => (activeBlock ? handleUpdateGuidance(activeBlock, g) : Promise.resolve())}
                 onDismissAdvisory={() => activeBlock && handleDismissAdvisory(activeBlock)}
