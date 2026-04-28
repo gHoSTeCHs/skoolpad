@@ -3,15 +3,18 @@ import type { ReactNode } from 'react';
 import { StageRail, type StageKey } from '@/components/admin/content-studio/stage-rail';
 import { StudioTopBar } from '@/components/admin/content-studio/studio-top-bar';
 import { InspectorPeek, type InspectorTab } from '@/components/admin/content-studio/inspector-peek';
-import type { ContentProject, ResolvedStageModel, ResolvedStageModels } from '@/types/content-studio';
+import type { AIModelOption, ContentProject, ResolvedStageModel, ResolvedStageModels } from '@/types/content-studio';
 
 interface ContentStudioLayoutProps {
     project: ContentProject;
+    aiModels: AIModelOption[];
+    platformDefaultModelId: string | null;
     resolvedModels: ResolvedStageModels;
     logCount: number;
     selectedStep: StageKey;
     onStepClick: (key: StageKey) => void;
     onLogClick: () => void;
+    onProjectUpdate: (project: ContentProject) => void;
     inspectorTab: InspectorTab | null;
     onInspectorTabClick: (tab: InspectorTab) => void;
     inspectorEnabled?: boolean;
@@ -22,11 +25,14 @@ interface ContentStudioLayoutProps {
 
 export default function ContentStudioLayout({
     project,
+    aiModels,
+    platformDefaultModelId,
     resolvedModels,
     logCount,
     selectedStep,
     onStepClick,
     onLogClick,
+    onProjectUpdate,
     inspectorTab,
     onInspectorTabClick,
     inspectorEnabled = false,
@@ -50,8 +56,11 @@ export default function ContentStudioLayout({
                 <StudioTopBar
                     project={project}
                     resolvedDefaultModel={resolvedDefault}
+                    aiModels={aiModels}
+                    platformDefaultModelId={platformDefaultModelId}
                     logCount={logCount}
                     onLogClick={onLogClick}
+                    onProjectUpdate={onProjectUpdate}
                 />
                 <div className="min-h-0 flex-1 overflow-hidden">{children}</div>
             </main>

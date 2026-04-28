@@ -16,6 +16,7 @@ interface Props {
     project: ContentProject;
     generationLogs: GenerationLogEntry[];
     aiModels: AIModelOption[];
+    platformDefaultModelId: string | null;
     resolvedModels: ResolvedStageModels;
     topicsWithBlocks: TopicWithBlocks[];
 }
@@ -36,6 +37,7 @@ export default function ContentStudioShowPreview({
     project: initialProject,
     generationLogs: propLogs,
     aiModels,
+    platformDefaultModelId,
     resolvedModels,
     topicsWithBlocks,
 }: Props) {
@@ -66,11 +68,14 @@ export default function ContentStudioShowPreview({
     return (
         <ContentStudioLayout
             project={project}
+            aiModels={aiModels}
+            platformDefaultModelId={platformDefaultModelId}
             resolvedModels={resolvedModels}
             logCount={logs.length}
             selectedStep={activeStep}
             onStepClick={setActiveStep}
             onLogClick={() => setLogDrawerOpen((v) => !v)}
+            onProjectUpdate={handleProjectUpdate}
             inspectorTab={inspectorTab}
             onInspectorTabClick={handleInspectorTabClick}
             inspectorEnabled={activeStep === 'content'}

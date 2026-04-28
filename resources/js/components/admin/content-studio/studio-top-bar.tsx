@@ -2,13 +2,17 @@ import { Link } from '@inertiajs/react';
 import { ChevronLeft, History } from 'lucide-react';
 import * as ContentStudioAction from '@/actions/App/Http/Controllers/Admin/ContentStudioController';
 import { cn } from '@/lib/utils';
-import type { ContentProject, ContentProjectStatus, ResolvedStageModel } from '@/types/content-studio';
+import { ProjectDefaultModelChip } from './project-default-model-chip';
+import type { AIModelOption, ContentProject, ContentProjectStatus, ResolvedStageModel } from '@/types/content-studio';
 
 interface StudioTopBarProps {
     project: ContentProject;
     resolvedDefaultModel: ResolvedStageModel;
+    aiModels: AIModelOption[];
+    platformDefaultModelId: string | null;
     logCount: number;
     onLogClick: () => void;
+    onProjectUpdate: (project: ContentProject) => void;
 }
 
 const STATUS_CLASS: Record<ContentProjectStatus, string> = {
@@ -20,7 +24,15 @@ const STATUS_CLASS: Record<ContentProjectStatus, string> = {
     complete: 'bg-[var(--badge-reward-bg)] text-[var(--badge-reward-fg)]',
 };
 
-export function StudioTopBar({ project, resolvedDefaultModel, logCount, onLogClick }: StudioTopBarProps) {
+export function StudioTopBar({
+    project,
+    resolvedDefaultModel,
+    aiModels,
+    platformDefaultModelId,
+    logCount,
+    onLogClick,
+    onProjectUpdate,
+}: StudioTopBarProps) {
     const breadcrumb = project.mode === 'secondary' ? project.curriculum_subject_name : project.discipline_name;
     const title = breadcrumb ?? 'Untitled project';
 
@@ -53,14 +65,14 @@ export function StudioTopBar({ project, resolvedDefaultModel, logCount, onLogCli
                 </span>
             </div>
             <div className="flex-1" />
-            <button
-                type="button"
-                className="inline-flex h-8 items-center gap-2 rounded-md border border-border bg-card px-3 text-[12.5px] font-medium transition-colors hover:border-border/70"
-                title={`Default model · resolved via ${resolvedDefaultModel.source}`}
-            >
-                <span className="h-1.5 w-1.5 rounded-full bg-primary" />
-                <span>{resolvedDefaultModel.name}</span>
-            </button>
+            <ProjectDefaultModelChip
+                projectId={project.id}
+                currentDefaultId={project.default_ai_model_id}
+                platformDefaultModelId={platformDefaultModelId}
+                aiModels={aiModels}
+                resolvedDefaultModel={resolvedDefaultModel}
+                onProjectUpdate={onProjectUpdate}
+            />
             <button
                 type="button"
                 onClick={onLogClick}
