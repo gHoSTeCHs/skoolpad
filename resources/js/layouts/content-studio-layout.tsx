@@ -37,7 +37,7 @@ export default function ContentStudioLayout({
     const resolvedDefault: ResolvedStageModel = resolvedModels.content;
 
     return (
-        <div className="grid h-screen grid-cols-[56px_1fr_44px] overflow-hidden bg-background text-foreground">
+        <div className="fixed inset-0 flex bg-background text-foreground">
             <Head title={pageTitle ? `${pageTitle} — Content Studio` : 'Content Studio'} />
             <StageRail
                 status={project.status}
@@ -46,7 +46,7 @@ export default function ContentStudioLayout({
                 selectedStep={selectedStep}
                 onStepClick={onStepClick}
             />
-            <main className="flex h-screen min-w-0 flex-col overflow-hidden">
+            <main className="flex min-h-0 min-w-0 flex-1 flex-col">
                 <StudioTopBar
                     project={project}
                     resolvedDefaultModel={resolvedDefault}
