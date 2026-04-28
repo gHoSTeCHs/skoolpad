@@ -11,6 +11,7 @@ import { GenerateAllBlocksDialog } from './generate-all-blocks-dialog';
 import { MarkTopicCompleteDialog } from './mark-topic-complete-dialog';
 import { ResetTopicDialog } from './reset-topic-dialog';
 import { InspectorPanel } from './inspector-panel';
+import { GenerationOverlay } from './generation-overlay';
 import type { InspectorTab } from './inspector-peek';
 import type {
     AIModelOption,
@@ -59,13 +60,33 @@ export function StageContentPreview({
     const [generateAllOpen, setGenerateAllOpen] = useState(false);
     const [markCompleteOpen, setMarkCompleteOpen] = useState(false);
     const [resetOpen, setResetOpen] = useState(false);
+    const [topicGenTotal, setTopicGenTotal] = useState(0);
+    const [elapsedSec, setElapsedSec] = useState(0);
+    const startTimeRef = useRef<number | null>(null);
 
-    const { status, startStream } = useGenerationStream();
+    const { status, progressItems, startStream, cancel } = useGenerationStream();
     const isBusy = status === 'processing' || status === 'validating';
+    const isTopicGeneration = isBusy && busyBlockId === null;
 
     useEffect(() => {
         if (status === 'complete' || status === 'error') setBusyBlockId(null);
     }, [status]);
+
+    useEffect(() => {
+        if (!isTopicGeneration) {
+            startTimeRef.current = null;
+            setElapsedSec(0);
+            return;
+        }
+        startTimeRef.current = Date.now();
+        setElapsedSec(0);
+        const id = window.setInterval(() => {
+            if (startTimeRef.current) {
+                setElapsedSec(Math.round((Date.now() - startTimeRef.current) / 1000));
+            }
+        }, 1000);
+        return () => window.clearInterval(id);
+    }, [isTopicGeneration]);
 
     const activeTopic = useMemo(
         () => topicsWithBlocks.find((t) => t.id === activeTopicId) ?? topicsWithBlocks[0] ?? null,
@@ -112,6 +133,11 @@ export function StageContentPreview({
 
     const handleRunTopic = useCallback(
         async (topic: TopicWithBlocks, forceRegenerate: boolean) => {
+            const leaves = topic.blocks.filter((b) => !b.is_container);
+            const total = forceRegenerate
+                ? leaves.length
+                : leaves.filter((b) => b.generation_status === 'not_started').length;
+            setTopicGenTotal(total);
             try {
                 const response = await csPost<{ job_id: string }>(
                     ContentStudioAction.runTopicContent.url([project.id, topic.id]),
@@ -310,9 +336,15 @@ export function StageContentPreview({
     const notStartedCount = leafBlocks.filter((b) => b.generation_status === 'not_started').length;
     const allApproved = leafBlocks.length > 0 && leafBlocks.every((b) => b.generation_status === 'approved');
 
+    const elapsedLabel =
+        elapsedSec >= 60 ? `${Math.floor(elapsedSec / 60)}m ${elapsedSec % 60}s` : `${elapsedSec}s`;
+    const overlayItemsDone = progressItems.filter((i) => i.state === 'done').length;
+    const overlayItemsTotal = Math.max(topicGenTotal, progressItems.length);
+    const blockTitleById = new Map(activeTopic.blocks.map((b) => [b.id, `Block ${b.path} · ${b.title}`]));
+
     return (
         <>
-            <div className="grid h-full min-h-0 grid-cols-[240px_300px_1fr] grid-rows-[minmax(0,1fr)] overflow-hidden">
+            <div className="relative grid h-full min-h-0 grid-cols-[240px_300px_1fr] grid-rows-[minmax(0,1fr)] overflow-hidden">
                 <TopicsColumn
                     topics={topicsWithBlocks}
                     activeTopicId={activeTopic.id}
@@ -365,6 +397,19 @@ export function StageContentPreview({
                         This topic has no leaf blocks.
                     </div>
                 )}
+
+                <GenerationOverlay
+                    open={isTopicGeneration}
+                    title={`Generating content for ${activeTopic.title}`}
+                    subtitle="Content stage"
+                    resolvedModel={resolvedModels.content}
+                    itemsTotal={overlayItemsTotal}
+                    itemsDone={overlayItemsDone}
+                    elapsed={elapsedLabel}
+                    items={progressItems}
+                    blockTitleResolver={(id) => blockTitleById.get(id) ?? id}
+                    onCancel={() => cancel()}
+                />
             </div>
 
             <InspectorPanel
