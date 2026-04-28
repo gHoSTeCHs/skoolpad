@@ -2,8 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { router } from '@inertiajs/react';
 import { sileo } from 'sileo';
 import { useGenerationStream } from '@/hooks/use-generation-stream';
-import { csPost, csPut } from '@/lib/content-studio';
-import { comparePaths } from '@/lib/content-studio';
+import { comparePaths, csPost, csPut } from '@/lib/content-studio';
 import * as ContentStudioAction from '@/actions/App/Http/Controllers/Admin/ContentStudioController';
 import { TopicsColumn } from './topics-column';
 import { BlocksColumn } from './blocks-column';
@@ -30,6 +29,7 @@ interface StageContentPreviewProps {
     generationLogs: GenerationLogEntry[];
     inspectorTab: InspectorTab | null;
     onInspectorTabClick: (tab: InspectorTab) => void;
+    onActiveBlockChange?: (block: ContentBlock | null) => void;
     onProjectUpdate: (project: ContentProject) => void;
 }
 
@@ -41,6 +41,7 @@ export function StageContentPreview({
     generationLogs,
     inspectorTab,
     onInspectorTabClick,
+    onActiveBlockChange,
     onProjectUpdate,
 }: StageContentPreviewProps) {
     const mountedRef = useRef(true);
@@ -90,6 +91,10 @@ export function StageContentPreview({
 
     const activeBlock = leafBlocks.find((b) => b.id === activeBlockId) ?? null;
     const activeBlockIndex = activeBlock ? leafBlocks.findIndex((b) => b.id === activeBlock.id) : -1;
+
+    useEffect(() => {
+        onActiveBlockChange?.(activeBlock);
+    }, [activeBlock, onActiveBlockChange]);
 
     const blockHistory = useMemo(
         () =>
@@ -301,7 +306,7 @@ export function StageContentPreview({
 
     return (
         <>
-            <div className="grid h-full min-h-0 grid-cols-[260px_320px_1fr] overflow-hidden">
+            <div className="grid h-full min-h-0 grid-cols-[240px_300px_1fr] overflow-hidden">
                 <TopicsColumn
                     topics={topicsWithBlocks}
                     activeTopicId={activeTopic.id}

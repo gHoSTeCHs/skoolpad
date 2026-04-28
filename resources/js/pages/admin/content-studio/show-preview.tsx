@@ -5,6 +5,7 @@ import type { StageKey } from '@/components/admin/content-studio/stage-rail';
 import type { InspectorTab } from '@/components/admin/content-studio/inspector-peek';
 import type {
     AIModelOption,
+    ContentBlock,
     ContentProject,
     GenerationLogEntry,
     ResolvedStageModels,
@@ -15,7 +16,6 @@ interface Props {
     project: ContentProject;
     generationLogs: GenerationLogEntry[];
     aiModels: AIModelOption[];
-    platformDefaultModelId: string | null;
     resolvedModels: ResolvedStageModels;
     topicsWithBlocks: TopicWithBlocks[];
 }
@@ -44,6 +44,7 @@ export default function ContentStudioShowPreview({
     const [activeStep, setActiveStep] = useState<StageKey>(() => getDefaultStep(initialProject));
     const [inspectorTab, setInspectorTab] = useState<InspectorTab | null>(null);
     const [logDrawerOpen, setLogDrawerOpen] = useState(false);
+    const [activeBlock, setActiveBlock] = useState<ContentBlock | null>(null);
 
     useEffect(() => {
         setLogs(propLogs);
@@ -53,6 +54,10 @@ export default function ContentStudioShowPreview({
 
     const handleInspectorTabClick = useCallback((tab: InspectorTab) => {
         setInspectorTab((prev) => (prev === tab ? null : tab));
+    }, []);
+
+    const handleActiveBlockChange = useCallback((block: ContentBlock | null) => {
+        setActiveBlock(block);
     }, []);
 
     const isSecondary = project.mode === 'secondary';
@@ -69,6 +74,7 @@ export default function ContentStudioShowPreview({
             inspectorTab={inspectorTab}
             onInspectorTabClick={handleInspectorTabClick}
             inspectorEnabled={activeStep === 'content'}
+            inspectorHasAdvisory={!!activeBlock?.drift_advisory}
             pageTitle={pageTitle ?? undefined}
         >
             {activeStep === 'content' ? (
@@ -80,6 +86,7 @@ export default function ContentStudioShowPreview({
                     generationLogs={logs}
                     inspectorTab={inspectorTab}
                     onInspectorTabClick={handleInspectorTabClick}
+                    onActiveBlockChange={handleActiveBlockChange}
                     onProjectUpdate={handleProjectUpdate}
                 />
             ) : (

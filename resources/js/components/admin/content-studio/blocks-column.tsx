@@ -95,7 +95,7 @@ export function BlocksColumn({
                                 'grid w-full grid-cols-[32px_1fr_auto] items-start gap-2.5 border-l-2 px-3 py-2.5 text-left transition-colors',
                                 isActive
                                     ? 'border-l-foreground bg-card'
-                                    : 'border-l-transparent hover:bg-muted/40',
+                                    : 'border-l-transparent hover:bg-muted',
                             )}
                         >
                             <span className="pt-px text-right tech">{block.path}</span>

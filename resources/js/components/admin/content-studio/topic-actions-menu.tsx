@@ -41,12 +41,24 @@ export function TopicActionsMenu({
                 <DropdownMenuLabel className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground/80">
                     Topic actions
                 </DropdownMenuLabel>
-                <DropdownMenuItem onClick={onMarkCompleteClick} disabled={!canMarkComplete}>
+                <DropdownMenuItem
+                    disabled={!canMarkComplete}
+                    onSelect={(e) => {
+                        e.preventDefault();
+                        setTimeout(onMarkCompleteClick, 0);
+                    }}
+                >
                     <CheckCircle className="mr-2 h-3.5 w-3.5" />
                     Mark complete
                 </DropdownMenuItem>
                 <DropdownMenuSeparator />
-                <DropdownMenuItem onClick={onResetClick} className="text-destructive focus:text-destructive">
+                <DropdownMenuItem
+                    className="text-destructive focus:text-destructive"
+                    onSelect={(e) => {
+                        e.preventDefault();
+                        setTimeout(onResetClick, 0);
+                    }}
+                >
                     <RotateCcw className="mr-2 h-3.5 w-3.5" />
                     Reset topic
                 </DropdownMenuItem>
