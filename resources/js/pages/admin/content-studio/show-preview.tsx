@@ -3,6 +3,7 @@ import ContentStudioLayout from '@/layouts/content-studio-layout';
 import { StageContentPreview } from '@/components/admin/content-studio/stage-content-preview';
 import { StageResearchPreview } from '@/components/admin/content-studio/stage-research-preview';
 import { StageSchemePreview } from '@/components/admin/content-studio/stage-scheme-preview';
+import { StageBlocksPreview } from '@/components/admin/content-studio/stage-blocks-preview';
 import { LogDrawer } from '@/components/admin/content-studio/log-drawer';
 import type { StageKey } from '@/components/admin/content-studio/stage-rail';
 import type { InspectorTab } from '@/components/admin/content-studio/inspector-peek';
@@ -160,17 +161,16 @@ export default function ContentStudioShowPreview({
                     onProjectUpdate={handleProjectUpdate}
                     onLogAppend={handleLogAppend}
                 />
-            ) : (
-                <div className="flex h-full flex-col items-center justify-center gap-3 p-12 text-center">
-                    <p className="font-display text-[18px] font-semibold tracking-tight">
-                        {activeStep} stage placeholder
-                    </p>
-                    <p className="max-w-[48ch] text-[13.5px] text-muted-foreground">
-                        Phase 9 fills this in. Switch the rail icon to Content,
-                        Research, or Scheme to see redesigned stages.
-                    </p>
-                </div>
-            )}
+            ) : activeStep === 'blocks' ? (
+                <StageBlocksPreview
+                    project={project}
+                    aiModels={aiModels}
+                    resolvedModel={resolvedModels.blocks}
+                    isActive={project.status === 'structuring'}
+                    onProjectUpdate={handleProjectUpdate}
+                    onLogAppend={handleLogAppend}
+                />
+            ) : null}
             <LogDrawer
                 open={logDrawerOpen}
                 onOpenChange={setLogDrawerOpen}
