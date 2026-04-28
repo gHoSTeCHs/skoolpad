@@ -53,7 +53,9 @@ export function StageContentPreview({
         };
     }, []);
 
-    const [activeTopicId, setActiveTopicId] = useState<string | null>(topicsWithBlocks[0]?.id ?? null);
+    const [activeTopicId, setActiveTopicId] = useState<string | null>(
+        topicsWithBlocks[0]?.id ?? null,
+    );
     const [activeBlockId, setActiveBlockId] = useState<string | null>(null);
     const [busyBlockId, setBusyBlockId] = useState<string | null>(null);
 
@@ -64,7 +66,8 @@ export function StageContentPreview({
     const [elapsedSec, setElapsedSec] = useState(0);
     const startTimeRef = useRef<number | null>(null);
 
-    const { status, progressItems, startStream, cancel } = useGenerationStream();
+    const { status, progressItems, startStream, cancel } =
+        useGenerationStream();
     const isBusy = status === 'processing' || status === 'validating';
     const isTopicGeneration = isBusy && busyBlockId === null;
 
@@ -82,21 +85,28 @@ export function StageContentPreview({
         setElapsedSec(0);
         const id = window.setInterval(() => {
             if (startTimeRef.current) {
-                setElapsedSec(Math.round((Date.now() - startTimeRef.current) / 1000));
+                setElapsedSec(
+                    Math.round((Date.now() - startTimeRef.current) / 1000),
+                );
             }
         }, 1000);
         return () => window.clearInterval(id);
     }, [isTopicGeneration]);
 
     const activeTopic = useMemo(
-        () => topicsWithBlocks.find((t) => t.id === activeTopicId) ?? topicsWithBlocks[0] ?? null,
+        () =>
+            topicsWithBlocks.find((t) => t.id === activeTopicId) ??
+            topicsWithBlocks[0] ??
+            null,
         [topicsWithBlocks, activeTopicId],
     );
 
     const leafBlocks = useMemo(
         () =>
             activeTopic
-                ? activeTopic.blocks.filter((b) => !b.is_container).sort((a, b) => comparePaths(a.path, b.path))
+                ? activeTopic.blocks
+                      .filter((b) => !b.is_container)
+                      .sort((a, b) => comparePaths(a.path, b.path))
                 : [],
         [activeTopic],
     );
@@ -111,7 +121,9 @@ export function StageContentPreview({
     }, [activeTopic?.id, leafBlocks, activeBlockId]);
 
     const activeBlock = leafBlocks.find((b) => b.id === activeBlockId) ?? null;
-    const activeBlockIndex = activeBlock ? leafBlocks.findIndex((b) => b.id === activeBlock.id) : -1;
+    const activeBlockIndex = activeBlock
+        ? leafBlocks.findIndex((b) => b.id === activeBlock.id)
+        : -1;
 
     useEffect(() => {
         onActiveBlockChange?.(activeBlock);
@@ -120,14 +132,20 @@ export function StageContentPreview({
     const blockHistory = useMemo(
         () =>
             activeBlock
-                ? generationLogs.filter((l) => l.content_block_id === activeBlock.id)
+                ? generationLogs.filter(
+                      (l) => l.content_block_id === activeBlock.id,
+                  )
                 : [],
         [generationLogs, activeBlock],
     );
 
     const historyLinkageAvailable = useMemo(
-        () => generationLogs.some((l) => l.content_block_id !== undefined && l.content_block_id !== null)
-            || generationLogs.length === 0,
+        () =>
+            generationLogs.some(
+                (l) =>
+                    l.content_block_id !== undefined &&
+                    l.content_block_id !== null,
+            ) || generationLogs.length === 0,
         [generationLogs],
     );
 
@@ -136,11 +154,15 @@ export function StageContentPreview({
             const leaves = topic.blocks.filter((b) => !b.is_container);
             const total = forceRegenerate
                 ? leaves.length
-                : leaves.filter((b) => b.generation_status === 'not_started').length;
+                : leaves.filter((b) => b.generation_status === 'not_started')
+                      .length;
             setTopicGenTotal(total);
             try {
                 const response = await csPost<{ job_id: string }>(
-                    ContentStudioAction.runTopicContent.url([project.id, topic.id]),
+                    ContentStudioAction.runTopicContent.url([
+                        project.id,
+                        topic.id,
+                    ]),
                     { only_unstarted: !forceRegenerate },
                 );
                 startStream(
@@ -148,12 +170,19 @@ export function StageContentPreview({
                     response.job_id,
                     (freshProject) => {
                         onProjectUpdate(freshProject);
-                        sileo.success({ title: `Topic generation finished: ${topic.title}` });
+                        sileo.success({
+                            title: `Topic generation finished: ${topic.title}`,
+                        });
                     },
                     (errMessage) => sileo.error({ title: errMessage }),
                 );
             } catch (e) {
-                sileo.error({ title: e instanceof Error ? e.message : 'Failed to start topic generation' });
+                sileo.error({
+                    title:
+                        e instanceof Error
+                            ? e.message
+                            : 'Failed to start topic generation',
+                });
             }
         },
         [project.id, startStream, onProjectUpdate],
@@ -164,7 +193,10 @@ export function StageContentPreview({
             try {
                 setBusyBlockId(block.id);
                 const response = await csPost<{ job_id: string }>(
-                    ContentStudioAction.runBlockContent.url([project.id, block.id]),
+                    ContentStudioAction.runBlockContent.url([
+                        project.id,
+                        block.id,
+                    ]),
                     modelId ? { model_id: modelId } : {},
                 );
                 startStream(
@@ -172,13 +204,20 @@ export function StageContentPreview({
                     response.job_id,
                     (freshProject) => {
                         onProjectUpdate(freshProject);
-                        sileo.success({ title: `Block generated: ${block.title}` });
+                        sileo.success({
+                            title: `Block generated: ${block.title}`,
+                        });
                     },
                     (errMessage) => sileo.error({ title: errMessage }),
                 );
             } catch (e) {
                 setBusyBlockId(null);
-                sileo.error({ title: e instanceof Error ? e.message : 'Failed to start block generation' });
+                sileo.error({
+                    title:
+                        e instanceof Error
+                            ? e.message
+                            : 'Failed to start block generation',
+                });
             }
         },
         [project.id, startStream, onProjectUpdate],
@@ -189,7 +228,10 @@ export function StageContentPreview({
             try {
                 setBusyBlockId(block.id);
                 const response = await csPost<{ job_id: string }>(
-                    ContentStudioAction.regenerateBlockContent.url([project.id, block.id]),
+                    ContentStudioAction.regenerateBlockContent.url([
+                        project.id,
+                        block.id,
+                    ]),
                     modelId ? { model_id: modelId } : {},
                 );
                 startStream(
@@ -197,13 +239,20 @@ export function StageContentPreview({
                     response.job_id,
                     (freshProject) => {
                         onProjectUpdate(freshProject);
-                        sileo.success({ title: `Block regenerated: ${block.title}` });
+                        sileo.success({
+                            title: `Block regenerated: ${block.title}`,
+                        });
                     },
                     (errMessage) => sileo.error({ title: errMessage }),
                 );
             } catch (e) {
                 setBusyBlockId(null);
-                sileo.error({ title: e instanceof Error ? e.message : 'Failed to regenerate block' });
+                sileo.error({
+                    title:
+                        e instanceof Error
+                            ? e.message
+                            : 'Failed to regenerate block',
+                });
             }
         },
         [project.id, startStream, onProjectUpdate],
@@ -212,19 +261,30 @@ export function StageContentPreview({
     const handleSaveBlock = useCallback(
         async (block: ContentBlock, payload: SaveContentPayload) => {
             try {
-                const { project: fresh } = await csPut<{ project: ContentProject }>(
-                    ContentStudioAction.saveBlockContent.url([project.id, block.id]),
+                const { project: fresh } = await csPut<{
+                    project: ContentProject;
+                }>(
+                    ContentStudioAction.saveBlockContent.url([
+                        project.id,
+                        block.id,
+                    ]),
                     payload as unknown as Record<string, unknown>,
                 );
                 onProjectUpdate(fresh);
                 sileo.success({ title: 'Block saved' });
                 if (mountedRef.current) {
                     await new Promise<void>((resolve) =>
-                        router.reload({ only: ['topicsWithBlocks'], onFinish: () => resolve() }),
+                        router.reload({
+                            only: ['topicsWithBlocks'],
+                            onFinish: () => resolve(),
+                        }),
                     );
                 }
             } catch (e) {
-                sileo.error({ title: e instanceof Error ? e.message : 'Failed to save block' });
+                sileo.error({
+                    title:
+                        e instanceof Error ? e.message : 'Failed to save block',
+                });
                 throw e;
             }
         },
@@ -234,18 +294,31 @@ export function StageContentPreview({
     const handleApproveBlock = useCallback(
         async (block: ContentBlock) => {
             try {
-                const { project: fresh } = await csPost<{ project: ContentProject }>(
-                    ContentStudioAction.approveBlockContent.url([project.id, block.id]),
+                const { project: fresh } = await csPost<{
+                    project: ContentProject;
+                }>(
+                    ContentStudioAction.approveBlockContent.url([
+                        project.id,
+                        block.id,
+                    ]),
                 );
                 onProjectUpdate(fresh);
                 sileo.success({ title: 'Block approved' });
                 if (mountedRef.current) {
                     await new Promise<void>((resolve) =>
-                        router.reload({ only: ['topicsWithBlocks'], onFinish: () => resolve() }),
+                        router.reload({
+                            only: ['topicsWithBlocks'],
+                            onFinish: () => resolve(),
+                        }),
                     );
                 }
             } catch (e) {
-                sileo.error({ title: e instanceof Error ? e.message : 'Failed to approve block' });
+                sileo.error({
+                    title:
+                        e instanceof Error
+                            ? e.message
+                            : 'Failed to approve block',
+                });
                 throw e;
             }
         },
@@ -255,14 +328,25 @@ export function StageContentPreview({
     const handleDismissAdvisory = useCallback(
         async (block: ContentBlock) => {
             try {
-                const { project: fresh } = await csPost<{ project: ContentProject }>(
-                    ContentStudioAction.dismissBlockAdvisory.url([project.id, block.id]),
+                const { project: fresh } = await csPost<{
+                    project: ContentProject;
+                }>(
+                    ContentStudioAction.dismissBlockAdvisory.url([
+                        project.id,
+                        block.id,
+                    ]),
                 );
                 onProjectUpdate(fresh);
                 sileo.success({ title: 'Advisory dismissed' });
-                if (mountedRef.current) router.reload({ only: ['topicsWithBlocks'] });
+                if (mountedRef.current)
+                    router.reload({ only: ['topicsWithBlocks'] });
             } catch (e) {
-                sileo.error({ title: e instanceof Error ? e.message : 'Failed to dismiss advisory' });
+                sileo.error({
+                    title:
+                        e instanceof Error
+                            ? e.message
+                            : 'Failed to dismiss advisory',
+                });
             }
         },
         [project.id, onProjectUpdate],
@@ -271,14 +355,25 @@ export function StageContentPreview({
     const handleMarkComplete = useCallback(
         async (topic: TopicWithBlocks) => {
             try {
-                const { project: fresh } = await csPost<{ project: ContentProject }>(
-                    ContentStudioAction.markTopicComplete.url([project.id, topic.id]),
+                const { project: fresh } = await csPost<{
+                    project: ContentProject;
+                }>(
+                    ContentStudioAction.markTopicComplete.url([
+                        project.id,
+                        topic.id,
+                    ]),
                 );
                 onProjectUpdate(fresh);
                 sileo.success({ title: `Topic published: ${topic.title}` });
-                if (mountedRef.current) router.reload({ only: ['topicsWithBlocks'] });
+                if (mountedRef.current)
+                    router.reload({ only: ['topicsWithBlocks'] });
             } catch (e) {
-                sileo.error({ title: e instanceof Error ? e.message : 'Failed to mark topic complete' });
+                sileo.error({
+                    title:
+                        e instanceof Error
+                            ? e.message
+                            : 'Failed to mark topic complete',
+                });
             }
         },
         [project.id, onProjectUpdate],
@@ -287,19 +382,32 @@ export function StageContentPreview({
     const handleUpdateGuidance = useCallback(
         async (block: ContentBlock, guidance: string) => {
             try {
-                const { project: fresh } = await csPut<{ project: ContentProject }>(
-                    ContentStudioAction.updateBlockGuidance.url([project.id, block.id]),
+                const { project: fresh } = await csPut<{
+                    project: ContentProject;
+                }>(
+                    ContentStudioAction.updateBlockGuidance.url([
+                        project.id,
+                        block.id,
+                    ]),
                     { content_guidance: guidance },
                 );
                 onProjectUpdate(fresh);
                 sileo.success({ title: 'Guidance saved' });
                 if (mountedRef.current) {
                     await new Promise<void>((resolve) =>
-                        router.reload({ only: ['topicsWithBlocks'], onFinish: () => resolve() }),
+                        router.reload({
+                            only: ['topicsWithBlocks'],
+                            onFinish: () => resolve(),
+                        }),
                     );
                 }
             } catch (e) {
-                sileo.error({ title: e instanceof Error ? e.message : 'Failed to save guidance' });
+                sileo.error({
+                    title:
+                        e instanceof Error
+                            ? e.message
+                            : 'Failed to save guidance',
+                });
                 throw e;
             }
         },
@@ -309,15 +417,26 @@ export function StageContentPreview({
     const handleResetTopic = useCallback(
         async (topic: TopicWithBlocks, confirmSlug: string) => {
             try {
-                const { project: fresh } = await csPost<{ project: ContentProject }>(
-                    ContentStudioAction.resetTopicContent.url([project.id, topic.id]),
+                const { project: fresh } = await csPost<{
+                    project: ContentProject;
+                }>(
+                    ContentStudioAction.resetTopicContent.url([
+                        project.id,
+                        topic.id,
+                    ]),
                     { confirm_slug: confirmSlug },
                 );
                 onProjectUpdate(fresh);
                 sileo.success({ title: `Topic reset: ${topic.title}` });
-                if (mountedRef.current) router.reload({ only: ['topicsWithBlocks'] });
+                if (mountedRef.current)
+                    router.reload({ only: ['topicsWithBlocks'] });
             } catch (e) {
-                sileo.error({ title: e instanceof Error ? e.message : 'Failed to reset topic' });
+                sileo.error({
+                    title:
+                        e instanceof Error
+                            ? e.message
+                            : 'Failed to reset topic',
+                });
             }
         },
         [project.id, onProjectUpdate],
@@ -326,21 +445,32 @@ export function StageContentPreview({
     if (topicsWithBlocks.length === 0) {
         return (
             <div className="flex h-full items-center justify-center p-12 text-[14px] text-muted-foreground">
-                No topics have approved block structures yet. Complete the blocks stage first.
+                No topics have approved block structures yet. Complete the
+                blocks stage first.
             </div>
         );
     }
 
     if (!activeTopic) return null;
 
-    const notStartedCount = leafBlocks.filter((b) => b.generation_status === 'not_started').length;
-    const allApproved = leafBlocks.length > 0 && leafBlocks.every((b) => b.generation_status === 'approved');
+    const notStartedCount = leafBlocks.filter(
+        (b) => b.generation_status === 'not_started',
+    ).length;
+    const allApproved =
+        leafBlocks.length > 0 &&
+        leafBlocks.every((b) => b.generation_status === 'approved');
 
     const elapsedLabel =
-        elapsedSec >= 60 ? `${Math.floor(elapsedSec / 60)}m ${elapsedSec % 60}s` : `${elapsedSec}s`;
-    const overlayItemsDone = progressItems.filter((i) => i.state === 'done').length;
+        elapsedSec >= 60
+            ? `${Math.floor(elapsedSec / 60)}m ${elapsedSec % 60}s`
+            : `${elapsedSec}s`;
+    const overlayItemsDone = progressItems.filter(
+        (i) => i.state === 'done',
+    ).length;
     const overlayItemsTotal = Math.max(topicGenTotal, progressItems.length);
-    const blockTitleById = new Map(activeTopic.blocks.map((b) => [b.id, `Block ${b.path} · ${b.title}`]));
+    const blockTitleById = new Map(
+        activeTopic.blocks.map((b) => [b.id, `Block ${b.path} · ${b.title}`]),
+    );
 
     return (
         <>
@@ -372,23 +502,40 @@ export function StageContentPreview({
                         block={activeBlock}
                         aiModels={aiModels}
                         resolvedModels={resolvedModels}
-                        isBusy={isBusy && (busyBlockId === null || busyBlockId === activeBlock.id)}
-                        onGenerate={(modelId) => handleRunBlock(activeBlock, modelId)}
+                        isBusy={
+                            isBusy &&
+                            (busyBlockId === null ||
+                                busyBlockId === activeBlock.id)
+                        }
+                        onGenerate={(modelId) =>
+                            handleRunBlock(activeBlock, modelId)
+                        }
                         onApprove={() => handleApproveBlock(activeBlock)}
-                        onRegenerate={(modelId) => handleRegenerateBlock(activeBlock, modelId)}
-                        onSave={(payload) => handleSaveBlock(activeBlock, payload)}
+                        onRegenerate={(modelId) =>
+                            handleRegenerateBlock(activeBlock, modelId)
+                        }
+                        onSave={(payload) =>
+                            handleSaveBlock(activeBlock, payload)
+                        }
                         onProjectUpdate={onProjectUpdate}
                         onRequestGuidance={() => {
-                            if (inspectorTab !== 'guidance') onInspectorTabClick('guidance');
+                            if (inspectorTab !== 'guidance')
+                                onInspectorTabClick('guidance');
                         }}
                         onPrevBlock={
                             activeBlockIndex > 0
-                                ? () => setActiveBlockId(leafBlocks[activeBlockIndex - 1].id)
+                                ? () =>
+                                      setActiveBlockId(
+                                          leafBlocks[activeBlockIndex - 1].id,
+                                      )
                                 : null
                         }
                         onNextBlock={
                             activeBlockIndex < leafBlocks.length - 1
-                                ? () => setActiveBlockId(leafBlocks[activeBlockIndex + 1].id)
+                                ? () =>
+                                      setActiveBlockId(
+                                          leafBlocks[activeBlockIndex + 1].id,
+                                      )
                                 : null
                         }
                     />
@@ -418,10 +565,20 @@ export function StageContentPreview({
                 block={activeBlock}
                 blockHistory={blockHistory}
                 historyLinkageAvailable={historyLinkageAvailable}
-                onClose={() => inspectorTab && onInspectorTabClick(inspectorTab)}
-                onUpdateGuidance={(g) => (activeBlock ? handleUpdateGuidance(activeBlock, g) : Promise.resolve())}
-                onDismissAdvisory={() => activeBlock && handleDismissAdvisory(activeBlock)}
-                onRegenerate={() => activeBlock && handleRegenerateBlock(activeBlock, null)}
+                onClose={() =>
+                    inspectorTab && onInspectorTabClick(inspectorTab)
+                }
+                onUpdateGuidance={(g) =>
+                    activeBlock
+                        ? handleUpdateGuidance(activeBlock, g)
+                        : Promise.resolve()
+                }
+                onDismissAdvisory={() =>
+                    activeBlock && handleDismissAdvisory(activeBlock)
+                }
+                onRegenerate={() =>
+                    activeBlock && handleRegenerateBlock(activeBlock, null)
+                }
                 isBusy={isBusy}
             />
 

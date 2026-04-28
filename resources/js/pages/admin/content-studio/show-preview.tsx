@@ -1,6 +1,7 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import ContentStudioLayout from '@/layouts/content-studio-layout';
 import { StageContentPreview } from '@/components/admin/content-studio/stage-content-preview';
+import { LogDrawer } from '@/components/admin/content-studio/log-drawer';
 import type { StageKey } from '@/components/admin/content-studio/stage-rail';
 import type { InspectorTab } from '@/components/admin/content-studio/inspector-peek';
 import type {
@@ -22,7 +23,8 @@ interface Props {
 }
 
 function getDefaultStep(project: ContentProject): StageKey {
-    const anyTopicApproved = Object.keys(project.progress_data?.blocks_approved ?? {}).length > 0;
+    const anyTopicApproved =
+        Object.keys(project.progress_data?.blocks_approved ?? {}).length > 0;
     const schemeApproved = !!project.progress_data?.scheme_approved_at;
     const schemeSkipped = !!project.progress_data?.scheme_skipped;
     const researchComplete = !!project.progress_data?.research_approved_at;
@@ -43,7 +45,9 @@ export default function ContentStudioShowPreview({
 }: Props) {
     const [project, setProject] = useState(initialProject);
     const [logs, setLogs] = useState(propLogs);
-    const [activeStep, setActiveStep] = useState<StageKey>(() => getDefaultStep(initialProject));
+    const [activeStep, setActiveStep] = useState<StageKey>(() =>
+        getDefaultStep(initialProject),
+    );
     const [inspectorTab, setInspectorTab] = useState<InspectorTab | null>(null);
     const [logDrawerOpen, setLogDrawerOpen] = useState(false);
     const [activeBlock, setActiveBlock] = useState<ContentBlock | null>(null);
@@ -56,18 +60,43 @@ export default function ContentStudioShowPreview({
         setProject(initialProject);
     }, [initialProject]);
 
-    const handleProjectUpdate = useCallback((updated: ContentProject) => setProject(updated), []);
+    const handleProjectUpdate = useCallback(
+        (updated: ContentProject) => setProject(updated),
+        [],
+    );
 
     const handleInspectorTabClick = useCallback((tab: InspectorTab) => {
         setInspectorTab((prev) => (prev === tab ? null : tab));
     }, []);
 
-    const handleActiveBlockChange = useCallback((block: ContentBlock | null) => {
-        setActiveBlock(block);
-    }, []);
+    const handleActiveBlockChange = useCallback(
+        (block: ContentBlock | null) => {
+            setActiveBlock(block);
+        },
+        [],
+    );
 
     const isSecondary = project.mode === 'secondary';
-    const pageTitle = isSecondary ? project.curriculum_subject_name : project.discipline_name;
+    const pageTitle = isSecondary
+        ? project.curriculum_subject_name
+        : project.discipline_name;
+
+    const blockTitleResolver = useMemo(() => {
+        const map = new Map<string, string>();
+        for (const topic of topicsWithBlocks) {
+            for (const block of topic.blocks) {
+                map.set(block.id, `Block ${block.path} · ${block.title}`);
+            }
+        }
+        return (id: string) => map.get(id) ?? null;
+    }, [topicsWithBlocks]);
+
+    const topicTitleResolver = useMemo(() => {
+        const map = new Map<string, string>(
+            topicsWithBlocks.map((t) => [t.id, t.title]),
+        );
+        return (id: string) => map.get(id) ?? null;
+    }, [topicsWithBlocks]);
 
     return (
         <ContentStudioLayout
@@ -104,16 +133,18 @@ export default function ContentStudioShowPreview({
                         {activeStep} stage placeholder
                     </p>
                     <p className="max-w-[48ch] text-[13.5px] text-muted-foreground">
-                        Phase 9 fills this in. The redesigned content stage is live above — switch the rail icon to
-                        Content.
+                        Phase 9 fills this in. The redesigned content stage is
+                        live above — switch the rail icon to Content.
                     </p>
                 </div>
             )}
-            {logDrawerOpen && (
-                <p className="fixed bottom-4 right-4 rounded bg-foreground/90 px-3 py-1 text-[11px] text-background">
-                    Log drawer toggled (drawer ships in Phase 8)
-                </p>
-            )}
+            <LogDrawer
+                open={logDrawerOpen}
+                onOpenChange={setLogDrawerOpen}
+                logs={logs}
+                blockTitleResolver={blockTitleResolver}
+                topicTitleResolver={topicTitleResolver}
+            />
         </ContentStudioLayout>
     );
 }

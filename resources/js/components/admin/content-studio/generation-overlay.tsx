@@ -41,17 +41,27 @@ export function GenerationOverlay({
                         '0 24px 48px -12px color-mix(in srgb, var(--foreground) 18%, transparent), 0 0 0 1px color-mix(in srgb, var(--honey) 10%, transparent)',
                 }}
             >
-                <span className="gen-shimmer-bar absolute inset-x-0 top-0 h-px" aria-hidden />
+                <span
+                    className="gen-shimmer-bar absolute inset-x-0 top-0 h-px"
+                    aria-hidden
+                />
 
                 <header className="flex items-start gap-3">
                     <div
                         className="flex h-9 w-9 flex-none items-center justify-center rounded-full border"
-                        style={{ background: 'var(--honey-soft)', borderColor: 'var(--honey-line)' }}
+                        style={{
+                            background: 'var(--honey-soft)',
+                            borderColor: 'var(--honey-line)',
+                        }}
                     >
-                        <Zap className="h-4 w-4" style={{ color: 'var(--honey)' }} strokeWidth={2} />
+                        <Zap
+                            className="h-4 w-4"
+                            style={{ color: 'var(--honey)' }}
+                            strokeWidth={2}
+                        />
                     </div>
                     <div className="min-w-0 flex-1">
-                        <h2 className="font-display text-[16px] font-semibold leading-snug tracking-tight text-foreground">
+                        <h2 className="font-display text-[16px] leading-snug font-semibold tracking-tight text-foreground">
                             {title}
                         </h2>
                         <p className="mt-0.5 truncate text-[12px] text-muted-foreground">
@@ -60,7 +70,7 @@ export function GenerationOverlay({
                         </p>
                     </div>
                     <div className="flex-none text-right">
-                        <div className="font-display text-[20px] font-semibold leading-none tabular-nums">
+                        <div className="font-display text-[20px] leading-none font-semibold tabular-nums">
                             {itemsDone} / {itemsTotal}
                         </div>
                         <div className="tech mt-1">elapsed {elapsed}</div>
@@ -69,7 +79,11 @@ export function GenerationOverlay({
 
                 <ul className="mt-5 max-h-[200px] space-y-2 overflow-y-auto pr-1">
                     {sortedItems.map((item) => (
-                        <ProgressItemRow key={item.id} item={item} resolveTitle={blockTitleResolver} />
+                        <ProgressItemRow
+                            key={item.id}
+                            item={item}
+                            resolveTitle={blockTitleResolver}
+                        />
                     ))}
                     {queuedCount > 0 &&
                         Array.from({ length: queuedCount }).map((_, i) => (
@@ -77,8 +91,10 @@ export function GenerationOverlay({
                                 key={`queued-${i}`}
                                 className="flex items-start gap-2.5 text-[13px] opacity-50"
                             >
-                                <span className="mt-1.5 flex-none h-2 w-2 rounded-full border border-muted-foreground/40" />
-                                <span className="text-muted-foreground">Queued</span>
+                                <span className="mt-1.5 h-2 w-2 flex-none rounded-full border border-muted-foreground/40" />
+                                <span className="text-muted-foreground">
+                                    Queued
+                                </span>
                             </li>
                         ))}
                 </ul>
@@ -109,7 +125,10 @@ function ProgressItemRow({ item, resolveTitle }: ProgressItemRowProps) {
     const title = resolveTitle(item.id);
     const duration =
         item.completedAt && item.startedAt
-            ? Math.max(1, Math.round((item.completedAt - item.startedAt) / 1000))
+            ? Math.max(
+                  1,
+                  Math.round((item.completedAt - item.startedAt) / 1000),
+              )
             : null;
 
     if (item.state === 'done') {
@@ -121,7 +140,9 @@ function ProgressItemRow({ item, resolveTitle }: ProgressItemRowProps) {
                     strokeWidth={3}
                 />
                 <span className="flex-1 truncate text-foreground">{title}</span>
-                {duration !== null && <span className="tech flex-none">{duration}s</span>}
+                {duration !== null && (
+                    <span className="tech flex-none">{duration}s</span>
+                )}
             </li>
         );
     }
@@ -129,9 +150,14 @@ function ProgressItemRow({ item, resolveTitle }: ProgressItemRowProps) {
     if (item.state === 'error') {
         return (
             <li className="flex items-start gap-2.5 text-[13px]">
-                <AlertCircle className="mt-0.5 h-3 w-3 flex-none text-destructive" strokeWidth={2.5} />
+                <AlertCircle
+                    className="mt-0.5 h-3 w-3 flex-none text-destructive"
+                    strokeWidth={2.5}
+                />
                 <span className="flex-1 truncate text-foreground">{title}</span>
-                <span className="text-[11.5px] font-medium text-destructive">failed</span>
+                <span className="text-[11.5px] font-medium text-destructive">
+                    failed
+                </span>
             </li>
         );
     }
@@ -139,12 +165,17 @@ function ProgressItemRow({ item, resolveTitle }: ProgressItemRowProps) {
     return (
         <li className="flex items-start gap-2.5 text-[13px]">
             <span
-                className="gen-pulse mt-1.5 flex-none h-2 w-2 rounded-full"
+                className="gen-pulse mt-1.5 h-2 w-2 flex-none rounded-full"
                 style={{ background: 'var(--honey)' }}
                 aria-hidden
             />
-            <span className="flex-1 truncate font-medium text-foreground">{title}</span>
-            <span className="text-[11.5px] font-medium" style={{ color: 'var(--honey)' }}>
+            <span className="flex-1 truncate font-medium text-foreground">
+                {title}
+            </span>
+            <span
+                className="text-[11.5px] font-medium"
+                style={{ color: 'var(--honey)' }}
+            >
                 drafting…
             </span>
         </li>
