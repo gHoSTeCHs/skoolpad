@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import ContentStudioLayout from '@/layouts/content-studio-layout';
 import { StageContentPreview } from '@/components/admin/content-studio/stage-content-preview';
+import { StageResearchPreview } from '@/components/admin/content-studio/stage-research-preview';
 import { LogDrawer } from '@/components/admin/content-studio/log-drawer';
 import type { StageKey } from '@/components/admin/content-studio/stage-rail';
 import type { InspectorTab } from '@/components/admin/content-studio/inspector-peek';
@@ -62,6 +63,11 @@ export default function ContentStudioShowPreview({
 
     const handleProjectUpdate = useCallback(
         (updated: ContentProject) => setProject(updated),
+        [],
+    );
+
+    const handleLogAppend = useCallback(
+        (entry: GenerationLogEntry) => setLogs((prev) => [entry, ...prev]),
         [],
     );
 
@@ -127,14 +133,26 @@ export default function ContentStudioShowPreview({
                     onActiveBlockChange={handleActiveBlockChange}
                     onProjectUpdate={handleProjectUpdate}
                 />
+            ) : activeStep === 'research' ? (
+                <StageResearchPreview
+                    project={project}
+                    aiModels={aiModels}
+                    resolvedModel={resolvedModels.research}
+                    isActive={
+                        project.status === 'draft' ||
+                        project.status === 'research'
+                    }
+                    onProjectUpdate={handleProjectUpdate}
+                    onLogAppend={handleLogAppend}
+                />
             ) : (
                 <div className="flex h-full flex-col items-center justify-center gap-3 p-12 text-center">
                     <p className="font-display text-[18px] font-semibold tracking-tight">
                         {activeStep} stage placeholder
                     </p>
                     <p className="max-w-[48ch] text-[13.5px] text-muted-foreground">
-                        Phase 9 fills this in. The redesigned content stage is
-                        live above — switch the rail icon to Content.
+                        Phase 9 fills this in. Switch the rail icon to Content
+                        or Research to see redesigned stages.
                     </p>
                 </div>
             )}
