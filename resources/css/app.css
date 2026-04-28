@@ -17,6 +17,7 @@
     --font-display: 'Bricolage Grotesque', Georgia, serif;
     --font-body: 'DM Sans', -apple-system, sans-serif;
     --font-content: 'DM Sans', -apple-system, sans-serif;
+    --font-mono: 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
 
     --radius-lg: var(--radius);
     --radius-md: calc(var(--radius) - 2px);
@@ -166,6 +167,7 @@
     --font-display: 'Bricolage Grotesque', Georgia, serif;
     --font-body: 'DM Sans', -apple-system, sans-serif;
     --font-content: 'DM Sans', -apple-system, sans-serif;
+    --font-mono: 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
 
     --bg-raised: #F3EDE7;
     --bg-hero: #0A2E22;
@@ -303,6 +305,7 @@
     --font-display: 'Bricolage Grotesque', Georgia, serif;
     --font-body: 'DM Sans', -apple-system, sans-serif;
     --font-content: 'DM Sans', -apple-system, sans-serif;
+    --font-mono: 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
 
     --bg-raised: #252019;
     --bg-hero: #0D0B09;
@@ -439,6 +442,7 @@
 
     --font-display: 'Outfit', sans-serif;
     --font-body: 'Outfit', sans-serif;
+    --font-mono: 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
     --font-content: 'Source Serif 4', Georgia, serif;
 
     --bg-raised: rgba(255, 255, 255, 0.06);
