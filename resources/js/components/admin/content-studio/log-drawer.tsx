@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { Fragment, useMemo, useState } from 'react';
 import { Sheet, SheetContent } from '@/components/ui/sheet';
 import { cn } from '@/lib/utils';
 import type { GenerationLogEntry } from '@/types/content-studio';
@@ -20,10 +20,6 @@ const STAGE_TONE: Record<string, string> = {
     questions: 'var(--badge-danger-fg)',
     explanations: 'var(--muted-foreground)',
 };
-
-const FRESH_THRESHOLD_MS = 60_000;
-const STAGGER_CAP = 8;
-const STAGGER_STEP_MS = 30;
 
 function formatCost(cents: number | null): string {
     if (cents === null || cents === 0) return '—';
@@ -89,7 +85,7 @@ export function LogDrawer({
                         Generation log
                     </h2>
 
-                    <dl className="mt-5 grid grid-cols-3 gap-3">
+                    <dl className="mt-6 grid grid-cols-3 gap-3">
                         <Stat
                             label="Tokens"
                             value={totals.tokens.toLocaleString()}
@@ -101,20 +97,27 @@ export function LogDrawer({
                     {promptTypes.length > 1 && (
                         <nav
                             aria-label="Filter by stage"
-                            className="mt-5 -mb-1 flex flex-wrap items-center gap-x-4 gap-y-1"
+                            className="mt-6 flex flex-wrap items-center gap-x-1.5 gap-y-1 text-[12.5px]"
                         >
-                            <FilterTab
+                            <FilterLink
                                 label="All"
                                 active={filter === null}
                                 onClick={() => setFilter(null)}
                             />
                             {promptTypes.map((t) => (
-                                <FilterTab
-                                    key={t}
-                                    label={t}
-                                    active={filter === t}
-                                    onClick={() => setFilter(t)}
-                                />
+                                <Fragment key={t}>
+                                    <span
+                                        className="text-muted-foreground/40"
+                                        aria-hidden
+                                    >
+                                        ·
+                                    </span>
+                                    <FilterLink
+                                        label={t}
+                                        active={filter === t}
+                                        onClick={() => setFilter(t)}
+                                    />
+                                </Fragment>
                             ))}
                         </nav>
                     )}
@@ -128,23 +131,11 @@ export function LogDrawer({
                                 : '— Nothing in this view.'}
                         </p>
                     ) : (
-                        <ol className="relative px-4 pt-5 pb-8">
-                            <span
-                                className="pointer-events-none absolute top-7 bottom-3 w-px bg-border"
-                                style={{ left: 84 }}
-                                aria-hidden
-                            />
-                            {filtered.map((log, i) => (
+                        <ol className="space-y-1.5 px-6 py-5">
+                            {filtered.map((log) => (
                                 <LogEntry
                                     key={log.id}
                                     log={log}
-                                    index={i}
-                                    fresh={
-                                        i === 0 &&
-                                        Date.now() -
-                                            new Date(log.created_at).getTime() <
-                                            FRESH_THRESHOLD_MS
-                                    }
                                     block={
                                         log.content_block_id &&
                                         blockTitleResolver
@@ -179,120 +170,84 @@ interface StatProps {
 function Stat({ label, value }: StatProps) {
     return (
         <div>
-            <dt className="font-mono text-[10px] font-medium tracking-[0.16em] text-muted-foreground/70 uppercase">
-                {label}
-            </dt>
-            <dd className="mt-1.5 font-display text-[22px] leading-none font-semibold tracking-tight tabular-nums">
+            <div className="font-display text-[24px] leading-none font-semibold tracking-tight text-foreground tabular-nums">
                 {value}
-            </dd>
+            </div>
+            <div className="mt-2 font-mono text-[10px] font-medium tracking-[0.16em] text-muted-foreground/70 uppercase">
+                {label}
+            </div>
         </div>
     );
 }
 
-interface FilterTabProps {
+interface FilterLinkProps {
     label: string;
     active: boolean;
     onClick: () => void;
 }
 
-function FilterTab({ label, active, onClick }: FilterTabProps) {
+function FilterLink({ label, active, onClick }: FilterLinkProps) {
     return (
         <button
             type="button"
             onClick={onClick}
             aria-pressed={active}
             className={cn(
-                'relative cursor-pointer py-1 font-mono text-[10.5px] font-medium tracking-[0.14em] uppercase transition-colors',
+                'cursor-pointer transition-colors',
                 active
-                    ? 'text-foreground'
+                    ? 'font-medium text-foreground underline decoration-foreground/30 underline-offset-4'
                     : 'text-muted-foreground hover:text-foreground',
             )}
         >
             {label}
-            <span
-                className={cn(
-                    'pointer-events-none absolute right-0 -bottom-px left-0 h-px transition-colors',
-                    active ? 'bg-foreground' : 'bg-transparent',
-                )}
-                aria-hidden
-            />
         </button>
     );
 }
 
 interface LogEntryProps {
     log: GenerationLogEntry;
-    index: number;
-    fresh: boolean;
     block: string | null;
     topic: string | null;
 }
 
-function LogEntry({ log, index, fresh, block, topic }: LogEntryProps) {
+function LogEntry({ log, block, topic }: LogEntryProps) {
     const tone = STAGE_TONE[log.prompt_type] ?? 'var(--muted-foreground)';
     const invalid = !log.is_valid;
-    const reltime = formatRelTime(log.created_at);
+    const stripeColor = invalid ? 'var(--badge-danger-fg)' : tone;
     const citation = block ?? (topic ? `Topic · ${topic}` : null);
-    const delay = `${Math.min(index, STAGGER_CAP) * STAGGER_STEP_MS}ms`;
 
     return (
         <li
-            className="relative animate-in py-3.5 pr-2 pl-[100px] duration-300 fill-mode-both fade-in slide-in-from-right-1"
-            style={{ animationDelay: delay }}
+            className="border-l-[3px] py-3 pr-1 pl-4"
+            style={{ borderLeftColor: stripeColor }}
         >
-            <time
-                dateTime={log.created_at}
-                title={new Date(log.created_at).toLocaleString()}
-                className={cn(
-                    'tech absolute top-[15px] left-0 w-[72px] text-right tabular-nums',
-                    invalid && 'text-destructive/70',
-                )}
-            >
-                {invalid ? `⨯ ${reltime}` : reltime}
-            </time>
-
-            <span
-                className={cn(
-                    'absolute top-[16px] left-[84px] h-2.5 w-2.5 -translate-x-1/2 rounded-full',
-                    fresh && 'gen-pulse',
-                )}
-                style={{
-                    border: `2px solid ${invalid ? 'var(--badge-danger-fg)' : tone}`,
-                    background: invalid
-                        ? 'var(--badge-danger-fg)'
-                        : 'var(--card)',
-                }}
-                aria-hidden
-            />
-
-            <div className="flex items-baseline gap-2">
-                <span
-                    className="font-mono text-[10px] font-medium tracking-[0.14em] uppercase"
-                    style={{ color: tone }}
-                >
+            <div className="flex items-baseline gap-3">
+                <span className="text-[13.5px] text-foreground">
                     {log.prompt_type}
+                    {invalid && (
+                        <span className="text-destructive"> · invalid</span>
+                    )}
                 </span>
-                <span className="tech ml-auto tabular-nums">
+                <span className="ml-auto font-mono text-[15px] font-semibold text-foreground tabular-nums">
                     {formatCost(log.estimated_cost_cents)}
                 </span>
             </div>
 
-            <p className="mt-1 text-[12.5px] leading-snug">
-                <span className="tech text-foreground">
-                    {log.model_used || '—'}
-                </span>
-                <span className="tech text-muted-foreground">
-                    {' '}
-                    · {log.tokens_used.toLocaleString()} tk
-                </span>
-                {invalid && (
-                    <span className="tech text-destructive"> · invalid</span>
-                )}
+            <p className="tech mt-1.5 truncate">
+                {log.model_used || '—'}
+                <span className="text-muted-foreground/60"> · </span>
+                {log.tokens_used.toLocaleString()} tk
+                <span className="text-muted-foreground/60"> · </span>
+                <time
+                    dateTime={log.created_at}
+                    title={new Date(log.created_at).toLocaleString()}
+                >
+                    {formatRelTime(log.created_at)}
+                </time>
             </p>
 
             {citation && (
-                <p className="mt-1.5 truncate text-[12.5px] text-muted-foreground">
-                    <span className="text-muted-foreground/60">↳ </span>
+                <p className="mt-1.5 truncate text-[12.5px] text-muted-foreground/90">
                     {citation}
                 </p>
             )}
