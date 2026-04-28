@@ -706,16 +706,17 @@ html {
         font-size: 11px;
         color: var(--fg-subtle);
         letter-spacing: 0;
+        opacity: 0.85;
     }
 
     .paper-surface {
         background: var(--card);
-        background-image: radial-gradient(rgb(31 26 18 / 0.018) 1px, transparent 1px);
+        background-image: radial-gradient(color-mix(in srgb, var(--foreground) 2%, transparent) 1px, transparent 1px);
         background-size: 16px 16px;
     }
 
     .gen-pulse {
-        box-shadow: 0 0 0 4px rgb(184 134 47 / 0.18);
+        box-shadow: 0 0 0 4px color-mix(in srgb, var(--honey) 18%, transparent);
         animation: gen-pulse 1.4s ease-in-out infinite;
     }
 
@@ -727,8 +728,8 @@ html {
 }
 
 @keyframes gen-pulse {
-    0%, 100% { box-shadow: 0 0 0 2px rgb(184 134 47 / 0.32); }
-    50%      { box-shadow: 0 0 0 7px rgb(184 134 47 / 0.06); }
+    0%, 100% { box-shadow: 0 0 0 2px color-mix(in srgb, var(--honey) 32%, transparent); }
+    50%      { box-shadow: 0 0 0 7px color-mix(in srgb, var(--honey) 6%, transparent); }
 }
 
 @keyframes gen-shimmer {
