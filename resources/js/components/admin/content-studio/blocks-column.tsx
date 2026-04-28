@@ -79,7 +79,7 @@ export function BlocksColumn({
                 </div>
             </div>
 
-            <div className="flex-1 overflow-y-auto py-1">
+            <div className="min-h-0 flex-1 overflow-y-auto py-1">
                 {leafBlocks.map((block) => {
                     const isBusy = busyBlockId === block.id;
                     const isActive = activeBlockId === block.id;

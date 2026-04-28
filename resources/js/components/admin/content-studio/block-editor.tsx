@@ -100,8 +100,8 @@ export function BlockEditor({
                 </div>
             </div>
 
-            <div className="flex-1 overflow-y-auto">
-                <div className="mx-auto max-w-[680px] px-10 py-12">
+            <div className="min-h-0 flex-1 overflow-y-auto">
+                <div className="mx-auto max-w-[820px] px-8 py-8">
                     <div className="mb-3 text-[11px] font-medium uppercase tracking-wide text-muted-foreground">
                         Block {block.path} · {block.difficulty_level ?? 'unspecified'}
                     </div>

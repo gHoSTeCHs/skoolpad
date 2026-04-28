@@ -111,26 +111,26 @@
    LIGHT MODE — Warm Editorial
    ============================================================================= */
 :root {
-    --background: #FAF7F4;
-    --foreground: #191512;
+    --background: #F7F2E9;
+    --foreground: #1F1A12;
 
-    --card: #FFFFFF;
-    --card-foreground: #191512;
+    --card: #FBF8F1;
+    --card-foreground: #1F1A12;
 
-    --popover: #FFFFFF;
-    --popover-foreground: #191512;
+    --popover: #FBF8F1;
+    --popover-foreground: #1F1A12;
 
     --primary: #1A6B4F;
-    --primary-foreground: #FFFFFF;
+    --primary-foreground: #FBF8F1;
 
-    --secondary: #F3EDE7;
-    --secondary-foreground: #191512;
+    --secondary: #F0E9DB;
+    --secondary-foreground: #1F1A12;
 
-    --muted: #F3EDE7;
-    --muted-foreground: #998A79;
+    --muted: #F0E9DB;
+    --muted-foreground: #6B5E47;
 
-    --accent: #F3EDE7;
-    --accent-foreground: #191512;
+    --accent: #F0E9DB;
+    --accent-foreground: #1F1A12;
 
     --destructive: #D4542B;
     --destructive-foreground: #FFFFFF;
@@ -141,8 +141,8 @@
     --warning: #D4952A;
     --warning-foreground: #FFFFFF;
 
-    --border: #E5DDD4;
-    --input: #E5DDD4;
+    --border: #E0D6C2;
+    --input: #E0D6C2;
     --ring: #1A6B4F;
 
     --radius: 0.625rem;
