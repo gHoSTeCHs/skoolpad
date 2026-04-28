@@ -46,7 +46,7 @@ export default function ContentStudioLayout({
                 selectedStep={selectedStep}
                 onStepClick={onStepClick}
             />
-            <main className="flex min-w-0 flex-col">
+            <main className="flex h-screen min-w-0 flex-col overflow-hidden">
                 <StudioTopBar
                     project={project}
                     resolvedDefaultModel={resolvedDefault}
