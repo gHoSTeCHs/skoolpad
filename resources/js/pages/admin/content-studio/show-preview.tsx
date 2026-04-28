@@ -52,6 +52,10 @@ export default function ContentStudioShowPreview({
         setLogs(propLogs);
     }, [propLogs]);
 
+    useEffect(() => {
+        setProject(initialProject);
+    }, [initialProject]);
+
     const handleProjectUpdate = useCallback((updated: ContentProject) => setProject(updated), []);
 
     const handleInspectorTabClick = useCallback((tab: InspectorTab) => {

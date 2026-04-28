@@ -68,10 +68,8 @@ export function CompoundGenerateButton({
             disabled={disabled}
             onClick={(e) => e.stopPropagation()}
             className={cn(
-                'inline-flex items-center gap-1.5 px-3 text-[12px] transition-colors',
-                isRunOverride
-                    ? 'text-background/80 hover:bg-black/5'
-                    : 'text-background/75 hover:bg-white/5',
+                'inline-flex items-center gap-1.5 px-3 text-[12px] transition-colors hover:bg-background/10',
+                isRunOverride ? 'text-background/80' : 'text-background/75',
             )}
         >
             <span
@@ -79,7 +77,11 @@ export function CompoundGenerateButton({
                     'h-1.5 w-1.5 rounded-full',
                     isRunOverride ? 'bg-background' : 'bg-[color:var(--honey-line)]',
                 )}
-                style={isRunOverride ? { boxShadow: '0 0 0 2px rgb(255 255 255 / 0.3)' } : undefined}
+                style={
+                    isRunOverride
+                        ? { boxShadow: '0 0 0 2px color-mix(in srgb, var(--foreground) 25%, transparent)' }
+                        : undefined
+                }
             />
             {isRunOverride ? 'this run' : displayModel}
             <ChevronDown className="h-2.5 w-2.5" />
@@ -98,7 +100,7 @@ export function CompoundGenerateButton({
                 {isRunOverride ? `${label} with ${displayModel}` : label}
             </button>
 
-            <span className={cn('my-1.5 w-px', isRunOverride ? 'bg-black/10' : 'bg-white/10')} aria-hidden />
+            <span className="my-1.5 w-px bg-background/15" aria-hidden />
 
             <ModelPickerPopover
                 projectId={projectId}
