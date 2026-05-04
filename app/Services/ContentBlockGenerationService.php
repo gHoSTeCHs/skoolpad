@@ -319,6 +319,16 @@ class ContentBlockGenerationService
             );
         }
 
+        $claimedWordCount = (int) ($response->data['word_count'] ?? 0);
+        if ($claimedWordCount > 0) {
+            $actualTextLength = self::tiptapTextLength($response->data['content'] ?? []);
+            if ($actualTextLength < $claimedWordCount) {
+                throw new \DomainException(
+                    "AI returned hollow content: claimed {$claimedWordCount} words but Tiptap document contains only {$actualTextLength} characters of text."
+                );
+            }
+        }
+
         $prior = [
             'key_terms' => $block->key_terms_introduced ?? [],
             'symbols' => $block->symbols_used ?? [],
@@ -455,6 +465,19 @@ class ContentBlockGenerationService
         }
 
         $block->update(['drift_advisory' => null]);
+    }
+
+    private static function tiptapTextLength(array $node): int
+    {
+        $length = 0;
+        if (($node['type'] ?? '') === 'text' && isset($node['text'])) {
+            $length += mb_strlen($node['text']);
+        }
+        foreach ($node['content'] ?? [] as $child) {
+            $length += self::tiptapTextLength($child);
+        }
+
+        return $length;
     }
 
     public function approveBlockContent(ContentBlock $block): void
