@@ -132,7 +132,7 @@ export function BlockEditor({
                         <>
                             {isEditing || block.generation_status === 'generated' ? (
                                 <TiptapEditor
-                                    value={editedContent}
+                                    value={block.content}
                                     onChange={(json) => setEditedContent(json)}
                                     placeholder="Block content"
                                     disabled={isBusy}
