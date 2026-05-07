@@ -54,6 +54,16 @@ function firstQuestion(sections: QuestionSection[]): QuestionNode | null {
 
 const TAB_ORDER: EditorTab[] = ['question', 'answers', 'links', 'contexts'];
 
+type PendingNav =
+    | { kind: 'selection'; target: SelectedNode | null }
+    | { kind: 'tab'; target: EditorTab };
+
+function isSameSelection(a: SelectedNode | null, b: SelectedNode | null): boolean {
+    if (a === b) return true;
+    if (a === null || b === null) return false;
+    return a.type === b.type && a.id === b.id;
+}
+
 export default function PreviewQuestionPapersBuild({ paper, enum_options }: Props) {
     const initialQuestion = useMemo(() => firstQuestion(paper.sections), [paper.sections]);
 
@@ -67,26 +77,37 @@ export default function PreviewQuestionPapersBuild({ paper, enum_options }: Prop
         links: false,
         contexts: false,
     });
-    const [pendingNode, setPendingNode] = useState<SelectedNode | null>(null);
+    const [pending, setPending] = useState<PendingNav | null>(null);
 
     const isAnyDirty = TAB_ORDER.some((t) => dirtyMap[t]);
 
     function requestSelection(next: SelectedNode | null) {
-        if (isAnyDirty && next?.type === 'question' && (selectedNode?.type !== 'question' || selectedNode.id !== next.id)) {
-            setPendingNode(next);
+        if (isSameSelection(next, selectedNode)) return;
+        if (isAnyDirty) {
+            setPending({ kind: 'selection', target: next });
             return;
         }
         setSelectedNode(next);
     }
 
+    function requestTabChange(next: EditorTab) {
+        if (next === activeTab) return;
+        if (isAnyDirty) {
+            setPending({ kind: 'tab', target: next });
+            return;
+        }
+        setActiveTab(next);
+    }
+
     function confirmDiscard() {
         setDirtyMap({ question: false, answers: false, links: false, contexts: false });
-        setSelectedNode(pendingNode);
-        setPendingNode(null);
+        if (pending?.kind === 'selection') setSelectedNode(pending.target);
+        if (pending?.kind === 'tab') setActiveTab(pending.target);
+        setPending(null);
     }
 
     function cancelDiscard() {
-        setPendingNode(null);
+        setPending(null);
     }
 
     function handleTabDirtyChange(tab: EditorTab, dirty: boolean) {
@@ -128,7 +149,7 @@ export default function PreviewQuestionPapersBuild({ paper, enum_options }: Prop
                                 question={located.question}
                                 enumOptions={enum_options}
                                 activeTab={activeTab}
-                                onTabChange={setActiveTab}
+                                onTabChange={requestTabChange}
                                 onTabDirtyChange={handleTabDirtyChange}
                             />
                         ) : (
@@ -146,17 +167,17 @@ export default function PreviewQuestionPapersBuild({ paper, enum_options }: Prop
                 </div>
             </div>
 
-            <AlertDialog open={pendingNode !== null} onOpenChange={(open) => !open && cancelDiscard()}>
+            <AlertDialog open={pending !== null} onOpenChange={(open) => !open && cancelDiscard()}>
                 <AlertDialogContent>
                     <AlertDialogHeader>
                         <AlertDialogTitle>Unsaved changes</AlertDialogTitle>
                         <AlertDialogDescription>
-                            You have unsaved edits on this question. Discard them and switch, or stay and save first?
+                            You have unsaved edits on this question. Discard them and continue, or stay and save first?
                         </AlertDialogDescription>
                     </AlertDialogHeader>
                     <AlertDialogFooter>
                         <AlertDialogCancel onClick={cancelDiscard}>Stay and save</AlertDialogCancel>
-                        <AlertDialogAction onClick={confirmDiscard}>Discard and switch</AlertDialogAction>
+                        <AlertDialogAction onClick={confirmDiscard}>Discard and continue</AlertDialogAction>
                     </AlertDialogFooter>
                 </AlertDialogContent>
             </AlertDialog>

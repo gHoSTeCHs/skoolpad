@@ -24,6 +24,8 @@ interface FreeFormAuthorProps {
 }
 
 export function FreeFormAuthor({ question, enumOptions, onDirtyChange }: FreeFormAuthorProps) {
+    const initialSource = ((question as QuestionNode & { source?: string }).source) ?? 'manual';
+
     const form = useForm({
         question_type: question.question_type,
         content: question.content,
@@ -32,6 +34,8 @@ export function FreeFormAuthor({ question, enumOptions, onDirtyChange }: FreeFor
         difficulty_level: question.difficulty_level ?? '',
         bloom_level: question.bloom_level ?? '',
         response_config: question.response_config ?? null,
+        source: initialSource,
+        status: question.status ?? 'draft',
     });
 
     const initialDataRef = useRef(JSON.stringify(form.data));
@@ -45,8 +49,10 @@ export function FreeFormAuthor({ question, enumOptions, onDirtyChange }: FreeFor
             difficulty_level: question.difficulty_level ?? '',
             bloom_level: question.bloom_level ?? '',
             response_config: question.response_config ?? null,
+            source: initialSource,
+            status: question.status ?? 'draft',
         });
-    }, [question.id]);
+    }, [question.id, initialSource, question.status]);
 
     const isDirty = JSON.stringify(form.data) !== initialDataRef.current;
 
