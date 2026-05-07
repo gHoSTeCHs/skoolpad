@@ -91,7 +91,20 @@ class QuestionPaperController extends Controller
     {
         Gate::authorize('managePapers', Question::class);
 
-        $questionPaper->load([
+        return Inertia::render('admin/question-papers/build', $this->buildPayload($questionPaper));
+    }
+
+    public function buildPreview(QuestionPaper $questionPaper): Response
+    {
+        Gate::authorize('managePapers', Question::class);
+
+        return Inertia::render('admin/preview/question-papers/build', $this->buildPayload($questionPaper));
+    }
+
+    /** @return array<string, mixed> */
+    private function buildPayload(QuestionPaper $paper): array
+    {
+        $paper->load([
             'institutionCourse:id,institution_id,course_code,course_title',
             'institutionCourse.institution:id,name,abbreviation',
             'assessmentType:id,name,slug',
@@ -108,15 +121,15 @@ class QuestionPaperController extends Controller
             'contexts',
         ]);
 
-        return Inertia::render('admin/question-papers/build', [
-            'paper' => $questionPaper,
+        return [
+            'paper' => $paper,
             'enum_options' => [
                 'question_types' => array_map(fn ($c) => ['value' => $c->value, 'label' => $c->label()], QuestionType::cases()),
                 'difficulties' => array_map(fn ($c) => ['value' => $c->value, 'label' => $c->label()], QuestionDifficulty::cases()),
                 'bloom_levels' => array_map(fn ($c) => ['value' => $c->value, 'label' => $c->label()], BloomLevel::cases()),
                 'context_types' => array_map(fn ($c) => ['value' => $c->value, 'label' => $c->label()], ContextType::cases()),
             ],
-        ]);
+        ];
     }
 
     public function update(UpdateQuestionPaperRequest $request, QuestionPaper $questionPaper): RedirectResponse

@@ -142,6 +142,44 @@ test('build page loads paper with nested data', function () {
         );
 });
 
+test('build preview page loads paper with same payload shape as build', function () {
+    $paper = QuestionPaper::factory()->create(['institution_course_id' => $this->course->id]);
+    $section = QuestionSection::factory()->create(['question_paper_id' => $paper->id]);
+    $question = Question::factory()->create([
+        'question_paper_id' => $paper->id,
+        'question_section_id' => $section->id,
+        'institution_course_id' => $this->course->id,
+        'created_by' => $this->admin->id,
+    ]);
+    QuestionAnswer::factory()->for($question)->create([
+        'depth_level' => AnswerDepthLevel::Quick,
+        'is_published' => true,
+        'created_by' => $this->admin->id,
+    ]);
+
+    $this->actingAs($this->admin)
+        ->get(route('admin.question-papers.build-preview', $paper))
+        ->assertOk()
+        ->assertInertia(fn ($page) => $page
+            ->component('admin/preview/question-papers/build')
+            ->has('paper')
+            ->has('paper.sections', 1)
+            ->has('paper.sections.0.questions', 1)
+            ->has('paper.sections.0.questions.0.answers', 1)
+            ->has('enum_options.question_types')
+            ->has('enum_options.difficulties')
+            ->has('enum_options.bloom_levels')
+            ->has('enum_options.context_types')
+        );
+});
+
+test('build preview is staff-gated', function () {
+    $paper = QuestionPaper::factory()->create(['institution_course_id' => $this->course->id]);
+
+    $this->get(route('admin.question-papers.build-preview', $paper))
+        ->assertRedirect(route('login'));
+});
+
 test('build eager-loads answers on top-level questions', function () {
     $paper = QuestionPaper::factory()->create(['institution_course_id' => $this->course->id]);
     $section = QuestionSection::factory()->create(['question_paper_id' => $paper->id]);
