@@ -97,9 +97,13 @@ class QuestionPaperController extends Controller
             'assessmentType:id,name,slug',
             'sections' => fn ($q) => $q->orderBy('sort_order'),
             'sections.questions' => fn ($q) => $q->whereNull('parent_question_id')->orderBy('sort_order'),
+            'sections.questions.answers',
             'sections.questions.children' => fn ($q) => $q->orderBy('sort_order'),
+            'sections.questions.children.answers',
             'sections.questions.children.children' => fn ($q) => $q->orderBy('sort_order'),
+            'sections.questions.children.children.answers',
             'sections.questions.children.children.children' => fn ($q) => $q->orderBy('sort_order'),
+            'sections.questions.children.children.children.answers',
             'sections.questions.questionContextLinks',
             'contexts',
         ]);
