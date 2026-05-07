@@ -1,18 +1,28 @@
 'use no memo';
 
-import { useEffect, useRef } from 'react';
-import { useForm } from '@inertiajs/react';
-import { Button } from '@/components/ui/button';
+import { useCallback } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { FormField } from '@/components/ui/form-field';
 import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { TiptapEditor } from '@/components/shared/tiptap-editor';
-import InputError from '@/components/input-error';
-import QuestionController from '@/actions/App/Http/Controllers/Admin/QuestionController';
+import { Button } from '@/components/ui/button';
+import { Plus, Trash2 } from 'lucide-react';
 import type { EnumOption, QuestionNode } from '@/types/questions';
-import type { TiptapJSON } from '@/types/tiptap';
+import { useQuestionForm } from './_shared/use-question-form';
+import { StemCard } from './_shared/stem-card';
+import { MetadataCard } from './_shared/metadata-card';
+import { SaveBar } from './_shared/save-bar';
+
+interface RubricCriterion {
+    label: string;
+    text: string;
+    points: number;
+}
+
+interface FreeFormConfig {
+    minWords?: number;
+    maxWords?: number;
+    rubric?: RubricCriterion[];
+}
 
 interface FreeFormAuthorProps {
     question: QuestionNode;
@@ -23,58 +33,41 @@ interface FreeFormAuthorProps {
     onDirtyChange: (dirty: boolean) => void;
 }
 
+const CRITERION_LABELS = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H'];
+
 export function FreeFormAuthor({ question, enumOptions, onDirtyChange }: FreeFormAuthorProps) {
-    const initialSource = ((question as QuestionNode & { source?: string }).source) ?? 'manual';
+    const { form, isDirty, save } = useQuestionForm(question, onDirtyChange);
+    const config = (form.data.response_config as FreeFormConfig | null) ?? {};
+    const rubric = config.rubric ?? [];
 
-    const form = useForm({
-        question_type: question.question_type,
-        content: question.content,
-        content_doc: question.content_doc ?? null,
-        marks: question.marks,
-        difficulty_level: question.difficulty_level ?? '',
-        bloom_level: question.bloom_level ?? '',
-        response_config: question.response_config ?? null,
-        source: initialSource,
-        status: question.status ?? 'draft',
-    });
+    const setConfig = useCallback((next: FreeFormConfig) => {
+        const cleaned: FreeFormConfig = {};
+        if (typeof next.minWords === 'number' && Number.isFinite(next.minWords)) cleaned.minWords = next.minWords;
+        if (typeof next.maxWords === 'number' && Number.isFinite(next.maxWords)) cleaned.maxWords = next.maxWords;
+        if (next.rubric && next.rubric.length > 0) cleaned.rubric = next.rubric;
+        const isEmpty = Object.keys(cleaned).length === 0;
+        form.setData('response_config', isEmpty ? null : (cleaned as never));
+    }, [form]);
 
-    const initialDataRef = useRef(JSON.stringify(form.data));
-
-    useEffect(() => {
-        initialDataRef.current = JSON.stringify({
-            question_type: question.question_type,
-            content: question.content,
-            content_doc: question.content_doc ?? null,
-            marks: question.marks,
-            difficulty_level: question.difficulty_level ?? '',
-            bloom_level: question.bloom_level ?? '',
-            response_config: question.response_config ?? null,
-            source: initialSource,
-            status: question.status ?? 'draft',
-        });
-    }, [question.id, initialSource, question.status]);
-
-    const isDirty = JSON.stringify(form.data) !== initialDataRef.current;
-
-    useEffect(() => {
-        onDirtyChange(isDirty);
-    }, [isDirty, onDirtyChange]);
-
-    function handleSubmit(e: React.FormEvent) {
-        e.preventDefault();
-        form.put(QuestionController.update.url(question.id), {
-            preserveScroll: true,
-            preserveState: true,
-            only: ['paper'],
-            onSuccess: () => {
-                initialDataRef.current = JSON.stringify(form.data);
-                onDirtyChange(false);
-            },
-        });
+    function addCriterion() {
+        const next = [...rubric, {
+            label: CRITERION_LABELS[rubric.length] ?? `${rubric.length + 1}`,
+            text: '',
+            points: 0,
+        }];
+        setConfig({ ...config, rubric: next });
     }
 
-    async function handleImageUpload(_file: File): Promise<string> {
-        return '/placeholder-image.png';
+    function updateCriterion(idx: number, patch: Partial<RubricCriterion>) {
+        const next = rubric.map((c, i) => (i === idx ? { ...c, ...patch } : c));
+        setConfig({ ...config, rubric: next });
+    }
+
+    function removeCriterion(idx: number) {
+        const next = rubric
+            .filter((_, i) => i !== idx)
+            .map((c, i) => ({ ...c, label: CRITERION_LABELS[i] ?? `${i + 1}` }));
+        setConfig({ ...config, rubric: next });
     }
 
     const typeLabel = question.question_type === 'theory'
@@ -84,102 +77,130 @@ export function FreeFormAuthor({ question, enumOptions, onDirtyChange }: FreeFor
             : 'Essay';
 
     return (
-        <form onSubmit={handleSubmit} className="space-y-5">
+        <form onSubmit={save} className="space-y-5">
+            <StemCard
+                title={`${typeLabel} stem`}
+                description="The question prompt as the student will read it. Use the editor for math, code, tables, and images."
+                placeholder={`Write the ${typeLabel.toLowerCase()} prompt here…`}
+                valueDoc={form.data.content_doc}
+                error={form.errors.content}
+                onChange={(json, plain) => form.setData((prev) => ({ ...prev, content: plain, content_doc: json }))}
+            />
+
             <Card>
                 <CardHeader>
-                    <CardTitle>{typeLabel} stem</CardTitle>
+                    <CardTitle>Word range</CardTitle>
                     <CardDescription>
-                        The question prompt as the student will read it. Use the editor to add formatting, code, math, tables, or images.
+                        Optional. When set, the student sees a soft hint above the editor; submissions outside the range can still be graded.
+                    </CardDescription>
+                </CardHeader>
+                <CardContent>
+                    <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                        <FormField label="Min words" name="min_words">
+                            <Input
+                                id="min_words"
+                                type="number"
+                                min={0}
+                                step={10}
+                                value={config.minWords ?? ''}
+                                onChange={(e) => {
+                                    const v = e.target.value;
+                                    setConfig({ ...config, minWords: v === '' ? undefined : Number(v) });
+                                }}
+                                placeholder="—"
+                            />
+                        </FormField>
+                        <FormField label="Max words" name="max_words">
+                            <Input
+                                id="max_words"
+                                type="number"
+                                min={0}
+                                step={10}
+                                value={config.maxWords ?? ''}
+                                onChange={(e) => {
+                                    const v = e.target.value;
+                                    setConfig({ ...config, maxWords: v === '' ? undefined : Number(v) });
+                                }}
+                                placeholder="—"
+                            />
+                        </FormField>
+                    </div>
+                </CardContent>
+            </Card>
+
+            <Card>
+                <CardHeader>
+                    <CardTitle>Rubric</CardTitle>
+                    <CardDescription>
+                        Optional. Adding a rubric unlocks AI-assisted grading. Without a rubric, free-form questions
+                        fall back to fully manual grading.
                     </CardDescription>
                 </CardHeader>
                 <CardContent>
                     <div className="space-y-2">
-                        <Label htmlFor="stem">Stem</Label>
-                        <TiptapEditor
-                            value={form.data.content_doc}
-                            onChange={(json, plain) => {
-                                form.setData((prev) => ({
-                                    ...prev,
-                                    content: plain,
-                                    content_doc: json,
-                                }));
-                            }}
-                            onImageUpload={handleImageUpload}
-                            placeholder={`Write the ${typeLabel.toLowerCase()} prompt here…`}
-                        />
-                        <InputError message={form.errors.content} />
+                        {rubric.map((criterion, idx) => (
+                            <div
+                                key={idx}
+                                className="grid grid-cols-[28px_1fr_72px_32px] items-center gap-3 rounded-md border border-dashed border-border bg-card px-3 py-2"
+                            >
+                                <span className="rounded bg-primary px-1.5 py-0.5 text-center font-mono text-[11px] font-semibold text-primary-foreground">
+                                    {criterion.label}
+                                </span>
+                                <Input
+                                    value={criterion.text}
+                                    onChange={(e) => updateCriterion(idx, { text: e.target.value })}
+                                    placeholder="Criterion description"
+                                    className="border-0 bg-transparent shadow-none focus-visible:ring-0"
+                                />
+                                <Input
+                                    type="number"
+                                    min={0}
+                                    step={1}
+                                    value={criterion.points}
+                                    onChange={(e) => updateCriterion(idx, { points: Number(e.target.value) || 0 })}
+                                    className="text-right font-mono text-xs"
+                                />
+                                <Button
+                                    type="button"
+                                    size="icon"
+                                    variant="ghost"
+                                    onClick={() => removeCriterion(idx)}
+                                    className="size-8 text-muted-foreground hover:text-destructive"
+                                >
+                                    <Trash2 className="size-4" />
+                                    <span className="sr-only">Remove criterion {criterion.label}</span>
+                                </Button>
+                            </div>
+                        ))}
+
+                        <button
+                            type="button"
+                            onClick={addCriterion}
+                            className="flex w-full items-center justify-center gap-2 rounded-md border border-dashed border-border px-3 py-2 font-mono text-xs text-muted-foreground transition-colors hover:border-[var(--fg-subtle)] hover:bg-[var(--bg-raised)] hover:text-foreground"
+                        >
+                            <Plus className="size-3.5" />
+                            Add criterion
+                        </button>
                     </div>
                 </CardContent>
             </Card>
 
-            <Card>
-                <CardHeader>
-                    <CardTitle>Metadata</CardTitle>
-                    <CardDescription>Marks, difficulty, and Bloom taxonomy classification.</CardDescription>
-                </CardHeader>
-                <CardContent>
-                    <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
-                        <FormField label="Marks" name="marks" error={form.errors.marks}>
-                            <Input
-                                id="marks"
-                                type="number"
-                                min={0}
-                                step={0.5}
-                                value={form.data.marks ?? ''}
-                                onChange={(e) => {
-                                    const v = e.target.value;
-                                    form.setData('marks', v === '' ? null : Number(v));
-                                }}
-                            />
-                        </FormField>
+            <MetadataCard
+                marks={form.data.marks}
+                difficulty={form.data.difficulty_level}
+                bloom={form.data.bloom_level}
+                enumOptions={enumOptions}
+                errors={{
+                    marks: form.errors.marks,
+                    difficulty_level: form.errors.difficulty_level,
+                    bloom_level: form.errors.bloom_level,
+                }}
+                onMarksChange={(m) => form.setData('marks', m)}
+                onDifficultyChange={(d) => form.setData('difficulty_level', d)}
+                onBloomChange={(b) => form.setData('bloom_level', b)}
+            />
 
-                        <FormField label="Difficulty" name="difficulty_level" error={form.errors.difficulty_level}>
-                            <Select
-                                value={form.data.difficulty_level || undefined}
-                                onValueChange={(v) => form.setData('difficulty_level', v)}
-                            >
-                                <SelectTrigger id="difficulty_level">
-                                    <SelectValue placeholder="Select difficulty" />
-                                </SelectTrigger>
-                                <SelectContent>
-                                    {enumOptions.difficulties.map((opt) => (
-                                        <SelectItem key={opt.value} value={opt.value}>
-                                            {opt.label}
-                                        </SelectItem>
-                                    ))}
-                                </SelectContent>
-                            </Select>
-                        </FormField>
-
-                        <FormField label="Bloom level" name="bloom_level" error={form.errors.bloom_level}>
-                            <Select
-                                value={form.data.bloom_level || undefined}
-                                onValueChange={(v) => form.setData('bloom_level', v)}
-                            >
-                                <SelectTrigger id="bloom_level">
-                                    <SelectValue placeholder="Select Bloom level" />
-                                </SelectTrigger>
-                                <SelectContent>
-                                    {(enumOptions.bloom_levels ?? []).map((opt) => (
-                                        <SelectItem key={opt.value} value={opt.value}>
-                                            {opt.label}
-                                        </SelectItem>
-                                    ))}
-                                </SelectContent>
-                            </Select>
-                        </FormField>
-                    </div>
-                </CardContent>
-            </Card>
-
-            <div className="flex items-center justify-end gap-3 border-t border-[var(--border-2)] pt-4">
-                {form.recentlySuccessful && (
-                    <span className="text-xs text-muted-foreground">Saved</span>
-                )}
-                <Button type="submit" disabled={form.processing || !isDirty}>
-                    {form.processing ? 'Saving…' : 'Save question'}
-                </Button>
-            </div>
+            <SaveBar isDirty={isDirty} processing={form.processing} recentlySuccessful={form.recentlySuccessful} />
         </form>
     );
 }
