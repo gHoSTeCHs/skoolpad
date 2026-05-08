@@ -1,10 +1,13 @@
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { cn } from '@/lib/utils';
 import type { QuestionEnumOptions, QuestionPaper, QuestionSection, QuestionNode, AnswerDepthLevel } from '@/types/questions';
 import { QuestionHeader } from './question-header';
 import { QuestionTab } from './tabs/question-tab';
 import { AnswersTab } from './tabs/answers-tab';
 import { LinksTab } from './tabs/links-tab';
 import { ContextsTab } from './tabs/contexts-tab';
+import { aggregateGroupCounts, fillStateFor } from './tabs/answers-tab/_shared/answer-fill-utils';
+import { DEPTH_ORDER } from './tabs/answers-tab/_shared/depth-meta';
 
 export type EditorTab = 'question' | 'answers' | 'links' | 'contexts';
 
@@ -16,19 +19,24 @@ interface CompositeEditorProps {
     activeTab: EditorTab;
     onTabChange: (tab: EditorTab) => void;
     onTabDirtyChange: (tab: EditorTab, dirty: boolean) => void;
+    initialDepth: AnswerDepthLevel | null;
+    onInitialDepthConsumed: () => void;
+    onSelectChildDepth: (childId: string, depth: AnswerDepthLevel) => void;
+    answersDirty: boolean;
 }
 
-const ANSWER_DEPTHS: AnswerDepthLevel[] = ['quick', 'standard', 'deep_dive'];
-
-function answersFilledCount(question: QuestionNode): number {
-    if (!question.answers) return 0;
-    return ANSWER_DEPTHS.filter((d) => question.answers!.some((a) => a.depth_level === d)).length;
+interface AnswerCount {
+    filled: number;
+    total: number;
 }
 
-function linkCount(question: QuestionNode): number {
-    const topicCount = 0;
-    const blockCount = 0;
-    return topicCount + blockCount;
+function answerCountFor(question: QuestionNode): AnswerCount {
+    if (question.question_type === 'group') {
+        const counts = aggregateGroupCounts(question);
+        return { filled: counts.filled, total: counts.total };
+    }
+    const filled = DEPTH_ORDER.filter((d) => fillStateFor(question, d) !== 'empty').length;
+    return { filled, total: 3 };
 }
 
 function contextCount(question: QuestionNode): number {
@@ -43,9 +51,13 @@ export function CompositeEditor({
     activeTab,
     onTabChange,
     onTabDirtyChange,
+    initialDepth,
+    onInitialDepthConsumed,
+    onSelectChildDepth,
+    answersDirty,
 }: CompositeEditorProps) {
-    const answerCount = answersFilledCount(question);
-    const linkN = linkCount(question);
+    const isGroup = question.question_type === 'group';
+    const answerCount = answerCountFor(question);
     const ctxN = contextCount(question);
 
     return (
@@ -61,19 +73,17 @@ export function CompositeEditor({
                     <TabsTrigger value="question" className="gap-2 px-4 py-3">
                         Question
                     </TabsTrigger>
-                    <TabsTrigger value="answers" className="gap-2 px-4 py-3">
-                        Answers
-                        <span className="rounded-full bg-[var(--bg-raised)] px-1.5 py-0.5 font-mono text-[10px] text-muted-foreground">
-                            {answerCount}/3
+                    <TabsTrigger
+                        value="answers"
+                        className={cn('gap-2 px-4 py-3', answersDirty && 'qb-answer-tab--warn')}
+                    >
+                        {isGroup ? "Children's answers" : 'Answers'}
+                        <span className="qb-tab-badge rounded-full bg-[var(--bg-raised)] px-1.5 py-0.5 font-mono text-[10px] text-muted-foreground">
+                            {answerCount.filled}/{answerCount.total}
                         </span>
                     </TabsTrigger>
                     <TabsTrigger value="links" className="gap-2 px-4 py-3">
                         Links
-                        {linkN > 0 && (
-                            <span className="rounded-full bg-[var(--bg-raised)] px-1.5 py-0.5 font-mono text-[10px] text-muted-foreground">
-                                {linkN}
-                            </span>
-                        )}
                     </TabsTrigger>
                     <TabsTrigger value="contexts" className="gap-2 px-4 py-3">
                         Contexts
@@ -94,7 +104,14 @@ export function CompositeEditor({
                         />
                     </TabsContent>
                     <TabsContent value="answers" className="mt-0">
-                        <AnswersTab question={question} />
+                        <AnswersTab
+                            question={question}
+                            initialDepth={initialDepth}
+                            onInitialDepthConsumed={onInitialDepthConsumed}
+                            onSelectChildDepth={onSelectChildDepth}
+                            onEditOnQuestionTab={() => onTabChange('question')}
+                            onDirtyChange={(d) => onTabDirtyChange('answers', d)}
+                        />
                     </TabsContent>
                     <TabsContent value="links" className="mt-0">
                         <LinksTab question={question} />

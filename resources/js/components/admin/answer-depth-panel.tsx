@@ -3,6 +3,7 @@
 import { Transition } from '@headlessui/react';
 import { useForm } from '@inertiajs/react';
 import { CheckCircle2, Circle } from 'lucide-react';
+import { useEffect } from 'react';
 import AnswerController from '@/actions/App/Http/Controllers/Admin/AnswerController';
 import InputError from '@/components/input-error';
 import { TiptapEditor } from '@/components/shared/tiptap-editor';
@@ -17,9 +18,10 @@ import type { TiptapJSON } from '@/types/tiptap';
 interface Props {
     questionId: string;
     depthData: AnswerDepthData;
+    onDirtyChange?: (dirty: boolean) => void;
 }
 
-export function AnswerDepthPanel({ questionId, depthData }: Props) {
+export function AnswerDepthPanel({ questionId, depthData, onDirtyChange }: Props) {
     const isExisting = depthData.answer !== null;
 
     const form = useForm({
@@ -28,6 +30,10 @@ export function AnswerDepthPanel({ questionId, depthData }: Props) {
         content_plain: depthData.answer?.content_plain ?? '',
         is_published: depthData.answer?.is_published ?? false,
     });
+
+    useEffect(() => {
+        onDirtyChange?.(form.isDirty);
+    }, [form.isDirty, onDirtyChange]);
 
     async function handleImageUpload(_file: File): Promise<string> {
         return '/placeholder-image.png';
@@ -50,7 +56,7 @@ export function AnswerDepthPanel({ questionId, depthData }: Props) {
     }
 
     return (
-        <Card>
+        <Card data-depth={depthData.depth_level}>
             <CardHeader>
                 <div className="flex items-center justify-between">
                     <div className="flex items-center gap-2.5">

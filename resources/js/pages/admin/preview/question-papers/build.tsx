@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useCallback, useMemo, useState } from 'react';
 import { Head } from '@inertiajs/react';
 import {
     AlertDialog,
@@ -16,7 +16,7 @@ import PaperTree from '@/components/admin/preview/question-builder/paper-tree';
 import type { SelectedNode } from '@/components/admin/preview/question-builder/paper-tree';
 import { CompositeEditor, type EditorTab } from '@/components/admin/preview/question-builder/composite-editor';
 import QuestionPaperController from '@/actions/App/Http/Controllers/Admin/QuestionPaperController';
-import type { QuestionEnumOptions, QuestionNode, QuestionPaper, QuestionSection } from '@/types/questions';
+import type { AnswerDepthLevel, QuestionEnumOptions, QuestionNode, QuestionPaper, QuestionSection } from '@/types/questions';
 
 interface Props {
     paper: QuestionPaper;
@@ -71,6 +71,7 @@ export default function PreviewQuestionPapersBuild({ paper, enum_options }: Prop
         initialQuestion ? { type: 'question', id: initialQuestion.id } : null,
     );
     const [activeTab, setActiveTab] = useState<EditorTab>('question');
+    const [pendingDepth, setPendingDepth] = useState<AnswerDepthLevel | null>(null);
     const [dirtyMap, setDirtyMap] = useState<Record<EditorTab, boolean>>({
         question: false,
         answers: false,
@@ -98,6 +99,16 @@ export default function PreviewQuestionPapersBuild({ paper, enum_options }: Prop
         }
         setActiveTab(next);
     }
+
+    function handleSelectChildDepth(childId: string, depth: AnswerDepthLevel) {
+        setSelectedNode({ type: 'question', id: childId });
+        setActiveTab('answers');
+        setPendingDepth(depth);
+    }
+
+    const handleInitialDepthConsumed = useCallback(() => {
+        setPendingDepth(null);
+    }, []);
 
     function confirmDiscard() {
         setDirtyMap({ question: false, answers: false, links: false, contexts: false });
@@ -151,6 +162,10 @@ export default function PreviewQuestionPapersBuild({ paper, enum_options }: Prop
                                 activeTab={activeTab}
                                 onTabChange={requestTabChange}
                                 onTabDirtyChange={handleTabDirtyChange}
+                                initialDepth={pendingDepth}
+                                onInitialDepthConsumed={handleInitialDepthConsumed}
+                                onSelectChildDepth={handleSelectChildDepth}
+                                answersDirty={dirtyMap.answers}
                             />
                         ) : (
                             <div className="flex h-full items-center justify-center p-6">
