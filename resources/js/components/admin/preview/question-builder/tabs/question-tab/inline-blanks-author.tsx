@@ -21,8 +21,16 @@ interface InlineBlanksAuthorProps {
 
 const BLANK_RE = /\[\[([^\]]*)\]\]/g;
 
-function detectBlankCount(stem: string): number {
-    return Array.from(stem.matchAll(BLANK_RE)).length;
+interface ParsedBlank {
+    position: number;
+    captured: string;
+}
+
+function parseBlanks(stem: string): ParsedBlank[] {
+    return Array.from(stem.matchAll(BLANK_RE)).map((m, i) => ({
+        position: i + 1,
+        captured: (m[1] ?? '').trim(),
+    }));
 }
 
 function defaultConfig(): FillBlankConfig {
@@ -36,7 +44,7 @@ export function InlineBlanksAuthor({ question, enumOptions, onDirtyChange }: Inl
     const { form, isDirty, save } = useQuestionForm(question, onDirtyChange);
     const config = (form.data.response_config as FillBlankConfig | null) ?? defaultConfig();
     const stem = form.data.content ?? '';
-    const blankCount = useMemo(() => detectBlankCount(stem), [stem]);
+    const parsed = useMemo(() => parseBlanks(stem), [stem]);
 
     const setConfig = useCallback((next: FillBlankConfig) => {
         form.setData('response_config', next as never);
@@ -44,14 +52,19 @@ export function InlineBlanksAuthor({ question, enumOptions, onDirtyChange }: Inl
 
     const blanks = useMemo(() => {
         const existing = config.blanks ?? [];
-        return Array.from({ length: blankCount }, (_, i) =>
-            existing.find((b) => b.position === i + 1) ?? { position: i + 1, correct_answers: [] },
-        );
-    }, [blankCount, config.blanks]);
+        return parsed.map((p) => {
+            const existingMatch = existing.find((b) => b.position === p.position);
+            if (existingMatch && existingMatch.correct_answers.length > 0) return existingMatch;
+            const seed = p.captured ? [p.captured] : [];
+            return existingMatch ?? { position: p.position, correct_answers: seed };
+        });
+    }, [parsed, config.blanks]);
 
     function setBlankAccepted(position: number, values: string[]) {
         const others = blanks.filter((b) => b.position !== position);
-        const updated = [...others, { position, correct_answers: values }].sort((a, b) => a.position - b.position);
+        const updated = [...others, { position, correct_answers: values }]
+            .filter((b) => b.correct_answers.length > 0)
+            .sort((a, b) => a.position - b.position);
         setConfig({ ...config, blanks: updated });
     }
 
@@ -94,15 +107,15 @@ export function InlineBlanksAuthor({ question, enumOptions, onDirtyChange }: Inl
                     <textarea
                         rows={4}
                         value={stem}
-                        onChange={(e) => form.setData('content', e.target.value)}
+                        onChange={(e) => form.setData((prev) => ({ ...prev, content: e.target.value, content_doc: null }))}
                         placeholder='e.g. "The MMU translates a [[virtual address]] into a [[physical address]]…"'
                         className="w-full resize-none rounded-md border border-border bg-card px-3 py-2 font-mono text-[13px] outline-none focus:border-[var(--fg-subtle)]"
                     />
 
-                    {blankCount > 0 && (
+                    {parsed.length > 0 && (
                         <div className="mt-3 space-y-1.5">
                             <span className="font-mono text-[10px] uppercase tracking-wider text-muted-foreground">
-                                Preview · {blankCount} blank{blankCount === 1 ? '' : 's'}
+                                Preview · {parsed.length} blank{parsed.length === 1 ? '' : 's'}
                             </span>
                             <div className="rounded-md border border-border bg-[var(--bg-raised)] px-4 py-3 text-[13.5px] leading-[1.85]">
                                 {renderedStem}
@@ -112,7 +125,7 @@ export function InlineBlanksAuthor({ question, enumOptions, onDirtyChange }: Inl
                 </CardContent>
             </Card>
 
-            {blankCount > 0 && (
+            {parsed.length > 0 && (
                 <Card>
                     <CardHeader>
                         <CardTitle>Accepted answers per blank</CardTitle>

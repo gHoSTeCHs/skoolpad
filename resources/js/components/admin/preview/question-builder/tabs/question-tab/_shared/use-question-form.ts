@@ -3,7 +3,7 @@
 import { useEffect, useRef } from 'react';
 import { useForm } from '@inertiajs/react';
 import QuestionController from '@/actions/App/Http/Controllers/Admin/QuestionController';
-import type { QuestionNode, ResponseConfig } from '@/types/questions';
+import type { QuestionNode, ResponseConfig, SubQuestionFormData } from '@/types/questions';
 import type { TiptapJSON } from '@/types/tiptap';
 
 export interface QuestionFormShape {
@@ -16,10 +16,23 @@ export interface QuestionFormShape {
     response_config: ResponseConfig;
     source: string;
     status: string;
+    sub_questions: SubQuestionFormData[];
+}
+
+function mapChildrenToSubQuestions(children: QuestionNode[]): SubQuestionFormData[] {
+    return children.map((child) => ({
+        id: child.id,
+        question_type: child.question_type,
+        content: child.content,
+        content_doc: child.content_doc ?? null,
+        marks: child.marks,
+        sort_order: child.sort_order,
+        response_config: child.response_config ?? null,
+    }));
 }
 
 function buildInitial(question: QuestionNode): QuestionFormShape {
-    const source = ((question as QuestionNode & { source?: string }).source) ?? 'manual';
+    const runtimeQuestion = question as QuestionNode & { source?: string };
     return {
         question_type: question.question_type,
         content: question.content,
@@ -28,8 +41,9 @@ function buildInitial(question: QuestionNode): QuestionFormShape {
         difficulty_level: question.difficulty_level ?? '',
         bloom_level: question.bloom_level ?? '',
         response_config: question.response_config ?? null,
-        source,
+        source: runtimeQuestion.source ?? 'manual',
         status: question.status ?? 'draft',
+        sub_questions: mapChildrenToSubQuestions(question.children ?? []),
     };
 }
 

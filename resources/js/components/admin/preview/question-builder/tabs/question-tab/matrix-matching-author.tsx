@@ -10,6 +10,8 @@ import { MetadataCard } from './_shared/metadata-card';
 import { SaveBar } from './_shared/save-bar';
 
 const COLUMN_LABELS = ['P', 'Q', 'R', 'S', 'T', 'U', 'V', 'W'];
+const MIN_LEFT = 2;
+const MIN_RIGHT = 2;
 
 interface MatrixAuthorProps {
     question: QuestionNode;
@@ -55,7 +57,7 @@ export function MatrixMatchingAuthor({ question, enumOptions, onDirtyChange }: M
     }
 
     function removeRow(idx: number) {
-        if (config.left.length <= 1) return;
+        if (config.left.length <= MIN_LEFT) return;
         const left = config.left.filter((_, i) => i !== idx);
         const mapping: Record<number, number[]> = {};
         let target = 0;
@@ -77,7 +79,7 @@ export function MatrixMatchingAuthor({ question, enumOptions, onDirtyChange }: M
     }
 
     function removeColumn(idx: number) {
-        if (config.right.length <= 1) return;
+        if (config.right.length <= MIN_RIGHT) return;
         const right = config.right.filter((_, i) => i !== idx);
         const mapping: Record<number, number[]> = {};
         Object.entries(config.mapping).forEach(([rowKey, cols]) => {
@@ -128,7 +130,7 @@ export function MatrixMatchingAuthor({ question, enumOptions, onDirtyChange }: M
                                                 <button
                                                     type="button"
                                                     onClick={() => removeColumn(colIdx)}
-                                                    disabled={config.right.length <= 1}
+                                                    disabled={config.right.length <= MIN_RIGHT}
                                                     className="opacity-0 transition-opacity hover:text-destructive disabled:cursor-not-allowed group-hover:opacity-100"
                                                     aria-label={`Remove column ${COLUMN_LABELS[colIdx]}`}
                                                 >
@@ -188,7 +190,7 @@ export function MatrixMatchingAuthor({ question, enumOptions, onDirtyChange }: M
                                             <button
                                                 type="button"
                                                 onClick={() => removeRow(rowIdx)}
-                                                disabled={config.left.length <= 1}
+                                                disabled={config.left.length <= MIN_LEFT}
                                                 className="size-6 rounded text-[var(--fg-subtle)] opacity-0 transition-opacity hover:bg-[var(--bg-raised)] hover:text-destructive disabled:cursor-not-allowed group-hover:opacity-100"
                                                 aria-label={`Remove row ${rowIdx + 1}`}
                                             >

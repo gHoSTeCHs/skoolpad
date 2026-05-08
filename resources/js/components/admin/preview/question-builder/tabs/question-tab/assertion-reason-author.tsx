@@ -1,6 +1,6 @@
 'use no memo';
 
-import { useCallback } from 'react';
+import { useCallback, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Label } from '@/components/ui/label';
 import type { AssertionReasonConfig, EnumOption, QuestionNode } from '@/types/questions';
@@ -16,6 +16,8 @@ interface AssertionReasonAuthorProps {
     };
     onDirtyChange: (dirty: boolean) => void;
 }
+
+const STANDARD_PROMPT = 'Read the assertion and reason; choose the option that best describes the relationship.';
 
 const STANDARD_OPTIONS = [
     { label: 'A', text: 'Both A and R are true; R is the correct explanation of A' },
@@ -36,6 +38,12 @@ function defaultConfig(): AssertionReasonConfig {
 export function AssertionReasonAuthor({ question, enumOptions, onDirtyChange }: AssertionReasonAuthorProps) {
     const { form, isDirty, save } = useQuestionForm(question, onDirtyChange);
     const config = (form.data.response_config as AssertionReasonConfig | null) ?? defaultConfig();
+
+    useEffect(() => {
+        if (!form.data.content || form.data.content.trim() === '') {
+            form.setData((prev) => ({ ...prev, content: STANDARD_PROMPT }));
+        }
+    }, [question.id]);
 
     const setConfig = useCallback((next: AssertionReasonConfig) => {
         form.setData('response_config', next as never);

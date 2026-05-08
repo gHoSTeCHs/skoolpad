@@ -1,3 +1,5 @@
+'use no memo';
+
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Label } from '@/components/ui/label';
 import { TiptapEditor } from '@/components/shared/tiptap-editor';

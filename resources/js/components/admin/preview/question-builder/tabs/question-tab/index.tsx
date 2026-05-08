@@ -4,6 +4,7 @@ import { SingleChoiceAuthor } from './single-choice-author';
 import { MultiChoiceAuthor } from './multi-choice-author';
 import { BooleanAuthor } from './boolean-author';
 import { InlineBlanksAuthor } from './inline-blanks-author';
+import { ClozeAuthor } from './cloze-author';
 import { MatchingAuthor } from './matching-author';
 import { OrderingAuthor } from './ordering-author';
 import { MatrixMatchingAuthor } from './matrix-matching-author';
@@ -38,8 +39,9 @@ function getAuthor(
         case 'true_false':
             return <BooleanAuthor key={key} {...props} />;
         case 'fill_blank':
-        case 'cloze':
             return <InlineBlanksAuthor key={key} {...props} />;
+        case 'cloze':
+            return <ClozeAuthor key={key} {...props} />;
         case 'matching':
             return <MatchingAuthor key={key} {...props} />;
         case 'ordering':

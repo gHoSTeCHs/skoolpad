@@ -85,7 +85,14 @@ export function DiagramLabelAuthor({ question, enumOptions, onDirtyChange }: Dia
     }
 
     function setLabelAccepted(idx: number, values: string[]) {
-        setConfig({ ...config, accepted: { ...(config.accepted ?? {}), [idx]: values } });
+        const labels = config.labels.map((l, i) =>
+            i === idx ? { ...l, answer: values[0] ?? '' } : l,
+        );
+        setConfig({
+            ...config,
+            labels,
+            accepted: { ...(config.accepted ?? {}), [idx]: values },
+        });
     }
 
     function setLabelMarks(idx: number, marks: number) {

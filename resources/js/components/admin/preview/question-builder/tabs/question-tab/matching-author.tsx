@@ -19,9 +19,14 @@ interface MatchingAuthorProps {
     onDirtyChange: (dirty: boolean) => void;
 }
 
+const MIN_PAIRS = 2;
+
 function defaultConfig(): MatchingConfig {
     return {
-        pairs: [{ left: '', right: '' }],
+        pairs: [
+            { left: '', right: '' },
+            { left: '', right: '' },
+        ],
         distractors: [],
     };
 }
@@ -40,13 +45,35 @@ export function MatchingAuthor({ question, enumOptions, onDirtyChange }: Matchin
         setConfig({ ...config, pairs });
     }
 
+    function commitAndAdvance(idx: number, side: 'left' | 'right', text: string) {
+        form.setData((prev) => {
+            const current = (prev.response_config as MatchingConfig | null) ?? defaultConfig();
+            const updatedPairs = current.pairs.map((p, i) =>
+                i === idx ? { ...p, [side]: text } : p,
+            );
+            const isLastRowRight = side === 'right' && idx === current.pairs.length - 1;
+            const finalPairs = isLastRowRight
+                ? [...updatedPairs, { left: '', right: '' }]
+                : updatedPairs;
+            return { ...prev, response_config: { ...current, pairs: finalPairs } as never };
+        });
+        const isLastRowRight = side === 'right' && idx === config.pairs.length - 1;
+        if (isLastRowRight) {
+            setEditingIdx({ row: idx + 1, side: 'left' });
+        } else if (side === 'left') {
+            setEditingIdx({ row: idx, side: 'right' });
+        } else {
+            setEditingIdx({ row: idx + 1, side: 'left' });
+        }
+    }
+
     function addPair() {
         setConfig({ ...config, pairs: [...config.pairs, { left: '', right: '' }] });
         setEditingIdx({ row: config.pairs.length, side: 'left' });
     }
 
     function removePair(idx: number) {
-        if (config.pairs.length <= 1) return;
+        if (config.pairs.length <= MIN_PAIRS) return;
         setConfig({ ...config, pairs: config.pairs.filter((_, i) => i !== idx) });
     }
 
@@ -85,7 +112,7 @@ export function MatchingAuthor({ question, enumOptions, onDirtyChange }: Matchin
                                         setEditingIdx(null);
                                     }}
                                     onCancel={() => setEditingIdx(null)}
-                                    onAdvance={() => setEditingIdx({ row: idx, side: 'right' })}
+                                    onAdvance={(text) => commitAndAdvance(idx, 'left', text)}
                                 />
 
                                 <ArrowLeftRight className="size-4 shrink-0 text-[var(--fg-subtle)]" aria-hidden />
@@ -100,13 +127,7 @@ export function MatchingAuthor({ question, enumOptions, onDirtyChange }: Matchin
                                         setEditingIdx(null);
                                     }}
                                     onCancel={() => setEditingIdx(null)}
-                                    onAdvance={() => {
-                                        if (idx === config.pairs.length - 1) {
-                                            addPair();
-                                        } else {
-                                            setEditingIdx({ row: idx + 1, side: 'left' });
-                                        }
-                                    }}
+                                    onAdvance={(text) => commitAndAdvance(idx, 'right', text)}
                                 />
 
                                 <button
@@ -120,7 +141,7 @@ export function MatchingAuthor({ question, enumOptions, onDirtyChange }: Matchin
                                 <button
                                     type="button"
                                     onClick={() => removePair(idx)}
-                                    disabled={config.pairs.length <= 1}
+                                    disabled={config.pairs.length <= MIN_PAIRS}
                                     className="size-6 shrink-0 rounded text-[var(--fg-subtle)] opacity-0 transition-opacity hover:bg-[var(--bg-raised)] hover:text-destructive disabled:cursor-not-allowed group-hover:opacity-100"
                                     aria-label="Remove pair"
                                 >
@@ -185,7 +206,7 @@ interface PairCellProps {
     onActivate: () => void;
     onCommit: (text: string) => void;
     onCancel: () => void;
-    onAdvance: () => void;
+    onAdvance: (text: string) => void;
 }
 
 function PairCell({ isEditing, value, placeholder, onActivate, onCommit, onCancel, onAdvance }: PairCellProps) {
@@ -212,8 +233,7 @@ function PairCell({ isEditing, value, placeholder, onActivate, onCommit, onCance
             onKeyDown={(e) => {
                 if (e.key === 'Enter') {
                     e.preventDefault();
-                    onCommit(draft);
-                    onAdvance();
+                    onAdvance(draft);
                 } else if (e.key === 'Escape') {
                     onCancel();
                 }

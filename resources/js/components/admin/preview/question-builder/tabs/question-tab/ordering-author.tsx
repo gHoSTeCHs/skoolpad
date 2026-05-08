@@ -18,10 +18,12 @@ interface OrderingAuthorProps {
     onDirtyChange: (dirty: boolean) => void;
 }
 
+const MIN_ITEMS = 2;
+
 function defaultConfig(): OrderingConfig {
     return {
-        items: [''],
-        correct_order: [0],
+        items: ['', ''],
+        correct_order: [0, 1],
     };
 }
 
@@ -47,7 +49,7 @@ export function OrderingAuthor({ question, enumOptions, onDirtyChange }: Orderin
     }
 
     function removeItem(idx: number) {
-        if (config.items.length <= 1) return;
+        if (config.items.length <= MIN_ITEMS) return;
         const items = config.items.filter((_, i) => i !== idx);
         const correct_order = items.map((_, i) => i);
         setConfig({ items, correct_order });
@@ -150,7 +152,7 @@ export function OrderingAuthor({ question, enumOptions, onDirtyChange }: Orderin
                                     <button
                                         type="button"
                                         onClick={() => removeItem(idx)}
-                                        disabled={config.items.length <= 1}
+                                        disabled={config.items.length <= MIN_ITEMS}
                                         className="size-6 shrink-0 rounded text-[var(--fg-subtle)] opacity-0 transition-opacity hover:bg-[var(--bg-raised)] hover:text-destructive disabled:cursor-not-allowed group-hover:opacity-100"
                                         aria-label="Remove step"
                                     >
