@@ -3,6 +3,7 @@
 use App\Http\Controllers\Admin\AIModelController;
 use App\Http\Controllers\Admin\AIPlatformSettingsController;
 use App\Http\Controllers\Admin\AnswerController;
+use App\Http\Controllers\Admin\AnswerGenerationController;
 use App\Http\Controllers\Admin\AssessmentSubjectController;
 use App\Http\Controllers\Admin\AssessmentTypeController;
 use App\Http\Controllers\Admin\BulkImportController;
@@ -82,6 +83,8 @@ Route::middleware(['auth', 'verified', 'staff'])->prefix('admin')->name('admin.'
     Route::get('questions/{question}/answers', [AnswerController::class, 'index'])->name('questions.answers');
     Route::post('questions/{question}/answers', [AnswerController::class, 'store'])->name('questions.answers.store');
     Route::put('questions/{question}/answers/{answer}', [AnswerController::class, 'update'])->name('questions.answers.update');
+    Route::post('questions/{question}/answers/{depth}/plan', [AnswerGenerationController::class, 'plan'])->name('questions.answers.plan');
+    Route::post('questions/{question}/answers/{depth}/generate', [AnswerGenerationController::class, 'generate'])->name('questions.answers.generate');
     Route::get('courses', [CourseController::class, 'index'])->name('courses.index');
     Route::get('courses/create', [CourseController::class, 'create'])->name('courses.create');
     Route::post('courses', [CourseController::class, 'store'])->name('courses.store');

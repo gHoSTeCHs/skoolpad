@@ -16,6 +16,7 @@ class AIGenerationLog extends Model
 
     protected $fillable = [
         'content_project_id',
+        'question_id',
         'content_block_id',
         'canonical_topic_id',
         'ai_model_id',
@@ -77,5 +78,10 @@ class AIGenerationLog extends Model
     public function canonicalTopic(): BelongsTo
     {
         return $this->belongsTo(CanonicalTopic::class);
+    }
+
+    public function question(): BelongsTo
+    {
+        return $this->belongsTo(Question::class);
     }
 }
