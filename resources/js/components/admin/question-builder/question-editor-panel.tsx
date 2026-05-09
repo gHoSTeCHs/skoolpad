@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import { router } from '@inertiajs/react';
 import { Button } from '@/components/ui/button';
-import QuestionEditor from './question-editor';
+import { QuestionEditor } from './question-editor';
 import QuestionTypeSelector from './question-type-selector';
 import ContextPicker from './context-picker';
 import { FormField } from '@/components/ui/form-field';

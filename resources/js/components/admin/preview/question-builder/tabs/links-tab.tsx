@@ -1,37 +1,161 @@
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import type { QuestionNode } from '@/types/questions';
+'use no memo';
 
-export function LinksTab({ question: _question }: { question: QuestionNode }) {
+import { router } from '@inertiajs/react';
+import { useState } from 'react';
+import QuestionController from '@/actions/App/Http/Controllers/Admin/QuestionController';
+import { BlockLinker, blockLinksFromNode } from '@/components/admin/block-linker';
+import { TopicLinker } from '@/components/admin/topic-linker';
+import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
+import type { BlockLinkDraft } from '@/components/admin/block-linker';
+import type { QuestionNode, QuestionNodeTopicLink, TopicLink } from '@/types/questions';
+
+function topicLinksFromNode(raw: QuestionNodeTopicLink[]): TopicLink[] {
+    return raw.map((link) => ({
+        id: link.canonical_topic_id,
+        title: link.canonical_topic.title,
+        is_primary: link.is_primary,
+    }));
+}
+
+interface LinksTabProps {
+    question: QuestionNode;
+    onDirtyChange?: (dirty: boolean) => void;
+}
+
+export function LinksTab({ question, onDirtyChange }: LinksTabProps) {
+    const savedTopics = topicLinksFromNode(question.topic_links ?? []);
+    const savedPrimaryId = savedTopics.find((t) => t.is_primary)?.id ?? '';
+    const savedBlocks = blockLinksFromNode(question.question_block_links ?? []);
+
+    const [topics, setTopics] = useState<TopicLink[]>(savedTopics);
+    const [primaryTopicId, setPrimaryTopicId] = useState(savedPrimaryId);
+    const [topicsDirty, setTopicsDirty] = useState(false);
+    const [topicsSaving, setTopicsSaving] = useState(false);
+    const [topicsErrors, setTopicsErrors] = useState<Record<string, string>>({});
+
+    const [blocks, setBlocks] = useState<BlockLinkDraft[]>(savedBlocks);
+    const [blocksDirty, setBlocksDirty] = useState(false);
+    const [blocksSaving, setBlocksSaving] = useState(false);
+    const [blocksErrors, setBlocksErrors] = useState<Record<string, string>>({});
+
+    function handleTopicsChange(next: TopicLink[]) {
+        setTopics(next);
+        setTopicsDirty(true);
+        onDirtyChange?.(true);
+    }
+
+    function handlePrimaryChange(id: string) {
+        setPrimaryTopicId(id);
+        setTopicsDirty(true);
+        onDirtyChange?.(true);
+    }
+
+    function handleBlocksChange(next: BlockLinkDraft[]) {
+        setBlocks(next);
+        setBlocksDirty(true);
+        onDirtyChange?.(true);
+    }
+
+    function saveTopics() {
+        setTopicsSaving(true);
+        setTopicsErrors({});
+        router.put(
+            QuestionController.update.url(question.id),
+            {
+                topic_ids: topics.map((t) => t.id),
+                primary_topic_id: primaryTopicId || null,
+            },
+            {
+                preserveScroll: true,
+                only: ['paper'],
+                onSuccess: () => {
+                    setTopicsDirty(false);
+                    onDirtyChange?.(blocksDirty);
+                },
+                onError: (errors) => setTopicsErrors(errors),
+                onFinish: () => setTopicsSaving(false),
+            },
+        );
+    }
+
+    function saveBlocks() {
+        setBlocksSaving(true);
+        setBlocksErrors({});
+        router.put(
+            QuestionController.update.url(question.id),
+            {
+                block_links: blocks.map((b) => ({
+                    content_block_id: b.content_block_id,
+                    relevance: b.relevance,
+                })),
+            },
+            {
+                preserveScroll: true,
+                only: ['paper'],
+                onSuccess: () => {
+                    setBlocksDirty(false);
+                    onDirtyChange?.(topicsDirty);
+                },
+                onError: (errors) => setBlocksErrors(errors),
+                onFinish: () => setBlocksSaving(false),
+            },
+        );
+    }
+
+    const savedTopicIds = (question.topic_links ?? []).map((l) => l.canonical_topic_id);
+
     return (
         <div className="space-y-5">
             <Card>
                 <CardHeader>
                     <CardTitle>Topic links</CardTitle>
-                    <CardDescription>
-                        Canonical-topic links land in Round 4.E. The existing TopicLinker UI from the standalone edit
-                        page is being embedded here as a Card with its own Save button.
-                    </CardDescription>
                 </CardHeader>
                 <CardContent>
-                    <div className="rounded-md border border-dashed border-border px-4 py-6 text-center text-xs text-muted-foreground">
-                        Coming in 4.E
-                    </div>
+                    <TopicLinker
+                        selectedTopics={topics}
+                        onChange={handleTopicsChange}
+                        onPrimaryChange={handlePrimaryChange}
+                        primaryTopicId={primaryTopicId}
+                        errors={topicsErrors}
+                    />
                 </CardContent>
+                {topicsDirty && (
+                    <CardFooter className="border-t pt-4">
+                        <Button
+                            size="sm"
+                            onClick={saveTopics}
+                            disabled={topicsSaving}
+                        >
+                            {topicsSaving ? 'Saving…' : 'Save topic links'}
+                        </Button>
+                    </CardFooter>
+                )}
             </Card>
 
             <Card>
                 <CardHeader>
                     <CardTitle>Content block links</CardTitle>
-                    <CardDescription>
-                        Block-link picker UI from the standalone edit page is being embedded here in 4.E with its own
-                        Save button.
-                    </CardDescription>
                 </CardHeader>
                 <CardContent>
-                    <div className="rounded-md border border-dashed border-border px-4 py-6 text-center text-xs text-muted-foreground">
-                        Coming in 4.E
-                    </div>
+                    <BlockLinker
+                        selectedBlocks={blocks}
+                        onChange={handleBlocksChange}
+                        topicIds={savedTopicIds}
+                        errors={blocksErrors}
+                    />
                 </CardContent>
+                {blocksDirty && (
+                    <CardFooter className="border-t pt-4">
+                        <Button
+                            size="sm"
+                            onClick={saveBlocks}
+                            disabled={blocksSaving}
+                        >
+                            {blocksSaving ? 'Saving…' : 'Save block links'}
+                        </Button>
+                    </CardFooter>
+                )}
             </Card>
         </div>
     );

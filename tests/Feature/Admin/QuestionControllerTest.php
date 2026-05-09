@@ -131,6 +131,55 @@ test('store creates question with response_config and topic links', function () 
         ->and($question->created_by)->toBe($this->admin->id);
 });
 
+test('store persists content_doc Tiptap JSON alongside plain content', function () {
+    $doc = [
+        'type' => 'doc',
+        'content' => [[
+            'type' => 'paragraph',
+            'content' => [['type' => 'text', 'text' => 'Define the term ACID.']],
+        ]],
+    ];
+
+    $this->actingAs($this->admin)
+        ->post(route('admin.questions.store'), validQuestionData([
+            'question_type' => 'theory',
+            'response_config' => null,
+            'content' => 'Define the term ACID.',
+            'content_doc' => $doc,
+        ]))
+        ->assertRedirect();
+
+    $question = Question::first();
+    expect($question->content)->toBe('Define the term ACID.')
+        ->and($question->content_doc)->toEqual($doc);
+});
+
+test('store accepts question without content_doc and stores null', function () {
+    $this->actingAs($this->admin)
+        ->post(route('admin.questions.store'), validQuestionData([
+            'question_type' => 'theory',
+            'response_config' => null,
+        ]))
+        ->assertRedirect();
+
+    expect(Question::first()->content_doc)->toBeNull();
+});
+
+test('store from paper builder returns back with created_question_id flash', function () {
+    $paper = QuestionPaper::factory()->for($this->course)->create();
+    $section = QuestionSection::factory()->for($paper)->create();
+
+    $this->actingAs($this->admin)
+        ->from(route('admin.question-papers.build', $paper))
+        ->post(route('admin.questions.store'), validQuestionData([
+            'question_paper_id' => $paper->id,
+            'question_section_id' => $section->id,
+            'from_paper_builder' => true,
+        ]))
+        ->assertRedirect(route('admin.question-papers.build', $paper))
+        ->assertSessionHas('created_question_id');
+});
+
 test('store creates theory question without response_config', function () {
     $data = validQuestionData([
         'question_type' => 'theory',
@@ -240,7 +289,7 @@ test('update rejects publish without permission', function () {
         ->put(route('admin.questions.update', $question), validQuestionData([
             'status' => 'published',
         ]))
-        ->assertSessionHasErrors(['status']);
+        ->assertForbidden();
 });
 
 test('update changes response_config when type changes', function () {
@@ -412,4 +461,39 @@ test('update syncs block links', function () {
     expect($question->questionBlockLinks)->toHaveCount(1);
     expect($question->questionBlockLinks->first()->content_block_id)->toBe($block2->id);
     expect($question->questionBlockLinks->first()->relevance->value)->toBe('secondary');
+});
+
+test('update clears all topic links when topic_ids is empty array', function () {
+    $question = Question::factory()->for($this->course)->create(['created_by' => $this->admin->id]);
+    $question->topicLinks()->create(['canonical_topic_id' => $this->topic->id, 'is_primary' => true]);
+
+    $this->actingAs($this->admin)
+        ->put(route('admin.questions.update', $question), validQuestionData([
+            'topic_ids' => [],
+            'primary_topic_id' => null,
+        ]))
+        ->assertRedirect();
+
+    expect($question->fresh()->topicLinks)->toHaveCount(0);
+});
+
+test('links tab put with only topic fields does not overwrite response_config', function () {
+    $originalConfig = ['options' => [['label' => 'A', 'text' => 'O(log n)', 'is_correct' => true]]];
+    $question = Question::factory()->for($this->course)->create([
+        'created_by' => $this->admin->id,
+        'response_config' => $originalConfig,
+    ]);
+
+    $this->actingAs($this->admin)
+        ->put(route('admin.questions.update', $question), [
+            'topic_ids' => [$this->topic->id],
+            'primary_topic_id' => $this->topic->id,
+        ])
+        ->assertRedirect();
+
+    $question->refresh();
+    expect($question->topicLinks)->toHaveCount(1);
+    expect($question->response_config['options'])->toHaveCount(1);
+    expect($question->response_config['options'][0]['text'])->toBe('O(log n)');
+    expect($question->response_config['options'][0]['is_correct'])->toBeTrue();
 });

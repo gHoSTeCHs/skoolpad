@@ -133,6 +133,20 @@ Route::middleware(['auth', 'verified', 'staff'])->prefix('admin')->name('admin.'
             ->limit(20)
             ->get(['id', 'title']);
     })->name('api.topics.search');
+    Route::get('api/blocks/search', function (Request $request) {
+        return \App\Models\ContentBlock::query()
+            ->when($request->filled('topic_ids'), function ($q) use ($request) {
+                $q->whereIn('canonical_topic_id', $request->array('topic_ids'));
+            })
+            ->when($request->filled('q'), function ($q) use ($request) {
+                $escaped = str_replace(['%', '_'], ['\%', '\_'], $request->string('q'));
+
+                return $q->where('title', 'ilike', "%{$escaped}%");
+            })
+            ->orderBy('title')
+            ->limit(20)
+            ->get(['id', 'title', 'canonical_topic_id']);
+    })->name('api.blocks.search');
     Route::get('api/institutions/{institution}/courses', function (Institution $institution, Request $request) {
         return InstitutionCourse::query()
             ->where('institution_id', $institution->id)

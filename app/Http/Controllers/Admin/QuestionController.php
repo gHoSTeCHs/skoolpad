@@ -125,10 +125,12 @@ class QuestionController extends Controller
 
         $question = $this->questionService->persistQuestionTree($data);
 
-        $topicIds = $request->validated('topic_ids');
-        $primaryTopicId = $request->validated('primary_topic_id');
-        if (! empty($topicIds)) {
-            $this->questionService->syncTopicLinks($question, $topicIds, $primaryTopicId);
+        if ($request->has('topic_ids')) {
+            $this->questionService->syncTopicLinks(
+                $question,
+                $request->validated('topic_ids') ?? [],
+                $request->validated('primary_topic_id'),
+            );
         }
 
         if ($request->has('block_links')) {
@@ -226,10 +228,12 @@ class QuestionController extends Controller
 
         $this->questionService->updateQuestionTree($question, $data, $request->user());
 
-        $topicIds = $request->validated('topic_ids');
-        $primaryTopicId = $request->validated('primary_topic_id');
-        if (! empty($topicIds)) {
-            $this->questionService->syncTopicLinks($question, $topicIds, $primaryTopicId);
+        if ($request->has('topic_ids')) {
+            $this->questionService->syncTopicLinks(
+                $question,
+                $request->validated('topic_ids') ?? [],
+                $request->validated('primary_topic_id'),
+            );
         }
 
         if ($request->has('block_links')) {

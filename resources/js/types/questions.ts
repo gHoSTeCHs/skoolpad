@@ -152,6 +152,8 @@ export interface QuestionNode {
     context_links?: { context_id: string; sort_order: number; label?: string }[];
     question_context_links?: { question_context_id: string; sort_order: number; label?: string }[];
     children: QuestionNode[];
+    topic_links?: QuestionNodeTopicLink[];
+    question_block_links?: QuestionNodeBlockLink[];
     answers?: {
         id: string;
         depth_level: string;
@@ -190,6 +192,27 @@ export interface TopicLink {
     id: string;
     title: string;
     is_primary: boolean;
+}
+
+export type BlockRelevance = 'primary' | 'secondary' | 'prerequisite';
+
+export interface BlockSearchResult {
+    id: string;
+    title: string;
+    canonical_topic_id: string;
+}
+
+export interface QuestionNodeTopicLink {
+    id: string;
+    canonical_topic_id: string;
+    is_primary: boolean;
+    canonical_topic: { id: string; title: string };
+}
+
+export interface QuestionNodeBlockLink {
+    content_block_id: string;
+    relevance: BlockRelevance;
+    content_block: { id: string; title: string };
 }
 
 export interface InstitutionOption {

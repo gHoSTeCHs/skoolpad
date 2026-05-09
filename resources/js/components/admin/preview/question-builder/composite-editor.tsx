@@ -43,6 +43,10 @@ function contextCount(question: QuestionNode): number {
     return question.question_context_links?.length ?? question.context_links?.length ?? 0;
 }
 
+function linkCount(question: QuestionNode): number {
+    return (question.topic_links?.length ?? 0) + (question.question_block_links?.length ?? 0);
+}
+
 export function CompositeEditor({
     paper,
     section,
@@ -59,6 +63,7 @@ export function CompositeEditor({
     const isGroup = question.question_type === 'group';
     const answerCount = answerCountFor(question);
     const ctxN = contextCount(question);
+    const linkN = linkCount(question);
 
     return (
         <div className="flex h-full flex-col bg-background">
@@ -84,6 +89,11 @@ export function CompositeEditor({
                     </TabsTrigger>
                     <TabsTrigger value="links" className="gap-2 px-4 py-3">
                         Links
+                        {linkN > 0 && (
+                            <span className="rounded-full bg-[var(--bg-raised)] px-1.5 py-0.5 font-mono text-[10px] text-muted-foreground">
+                                {linkN}
+                            </span>
+                        )}
                     </TabsTrigger>
                     <TabsTrigger value="contexts" className="gap-2 px-4 py-3">
                         Contexts
@@ -114,7 +124,10 @@ export function CompositeEditor({
                         />
                     </TabsContent>
                     <TabsContent value="links" className="mt-0">
-                        <LinksTab question={question} />
+                        <LinksTab
+                            question={question}
+                            onDirtyChange={(d) => onTabDirtyChange('links', d)}
+                        />
                     </TabsContent>
                     <TabsContent value="contexts" className="mt-0">
                         <ContextsTab question={question} />
