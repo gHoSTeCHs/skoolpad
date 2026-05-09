@@ -8,6 +8,7 @@ use App\Jobs\RunAnswerGeneration;
 use App\Models\Question;
 use App\Services\Admin\AnswerGenerationService;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Str;
 
@@ -35,7 +36,7 @@ class AnswerGenerationController extends Controller
         return response()->json($plan);
     }
 
-    public function generate(Question $question, string $depth): JsonResponse
+    public function generate(Request $request, Question $question, string $depth): JsonResponse
     {
         Gate::authorize('manageAnswers', Question::class);
 
@@ -44,9 +45,11 @@ class AnswerGenerationController extends Controller
             return response()->json(['message' => "Invalid depth: {$depth}"], 422);
         }
 
+        $proseOutline = $request->input('prose_outline', []);
+
         $jobId = (string) Str::uuid();
 
-        RunAnswerGeneration::dispatch($question, $depthLevel, $jobId);
+        RunAnswerGeneration::dispatch($question, $depthLevel, $jobId, $proseOutline);
 
         return response()->json(['job_id' => $jobId]);
     }

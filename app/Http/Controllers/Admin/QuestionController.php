@@ -116,14 +116,14 @@ class QuestionController extends Controller
         $data = $request->safe()->only([
             'institution_course_id', 'exam_subject_id', 'question_paper_id',
             'question_section_id', 'parent_question_id', 'question_type',
-            'content', 'year', 'semester', 'marks', 'difficulty_level',
-            'bloom_level', 'source', 'status', 'response_config',
+            'content', 'content_doc', 'year', 'semester', 'marks', 'difficulty_level',
+            'bloom_level', 'source', 'status', 'response_config', 'choice_group',
         ]);
 
         $data['created_by'] = $request->user()->id;
-        $data = $this->questionService->prepareQuestionData($data);
+        $data['sub_questions'] = $request->validated('sub_questions') ?? [];
 
-        $question = Question::query()->create($data);
+        $question = $this->questionService->persistQuestionTree($data);
 
         $topicIds = $request->validated('topic_ids');
         $primaryTopicId = $request->validated('primary_topic_id');
@@ -133,6 +133,12 @@ class QuestionController extends Controller
 
         if ($request->has('block_links')) {
             $this->questionService->syncBlockLinks($question, $request->validated('block_links') ?? []);
+        }
+
+        if ($request->boolean('from_paper_builder')) {
+            return back()
+                ->with('success', 'Question created.')
+                ->with('created_question_id', $question->id);
         }
 
         return to_route('admin.questions.edit', $question)->with('success', 'Question created.');
@@ -147,6 +153,7 @@ class QuestionController extends Controller
             'institutionCourse.institution:id,name,abbreviation',
             'topicLinks.canonicalTopic:id,title',
             'questionBlockLinks.contentBlock:id,title,canonical_topic_id',
+            'children' => fn ($q) => $q->orderBy('sort_order'),
         ]);
 
         return Inertia::render('admin/questions/edit', [
@@ -156,6 +163,7 @@ class QuestionController extends Controller
                 'institution_id' => $question->institutionCourse?->institution_id,
                 'question_type' => $question->question_type,
                 'content' => $question->content,
+                'content_doc' => $question->content_doc,
                 'year' => $question->year,
                 'semester' => $question->semester,
                 'marks' => $question->marks,
@@ -164,6 +172,15 @@ class QuestionController extends Controller
                 'source' => $question->source,
                 'status' => $question->status,
                 'response_config' => $question->response_config,
+                'choice_group' => $question->choice_group,
+                'sub_questions' => $question->children->map(fn ($child) => [
+                    'id' => $child->id,
+                    'question_type' => $child->question_type,
+                    'content' => $child->content,
+                    'marks' => $child->marks,
+                    'sort_order' => $child->sort_order,
+                    'response_config' => $child->response_config,
+                ])->values(),
                 'topic_links' => $question->topicLinks->map(fn ($link) => [
                     'id' => $link->canonical_topic_id,
                     'title' => $link->canonicalTopic->title,
@@ -194,15 +211,20 @@ class QuestionController extends Controller
     {
         Gate::authorize('update', $question);
 
+        if ($request->validated('status') === \App\Enums\QuestionStatus::Published->value) {
+            Gate::authorize('publish', $question);
+        }
+
         $data = $request->safe()->only([
             'institution_course_id', 'exam_subject_id', 'question_paper_id',
             'question_section_id', 'parent_question_id', 'question_type',
-            'content', 'year', 'semester', 'marks', 'difficulty_level',
-            'bloom_level', 'source', 'status', 'response_config',
+            'content', 'content_doc', 'year', 'semester', 'marks', 'difficulty_level',
+            'bloom_level', 'source', 'status', 'response_config', 'choice_group',
         ]);
 
-        $data = $this->questionService->markPublishedIfNeeded($question, $data, $request->user());
-        $question->update($data);
+        $data['sub_questions'] = $request->validated('sub_questions') ?? [];
+
+        $this->questionService->updateQuestionTree($question, $data, $request->user());
 
         $topicIds = $request->validated('topic_ids');
         $primaryTopicId = $request->validated('primary_topic_id');

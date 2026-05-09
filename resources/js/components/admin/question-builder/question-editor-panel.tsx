@@ -1,3 +1,5 @@
+'use no memo';
+
 import { useState, useEffect } from 'react';
 import { router } from '@inertiajs/react';
 import { Button } from '@/components/ui/button';
@@ -15,6 +17,7 @@ import type {
     QuestionEnumOptions,
     QuestionContextData,
 } from '@/types/questions';
+import type { TiptapJSON } from '@/types/tiptap';
 
 /**
  * Resolves linked contexts from a question node, handling both the
@@ -35,40 +38,166 @@ function getLinkedContexts(question: QuestionNode, contexts: QuestionContextData
     return [];
 }
 
-interface QuestionEditorPanelProps {
-    paper: QuestionPaper;
-    question: QuestionNode;
-    enumOptions: QuestionEnumOptions;
+export interface DraftSeed {
+    sectionId: string;
+    parentId?: string;
+    defaultType: QuestionType;
 }
 
-export default function QuestionEditorPanel({ paper, question, enumOptions }: QuestionEditorPanelProps) {
-    const [questionType, setQuestionType] = useState<QuestionType>(question.question_type);
-    const [content, setContent] = useState(question.content);
-    const [marks, setMarks] = useState<number | null>(question.marks);
-    const [difficulty, setDifficulty] = useState(question.difficulty_level ?? '');
-    const [bloomLevel, setBloomLevel] = useState(question.bloom_level ?? '');
-    const [responseConfig, setResponseConfig] = useState<ResponseConfig>(question.response_config);
+function hydrateDocFromPlain(plain: string | undefined | null): TiptapJSON | null {
+    if (!plain || plain.trim().length === 0) return null;
+    return {
+        type: 'doc',
+        content: plain.split(/\n{2,}/).map((paragraph) => ({
+            type: 'paragraph',
+            content: paragraph.length > 0 ? [{ type: 'text', text: paragraph }] : [],
+        })),
+    };
+}
+
+interface QuestionEditorPanelProps {
+    paper: QuestionPaper;
+    question?: QuestionNode;
+    draft?: DraftSeed;
+    enumOptions: QuestionEnumOptions;
+    onCreated?: (newQuestionId: string) => void;
+    onDirtyChange?: (dirty: boolean) => void;
+}
+
+export function QuestionEditorPanel({
+    paper,
+    question,
+    draft,
+    enumOptions,
+    onCreated,
+    onDirtyChange,
+}: QuestionEditorPanelProps) {
+    const isNew = !question && !!draft;
+    const initialType = question?.question_type ?? draft?.defaultType ?? 'mcq';
+
+    const [questionType, setQuestionType] = useState<QuestionType>(initialType);
+    const [content, setContent] = useState(question?.content ?? '');
+    const [contentDoc, setContentDoc] = useState<TiptapJSON | null>(
+        question?.content_doc ?? hydrateDocFromPlain(question?.content),
+    );
+    const [marks, setMarks] = useState<number | null>(question?.marks ?? null);
+    const [difficulty, setDifficulty] = useState(question?.difficulty_level ?? '');
+    const [bloomLevel, setBloomLevel] = useState(question?.bloom_level ?? '');
+    const [responseConfig, setResponseConfig] = useState<ResponseConfig>(question?.response_config ?? null);
     const [saving, setSaving] = useState(false);
     const [errors, setErrors] = useState<Record<string, string>>({});
     const [contextPickerOpen, setContextPickerOpen] = useState(false);
 
     useEffect(() => {
-        setQuestionType(question.question_type);
-        setContent(question.content);
-        setMarks(question.marks);
-        setDifficulty(question.difficulty_level ?? '');
-        setBloomLevel(question.bloom_level ?? '');
-        setResponseConfig(question.response_config);
+        if (question) {
+            setQuestionType(question.question_type);
+            setContent(question.content);
+            setContentDoc(question.content_doc ?? hydrateDocFromPlain(question.content));
+            setMarks(question.marks);
+            setDifficulty(question.difficulty_level ?? '');
+            setBloomLevel(question.bloom_level ?? '');
+            setResponseConfig(question.response_config);
+        } else if (draft) {
+            setQuestionType(draft.defaultType);
+            setContent('');
+            setContentDoc(null);
+            setMarks(null);
+            setDifficulty('');
+            setBloomLevel('');
+            setResponseConfig(null);
+        }
         setErrors({});
-    }, [question.id]);
+        onDirtyChange?.(false);
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [question?.id, draft?.sectionId, draft?.parentId]);
+
+    function markDirty() {
+        if (isNew) onDirtyChange?.(true);
+    }
+
+    function handleContentChange(plain: string, doc: TiptapJSON | null) {
+        setContent(plain);
+        setContentDoc(doc);
+        if (isNew) onDirtyChange?.(plain.trim().length > 0);
+    }
+
+    function handleTypeChange(t: QuestionType) {
+        if (t !== questionType) {
+            setResponseConfig(null);
+        }
+        setQuestionType(t);
+        markDirty();
+    }
+
+    function handleMarksChange(m: number | null) {
+        setMarks(m);
+        markDirty();
+    }
+
+    function handleDifficultyChange(d: string) {
+        setDifficulty(d);
+        markDirty();
+    }
+
+    function handleBloomChange(b: string) {
+        setBloomLevel(b);
+        markDirty();
+    }
+
+    function handleResponseConfigChange(c: ResponseConfig) {
+        setResponseConfig(c);
+        markDirty();
+    }
 
     function handleSave() {
         setSaving(true);
+
+        if (isNew && draft) {
+            router.post(
+                QuestionController.store.url(),
+                {
+                    question_paper_id: paper.id,
+                    question_section_id: draft.sectionId || undefined,
+                    parent_question_id: draft.parentId,
+                    institution_course_id: paper.institution_course_id,
+                    question_type: questionType,
+                    content,
+                    content_doc: contentDoc,
+                    marks: marks ?? undefined,
+                    difficulty_level: difficulty || undefined,
+                    bloom_level: bloomLevel || undefined,
+                    response_config: responseConfig as unknown as string,
+                    source: 'manual',
+                    status: 'draft',
+                    from_paper_builder: true,
+                },
+                {
+                    preserveScroll: true,
+                    onSuccess: (page) => {
+                        setSaving(false);
+                        setErrors({});
+                        onDirtyChange?.(false);
+                        const flash = (page.props as { flash?: { created_question_id?: string } }).flash;
+                        const newId = flash?.created_question_id;
+                        if (newId && onCreated) onCreated(newId);
+                    },
+                    onError: (errs) => {
+                        setSaving(false);
+                        setErrors(errs as Record<string, string>);
+                    },
+                },
+            );
+            return;
+        }
+
+        if (!question) return;
+
         router.put(
             QuestionController.update.url(question.id),
             {
                 question_type: questionType,
                 content,
+                content_doc: contentDoc,
                 marks: marks ?? undefined,
                 difficulty_level: difficulty || undefined,
                 bloom_level: bloomLevel || undefined,
@@ -87,24 +216,43 @@ export default function QuestionEditorPanel({ paper, question, enumOptions }: Qu
                     setSaving(false);
                     setErrors(errs as Record<string, string>);
                 },
-            }
+            },
         );
     }
 
-    const linkedContexts = getLinkedContexts(question, paper.contexts);
+    const linkedContexts = question ? getLinkedContexts(question, paper.contexts) : [];
+    const headerLabel = isNew
+        ? draft?.parentId
+            ? 'New Sub-question'
+            : 'New Question'
+        : 'Edit Question';
+    const cta = isNew
+        ? draft?.parentId
+            ? 'Create sub-question'
+            : 'Create question'
+        : 'Save changes';
 
     return (
         <div className="space-y-6 p-4">
-            <div className="flex items-center justify-between">
-                <h3 className="text-sm font-semibold">Edit Question</h3>
-                <Button
-                    variant="outline"
-                    size="sm"
-                    className="text-xs"
-                    onClick={() => setContextPickerOpen(true)}
-                >
-                    Link Context
-                </Button>
+            <div>
+                <div className="flex items-center justify-between">
+                    <h3 className="text-sm font-semibold">{headerLabel}</h3>
+                    {!isNew && question && (
+                        <Button
+                            variant="outline"
+                            size="sm"
+                            className="text-xs"
+                            onClick={() => setContextPickerOpen(true)}
+                        >
+                            Link Context
+                        </Button>
+                    )}
+                </div>
+                {isNew && (
+                    <p className="mt-1 text-xs italic text-muted-foreground">
+                        Not saved yet — fill in content and click {cta}.
+                    </p>
+                )}
             </div>
 
             {linkedContexts.length > 0 && (
@@ -123,7 +271,7 @@ export default function QuestionEditorPanel({ paper, question, enumOptions }: Qu
             <FormField label="Question Type" name="question_type" error={errors.question_type} required>
                 <QuestionTypeSelector
                     value={questionType}
-                    onChange={setQuestionType}
+                    onChange={handleTypeChange}
                     options={enumOptions.question_types}
                 />
             </FormField>
@@ -131,15 +279,16 @@ export default function QuestionEditorPanel({ paper, question, enumOptions }: Qu
             <QuestionEditor
                 questionType={questionType}
                 content={content}
+                contentDoc={contentDoc}
                 marks={marks}
                 difficultyLevel={difficulty}
                 bloomLevel={bloomLevel}
                 responseConfig={responseConfig}
-                onContentChange={setContent}
-                onMarksChange={setMarks}
-                onDifficultyChange={setDifficulty}
-                onBloomChange={setBloomLevel}
-                onResponseConfigChange={setResponseConfig}
+                onContentChange={handleContentChange}
+                onMarksChange={handleMarksChange}
+                onDifficultyChange={handleDifficultyChange}
+                onBloomChange={handleBloomChange}
+                onResponseConfigChange={handleResponseConfigChange}
                 enumOptions={{
                     difficulties: enumOptions.difficulties,
                     bloom_levels: enumOptions.bloom_levels,
@@ -148,15 +297,17 @@ export default function QuestionEditorPanel({ paper, question, enumOptions }: Qu
             />
 
             <Button onClick={handleSave} disabled={saving || !content.trim()} className="w-full">
-                {saving ? 'Saving...' : 'Save Question'}
+                {saving ? 'Saving…' : cta}
             </Button>
 
-            <ContextPicker
-                open={contextPickerOpen}
-                onOpenChange={setContextPickerOpen}
-                contexts={paper.contexts}
-                question={question}
-            />
+            {!isNew && question && (
+                <ContextPicker
+                    open={contextPickerOpen}
+                    onOpenChange={setContextPickerOpen}
+                    contexts={paper.contexts}
+                    question={question}
+                />
+            )}
         </div>
     );
 }

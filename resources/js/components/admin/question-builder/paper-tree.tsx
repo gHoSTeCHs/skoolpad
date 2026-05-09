@@ -8,11 +8,18 @@ import QuestionContextController from '@/actions/App/Http/Controllers/Admin/Ques
 import QuestionController from '@/actions/App/Http/Controllers/Admin/QuestionController';
 import type { QuestionPaper, QuestionSection, QuestionNode, QuestionContextData } from '@/types/questions';
 
-export type SelectedNodeType = 'section' | 'question' | 'context';
+import type { QuestionType } from '@/types/questions';
 
-export interface SelectedNode {
-    type: SelectedNodeType;
-    id: string;
+export type SelectedNodeType = 'section' | 'question' | 'context' | 'new-question';
+
+export type SelectedNode =
+    | { type: 'section'; id: string }
+    | { type: 'question'; id: string }
+    | { type: 'context'; id: string }
+    | { type: 'new-question'; sectionId: string; parentId?: string; defaultType: QuestionType };
+
+export interface DraftPreview {
+    title?: string;
 }
 
 interface PaperTreeProps {
@@ -52,19 +59,19 @@ function QuestionTreeNode({ paper, question, depth, selectedNode, onSelectNode }
     const isSelected = selectedNode?.type === 'question' && selectedNode.id === question.id;
     const hasChildren = question.children.length > 0;
 
-    function handleAddSubQuestion() {
-        router.post(QuestionController.store.url(), {
-            question_paper_id: paper.id,
-            question_section_id: question.question_type === 'group' ? null : undefined,
-            parent_question_id: question.id,
-            institution_course_id: paper.institution_course_id,
-            question_type: 'short_answer',
-            content: 'New sub-question',
-            source: 'manual',
-            status: 'draft',
-        }, {
-            preserveScroll: true,
-            onSuccess: () => router.reload({ only: ['paper'] }),
+    const isGroupParent = question.question_type === 'group';
+
+    const isDraftingChildHere =
+        selectedNode?.type === 'new-question' && selectedNode.parentId === question.id;
+
+    function handleAddSubQuestion(e: React.MouseEvent) {
+        e.stopPropagation();
+        const defaultChildType = isGroupParent ? 'short_answer' : question.question_type;
+        onSelectNode({
+            type: 'new-question',
+            sectionId: question.question_section_id ?? '',
+            parentId: question.id,
+            defaultType: defaultChildType,
         });
     }
 
@@ -101,18 +108,16 @@ function QuestionTreeNode({ paper, question, depth, selectedNode, onSelectNode }
 
                 <AnswerStatusDots question={question} />
 
-                {question.question_type === 'group' && (
-                    <button
-                        onClick={(e) => { e.stopPropagation(); handleAddSubQuestion(); }}
-                        className="hidden shrink-0 rounded border-none bg-transparent p-0 text-muted-foreground transition-colors hover:text-primary group-hover:inline-block"
-                        title="Add sub-question"
-                    >
-                        +
-                    </button>
-                )}
+                <button
+                    onClick={handleAddSubQuestion}
+                    className="hidden shrink-0 rounded border-none bg-transparent p-0 text-muted-foreground transition-colors hover:text-primary group-hover:inline-block"
+                    title={isGroupParent ? 'Add sub-question' : 'Add part'}
+                >
+                    +
+                </button>
             </div>
 
-            {hasChildren && expanded && (
+            {(hasChildren || isDraftingChildHere) && expanded && (
                 <div>
                     {question.children.map((child) => (
                         <QuestionTreeNode
@@ -124,8 +129,23 @@ function QuestionTreeNode({ paper, question, depth, selectedNode, onSelectNode }
                             onSelectNode={onSelectNode}
                         />
                     ))}
+                    {isDraftingChildHere && (
+                        <DraftPlaceholder depth={depth + 1} />
+                    )}
                 </div>
             )}
+        </div>
+    );
+}
+
+function DraftPlaceholder({ depth }: { depth: number }) {
+    return (
+        <div style={{ paddingLeft: depth > 0 ? 12 : 0 }}>
+            <div className="flex items-center gap-1.5 rounded-md border-l-2 border-dashed border-primary/40 bg-accent/30 px-2 py-1.5 text-xs italic text-muted-foreground">
+                <span className="inline-block h-1.5 w-1.5 shrink-0 rounded-full border border-dashed border-primary/40" />
+                <span className="min-w-0 flex-1 truncate">Untitled draft</span>
+                <span className="shrink-0 text-[9px] uppercase tracking-wide text-primary/70">unsaved</span>
+            </div>
         </div>
     );
 }
@@ -135,18 +155,17 @@ function SectionNode({ paper, section, selectedNode, onSelectNode }: SectionNode
     const isSelected = selectedNode?.type === 'section' && selectedNode.id === section.id;
     const questionCount = countQuestionsRecursive(section.questions);
 
-    function handleAddQuestion() {
-        router.post(QuestionController.store.url(), {
-            question_paper_id: paper.id,
-            question_section_id: section.id,
-            institution_course_id: paper.institution_course_id,
-            question_type: 'mcq',
-            content: 'New question',
-            source: 'manual',
-            status: 'draft',
-        }, {
-            preserveScroll: true,
-            onSuccess: () => router.reload({ only: ['paper'] }),
+    const isDraftingHere =
+        selectedNode?.type === 'new-question'
+        && selectedNode.sectionId === section.id
+        && !selectedNode.parentId;
+
+    function handleAddQuestion(e: React.MouseEvent) {
+        e.stopPropagation();
+        onSelectNode({
+            type: 'new-question',
+            sectionId: section.id,
+            defaultType: 'mcq',
         });
     }
 
@@ -172,7 +191,7 @@ function SectionNode({ paper, section, selectedNode, onSelectNode }: SectionNode
                 <span className="shrink-0 text-[10px] text-muted-foreground">{questionCount}q</span>
 
                 <button
-                    onClick={(e) => { e.stopPropagation(); handleAddQuestion(); }}
+                    onClick={handleAddQuestion}
                     className="hidden shrink-0 rounded-md border-none bg-transparent px-1 py-0 text-sm text-muted-foreground transition-colors hover:text-primary group-hover:inline-block"
                     title="Add question to section"
                 >
@@ -192,13 +211,14 @@ function SectionNode({ paper, section, selectedNode, onSelectNode }: SectionNode
                             onSelectNode={onSelectNode}
                         />
                     ))}
+                    {isDraftingHere && <DraftPlaceholder depth={0} />}
                 </div>
             )}
         </div>
     );
 }
 
-export default function PaperTree({ paper, selectedNode, onSelectNode }: PaperTreeProps) {
+export function PaperTree({ paper, selectedNode, onSelectNode }: PaperTreeProps) {
     const [contextsExpanded, setContextsExpanded] = useState(true);
 
     function handleAddSection() {

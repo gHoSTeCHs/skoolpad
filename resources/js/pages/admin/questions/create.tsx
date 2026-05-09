@@ -1,8 +1,10 @@
+'use no memo';
+
 import { Head, Link, useForm } from '@inertiajs/react';
 import { Eye } from 'lucide-react';
 import { useEffect, useMemo, useState } from 'react';
 import QuestionController from '@/actions/App/Http/Controllers/Admin/QuestionController';
-import QuestionEditor from '@/components/admin/question-builder/question-editor';
+import { QuestionEditor } from '@/components/admin/question-builder/question-editor';
 import QuestionTypeSelector from '@/components/admin/question-builder/question-type-selector';
 import { TopicLinker } from '@/components/admin/topic-linker';
 import { QuestionRenderer } from '@/components/skoolpad/questions';
@@ -47,6 +49,7 @@ export default function AdminQuestionsCreate({ institutions, enum_options }: Pro
         institution_course_id: '',
         question_type: 'mcq',
         content: '',
+        content_doc: null,
         year: '',
         semester: '',
         marks: '',
@@ -57,6 +60,8 @@ export default function AdminQuestionsCreate({ institutions, enum_options }: Pro
         response_config: null,
         topic_ids: [],
         primary_topic_id: '',
+        sub_questions: [],
+        choice_group: null,
     });
 
     const previewQuestion = useMemo<ShowcaseQuestion>(
@@ -175,18 +180,26 @@ export default function AdminQuestionsCreate({ institutions, enum_options }: Pro
                                     <QuestionEditor
                                         questionType={form.data.question_type}
                                         content={form.data.content}
+                                        contentDoc={form.data.content_doc ?? null}
                                         marks={form.data.marks === '' ? null : (form.data.marks as number)}
                                         difficultyLevel={form.data.difficulty_level}
                                         bloomLevel={form.data.bloom_level ?? ''}
                                         responseConfig={form.data.response_config}
-                                        onContentChange={(content) => form.setData('content', content)}
+                                        subQuestions={form.data.sub_questions}
+                                        choiceGroup={form.data.choice_group}
+                                        onContentChange={(content, doc) => {
+                                            form.setData((prev) => ({ ...prev, content, content_doc: doc }));
+                                        }}
                                         onMarksChange={(marks) => form.setData('marks', marks ?? '')}
                                         onDifficultyChange={(level) => form.setData('difficulty_level', level as QuestionDifficulty | '')}
                                         onBloomChange={(level) => form.setData('bloom_level', level)}
                                         onResponseConfigChange={(config: ResponseConfig) => form.setData('response_config', config)}
+                                        onSubQuestionsChange={(next) => form.setData('sub_questions', next)}
+                                        onChoiceGroupChange={(next) => form.setData('choice_group', next)}
                                         enumOptions={{
                                             difficulties: enum_options.difficulties,
                                             bloom_levels: enum_options.bloom_levels,
+                                            question_types: enum_options.question_types,
                                         }}
                                         errors={form.errors}
                                     />

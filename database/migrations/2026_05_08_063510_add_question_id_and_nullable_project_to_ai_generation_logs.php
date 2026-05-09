@@ -30,7 +30,8 @@ return new class extends Migration
             $table->dropColumn('question_id');
         });
 
-        DB::statement("UPDATE ai_generation_logs SET content_project_id = '00000000-0000-0000-0000-000000000000' WHERE content_project_id IS NULL");
-        DB::statement('ALTER TABLE ai_generation_logs ALTER COLUMN content_project_id SET NOT NULL');
+        // content_project_id is left nullable — restoring NOT NULL would require deleting
+        // all answer-generation log rows (which legitimately have content_project_id = null)
+        // and would violate the FK constraint with a sentinel UUID. Accept nullable on rollback.
     }
 };

@@ -25,6 +25,7 @@ class RunAnswerGeneration implements ShouldQueue
         public readonly Question $question,
         public readonly AnswerDepthLevel $depth,
         public readonly string $jobId,
+        public readonly array $proseOutline = [],
     ) {}
 
     public function handle(\Illuminate\Contracts\Container\Container $container): void
@@ -34,7 +35,7 @@ class RunAnswerGeneration implements ShouldQueue
         $this->broadcastUpdate('status', ['message' => "Generating {$this->depth->label()} answer..."]);
 
         try {
-            $logId = $service->generate($this->question, $this->depth);
+            $logId = $service->generate($this->question, $this->depth, $this->proseOutline);
 
             $this->broadcastUpdate('complete', [
                 'generation_log_id' => $logId,

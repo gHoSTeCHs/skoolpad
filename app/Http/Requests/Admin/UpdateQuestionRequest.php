@@ -31,6 +31,7 @@ class UpdateQuestionRequest extends FormRequest
             'exam_subject_id' => ['nullable', 'uuid', 'exists:exam_subjects,id'],
             'question_type' => ['required', 'string', Rule::in(QuestionType::values())],
             'content' => ['required', 'string'],
+            'content_doc' => ['nullable', 'array'],
             'year' => ['nullable', 'integer', 'min:1990', 'max:'.date('Y')],
             'semester' => ['nullable', 'string', Rule::in(['first', 'second'])],
             'marks' => ['nullable', 'integer', 'min:1'],
@@ -45,6 +46,19 @@ class UpdateQuestionRequest extends FormRequest
             'block_links' => ['nullable', 'array'],
             'block_links.*.content_block_id' => ['required', 'uuid', 'exists:content_blocks,id'],
             'block_links.*.relevance' => ['required', Rule::enum(Relevance::class)],
+            'sub_questions' => ['nullable', 'array', 'max:30'],
+            'sub_questions.*.id' => ['nullable', 'uuid', 'exists:questions,id'],
+            'sub_questions.*.question_type' => ['required', 'string', Rule::in(QuestionType::values())],
+            'sub_questions.*.content' => ['required', 'string'],
+            'sub_questions.*.marks' => ['nullable', 'integer', 'min:0', 'max:1000'],
+            'sub_questions.*.sort_order' => ['required', 'integer', 'min:0'],
+            'sub_questions.*.response_config' => ['nullable', 'array'],
+            'choice_group' => ['nullable', 'array'],
+            'choice_group.required' => ['nullable', 'array'],
+            'choice_group.required.*' => ['string', 'max:32'],
+            'choice_group.chooseN' => ['nullable', 'integer', 'min:1', 'max:20'],
+            'choice_group.optional' => ['nullable', 'array'],
+            'choice_group.optional.*' => ['string', 'max:32'],
         ];
     }
 
@@ -53,14 +67,6 @@ class UpdateQuestionRequest extends FormRequest
     {
         return [
             function (Validator $validator) {
-                $status = $this->input('status');
-                if ($status === QuestionStatus::Published->value) {
-                    $user = $this->user();
-                    if (! $user->role->hasPermission('publish_content')) {
-                        $validator->errors()->add('status', 'Only users with publish permission can publish questions.');
-                    }
-                }
-
                 $topicIds = $this->input('topic_ids', []);
                 $primaryId = $this->input('primary_topic_id');
 

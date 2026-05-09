@@ -167,7 +167,7 @@ function ContextTreeNode({
     );
 }
 
-export default function PaperTree({ paper, selectedNode, onSelectNode }: PaperTreeProps) {
+export function PaperTree({ paper, selectedNode, onSelectNode }: PaperTreeProps) {
     const [contextsExpanded, setContextsExpanded] = useState(true);
 
     return (

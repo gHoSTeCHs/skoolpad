@@ -8,8 +8,8 @@ import {
     GraduationCap,
     Landmark,
     LayoutGrid,
+    Library,
     ListChecks,
-    MessageSquareMore,
     Network,
     Ruler,
     Settings,
@@ -32,6 +32,7 @@ import InstitutionController from '@/actions/App/Http/Controllers/Admin/Institut
 import InstitutionTypeController from '@/actions/App/Http/Controllers/Admin/InstitutionTypeController';
 import QuestionController from '@/actions/App/Http/Controllers/Admin/QuestionController';
 import QuestionPaperController from '@/actions/App/Http/Controllers/Admin/QuestionPaperController';
+import ReviewQueueController from '@/actions/App/Http/Controllers/Admin/ReviewQueueController';
 import SchemeOfWorkController from '@/actions/App/Http/Controllers/Admin/SchemeOfWorkController';
 import SettingsController from '@/actions/App/Http/Controllers/Admin/SettingsController';
 import UserController from '@/actions/App/Http/Controllers/Admin/UserController';
@@ -67,12 +68,12 @@ const navGroups: NavGroup[] = [
         items: [
             { title: 'Disciplines', href: DisciplineController.index.url(), icon: Shapes },
             { title: 'Canonical Topics', href: CanonicalTopicController.index.url(), icon: BookOpen },
-            { title: 'Questions', href: QuestionController.index.url(), icon: MessageSquareMore },
             { title: 'Question Papers', href: QuestionPaperController.index.url(), icon: FileText },
+            { title: 'Question Library', href: QuestionController.index.url(), icon: Library },
             { title: 'Courses', href: CourseController.index.url(), icon: GraduationCap },
             { title: 'Curriculum Mappings', href: CurriculumMappingController.index.url(), icon: Network },
             { title: 'Scheme of Work', href: SchemeOfWorkController.index.url(), icon: CalendarDays },
-            { title: 'Review Queue', href: '/admin/review-queue', icon: ListChecks },
+            { title: 'Review Queue', href: ReviewQueueController.index.url(), icon: ListChecks },
             { title: 'Bulk Import', href: BulkImportController.index.url(), icon: Upload },
         ],
     },

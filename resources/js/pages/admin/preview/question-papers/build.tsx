@@ -12,7 +12,7 @@ import {
 } from '@/components/ui/alert-dialog';
 import AdminLayout from '@/layouts/admin-layout';
 import PaperHeader from '@/components/admin/question-builder/paper-header';
-import PaperTree from '@/components/admin/preview/question-builder/paper-tree';
+import { PaperTree } from '@/components/admin/preview/question-builder/paper-tree';
 import type { SelectedNode } from '@/components/admin/preview/question-builder/paper-tree';
 import { CompositeEditor, type EditorTab } from '@/components/admin/preview/question-builder/composite-editor';
 import QuestionPaperController from '@/actions/App/Http/Controllers/Admin/QuestionPaperController';

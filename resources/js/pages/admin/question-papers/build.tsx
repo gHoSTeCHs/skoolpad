@@ -2,12 +2,22 @@ import { useState } from 'react';
 import { Head } from '@inertiajs/react';
 import AdminLayout from '@/layouts/admin-layout';
 import PaperHeader from '@/components/admin/question-builder/paper-header';
-import PaperTree from '@/components/admin/question-builder/paper-tree';
+import { PaperTree } from '@/components/admin/question-builder/paper-tree';
 import type { SelectedNode } from '@/components/admin/question-builder/paper-tree';
 import SectionEditor from '@/components/admin/question-builder/section-editor';
 import ContextEditor from '@/components/admin/question-builder/context-editor';
-import QuestionEditorPanel from '@/components/admin/question-builder/question-editor-panel';
-import PreviewPanel from '@/components/admin/question-builder/preview-panel';
+import { QuestionEditorPanel } from '@/components/admin/question-builder/question-editor-panel';
+import { PreviewPanel } from '@/components/admin/question-builder/preview-panel';
+import {
+    AlertDialog,
+    AlertDialogAction,
+    AlertDialogCancel,
+    AlertDialogContent,
+    AlertDialogDescription,
+    AlertDialogFooter,
+    AlertDialogHeader,
+    AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
 import QuestionPaperController from '@/actions/App/Http/Controllers/Admin/QuestionPaperController';
 import type { QuestionPaper, QuestionEnumOptions, QuestionSection, QuestionNode } from '@/types/questions';
 
@@ -37,10 +47,14 @@ function EditorPanel({
     paper,
     selectedNode,
     enumOptions,
+    onCreated,
+    onDirtyChange,
 }: {
     paper: QuestionPaper;
     selectedNode: SelectedNode | null;
     enumOptions: QuestionEnumOptions;
+    onCreated: (newId: string) => void;
+    onDirtyChange: (dirty: boolean) => void;
 }) {
     if (!selectedNode) {
         return (
@@ -49,6 +63,23 @@ function EditorPanel({
                     Select an item from the tree to edit it here.
                 </p>
             </div>
+        );
+    }
+
+    if (selectedNode.type === 'new-question') {
+        return (
+            <QuestionEditorPanel
+                key={`draft-${selectedNode.sectionId}-${selectedNode.parentId ?? 'root'}`}
+                paper={paper}
+                draft={{
+                    sectionId: selectedNode.sectionId,
+                    parentId: selectedNode.parentId,
+                    defaultType: selectedNode.defaultType,
+                }}
+                enumOptions={enumOptions}
+                onCreated={onCreated}
+                onDirtyChange={onDirtyChange}
+            />
         );
     }
 
@@ -89,6 +120,42 @@ function EditorPanel({
 
 export default function QuestionPapersBuild({ paper, enum_options }: Props) {
     const [selectedNode, setSelectedNode] = useState<SelectedNode | null>(null);
+    const [draftDirty, setDraftDirty] = useState(false);
+    const [pendingNode, setPendingNode] = useState<SelectedNode | null>(null);
+
+    function requestSelection(next: SelectedNode | null) {
+        const isDifferentDraft =
+            selectedNode?.type === 'new-question'
+            && next?.type === 'new-question'
+            && (next.sectionId !== selectedNode.sectionId || next.parentId !== selectedNode.parentId);
+        const isLeavingDraft =
+            selectedNode?.type === 'new-question' && next?.type !== 'new-question';
+
+        if ((isLeavingDraft || isDifferentDraft) && draftDirty) {
+            setPendingNode(next);
+            return;
+        }
+
+        setSelectedNode(next);
+        if (selectedNode?.type === 'new-question' && (isLeavingDraft || isDifferentDraft)) {
+            setDraftDirty(false);
+        }
+    }
+
+    function confirmDiscard() {
+        setSelectedNode(pendingNode);
+        setPendingNode(null);
+        setDraftDirty(false);
+    }
+
+    function cancelDiscard() {
+        setPendingNode(null);
+    }
+
+    function handleCreated(newId: string) {
+        setDraftDirty(false);
+        setSelectedNode({ type: 'question', id: newId });
+    }
 
     const breadcrumbs = [
         { title: 'Question Papers', href: QuestionPaperController.index.url() },
@@ -108,7 +175,7 @@ export default function QuestionPapersBuild({ paper, enum_options }: Props) {
                         <PaperTree
                             paper={paper}
                             selectedNode={selectedNode}
-                            onSelectNode={setSelectedNode}
+                            onSelectNode={requestSelection}
                         />
                     </div>
 
@@ -117,6 +184,8 @@ export default function QuestionPapersBuild({ paper, enum_options }: Props) {
                             paper={paper}
                             selectedNode={selectedNode}
                             enumOptions={enum_options}
+                            onCreated={handleCreated}
+                            onDirtyChange={setDraftDirty}
                         />
                     </div>
 
@@ -130,6 +199,21 @@ export default function QuestionPapersBuild({ paper, enum_options }: Props) {
                     </div>
                 </div>
             </div>
+
+            <AlertDialog open={pendingNode !== null} onOpenChange={(open) => !open && cancelDiscard()}>
+                <AlertDialogContent>
+                    <AlertDialogHeader>
+                        <AlertDialogTitle>Unsaved changes</AlertDialogTitle>
+                        <AlertDialogDescription>
+                            Your draft hasn't been saved. Discard it and continue, or stay and finish writing?
+                        </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter>
+                        <AlertDialogCancel onClick={cancelDiscard}>Continue editing</AlertDialogCancel>
+                        <AlertDialogAction onClick={confirmDiscard}>Discard draft</AlertDialogAction>
+                    </AlertDialogFooter>
+                </AlertDialogContent>
+            </AlertDialog>
         </AdminLayout>
     );
 }

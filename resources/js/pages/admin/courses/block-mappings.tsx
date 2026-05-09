@@ -11,6 +11,7 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Switch } from '@/components/ui/switch';
 import AdminLayout from '@/layouts/admin-layout';
+import { randomId } from '@/lib/utils';
 
 interface TopicBlock {
     id: string;
@@ -80,7 +81,7 @@ export default function AdminCourseBlockMappings({ course, mappings, topics, tea
     const [processing, setProcessing] = useState(false);
 
     const breadcrumbs = [
-        { title: 'Courses', href: '/admin/courses' },
+        { title: 'Courses', href: CourseController.index.url() },
         { title: 'Edit', href: CourseController.edit.url(course.id) },
         { title: 'Block Mappings', href: '#' },
     ];
@@ -111,7 +112,7 @@ export default function AdminCourseBlockMappings({ course, mappings, topics, tea
         setMappedBlocks((prev) => [
             ...prev,
             {
-                id: crypto.randomUUID(),
+                id: randomId(),
                 content_block_id: block.id,
                 block_title: block.title,
                 block_path: block.path,

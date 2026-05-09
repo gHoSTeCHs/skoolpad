@@ -90,7 +90,10 @@ export function DepthCard({ questionId, depthData, onDirtyChange }: DepthCardPro
                 question: questionId,
                 depth: depthData.depth_level,
             });
-            const res = await csrfFetch(url, { method: 'POST' });
+            const res = await csrfFetch(url, {
+                method: 'POST',
+                body: JSON.stringify({ prose_outline: planData?.prose_outline ?? [] }),
+            });
             if (!res.ok) {
                 const body = await res.json().catch(() => ({}));
                 throw new Error((body as { message?: string }).message ?? 'Generate request failed');

@@ -67,12 +67,22 @@ function SectionPreview({ section }: { section: QuestionSection }) {
     );
 }
 
-export default function PreviewPanel({ paper, selectedNode }: PreviewPanelProps) {
+export function PreviewPanel({ paper, selectedNode }: PreviewPanelProps) {
     if (!selectedNode) {
         return (
             <div className="flex h-full items-center justify-center p-6">
                 <p className="text-center text-sm text-muted-foreground">
                     Select a section, question, or context to preview.
+                </p>
+            </div>
+        );
+    }
+
+    if (selectedNode.type === 'new-question') {
+        return (
+            <div className="flex h-full items-center justify-center p-6">
+                <p className="text-center text-sm italic text-muted-foreground">
+                    Preview will appear once you create the question.
                 </p>
             </div>
         );

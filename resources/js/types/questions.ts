@@ -12,7 +12,7 @@ export type ContextType =
 
 export type QuestionStatus = 'draft' | 'in_review' | 'published' | 'archived';
 export type QuestionDifficulty = 'easy' | 'medium' | 'hard';
-export type QuestionSource = 'manual' | 'crowdsourced' | 'ai_generated' | 'bulk_import';
+export type QuestionSource = 'manual' | 'crowdsourced' | 'ai_generated' | 'bulk_import' | 'past_paper_imported';
 export type AnswerDepthLevel = 'quick' | 'standard' | 'deep_dive';
 export type QuestionSemester = 'first' | 'second';
 
@@ -136,9 +136,11 @@ export interface QuestionContextData {
 export interface QuestionNode {
     id: string;
     question_type: QuestionType;
+    question_section_id?: string | null;
     question_number?: string;
     display_label?: string;
     content: string;
+    content_doc?: TiptapJSON | null;
     marks: number | null;
     sort_order: number;
     depth_level: number;
@@ -207,6 +209,22 @@ export interface TopicSearchResult {
     title: string;
 }
 
+export interface ChoiceGroup {
+    required: string[];
+    chooseN: number;
+    optional: string[];
+}
+
+export interface SubQuestionFormData {
+    id?: string;
+    question_type: QuestionType;
+    content: string;
+    content_doc?: TiptapJSON | null;
+    marks: number | null;
+    sort_order: number;
+    response_config: ResponseConfig;
+}
+
 export interface QuestionFormData {
     institution_course_id: string;
     question_paper_id?: string;
@@ -215,6 +233,7 @@ export interface QuestionFormData {
     exam_subject_id?: string;
     question_type: QuestionType;
     content: string;
+    content_doc?: TiptapJSON | null;
     year: number | '';
     semester: QuestionSemester | '';
     marks: number | '';
@@ -225,12 +244,16 @@ export interface QuestionFormData {
     response_config: ResponseConfig;
     topic_ids: string[];
     primary_topic_id: string;
+    sub_questions: SubQuestionFormData[];
+    choice_group: ChoiceGroup | null;
 }
 
-export interface QuestionData extends QuestionFormData {
+export interface QuestionData extends Omit<QuestionFormData, 'sub_questions' | 'choice_group'> {
     id: string;
     institution_id: string;
     topic_links: TopicLink[];
+    sub_questions: SubQuestionFormData[];
+    choice_group: ChoiceGroup | null;
 }
 
 export interface QuestionEnumOptions {
