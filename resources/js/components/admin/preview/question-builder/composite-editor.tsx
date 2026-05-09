@@ -130,7 +130,7 @@ export function CompositeEditor({
                         />
                     </TabsContent>
                     <TabsContent value="contexts" className="mt-0">
-                        <ContextsTab question={question} />
+                        <ContextsTab paper={paper} question={question} />
                     </TabsContent>
                 </div>
             </Tabs>
