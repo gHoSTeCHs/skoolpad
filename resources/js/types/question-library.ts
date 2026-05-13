@@ -65,6 +65,19 @@ export interface LibrarySearchResults {
     }>;
 }
 
+export type BulkAssignAction = 'assign_course' | 'assign_exam_subject' | 'attach_paper' | 'delete';
+
+export interface BulkAssignTarget {
+    id: string;
+    label: string;
+}
+
+export interface BulkAssignTargets {
+    courses: BulkAssignTarget[];
+    exam_subjects: BulkAssignTarget[];
+    papers: BulkAssignTarget[];
+}
+
 export type LibraryStatusFilter = 'all' | 'published' | 'draft';
 
 export type LibraryTab = 'papers' | 'course_pools' | 'exam_pools' | 'unattached';

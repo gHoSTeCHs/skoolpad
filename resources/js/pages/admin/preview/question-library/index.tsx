@@ -11,6 +11,7 @@ import { CoursePoolsTab } from '@/components/admin/preview/question-library/tabs
 import { ExamPoolsTab } from '@/components/admin/preview/question-library/tabs/exam-pools-tab';
 import { UnattachedTab } from '@/components/admin/preview/question-library/tabs/unattached-tab';
 import type {
+    BulkAssignTargets,
     LibraryCounts,
     LibraryPaper,
     CoursePool,
@@ -26,6 +27,7 @@ interface QuestionLibraryIndexProps {
     course_pools: CoursePool[];
     exam_subject_pools: ExamSubjectPool[];
     unattached_questions: UnattachedQuestion[];
+    bulk_assign_targets: BulkAssignTargets;
     filters: { search?: string; status?: string };
 }
 
@@ -40,6 +42,7 @@ export default function QuestionLibraryIndex({
     course_pools,
     exam_subject_pools,
     unattached_questions,
+    bulk_assign_targets,
     filters,
 }: QuestionLibraryIndexProps) {
     const [activeTab, setActiveTab] = useState<LibraryTab>('papers');
@@ -127,7 +130,9 @@ export default function QuestionLibraryIndex({
                     {activeTab === 'papers' && <PapersTab papers={papers} />}
                     {activeTab === 'course_pools' && <CoursePoolsTab pools={course_pools} />}
                     {activeTab === 'exam_pools' && <ExamPoolsTab pools={exam_subject_pools} />}
-                    {activeTab === 'unattached' && <UnattachedTab questions={unattached_questions} />}
+                    {activeTab === 'unattached' && (
+                        <UnattachedTab questions={unattached_questions} targets={bulk_assign_targets} />
+                    )}
                 </div>
             </div>
 

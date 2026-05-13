@@ -2,12 +2,12 @@
 
 namespace App\Services\Admin;
 
-use App\Enums\QuestionStatus;
 use App\Models\ExamSubject;
 use App\Models\InstitutionCourse;
 use App\Models\Question;
 use App\Models\QuestionAnswer;
 use App\Models\QuestionPaper;
+use DomainException;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 
@@ -295,6 +295,84 @@ class QuestionLibraryService
             'institution_abbreviation' => $course->institution?->abbreviation,
             'topics' => $topics,
             'questions_total' => $questions->count(),
+        ];
+    }
+
+    /**
+     * Bulk-assign or delete unattached questions.
+     *
+     * Only operates on questions that are currently unattached (no paper, no course, no exam-subject).
+     * Returns the number of rows actually affected.
+     *
+     * @param  array<int, string>  $questionIds
+     */
+    public function bulkAssignUnattached(array $questionIds, string $action, ?string $targetId): int
+    {
+        if (empty($questionIds)) {
+            return 0;
+        }
+
+        return DB::transaction(function () use ($questionIds, $action, $targetId) {
+            $base = Question::query()
+                ->whereIn('id', $questionIds)
+                ->whereNull('question_paper_id')
+                ->whereNull('institution_course_id')
+                ->whereNull('exam_subject_id');
+
+            return match ($action) {
+                'assign_course' => $base->update([
+                    'institution_course_id' => $targetId,
+                    'exam_subject_id' => null,
+                ]),
+                'assign_exam_subject' => $base->update([
+                    'exam_subject_id' => $targetId,
+                    'institution_course_id' => null,
+                ]),
+                'attach_paper' => $base->update([
+                    'question_paper_id' => $targetId,
+                    'institution_course_id' => null,
+                    'exam_subject_id' => null,
+                ]),
+                'delete' => $base->delete(),
+                default => throw new DomainException("Unsupported bulk action: {$action}"),
+            };
+        });
+    }
+
+    /**
+     * Targets a bulk-assign action can choose from — for the action dropdown.
+     *
+     * @return array<string, array<int, array<string, mixed>>>
+     */
+    public function getBulkAssignTargets(): array
+    {
+        return [
+            'courses' => InstitutionCourse::query()
+                ->with('institution:id,abbreviation')
+                ->orderBy('course_code')
+                ->limit(200)
+                ->get(['id', 'institution_id', 'course_code', 'course_title'])
+                ->map(fn (InstitutionCourse $c) => [
+                    'id' => $c->id,
+                    'label' => trim(($c->institution?->abbreviation ? $c->institution->abbreviation.' · ' : '').$c->course_code.' — '.$c->course_title),
+                ])
+                ->all(),
+            'exam_subjects' => ExamSubject::query()
+                ->orderBy('name')
+                ->limit(200)
+                ->get(['id', 'name'])
+                ->map(fn (ExamSubject $s) => ['id' => $s->id, 'label' => $s->name])
+                ->all(),
+            'papers' => QuestionPaper::query()
+                ->with('institutionCourse:id,course_code')
+                ->latest('updated_at')
+                ->limit(50)
+                ->get(['id', 'institution_course_id', 'title', 'year'])
+                ->map(fn (QuestionPaper $p) => [
+                    'id' => $p->id,
+                    'label' => trim(($p->institutionCourse?->course_code ? $p->institutionCourse->course_code.' · ' : '').$p->title.' ('.($p->year ?? '—').')'),
+                ])
+                ->all(),
         ];
     }
 

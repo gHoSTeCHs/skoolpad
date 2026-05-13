@@ -77,6 +77,7 @@ Route::middleware(['auth', 'verified', 'staff'])->prefix('admin')->name('admin.'
 
     Route::get('question-library/preview', [QuestionLibraryController::class, 'index'])->name('question-library.preview');
     Route::get('question-library/preview/search', [QuestionLibraryController::class, 'search'])->name('question-library.preview.search');
+    Route::post('question-library/preview/unattached/bulk-assign', [QuestionLibraryController::class, 'bulkAssignUnattached'])->name('question-library.preview.unattached.bulk-assign');
     Route::get('question-library/preview/courses/{course}', [QuestionLibraryController::class, 'showCourse'])->name('question-library.preview.course');
 
     Route::get('questions', [QuestionController::class, 'index'])->name('questions.index');

@@ -181,3 +181,135 @@ test('students cannot access pool builder', function () {
         ->get(route('admin.question-library.preview.course', ['course' => $this->course->id]))
         ->assertForbidden();
 });
+
+test('bulkAssign assigns unattached questions to a course', function () {
+    $targetCourse = InstitutionCourse::factory()->for($this->institution)->create();
+    $questions = Question::factory()->count(3)->create([
+        'question_paper_id' => null,
+        'institution_course_id' => null,
+        'exam_subject_id' => null,
+    ]);
+
+    $this->actingAs($this->admin)
+        ->post(route('admin.question-library.preview.unattached.bulk-assign'), [
+            'question_ids' => $questions->pluck('id')->all(),
+            'action' => 'assign_course',
+            'target_id' => $targetCourse->id,
+        ])
+        ->assertRedirect();
+
+    foreach ($questions as $q) {
+        $this->assertDatabaseHas('questions', [
+            'id' => $q->id,
+            'institution_course_id' => $targetCourse->id,
+            'question_paper_id' => null,
+        ]);
+    }
+});
+
+test('bulkAssign attaches unattached questions to a paper', function () {
+    $paper = QuestionPaper::factory()->create(['institution_course_id' => $this->course->id]);
+    $questions = Question::factory()->count(2)->create([
+        'question_paper_id' => null,
+        'institution_course_id' => null,
+        'exam_subject_id' => null,
+    ]);
+
+    $this->actingAs($this->admin)
+        ->post(route('admin.question-library.preview.unattached.bulk-assign'), [
+            'question_ids' => $questions->pluck('id')->all(),
+            'action' => 'attach_paper',
+            'target_id' => $paper->id,
+        ])
+        ->assertRedirect();
+
+    foreach ($questions as $q) {
+        $this->assertDatabaseHas('questions', [
+            'id' => $q->id,
+            'question_paper_id' => $paper->id,
+            'institution_course_id' => null,
+            'exam_subject_id' => null,
+        ]);
+    }
+});
+
+test('bulkAssign delete removes only selected unattached questions', function () {
+    $toDelete = Question::factory()->count(2)->create([
+        'question_paper_id' => null,
+        'institution_course_id' => null,
+        'exam_subject_id' => null,
+    ]);
+    $keep = Question::factory()->create([
+        'question_paper_id' => null,
+        'institution_course_id' => null,
+        'exam_subject_id' => null,
+    ]);
+
+    $this->actingAs($this->admin)
+        ->post(route('admin.question-library.preview.unattached.bulk-assign'), [
+            'question_ids' => $toDelete->pluck('id')->all(),
+            'action' => 'delete',
+        ])
+        ->assertRedirect();
+
+    foreach ($toDelete as $q) {
+        $this->assertDatabaseMissing('questions', ['id' => $q->id]);
+    }
+    $this->assertDatabaseHas('questions', ['id' => $keep->id]);
+});
+
+test('bulkAssign does not touch questions that are no longer unattached', function () {
+    $targetCourse = InstitutionCourse::factory()->for($this->institution)->create();
+    $existingPaper = QuestionPaper::factory()->create(['institution_course_id' => $this->course->id]);
+    $alreadyAttached = Question::factory()->create([
+        'question_paper_id' => $existingPaper->id,
+        'institution_course_id' => null,
+        'exam_subject_id' => null,
+    ]);
+
+    $this->actingAs($this->admin)
+        ->post(route('admin.question-library.preview.unattached.bulk-assign'), [
+            'question_ids' => [$alreadyAttached->id],
+            'action' => 'assign_course',
+            'target_id' => $targetCourse->id,
+        ])
+        ->assertRedirect();
+
+    // Untouched — still bound to its existing paper, not the target course
+    $this->assertDatabaseHas('questions', [
+        'id' => $alreadyAttached->id,
+        'question_paper_id' => $existingPaper->id,
+        'institution_course_id' => null,
+    ]);
+});
+
+test('bulkAssign rejects target_id missing when action requires one', function () {
+    $question = Question::factory()->create([
+        'question_paper_id' => null,
+        'institution_course_id' => null,
+        'exam_subject_id' => null,
+    ]);
+
+    $this->actingAs($this->admin)
+        ->post(route('admin.question-library.preview.unattached.bulk-assign'), [
+            'question_ids' => [$question->id],
+            'action' => 'assign_course',
+        ])
+        ->assertSessionHasErrors('target_id');
+});
+
+test('students cannot bulkAssign', function () {
+    $student = User::factory()->create();
+    $question = Question::factory()->create([
+        'question_paper_id' => null,
+        'institution_course_id' => null,
+        'exam_subject_id' => null,
+    ]);
+
+    $this->actingAs($student)
+        ->post(route('admin.question-library.preview.unattached.bulk-assign'), [
+            'question_ids' => [$question->id],
+            'action' => 'delete',
+        ])
+        ->assertForbidden();
+});
