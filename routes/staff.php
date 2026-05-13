@@ -31,6 +31,7 @@ use App\Http\Controllers\Admin\InstitutionController;
 use App\Http\Controllers\Admin\InstitutionTypeController;
 use App\Http\Controllers\Admin\QuestionContextController;
 use App\Http\Controllers\Admin\QuestionController;
+use App\Http\Controllers\Admin\QuestionLibraryController;
 use App\Http\Controllers\Admin\QuestionPaperController;
 use App\Http\Controllers\Admin\QuestionSectionController;
 use App\Http\Controllers\Admin\ReviewQueueController;
@@ -73,6 +74,9 @@ Route::middleware(['auth', 'verified', 'staff'])->prefix('admin')->name('admin.'
     Route::delete('question-papers/{questionPaper}/contexts/{questionContext}', [QuestionContextController::class, 'destroy'])->name('question-papers.contexts.destroy');
     Route::post('questions/{question}/contexts/link', [QuestionContextController::class, 'link'])->name('questions.contexts.link');
     Route::delete('questions/{question}/contexts/{questionContext}/unlink', [QuestionContextController::class, 'unlink'])->name('questions.contexts.unlink');
+
+    Route::get('question-library/preview', [QuestionLibraryController::class, 'index'])->name('question-library.preview');
+    Route::get('question-library/preview/search', [QuestionLibraryController::class, 'search'])->name('question-library.preview.search');
 
     Route::get('questions', [QuestionController::class, 'index'])->name('questions.index');
     Route::get('questions/create', [QuestionController::class, 'create'])->name('questions.create');

@@ -7,6 +7,7 @@ use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class ExamSubject extends Model
 {
@@ -36,5 +37,10 @@ class ExamSubject extends Model
     public function scopeSearch(Builder $query, string $term): Builder
     {
         return $query->where('name', 'ilike', "%{$term}%");
+    }
+
+    public function questions(): HasMany
+    {
+        return $this->hasMany(Question::class);
     }
 }
