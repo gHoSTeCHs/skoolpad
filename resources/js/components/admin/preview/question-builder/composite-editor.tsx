@@ -1,6 +1,7 @@
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { cn } from '@/lib/utils';
 import type { QuestionEnumOptions, QuestionPaper, QuestionSection, QuestionNode, AnswerDepthLevel } from '@/types/questions';
+import type { PoolContainer, PoolTopic } from '@/types/question-library';
 import { QuestionHeader } from './question-header';
 import { QuestionTab } from './tabs/question-tab';
 import { AnswersTab } from './tabs/answers-tab';
@@ -11,9 +12,12 @@ import { DEPTH_ORDER } from './tabs/answers-tab/_shared/depth-meta';
 
 export type EditorTab = 'question' | 'answers' | 'links' | 'contexts';
 
+export type EditorContainer =
+    | { kind: 'paper'; paper: QuestionPaper; section: QuestionSection }
+    | { kind: 'pool'; pool: PoolContainer; topic: PoolTopic };
+
 interface CompositeEditorProps {
-    paper: QuestionPaper;
-    section: QuestionSection;
+    container: EditorContainer;
     question: QuestionNode;
     enumOptions: QuestionEnumOptions;
     activeTab: EditorTab;
@@ -48,8 +52,7 @@ function linkCount(question: QuestionNode): number {
 }
 
 export function CompositeEditor({
-    paper,
-    section,
+    container,
     question,
     enumOptions,
     activeTab,
@@ -64,14 +67,18 @@ export function CompositeEditor({
     const answerCount = answerCountFor(question);
     const ctxN = contextCount(question);
     const linkN = linkCount(question);
+    const isPool = container.kind === 'pool';
 
     return (
         <div className="flex h-full flex-col bg-background">
-            <QuestionHeader paper={paper} section={section} question={question} />
+            <QuestionHeader container={container} question={question} />
 
             <Tabs
                 value={activeTab}
-                onValueChange={(v) => onTabChange(v as EditorTab)}
+                onValueChange={(v) => {
+                    if (v === 'contexts' && isPool) return;
+                    onTabChange(v as EditorTab);
+                }}
                 className="flex min-h-0 flex-1 flex-col"
             >
                 <TabsList className="h-auto justify-start rounded-none border-b border-[var(--border-2)] bg-card px-7 py-0">
@@ -95,12 +102,25 @@ export function CompositeEditor({
                             </span>
                         )}
                     </TabsTrigger>
-                    <TabsTrigger value="contexts" className="gap-2 px-4 py-3">
+                    <TabsTrigger
+                        value="contexts"
+                        disabled={isPool}
+                        className={cn('gap-2 px-4 py-3', isPool && 'cursor-not-allowed opacity-50')}
+                        title={isPool ? 'Contexts live on papers — pools rarely use them' : undefined}
+                    >
                         Contexts
-                        {ctxN > 0 && (
-                            <span className="rounded-full bg-[var(--bg-raised)] px-1.5 py-0.5 font-mono text-[10px] text-muted-foreground">
-                                {ctxN}
+                        {isPool ? (
+                            <span
+                                className="ml-1 font-mono text-[10px] text-[var(--fg-subtle)]"
+                            >
+                                — pools rarely use
                             </span>
+                        ) : (
+                            ctxN > 0 && (
+                                <span className="rounded-full bg-[var(--bg-raised)] px-1.5 py-0.5 font-mono text-[10px] text-muted-foreground">
+                                    {ctxN}
+                                </span>
+                            )
                         )}
                     </TabsTrigger>
                 </TabsList>
@@ -129,9 +149,11 @@ export function CompositeEditor({
                             onDirtyChange={(d) => onTabDirtyChange('links', d)}
                         />
                     </TabsContent>
-                    <TabsContent value="contexts" className="mt-0">
-                        <ContextsTab paper={paper} question={question} />
-                    </TabsContent>
+                    {container.kind === 'paper' && (
+                        <TabsContent value="contexts" className="mt-0">
+                            <ContextsTab paper={container.paper} question={question} />
+                        </TabsContent>
+                    )}
                 </div>
             </Tabs>
         </div>

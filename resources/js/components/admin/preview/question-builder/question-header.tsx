@@ -1,10 +1,10 @@
 import { Badge } from '@/components/ui/badge';
 import { QuestionTypeBadge } from '@/components/skoolpad/questions';
-import type { QuestionPaper, QuestionSection, QuestionNode } from '@/types/questions';
+import type { QuestionNode } from '@/types/questions';
+import type { EditorContainer } from './composite-editor';
 
 interface QuestionHeaderProps {
-    paper: QuestionPaper;
-    section: QuestionSection;
+    container: EditorContainer;
     question: QuestionNode;
 }
 
@@ -30,18 +30,29 @@ function statusLabel(status: string): string {
     }
 }
 
-export function QuestionHeader({ paper, section, question }: QuestionHeaderProps) {
+function breadcrumbsFor(container: EditorContainer, question: QuestionNode): string[] {
+    if (container.kind === 'paper') {
+        return [
+            container.paper.institution_course?.course_code,
+            container.paper.title,
+            container.section.label,
+            question.question_number || question.display_label || 'Q',
+        ].filter((s): s is string => Boolean(s));
+    }
+    return [
+        `${container.pool.course_code} · pool`,
+        container.topic.title,
+        question.question_number || question.display_label || 'Q',
+    ];
+}
+
+export function QuestionHeader({ container, question }: QuestionHeaderProps) {
     const titleText =
         question.content && question.content.trim().length > 0
             ? question.content.split('\n')[0]
             : 'Untitled question';
 
-    const breadcrumbs = [
-        paper.institution_course?.course_code,
-        paper.title,
-        section.label,
-        question.question_number || question.display_label || 'Q',
-    ].filter((s): s is string => Boolean(s));
+    const breadcrumbs = breadcrumbsFor(container, question);
 
     return (
         <div className="border-b border-[var(--border-2)] bg-card px-7 py-5">
@@ -74,6 +85,14 @@ export function QuestionHeader({ paper, section, question }: QuestionHeaderProps
                 )}
                 <span className="h-[3px] w-[3px] shrink-0 rounded-full bg-[var(--fg-subtle)]" aria-hidden />
                 <Badge variant={statusToTone(question.status)}>{statusLabel(question.status)}</Badge>
+                {container.kind === 'pool' && (
+                    <>
+                        <span className="h-[3px] w-[3px] shrink-0 rounded-full bg-[var(--fg-subtle)]" aria-hidden />
+                        <span className="font-mono text-[11px] text-[var(--fg-subtle)]">
+                            course-pool · no paper context
+                        </span>
+                    </>
+                )}
             </div>
         </div>
     );

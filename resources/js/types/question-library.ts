@@ -68,3 +68,19 @@ export interface LibrarySearchResults {
 export type LibraryStatusFilter = 'all' | 'published' | 'draft';
 
 export type LibraryTab = 'papers' | 'course_pools' | 'exam_pools' | 'unattached';
+
+export interface PoolTopic {
+    id: string;
+    title: string;
+    questions: import('./questions').QuestionNode[];
+}
+
+export interface PoolContainer {
+    id: string;
+    course_code: string;
+    course_title: string;
+    institution_name: string | null;
+    institution_abbreviation: string | null;
+    topics: PoolTopic[];
+    questions_total: number;
+}

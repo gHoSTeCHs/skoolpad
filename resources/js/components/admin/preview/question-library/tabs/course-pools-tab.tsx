@@ -1,3 +1,5 @@
+import { router } from '@inertiajs/react';
+import QuestionLibraryController from '@/actions/App/Http/Controllers/Admin/QuestionLibraryController';
 import { ContainerCard, toneForIndex } from '../container-card';
 import type { CoursePool } from '@/types/question-library';
 
@@ -28,6 +30,7 @@ export function CoursePoolsTab({ pools }: CoursePoolsTabProps) {
                     code={pool.course_code}
                     title={pool.course_title}
                     pills={['course pool', pool.institution_abbreviation?.toLowerCase() ?? 'inst']}
+                    onOpen={() => router.visit(QuestionLibraryController.showCourse.url({ course: pool.id }))}
                     footerLeft={pool.institution_name ?? '—'}
                     footerRight="open pool"
                 >

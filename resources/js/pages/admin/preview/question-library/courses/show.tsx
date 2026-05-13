@@ -1,5 +1,5 @@
 import { useCallback, useMemo, useState } from 'react';
-import { Head } from '@inertiajs/react';
+import { Head, Link } from '@inertiajs/react';
 import {
     AlertDialog,
     AlertDialogAction,
@@ -11,29 +11,21 @@ import {
     AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
 import AdminLayout from '@/layouts/admin-layout';
-import PaperHeader from '@/components/admin/question-builder/paper-header';
-import { PaperTree } from '@/components/admin/preview/question-builder/paper-tree';
+import { PoolTree } from '@/components/admin/preview/question-builder/pool-tree';
 import type { SelectedNode } from '@/components/admin/preview/question-builder/paper-tree';
 import { CompositeEditor, type EditorTab } from '@/components/admin/preview/question-builder/composite-editor';
-import QuestionPaperController from '@/actions/App/Http/Controllers/Admin/QuestionPaperController';
-import type { AnswerDepthLevel, QuestionEnumOptions, QuestionNode, QuestionPaper, QuestionSection } from '@/types/questions';
+import QuestionLibraryController from '@/actions/App/Http/Controllers/Admin/QuestionLibraryController';
+import type { AnswerDepthLevel, QuestionEnumOptions, QuestionNode } from '@/types/questions';
+import type { PoolContainer, PoolTopic } from '@/types/question-library';
 
 interface Props {
-    paper: QuestionPaper;
+    pool: PoolContainer;
     enum_options: QuestionEnumOptions;
 }
 
 interface Located {
-    section: QuestionSection;
+    topic: PoolTopic;
     question: QuestionNode;
-}
-
-function locateQuestion(sections: QuestionSection[], questionId: string): Located | null {
-    for (const section of sections) {
-        const found = locateInTree(section.questions, questionId);
-        if (found) return { section, question: found };
-    }
-    return null;
 }
 
 function locateInTree(nodes: QuestionNode[], id: string): QuestionNode | null {
@@ -45,9 +37,17 @@ function locateInTree(nodes: QuestionNode[], id: string): QuestionNode | null {
     return null;
 }
 
-function firstQuestion(sections: QuestionSection[]): QuestionNode | null {
-    for (const section of sections) {
-        if (section.questions.length > 0) return section.questions[0];
+function locateQuestion(pool: PoolContainer, questionId: string): Located | null {
+    for (const topic of pool.topics) {
+        const found = locateInTree(topic.questions, questionId);
+        if (found) return { topic, question: found };
+    }
+    return null;
+}
+
+function firstQuestion(pool: PoolContainer): QuestionNode | null {
+    for (const topic of pool.topics) {
+        if (topic.questions.length > 0) return topic.questions[0];
     }
     return null;
 }
@@ -64,8 +64,8 @@ function isSameSelection(a: SelectedNode | null, b: SelectedNode | null): boolea
     return a.type === b.type && a.id === b.id;
 }
 
-export default function PreviewQuestionPapersBuild({ paper, enum_options }: Props) {
-    const initialQuestion = useMemo(() => firstQuestion(paper.sections), [paper.sections]);
+export default function CoursePoolBuild({ pool, enum_options }: Props) {
+    const initialQuestion = useMemo(() => firstQuestion(pool), [pool]);
 
     const [selectedNode, setSelectedNode] = useState<SelectedNode | null>(
         initialQuestion ? { type: 'question', id: initialQuestion.id } : null,
@@ -125,37 +125,31 @@ export default function PreviewQuestionPapersBuild({ paper, enum_options }: Prop
         setDirtyMap((prev) => (prev[tab] === dirty ? prev : { ...prev, [tab]: dirty }));
     }
 
-    const located = selectedNode?.type === 'question'
-        ? locateQuestion(paper.sections, selectedNode.id)
-        : null;
+    const located = selectedNode?.type === 'question' ? locateQuestion(pool, selectedNode.id) : null;
 
     const breadcrumbs = [
-        { title: 'Question Papers', href: QuestionPaperController.index.url() },
-        { title: paper.title, href: '#' },
-        { title: 'Build (preview)', href: '#' },
+        { title: 'Question Library · preview', href: QuestionLibraryController.index.url() },
+        { title: pool.course_code, href: '#' },
+        { title: 'Pool builder', href: '#' },
     ];
 
     return (
         <AdminLayout breadcrumbs={breadcrumbs}>
-            <Head title={`Build (preview): ${paper.title}`} />
+            <Head title={`Pool: ${pool.course_code}`} />
 
             <div className="flex h-[calc(100vh-4rem)] flex-col">
-                <PaperHeader paper={paper} />
+                <PoolPageHeader pool={pool} />
 
                 <div className="flex min-h-0 flex-1">
                     <div className="w-[340px] shrink-0 overflow-hidden">
-                        <PaperTree
-                            paper={paper}
-                            selectedNode={selectedNode}
-                            onSelectNode={requestSelection}
-                        />
+                        <PoolTree pool={pool} selectedNode={selectedNode} onSelectNode={requestSelection} />
                     </div>
 
                     <div className="min-w-0 flex-1 overflow-hidden">
                         {located ? (
                             <CompositeEditor
                                 key={located.question.id}
-                                container={{ kind: 'paper', paper, section: located.section }}
+                                container={{ kind: 'pool', pool, topic: located.topic }}
                                 question={located.question}
                                 enumOptions={enum_options}
                                 activeTab={activeTab}
@@ -167,15 +161,7 @@ export default function PreviewQuestionPapersBuild({ paper, enum_options }: Prop
                                 answersDirty={dirtyMap.answers}
                             />
                         ) : (
-                            <div className="flex h-full items-center justify-center p-6">
-                                <p className="text-center text-sm text-muted-foreground">
-                                    {selectedNode?.type === 'section'
-                                        ? 'Section editing isn\'t part of the 4.B preview slice. Select a question to author it.'
-                                        : selectedNode?.type === 'context'
-                                            ? 'Context editing lands in 4.F. Select a question to author it.'
-                                            : 'Select a question from the tree to begin authoring.'}
-                                </p>
-                            </div>
+                            <EmptyState />
                         )}
                     </div>
                 </div>
@@ -196,5 +182,70 @@ export default function PreviewQuestionPapersBuild({ paper, enum_options }: Prop
                 </AlertDialogContent>
             </AlertDialog>
         </AdminLayout>
+    );
+}
+
+function PoolPageHeader({ pool }: { pool: PoolContainer }) {
+    return (
+        <div
+            className="border-b border-[var(--border-2)] bg-card px-7 py-4"
+            style={{ background: 'linear-gradient(180deg, var(--card) 0%, var(--bg-raised) 100%)' }}
+        >
+            <div className="flex items-center gap-3">
+                <Link
+                    href={QuestionLibraryController.index.url()}
+                    className="text-[11px] uppercase tracking-[0.14em] text-muted-foreground transition-colors hover:text-foreground"
+                    style={{ fontFamily: 'var(--font-display)' }}
+                >
+                    ← Library
+                </Link>
+                <span className="h-3 w-px bg-[var(--border)]" />
+                <div className="flex-1">
+                    <div
+                        className="text-[10px] uppercase tracking-[0.14em] text-[var(--fg-subtle)]"
+                        style={{ fontFamily: 'var(--font-display)' }}
+                    >
+                        Course pool · {pool.institution_abbreviation ?? '—'}
+                    </div>
+                    <h1
+                        className="mt-0.5 text-[18px] font-semibold leading-tight tracking-[-0.012em] text-foreground"
+                        style={{ fontFamily: 'var(--font-display)' }}
+                    >
+                        {pool.course_code} · {pool.course_title}
+                    </h1>
+                </div>
+                <div
+                    className="text-right text-[11px] text-muted-foreground"
+                    style={{ fontFamily: 'var(--font-mono)' }}
+                >
+                    {pool.questions_total} {pool.questions_total === 1 ? 'question' : 'questions'}
+                    <br />
+                    <span className="text-[var(--fg-subtle)]">
+                        {pool.topics.length} {pool.topics.length === 1 ? 'topic' : 'topics'} · no paper
+                    </span>
+                </div>
+            </div>
+        </div>
+    );
+}
+
+function EmptyState() {
+    return (
+        <div className="flex h-full items-center justify-center p-8">
+            <div className="max-w-sm text-center">
+                <div
+                    className="text-[10px] uppercase tracking-[0.14em] text-[var(--fg-subtle)]"
+                    style={{ fontFamily: 'var(--font-display)' }}
+                >
+                    Empty pool
+                </div>
+                <p
+                    className="mt-2 text-[14px] text-muted-foreground"
+                    style={{ fontFamily: 'var(--font-body)' }}
+                >
+                    No questions in this course pool yet. Add questions to this course (without a paper) and they'll appear here grouped by primary topic.
+                </p>
+            </div>
+        </div>
     );
 }

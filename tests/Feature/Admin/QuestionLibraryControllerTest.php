@@ -1,11 +1,13 @@
 <?php
 
+use App\Models\CanonicalTopic;
 use App\Models\ExamSubject;
 use App\Models\Institution;
 use App\Models\InstitutionCourse;
 use App\Models\Question;
 use App\Models\QuestionAnswer;
 use App\Models\QuestionPaper;
+use App\Models\QuestionTopicLink;
 use App\Models\User;
 
 beforeEach(function () {
@@ -111,5 +113,71 @@ test('students cannot access the library', function () {
 
     $this->actingAs($student)
         ->get(route('admin.question-library.preview'))
+        ->assertForbidden();
+});
+
+test('showCourse returns pool questions grouped by primary topic', function () {
+    $topicA = CanonicalTopic::factory()->create(['title' => 'Memory Management']);
+    $topicB = CanonicalTopic::factory()->create(['title' => 'Pipelining']);
+
+    $q1 = Question::factory()->create([
+        'institution_course_id' => $this->course->id,
+        'question_paper_id' => null,
+    ]);
+    QuestionTopicLink::query()->create([
+        'question_id' => $q1->id,
+        'canonical_topic_id' => $topicA->id,
+        'is_primary' => true,
+    ]);
+
+    $q2 = Question::factory()->create([
+        'institution_course_id' => $this->course->id,
+        'question_paper_id' => null,
+    ]);
+    QuestionTopicLink::query()->create([
+        'question_id' => $q2->id,
+        'canonical_topic_id' => $topicB->id,
+        'is_primary' => true,
+    ]);
+
+    $q3 = Question::factory()->create([
+        'institution_course_id' => $this->course->id,
+        'question_paper_id' => null,
+    ]);
+    // q3 has no topic links — goes to "untagged" bucket
+
+    $this->actingAs($this->admin)
+        ->get(route('admin.question-library.preview.course', ['course' => $this->course->id]))
+        ->assertOk()
+        ->assertInertia(fn ($page) => $page
+            ->component('admin/preview/question-library/courses/show')
+            ->where('pool.id', $this->course->id)
+            ->where('pool.questions_total', 3)
+            ->has('pool.topics', 3)
+        );
+});
+
+test('showCourse excludes paper-bound questions', function () {
+    Question::factory()->create([
+        'institution_course_id' => $this->course->id,
+        'question_paper_id' => null,
+    ]);
+    $paper = QuestionPaper::factory()->create(['institution_course_id' => $this->course->id]);
+    Question::factory()->create([
+        'institution_course_id' => null,
+        'question_paper_id' => $paper->id,
+    ]);
+
+    $this->actingAs($this->admin)
+        ->get(route('admin.question-library.preview.course', ['course' => $this->course->id]))
+        ->assertOk()
+        ->assertInertia(fn ($page) => $page->where('pool.questions_total', 1));
+});
+
+test('students cannot access pool builder', function () {
+    $student = User::factory()->create();
+
+    $this->actingAs($student)
+        ->get(route('admin.question-library.preview.course', ['course' => $this->course->id]))
         ->assertForbidden();
 });

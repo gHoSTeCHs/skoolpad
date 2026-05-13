@@ -234,6 +234,71 @@ class QuestionLibraryService
     }
 
     /**
+     * Build payload for a course pool — questions on a course without a paper, grouped by primary canonical topic.
+     *
+     * @return array<string, mixed>
+     */
+    public function getCoursePoolBuild(InstitutionCourse $course): array
+    {
+        $course->load(['institution:id,name,abbreviation']);
+
+        $questions = Question::query()
+            ->where('institution_course_id', $course->id)
+            ->whereNull('question_paper_id')
+            ->whereNull('parent_question_id')
+            ->with([
+                'answers',
+                'topicLinks.canonicalTopic:id,title',
+                'questionBlockLinks.contentBlock:id,title',
+                'children' => fn ($q) => $q->orderBy('sort_order'),
+                'children.answers',
+                'children.topicLinks.canonicalTopic:id,title',
+                'children.questionBlockLinks.contentBlock:id,title',
+                'children.children' => fn ($q) => $q->orderBy('sort_order'),
+                'children.children.answers',
+                'children.children.topicLinks.canonicalTopic:id,title',
+                'children.children.questionBlockLinks.contentBlock:id,title',
+                'children.children.children' => fn ($q) => $q->orderBy('sort_order'),
+                'children.children.children.answers',
+                'children.children.children.topicLinks.canonicalTopic:id,title',
+                'children.children.children.questionBlockLinks.contentBlock:id,title',
+                'questionContextLinks',
+            ])
+            ->orderBy('sort_order')
+            ->get();
+
+        $topicBuckets = [];
+        foreach ($questions as $question) {
+            $primary = $question->topicLinks->firstWhere('is_primary', true) ?? $question->topicLinks->first();
+            $topicId = $primary?->canonical_topic_id ?? 'untagged';
+            $topicTitle = $primary?->canonicalTopic?->title ?? 'Untagged';
+
+            if (! isset($topicBuckets[$topicId])) {
+                $topicBuckets[$topicId] = [
+                    'id' => $topicId,
+                    'title' => $topicTitle,
+                    'questions' => [],
+                ];
+            }
+
+            $topicBuckets[$topicId]['questions'][] = $question;
+        }
+
+        $topics = array_values($topicBuckets);
+        usort($topics, fn ($a, $b) => $a['id'] === 'untagged' ? 1 : ($b['id'] === 'untagged' ? -1 : strcmp($a['title'], $b['title'])));
+
+        return [
+            'id' => $course->id,
+            'course_code' => $course->course_code,
+            'course_title' => $course->course_title,
+            'institution_name' => $course->institution?->name,
+            'institution_abbreviation' => $course->institution?->abbreviation,
+            'topics' => $topics,
+            'questions_total' => $questions->count(),
+        ];
+    }
+
+    /**
      * Aggregate per-paper answer fill stats: count of answers (filled) and is_published=true.
      *
      * @param  Collection<int, string>  $paperIds

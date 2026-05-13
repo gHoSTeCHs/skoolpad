@@ -2,7 +2,11 @@
 
 namespace App\Http\Controllers\Admin;
 
+use App\Enums\BloomLevel;
+use App\Enums\QuestionDifficulty;
+use App\Enums\QuestionType;
 use App\Http\Controllers\Controller;
+use App\Models\InstitutionCourse;
 use App\Models\Question;
 use App\Services\Admin\QuestionLibraryService;
 use Illuminate\Http\JsonResponse;
@@ -44,6 +48,20 @@ class QuestionLibraryController extends Controller
 
         return response()->json([
             'results' => $this->libraryService->globalSearch($term),
+        ]);
+    }
+
+    public function showCourse(InstitutionCourse $course): Response
+    {
+        Gate::authorize('viewAny', Question::class);
+
+        return Inertia::render('admin/preview/question-library/courses/show', [
+            'pool' => $this->libraryService->getCoursePoolBuild($course),
+            'enum_options' => [
+                'question_types' => array_map(fn ($c) => ['value' => $c->value, 'label' => $c->label()], QuestionType::cases()),
+                'difficulties' => array_map(fn ($c) => ['value' => $c->value, 'label' => $c->label()], QuestionDifficulty::cases()),
+                'bloom_levels' => array_map(fn ($c) => ['value' => $c->value, 'label' => $c->label()], BloomLevel::cases()),
+            ],
         ]);
     }
 }
