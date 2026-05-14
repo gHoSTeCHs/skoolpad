@@ -1,12 +1,13 @@
 import { useState } from 'react';
 import { QuestionTypeBadge } from '@/components/skoolpad/questions';
 import { AnswerStatusDots } from '@/components/admin/question-builder/answer-status-dots';
-import type { QuestionPaper, QuestionSection, QuestionNode, QuestionContextData } from '@/types/questions';
+import type { QuestionPaper, QuestionSection, QuestionNode, QuestionContextData, QuestionType } from '@/types/questions';
 
 export type SelectedNode =
     | { type: 'section'; id: string }
     | { type: 'question'; id: string }
-    | { type: 'context'; id: string };
+    | { type: 'context'; id: string }
+    | { type: 'draft'; defaultType: QuestionType; sectionId?: string; topicId?: string; parentId?: string };
 
 interface PaperTreeProps {
     paper: QuestionPaper;

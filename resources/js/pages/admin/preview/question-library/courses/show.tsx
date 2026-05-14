@@ -61,7 +61,9 @@ type PendingNav =
 function isSameSelection(a: SelectedNode | null, b: SelectedNode | null): boolean {
     if (a === b) return true;
     if (a === null || b === null) return false;
-    return a.type === b.type && a.id === b.id;
+    if (a.type !== b.type) return false;
+    if (a.type === 'draft') return false;
+    return a.id === b.id;
 }
 
 export default function CoursePoolBuild({ pool, enum_options }: Props) {
