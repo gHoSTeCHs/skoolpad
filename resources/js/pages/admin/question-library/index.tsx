@@ -33,7 +33,7 @@ interface QuestionLibraryIndexProps {
 
 const breadcrumbs = [
     { title: 'Dashboard', href: '/admin' },
-    { title: 'Question Library · preview', href: '/admin/question-library/preview' },
+    { title: 'Question Library', href: '/admin/question-library' },
 ];
 
 export default function QuestionLibraryIndex({
@@ -54,7 +54,7 @@ export default function QuestionLibraryIndex({
     function applyStatusFilter(next: LibraryStatusFilter) {
         setStatusFilter(next);
         router.get(
-            '/admin/question-library/preview',
+            '/admin/question-library',
             next === 'all' ? {} : { status: next },
             { preserveState: true, preserveScroll: true, replace: true },
         );
@@ -62,7 +62,7 @@ export default function QuestionLibraryIndex({
 
     return (
         <AdminLayout breadcrumbs={breadcrumbs}>
-            <Head title="Question Library · preview" />
+            <Head title="Question Library" />
 
             <div className="px-6 pb-12 pt-6">
                 <div

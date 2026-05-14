@@ -156,12 +156,12 @@ export default function PreviewQuestionPapersBuild({ paper, enum_options }: Prop
     const breadcrumbs = [
         { title: 'Question Papers', href: QuestionPaperController.index.url() },
         { title: paper.title, href: '#' },
-        { title: 'Build (preview)', href: '#' },
+        { title: 'Build', href: '#' },
     ];
 
     return (
         <AdminLayout breadcrumbs={breadcrumbs}>
-            <Head title={`Build (preview): ${paper.title}`} />
+            <Head title={`Build: ${paper.title}`} />
 
             <div className="flex h-[calc(100vh-4rem)] flex-col">
                 <PaperHeader paper={paper} />

@@ -65,7 +65,7 @@ export function PapersTab({ papers }: PapersTabProps) {
                             'paper',
                             paper.assessment_type_name?.toLowerCase() ?? 'exam',
                         ]}
-                        onOpen={() => router.visit(QuestionPaperController.buildPreview.url({ questionPaper: paper.id }))}
+                        onOpen={() => router.visit(QuestionPaperController.build.url({ questionPaper: paper.id }))}
                         footerLeft={`edited ${formatRelative(paper.updated_at)}`}
                         footerRight="open builder"
                     >

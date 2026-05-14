@@ -158,10 +158,10 @@ test('build preview page loads paper with same payload shape as build', function
     ]);
 
     $this->actingAs($this->admin)
-        ->get(route('admin.question-papers.build-preview', $paper))
+        ->get(route('admin.question-papers.build', $paper))
         ->assertOk()
         ->assertInertia(fn ($page) => $page
-            ->component('admin/preview/question-papers/build')
+            ->component('admin/question-papers/build')
             ->has('paper')
             ->has('paper.sections', 1)
             ->has('paper.sections.0.questions', 1)
@@ -176,7 +176,7 @@ test('build preview page loads paper with same payload shape as build', function
 test('build preview is staff-gated', function () {
     $paper = QuestionPaper::factory()->create(['institution_course_id' => $this->course->id]);
 
-    $this->get(route('admin.question-papers.build-preview', $paper))
+    $this->get(route('admin.question-papers.build', $paper))
         ->assertRedirect(route('login'));
 });
 

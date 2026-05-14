@@ -142,7 +142,7 @@ export default function CoursePoolBuild({ pool, enum_options }: Props) {
     const located = selectedNode?.type === 'question' ? locateQuestion(pool, selectedNode.id) : null;
 
     const breadcrumbs = [
-        { title: 'Question Library · preview', href: QuestionLibraryController.index.url() },
+        { title: 'Question Library', href: QuestionLibraryController.index.url() },
         { title: pool.course_code, href: '#' },
         { title: 'Pool builder', href: '#' },
     ];

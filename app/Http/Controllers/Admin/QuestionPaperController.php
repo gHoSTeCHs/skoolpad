@@ -94,13 +94,6 @@ class QuestionPaperController extends Controller
         return Inertia::render('admin/question-papers/build', $this->buildPayload($questionPaper));
     }
 
-    public function buildPreview(QuestionPaper $questionPaper): Response
-    {
-        Gate::authorize('managePapers', Question::class);
-
-        return Inertia::render('admin/preview/question-papers/build', $this->buildPayload($questionPaper));
-    }
-
     /** @return array<string, mixed> */
     private function buildPayload(QuestionPaper $paper): array
     {

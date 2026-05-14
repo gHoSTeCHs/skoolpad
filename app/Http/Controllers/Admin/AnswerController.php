@@ -2,50 +2,15 @@
 
 namespace App\Http\Controllers\Admin;
 
-use App\Enums\AnswerDepthLevel;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Admin\StoreQuestionAnswerRequest;
 use App\Models\Question;
 use App\Models\QuestionAnswer;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Support\Facades\Gate;
-use Inertia\Inertia;
-use Inertia\Response;
 
 class AnswerController extends Controller
 {
-    public function index(Question $question): Response
-    {
-        Gate::authorize('manageAnswers', Question::class);
-
-        $question->load([
-            'institutionCourse:id,course_code',
-            'answers',
-        ]);
-
-        $answersMap = $question->answers->keyBy(fn ($a) => $a->depth_level->value);
-
-        return Inertia::render('admin/questions/answers', [
-            'question' => [
-                'id' => $question->id,
-                'content' => $question->content,
-                'question_type' => $question->question_type,
-                'course_code' => $question->institutionCourse?->course_code,
-            ],
-            'answers' => collect(AnswerDepthLevel::cases())->map(fn ($depth) => [
-                'depth_level' => $depth->value,
-                'label' => $depth->label(),
-                'description' => $depth->description(),
-                'answer' => $answersMap->has($depth->value) ? [
-                    'id' => $answersMap[$depth->value]->id,
-                    'content' => $answersMap[$depth->value]->content,
-                    'content_plain' => $answersMap[$depth->value]->content_plain,
-                    'is_published' => $answersMap[$depth->value]->is_published,
-                ] : null,
-            ])->values(),
-        ]);
-    }
-
     public function store(StoreQuestionAnswerRequest $request, Question $question): RedirectResponse
     {
         Gate::authorize('manageAnswers', Question::class);

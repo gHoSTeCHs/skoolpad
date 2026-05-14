@@ -43,77 +43,16 @@ function validQuestionData(array $overrides = []): array
     ], $overrides);
 }
 
-test('index displays questions page with pagination structure', function () {
-    Question::factory()->count(3)->for($this->course)->create(['created_by' => $this->admin->id]);
-
+test('questions index route redirects to the question library', function () {
     $this->actingAs($this->admin)
         ->get(route('admin.questions.index'))
-        ->assertOk()
-        ->assertInertia(fn ($page) => $page
-            ->component('admin/questions/index')
-            ->has('questions.data', 3)
-            ->has('questions.meta.current_page')
-            ->has('questions.meta.last_page')
-            ->has('questions.meta.per_page')
-            ->has('questions.meta.total')
-            ->has('questions.links.prev')
-            ->has('questions.links.next')
-            ->has('institutions')
-            ->has('enum_options')
-        );
+        ->assertRedirect('/admin/question-library');
 });
 
-test('index filters by status', function () {
-    Question::factory()->for($this->course)->create(['status' => QuestionStatus::Draft, 'created_by' => $this->admin->id]);
-    Question::factory()->for($this->course)->create(['status' => QuestionStatus::Published, 'created_by' => $this->admin->id]);
-
-    $this->actingAs($this->admin)
-        ->get(route('admin.questions.index', ['status' => 'draft']))
-        ->assertOk()
-        ->assertInertia(fn ($page) => $page->has('questions.data', 1));
-});
-
-test('index filters by institution_id', function () {
-    $otherInstitution = Institution::factory()->create();
-    $otherCourse = InstitutionCourse::factory()->for($otherInstitution)->create();
-
-    Question::factory()->for($this->course)->create(['created_by' => $this->admin->id]);
-    Question::factory()->for($otherCourse)->create(['created_by' => $this->admin->id]);
-
-    $this->actingAs($this->admin)
-        ->get(route('admin.questions.index', ['institution_id' => $this->institution->id]))
-        ->assertOk()
-        ->assertInertia(fn ($page) => $page->has('questions.data', 1));
-});
-
-test('index filters by search using FTS', function () {
-    Question::factory()->for($this->course)->create([
-        'content' => 'Explain the concept of binary search trees',
-        'created_by' => $this->admin->id,
-    ]);
-    Question::factory()->for($this->course)->create([
-        'content' => 'What is photosynthesis in plants',
-        'created_by' => $this->admin->id,
-    ]);
-
-    $this->actingAs($this->admin)
-        ->get(route('admin.questions.index', ['search' => 'binary search']))
-        ->assertOk()
-        ->assertInertia(fn ($page) => $page->has('questions.data', 1));
-});
-
-test('create returns create page with institutions and enum_options', function () {
+test('questions create route redirects to the question library', function () {
     $this->actingAs($this->admin)
         ->get(route('admin.questions.create'))
-        ->assertOk()
-        ->assertInertia(fn ($page) => $page
-            ->component('admin/questions/create')
-            ->has('institutions')
-            ->has('enum_options.question_types')
-            ->has('enum_options.difficulties')
-            ->has('enum_options.sources')
-            ->has('enum_options.semesters')
-        );
+        ->assertRedirect('/admin/question-library');
 });
 
 test('store creates question with response_config and topic links', function () {
@@ -232,22 +171,12 @@ test('store rejects primary_topic_id not in topic_ids', function () {
         ->assertSessionHasErrors(['primary_topic_id']);
 });
 
-test('edit returns edit page with question response_config and topic_links', function () {
+test('questions edit route redirects to the builder for the question container', function () {
     $question = Question::factory()->for($this->course)->create(['created_by' => $this->admin->id]);
-    $question->topicLinks()->create(['canonical_topic_id' => $this->topic->id, 'is_primary' => true]);
 
     $this->actingAs($this->admin)
         ->get(route('admin.questions.edit', $question))
-        ->assertOk()
-        ->assertInertia(fn ($page) => $page
-            ->component('admin/questions/edit')
-            ->has('question')
-            ->where('question.id', $question->id)
-            ->has('question.response_config.options', 4)
-            ->has('question.topic_links', 1)
-            ->has('institutions')
-            ->has('enum_options')
-        );
+        ->assertRedirect(route('admin.question-library.course', $this->course));
 });
 
 test('update modifies question and redirects', function () {

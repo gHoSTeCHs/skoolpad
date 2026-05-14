@@ -63,7 +63,7 @@ export function CommandPalette({ open, onOpenChange }: CommandPaletteProps) {
 
     function navigateToPaper(paperId: string) {
         onOpenChange(false);
-        router.visit(QuestionPaperController.buildPreview.url({ questionPaper: paperId }));
+        router.visit(QuestionPaperController.build.url({ questionPaper: paperId }));
     }
 
     return (
