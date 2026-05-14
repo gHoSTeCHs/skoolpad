@@ -17,6 +17,7 @@ import type { SelectedNode } from '@/components/admin/preview/question-builder/p
 import { CompositeEditor, type EditorTab } from '@/components/admin/preview/question-builder/composite-editor';
 import { DraftModeContext } from '@/components/admin/preview/question-builder/draft-mode-context';
 import { buildDraftQuestion } from '@/components/admin/preview/question-builder/lib/draft-question';
+import { SectionEditor } from '@/components/admin/preview/question-builder/section-editor';
 import QuestionPaperController from '@/actions/App/Http/Controllers/Admin/QuestionPaperController';
 import QuestionSectionController from '@/actions/App/Http/Controllers/Admin/QuestionSectionController';
 import type { AnswerDepthLevel, QuestionEnumOptions, QuestionNode, QuestionPaper, QuestionSection } from '@/types/questions';
@@ -176,7 +177,14 @@ export default function PreviewQuestionPapersBuild({ paper, enum_options }: Prop
                     </div>
 
                     <div className="min-w-0 flex-1 overflow-hidden">
-                        {draftNode ? (
+                        {selectedNode?.type === 'section' ? (
+                            (() => {
+                                const section = paper.sections.find((s) => s.id === selectedNode.id);
+                                return section ? (
+                                    <SectionEditor key={section.id} paper={paper} section={section} />
+                                ) : null;
+                            })()
+                        ) : draftNode ? (
                             <DraftModeContext.Provider
                                 value={{
                                     paperId: paper.id,
@@ -218,11 +226,9 @@ export default function PreviewQuestionPapersBuild({ paper, enum_options }: Prop
                         ) : (
                             <div className="flex h-full items-center justify-center p-6">
                                 <p className="text-center text-sm text-muted-foreground">
-                                    {selectedNode?.type === 'section'
-                                        ? 'Section editing isn\'t part of the 4.B preview slice. Select a question to author it.'
-                                        : selectedNode?.type === 'context'
-                                            ? 'Context editing lands in 4.F. Select a question to author it.'
-                                            : 'Select a question from the tree to begin authoring.'}
+                                    {selectedNode?.type === 'context'
+                                        ? 'Context editing is handled in the Contexts tab. Select a question to author it.'
+                                        : 'Select a question from the tree to begin authoring.'}
                                 </p>
                             </div>
                         )}
