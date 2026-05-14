@@ -6,6 +6,7 @@ import type { EditorContainer } from './composite-editor';
 interface QuestionHeaderProps {
     container: EditorContainer;
     question: QuestionNode;
+    isDraft?: boolean;
 }
 
 function statusToTone(status: string): 'default' | 'secondary' | 'outline' | 'destructive' {
@@ -30,29 +31,38 @@ function statusLabel(status: string): string {
     }
 }
 
-function breadcrumbsFor(container: EditorContainer, question: QuestionNode): string[] {
+function breadcrumbsFor(container: EditorContainer, question: QuestionNode, isDraft: boolean): string[] {
     if (container.kind === 'paper') {
-        return [
+        const crumbs: (string | undefined)[] = [
             container.paper.institution_course?.course_code,
             container.paper.title,
             container.section.label,
-            question.question_number || question.display_label || 'Q',
-        ].filter((s): s is string => Boolean(s));
+        ];
+        if (!isDraft) {
+            crumbs.push(question.question_number || question.display_label || 'Q');
+        }
+        return crumbs.filter((s): s is string => Boolean(s));
     }
-    return [
+    const crumbs = [
         `${container.pool.course_code} · pool`,
         container.topic.title,
-        question.question_number || question.display_label || 'Q',
     ];
+    if (!isDraft) {
+        crumbs.push(question.question_number || question.display_label || 'Q');
+    }
+    return crumbs;
 }
 
-export function QuestionHeader({ container, question }: QuestionHeaderProps) {
-    const titleText =
-        question.content && question.content.trim().length > 0
+export function QuestionHeader({ container, question, isDraft = false }: QuestionHeaderProps) {
+    const isSubQuestion = question.depth_level > 0;
+
+    const titleText = isDraft
+        ? (isSubQuestion ? 'New sub-question' : 'New question')
+        : question.content && question.content.trim().length > 0
             ? question.content.split('\n')[0]
             : 'Untitled question';
 
-    const breadcrumbs = breadcrumbsFor(container, question);
+    const breadcrumbs = breadcrumbsFor(container, question, isDraft);
 
     return (
         <div className="border-b border-[var(--border-2)] bg-card px-7 py-5">
