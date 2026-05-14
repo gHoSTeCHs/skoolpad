@@ -12,7 +12,7 @@ import {
 import AdminLayout from '@/layouts/admin-layout';
 import { PaperHeader } from '@/components/admin/question-builder/paper-header';
 import { PaperTree } from '@/components/admin/question-builder/paper-tree';
-import { CompositeEditor, type EditorTab } from '@/components/admin/question-builder/composite-editor';
+import { CompositeEditor } from '@/components/admin/question-builder/composite-editor';
 import { DraftModeContext } from '@/components/admin/question-builder/draft-mode-context';
 import { buildDraftQuestion } from '@/components/admin/question-builder/lib/draft-question';
 import { locateInSections, firstQuestionInSections } from '@/components/admin/question-builder/lib/locate-question';
@@ -50,7 +50,6 @@ function BuildShell({ paper, enumOptions }: { paper: QuestionPaper; enumOptions:
     const requestTabChange = useBuilderStore((s) => s.requestTabChange);
     const confirmDiscard = useBuilderStore((s) => s.confirmDiscard);
     const cancelDiscard = useBuilderStore((s) => s.cancelDiscard);
-    const registerDirty = useBuilderStore((s) => s.registerDirty);
     const selectChildDepth = useBuilderStore((s) => s.selectChildDepth);
     const consumeInitialDepth = useBuilderStore((s) => s.consumeInitialDepth);
     const selectCreatedQuestion = useBuilderStore((s) => s.selectCreatedQuestion);
@@ -73,15 +72,6 @@ function BuildShell({ paper, enumOptions }: { paper: QuestionPaper; enumOptions:
             { label: `Section ${String.fromCharCode(65 + paper.sections.length)}` },
             { preserveScroll: true, only: ['paper'] },
         );
-    }
-
-    /**
-     * Bridge: surfaces that still report dirtiness via the legacy onDirtyChange
-     * callback are registered into the store here. Surfaces migrated to
-     * useDirtyRegistration register themselves directly.
-     */
-    function handleTabDirtyChange(tab: EditorTab, dirty: boolean) {
-        registerDirty(tab, dirty, () => {});
     }
 
     const breadcrumbs = [
@@ -128,7 +118,6 @@ function BuildShell({ paper, enumOptions }: { paper: QuestionPaper; enumOptions:
                                     activeTab="question"
                                     isDraft
                                     onTabChange={() => {}}
-                                    onTabDirtyChange={handleTabDirtyChange}
                                     initialDepth={null}
                                     onInitialDepthConsumed={consumeInitialDepth}
                                     onSelectChildDepth={selectChildDepth}
@@ -143,7 +132,6 @@ function BuildShell({ paper, enumOptions }: { paper: QuestionPaper; enumOptions:
                                 enumOptions={enumOptions}
                                 activeTab={activeTab}
                                 onTabChange={requestTabChange}
-                                onTabDirtyChange={handleTabDirtyChange}
                                 initialDepth={pendingDepth}
                                 onInitialDepthConsumed={consumeInitialDepth}
                                 onSelectChildDepth={selectChildDepth}

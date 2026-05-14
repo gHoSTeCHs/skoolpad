@@ -22,7 +22,6 @@ interface CompositeEditorProps {
     enumOptions: QuestionEnumOptions;
     activeTab: EditorTab;
     onTabChange: (tab: EditorTab) => void;
-    onTabDirtyChange: (tab: EditorTab, dirty: boolean) => void;
     initialDepth: AnswerDepthLevel | null;
     onInitialDepthConsumed: () => void;
     onSelectChildDepth: (childId: string, depth: AnswerDepthLevel) => void;
@@ -58,7 +57,6 @@ export function CompositeEditor({
     enumOptions,
     activeTab,
     onTabChange,
-    onTabDirtyChange,
     initialDepth,
     onInitialDepthConsumed,
     onSelectChildDepth,
@@ -152,10 +150,7 @@ export function CompositeEditor({
                     )}
                     {!isDraft && (
                         <TabsContent value="links" className="mt-0">
-                            <LinksTab
-                                question={question}
-                                onDirtyChange={(d) => onTabDirtyChange('links', d)}
-                            />
+                            <LinksTab question={question} />
                         </TabsContent>
                     )}
                     {!isDraft && container.kind === 'paper' && (

@@ -11,7 +11,7 @@ import {
 } from '@/components/ui/alert-dialog';
 import AdminLayout from '@/layouts/admin-layout';
 import { PoolTree } from '@/components/admin/question-builder/pool-tree';
-import { CompositeEditor, type EditorTab } from '@/components/admin/question-builder/composite-editor';
+import { CompositeEditor } from '@/components/admin/question-builder/composite-editor';
 import { DraftModeContext } from '@/components/admin/question-builder/draft-mode-context';
 import { buildDraftQuestion } from '@/components/admin/question-builder/lib/draft-question';
 import { locateInPool, firstQuestionInPool } from '@/components/admin/question-builder/lib/locate-question';
@@ -48,7 +48,6 @@ function PoolShell({ pool, enumOptions }: { pool: PoolContainer; enumOptions: Qu
     const requestTabChange = useBuilderStore((s) => s.requestTabChange);
     const confirmDiscard = useBuilderStore((s) => s.confirmDiscard);
     const cancelDiscard = useBuilderStore((s) => s.cancelDiscard);
-    const registerDirty = useBuilderStore((s) => s.registerDirty);
     const selectChildDepth = useBuilderStore((s) => s.selectChildDepth);
     const consumeInitialDepth = useBuilderStore((s) => s.consumeInitialDepth);
     const selectCreatedQuestion = useBuilderStore((s) => s.selectCreatedQuestion);
@@ -58,15 +57,6 @@ function PoolShell({ pool, enumOptions }: { pool: PoolContainer; enumOptions: Qu
 
     function handleCreated(newQuestionId: string) {
         selectCreatedQuestion(newQuestionId);
-    }
-
-    /**
-     * Bridge: surfaces still reporting dirtiness via the legacy onDirtyChange
-     * callback are registered into the store here. Surfaces migrated to
-     * useDirtyRegistration register themselves directly.
-     */
-    function handleTabDirtyChange(tab: EditorTab, dirty: boolean) {
-        registerDirty(tab, dirty, () => {});
     }
 
     const breadcrumbs = [
@@ -111,7 +101,6 @@ function PoolShell({ pool, enumOptions }: { pool: PoolContainer; enumOptions: Qu
                                     activeTab="question"
                                     isDraft
                                     onTabChange={() => {}}
-                                    onTabDirtyChange={handleTabDirtyChange}
                                     initialDepth={null}
                                     onInitialDepthConsumed={consumeInitialDepth}
                                     onSelectChildDepth={selectChildDepth}
@@ -126,7 +115,6 @@ function PoolShell({ pool, enumOptions }: { pool: PoolContainer; enumOptions: Qu
                                 enumOptions={enumOptions}
                                 activeTab={activeTab}
                                 onTabChange={requestTabChange}
-                                onTabDirtyChange={handleTabDirtyChange}
                                 initialDepth={pendingDepth}
                                 onInitialDepthConsumed={consumeInitialDepth}
                                 onSelectChildDepth={selectChildDepth}

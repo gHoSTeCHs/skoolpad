@@ -1,5 +1,6 @@
-import { useState, useRef, useEffect } from 'react';
+import { useCallback, useState, useRef, useEffect } from 'react';
 import { router } from '@inertiajs/react';
+import { useDirtyRegistration } from '../hooks/use-dirty-registration';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
@@ -64,6 +65,17 @@ export function ContextsTab({ paper, question }: ContextsTabProps) {
 
     const paperContextIdsBefore = useRef<Set<string>>(new Set());
     const pendingAutoLink = useRef(false);
+
+    // Unsubmitted input in the link/create forms is real unsaved work — register it
+    // so navigating away triggers the discard prompt and confirmDiscard can clear it.
+    const dirty = createTitle.trim() !== '' || createContent.trim() !== '' || linkContextId !== '';
+    const resetForm = useCallback(() => {
+        setLinkContextId('');
+        setCreateType('passage');
+        setCreateTitle('');
+        setCreateContent('');
+    }, []);
+    useDirtyRegistration('contexts', dirty, resetForm);
 
     useEffect(() => {
         setLinkContextId('');

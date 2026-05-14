@@ -1,7 +1,7 @@
 'use no memo';
 
 import { router } from '@inertiajs/react';
-import { useState } from 'react';
+import { useCallback, useState } from 'react';
 import QuestionController from '@/actions/App/Http/Controllers/Admin/QuestionController';
 import { BlockLinker, blockLinksFromNode } from '@/components/admin/block-linker';
 import { TopicLinker } from '@/components/admin/topic-linker';
@@ -9,6 +9,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import type { BlockLinkDraft } from '@/components/admin/block-linker';
 import type { QuestionNode, QuestionNodeTopicLink, TopicLink } from '@/types/questions';
+import { useDirtyRegistration } from '../hooks/use-dirty-registration';
 
 function topicLinksFromNode(raw: QuestionNodeTopicLink[]): TopicLink[] {
     return raw.map((link) => ({
@@ -20,10 +21,9 @@ function topicLinksFromNode(raw: QuestionNodeTopicLink[]): TopicLink[] {
 
 interface LinksTabProps {
     question: QuestionNode;
-    onDirtyChange?: (dirty: boolean) => void;
 }
 
-export function LinksTab({ question, onDirtyChange }: LinksTabProps) {
+export function LinksTab({ question }: LinksTabProps) {
     const savedTopics = topicLinksFromNode(question.topic_links ?? []);
     const savedPrimaryId = savedTopics.find((t) => t.is_primary)?.id ?? '';
     const savedBlocks = blockLinksFromNode(question.question_block_links ?? []);
@@ -39,22 +39,36 @@ export function LinksTab({ question, onDirtyChange }: LinksTabProps) {
     const [blocksSaving, setBlocksSaving] = useState(false);
     const [blocksErrors, setBlocksErrors] = useState<Record<string, string>>({});
 
+    const resetTopics = useCallback(() => {
+        const restored = topicLinksFromNode(question.topic_links ?? []);
+        setTopics(restored);
+        setPrimaryTopicId(restored.find((t) => t.is_primary)?.id ?? '');
+        setTopicsErrors({});
+        setTopicsDirty(false);
+    }, [question]);
+
+    const resetBlocks = useCallback(() => {
+        setBlocks(blockLinksFromNode(question.question_block_links ?? []));
+        setBlocksErrors({});
+        setBlocksDirty(false);
+    }, [question]);
+
+    useDirtyRegistration('links:topics', topicsDirty, resetTopics);
+    useDirtyRegistration('links:blocks', blocksDirty, resetBlocks);
+
     function handleTopicsChange(next: TopicLink[]) {
         setTopics(next);
         setTopicsDirty(true);
-        onDirtyChange?.(true);
     }
 
     function handlePrimaryChange(id: string) {
         setPrimaryTopicId(id);
         setTopicsDirty(true);
-        onDirtyChange?.(true);
     }
 
     function handleBlocksChange(next: BlockLinkDraft[]) {
         setBlocks(next);
         setBlocksDirty(true);
-        onDirtyChange?.(true);
     }
 
     function saveTopics() {
@@ -69,10 +83,7 @@ export function LinksTab({ question, onDirtyChange }: LinksTabProps) {
             {
                 preserveScroll: true,
                 only: ['paper'],
-                onSuccess: () => {
-                    setTopicsDirty(false);
-                    onDirtyChange?.(blocksDirty);
-                },
+                onSuccess: () => setTopicsDirty(false),
                 onError: (errors) => setTopicsErrors(errors),
                 onFinish: () => setTopicsSaving(false),
             },
@@ -93,10 +104,7 @@ export function LinksTab({ question, onDirtyChange }: LinksTabProps) {
             {
                 preserveScroll: true,
                 only: ['paper'],
-                onSuccess: () => {
-                    setBlocksDirty(false);
-                    onDirtyChange?.(topicsDirty);
-                },
+                onSuccess: () => setBlocksDirty(false),
                 onError: (errors) => setBlocksErrors(errors),
                 onFinish: () => setBlocksSaving(false),
             },
@@ -122,11 +130,7 @@ export function LinksTab({ question, onDirtyChange }: LinksTabProps) {
                 </CardContent>
                 {topicsDirty && (
                     <CardFooter className="border-t pt-4">
-                        <Button
-                            size="sm"
-                            onClick={saveTopics}
-                            disabled={topicsSaving}
-                        >
+                        <Button size="sm" onClick={saveTopics} disabled={topicsSaving}>
                             {topicsSaving ? 'Saving…' : 'Save topic links'}
                         </Button>
                     </CardFooter>
@@ -147,11 +151,7 @@ export function LinksTab({ question, onDirtyChange }: LinksTabProps) {
                 </CardContent>
                 {blocksDirty && (
                     <CardFooter className="border-t pt-4">
-                        <Button
-                            size="sm"
-                            onClick={saveBlocks}
-                            disabled={blocksSaving}
-                        >
+                        <Button size="sm" onClick={saveBlocks} disabled={blocksSaving}>
                             {blocksSaving ? 'Saving…' : 'Save block links'}
                         </Button>
                     </CardFooter>
