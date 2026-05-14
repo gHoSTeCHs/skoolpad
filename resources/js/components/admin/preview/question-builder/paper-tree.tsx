@@ -13,6 +13,7 @@ interface PaperTreeProps {
     paper: QuestionPaper;
     selectedNode: SelectedNode | null;
     onSelectNode: (node: SelectedNode | null) => void;
+    onAddSection?: () => void;
 }
 
 function countQuestionsRecursive(questions: QuestionNode[]): number {
@@ -31,9 +32,10 @@ interface QuestionTreeNodeProps {
     depth: number;
     selectedNode: SelectedNode | null;
     onSelectNode: (node: SelectedNode) => void;
+    sectionId: string;
 }
 
-function QuestionTreeNode({ question, depth, selectedNode, onSelectNode }: QuestionTreeNodeProps) {
+function QuestionTreeNode({ question, depth, selectedNode, onSelectNode, sectionId }: QuestionTreeNodeProps) {
     const [expanded, setExpanded] = useState(true);
     const isSelected = selectedNode?.type === 'question' && selectedNode.id === question.id;
     const hasChildren = question.children.length > 0;
@@ -79,8 +81,22 @@ function QuestionTreeNode({ question, depth, selectedNode, onSelectNode }: Quest
                             depth={depth + 1}
                             selectedNode={selectedNode}
                             onSelectNode={onSelectNode}
+                            sectionId={sectionId}
                         />
                     ))}
+
+                    {question.question_type === 'group' && (
+                        <button
+                            type="button"
+                            onClick={(e) => {
+                                e.stopPropagation();
+                                onSelectNode({ type: 'draft', sectionId, parentId: question.id, defaultType: 'theory' });
+                            }}
+                            className="mt-0.5 flex w-full items-center gap-1.5 rounded-md border border-dashed border-border px-2 py-1 text-[11px] text-muted-foreground transition-colors hover:border-[var(--fg-subtle)] hover:bg-[var(--bg-raised)] hover:text-foreground"
+                        >
+                            + Add sub-question
+                        </button>
+                    )}
                 </div>
             )}
         </div>
@@ -130,8 +146,17 @@ function SectionNode({ section, selectedNode, onSelectNode }: SectionNodeProps) 
                             depth={0}
                             selectedNode={selectedNode}
                             onSelectNode={onSelectNode}
+                            sectionId={section.id}
                         />
                     ))}
+
+                    <button
+                        type="button"
+                        onClick={() => onSelectNode({ type: 'draft', sectionId: section.id, defaultType: 'mcq' })}
+                        className="ml-1 mt-0.5 flex w-full items-center gap-1.5 rounded-md border border-dashed border-border px-2 py-1 text-[11px] text-muted-foreground transition-colors hover:border-[var(--fg-subtle)] hover:bg-[var(--bg-raised)] hover:text-foreground"
+                    >
+                        + Add question
+                    </button>
                 </div>
             )}
         </div>
@@ -168,7 +193,7 @@ function ContextTreeNode({
     );
 }
 
-export function PaperTree({ paper, selectedNode, onSelectNode }: PaperTreeProps) {
+export function PaperTree({ paper, selectedNode, onSelectNode, onAddSection = () => {} }: PaperTreeProps) {
     const [contextsExpanded, setContextsExpanded] = useState(true);
 
     return (
@@ -191,6 +216,14 @@ export function PaperTree({ paper, selectedNode, onSelectNode }: PaperTreeProps)
                         onSelectNode={onSelectNode}
                     />
                 ))}
+
+                <button
+                    type="button"
+                    onClick={onAddSection}
+                    className="mt-2 flex w-full items-center justify-center gap-1.5 rounded-md border border-dashed border-border px-2 py-1.5 text-[11px] text-muted-foreground transition-colors hover:border-[var(--fg-subtle)] hover:bg-[var(--bg-raised)] hover:text-foreground"
+                >
+                    + Add section
+                </button>
 
                 {paper.contexts.length > 0 && (
                     <div className="mt-4">
