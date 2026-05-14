@@ -60,7 +60,6 @@ Route::middleware(['auth', 'verified', 'staff'])->prefix('admin')->name('admin.'
     Route::get('question-papers/create', [QuestionPaperController::class, 'create'])->name('question-papers.create');
     Route::post('question-papers', [QuestionPaperController::class, 'store'])->name('question-papers.store');
     Route::get('question-papers/{questionPaper}/build', [QuestionPaperController::class, 'build'])->name('question-papers.build');
-    Route::get('question-papers/{questionPaper}/build/preview', [QuestionPaperController::class, 'buildPreview'])->name('question-papers.build-preview');
     Route::put('question-papers/{questionPaper}', [QuestionPaperController::class, 'update'])->name('question-papers.update');
     Route::delete('question-papers/{questionPaper}', [QuestionPaperController::class, 'destroy'])->name('question-papers.destroy');
 
@@ -75,18 +74,18 @@ Route::middleware(['auth', 'verified', 'staff'])->prefix('admin')->name('admin.'
     Route::post('questions/{question}/contexts/link', [QuestionContextController::class, 'link'])->name('questions.contexts.link');
     Route::delete('questions/{question}/contexts/{questionContext}/unlink', [QuestionContextController::class, 'unlink'])->name('questions.contexts.unlink');
 
-    Route::get('question-library/preview', [QuestionLibraryController::class, 'index'])->name('question-library.preview');
-    Route::get('question-library/preview/search', [QuestionLibraryController::class, 'search'])->name('question-library.preview.search');
-    Route::post('question-library/preview/unattached/bulk-assign', [QuestionLibraryController::class, 'bulkAssignUnattached'])->name('question-library.preview.unattached.bulk-assign');
-    Route::get('question-library/preview/courses/{course}', [QuestionLibraryController::class, 'showCourse'])->name('question-library.preview.course');
+    Route::get('question-library', [QuestionLibraryController::class, 'index'])->name('question-library.index');
+    Route::get('question-library/search', [QuestionLibraryController::class, 'search'])->name('question-library.search');
+    Route::post('question-library/unattached/bulk-assign', [QuestionLibraryController::class, 'bulkAssignUnattached'])->name('question-library.unattached.bulk-assign');
+    Route::get('question-library/courses/{course}', [QuestionLibraryController::class, 'showCourse'])->name('question-library.course');
 
-    Route::get('questions', [QuestionController::class, 'index'])->name('questions.index');
-    Route::get('questions/create', [QuestionController::class, 'create'])->name('questions.create');
+    Route::redirect('questions', '/admin/question-library')->name('questions.index');
+    Route::redirect('questions/create', '/admin/question-library')->name('questions.create');
     Route::post('questions', [QuestionController::class, 'store'])->name('questions.store');
-    Route::get('questions/{question}/edit', [QuestionController::class, 'edit'])->name('questions.edit');
+    Route::get('questions/{question}/edit', [QuestionController::class, 'legacyEditRedirect'])->name('questions.edit');
     Route::put('questions/{question}', [QuestionController::class, 'update'])->name('questions.update');
     Route::post('questions/reorder', [QuestionController::class, 'reorder'])->name('questions.reorder');
-    Route::get('questions/{question}/answers', [AnswerController::class, 'index'])->name('questions.answers');
+    Route::get('questions/{question}/answers', [QuestionController::class, 'legacyEditRedirect'])->name('questions.answers');
     Route::post('questions/{question}/answers', [AnswerController::class, 'store'])->name('questions.answers.store');
     Route::put('questions/{question}/answers/{answer}', [AnswerController::class, 'update'])->name('questions.answers.update');
     Route::post('questions/{question}/answers/{depth}/plan', [AnswerGenerationController::class, 'plan'])->name('questions.answers.plan');

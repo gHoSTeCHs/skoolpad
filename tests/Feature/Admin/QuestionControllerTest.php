@@ -43,77 +43,16 @@ function validQuestionData(array $overrides = []): array
     ], $overrides);
 }
 
-test('index displays questions page with pagination structure', function () {
-    Question::factory()->count(3)->for($this->course)->create(['created_by' => $this->admin->id]);
-
+test('questions index route redirects to the question library', function () {
     $this->actingAs($this->admin)
         ->get(route('admin.questions.index'))
-        ->assertOk()
-        ->assertInertia(fn ($page) => $page
-            ->component('admin/questions/index')
-            ->has('questions.data', 3)
-            ->has('questions.meta.current_page')
-            ->has('questions.meta.last_page')
-            ->has('questions.meta.per_page')
-            ->has('questions.meta.total')
-            ->has('questions.links.prev')
-            ->has('questions.links.next')
-            ->has('institutions')
-            ->has('enum_options')
-        );
+        ->assertRedirect('/admin/question-library');
 });
 
-test('index filters by status', function () {
-    Question::factory()->for($this->course)->create(['status' => QuestionStatus::Draft, 'created_by' => $this->admin->id]);
-    Question::factory()->for($this->course)->create(['status' => QuestionStatus::Published, 'created_by' => $this->admin->id]);
-
-    $this->actingAs($this->admin)
-        ->get(route('admin.questions.index', ['status' => 'draft']))
-        ->assertOk()
-        ->assertInertia(fn ($page) => $page->has('questions.data', 1));
-});
-
-test('index filters by institution_id', function () {
-    $otherInstitution = Institution::factory()->create();
-    $otherCourse = InstitutionCourse::factory()->for($otherInstitution)->create();
-
-    Question::factory()->for($this->course)->create(['created_by' => $this->admin->id]);
-    Question::factory()->for($otherCourse)->create(['created_by' => $this->admin->id]);
-
-    $this->actingAs($this->admin)
-        ->get(route('admin.questions.index', ['institution_id' => $this->institution->id]))
-        ->assertOk()
-        ->assertInertia(fn ($page) => $page->has('questions.data', 1));
-});
-
-test('index filters by search using FTS', function () {
-    Question::factory()->for($this->course)->create([
-        'content' => 'Explain the concept of binary search trees',
-        'created_by' => $this->admin->id,
-    ]);
-    Question::factory()->for($this->course)->create([
-        'content' => 'What is photosynthesis in plants',
-        'created_by' => $this->admin->id,
-    ]);
-
-    $this->actingAs($this->admin)
-        ->get(route('admin.questions.index', ['search' => 'binary search']))
-        ->assertOk()
-        ->assertInertia(fn ($page) => $page->has('questions.data', 1));
-});
-
-test('create returns create page with institutions and enum_options', function () {
+test('questions create route redirects to the question library', function () {
     $this->actingAs($this->admin)
         ->get(route('admin.questions.create'))
-        ->assertOk()
-        ->assertInertia(fn ($page) => $page
-            ->component('admin/questions/create')
-            ->has('institutions')
-            ->has('enum_options.question_types')
-            ->has('enum_options.difficulties')
-            ->has('enum_options.sources')
-            ->has('enum_options.semesters')
-        );
+        ->assertRedirect('/admin/question-library');
 });
 
 test('store creates question with response_config and topic links', function () {
@@ -232,22 +171,12 @@ test('store rejects primary_topic_id not in topic_ids', function () {
         ->assertSessionHasErrors(['primary_topic_id']);
 });
 
-test('edit returns edit page with question response_config and topic_links', function () {
+test('questions edit route redirects to the builder for the question container', function () {
     $question = Question::factory()->for($this->course)->create(['created_by' => $this->admin->id]);
-    $question->topicLinks()->create(['canonical_topic_id' => $this->topic->id, 'is_primary' => true]);
 
     $this->actingAs($this->admin)
         ->get(route('admin.questions.edit', $question))
-        ->assertOk()
-        ->assertInertia(fn ($page) => $page
-            ->component('admin/questions/edit')
-            ->has('question')
-            ->where('question.id', $question->id)
-            ->has('question.response_config.options', 4)
-            ->has('question.topic_links', 1)
-            ->has('institutions')
-            ->has('enum_options')
-        );
+        ->assertRedirect(route('admin.question-library.course', $this->course));
 });
 
 test('update modifies question and redirects', function () {
@@ -496,4 +425,60 @@ test('links tab put with only topic fields does not overwrite response_config', 
     expect($question->response_config['options'])->toHaveCount(1);
     expect($question->response_config['options'][0]['text'])->toBe('O(log n)');
     expect($question->response_config['options'][0]['is_correct'])->toBeTrue();
+});
+
+it('creates a paper question from the builder and flashes the new id', function () {
+    $paper = QuestionPaper::factory()->create();
+    $section = QuestionSection::factory()->for($paper)->create();
+
+    $response = $this->actingAs($this->admin)->post(route('admin.questions.store'), [
+        'question_paper_id' => $paper->id,
+        'question_section_id' => $section->id,
+        'question_type' => 'mcq',
+        'content' => 'What is 2 + 2?',
+        'status' => 'draft',
+        'source' => 'manual',
+        'response_config' => [
+            'options' => [
+                ['label' => 'A', 'text' => '4', 'is_correct' => true],
+                ['label' => 'B', 'text' => '5', 'is_correct' => false],
+            ],
+        ],
+        'from_paper_builder' => true,
+    ]);
+
+    $response->assertRedirect();
+    $response->assertSessionHas('created_question_id');
+    $this->assertDatabaseHas('questions', [
+        'question_paper_id' => $paper->id,
+        'question_section_id' => $section->id,
+        'content' => 'What is 2 + 2?',
+    ]);
+});
+
+it('creates a nested sub-question when parent_question_id is provided', function () {
+    $paper = QuestionPaper::factory()->create();
+    $section = QuestionSection::factory()->for($paper)->create();
+    $parent = Question::factory()->create([
+        'question_paper_id' => $paper->id,
+        'question_section_id' => $section->id,
+        'question_type' => 'group',
+        'response_config' => null,
+    ]);
+
+    $this->actingAs($this->admin)->post(route('admin.questions.store'), [
+        'question_paper_id' => $paper->id,
+        'question_section_id' => $section->id,
+        'parent_question_id' => $parent->id,
+        'question_type' => 'theory',
+        'content' => 'Explain the result.',
+        'status' => 'draft',
+        'source' => 'manual',
+        'from_paper_builder' => true,
+    ])->assertRedirect();
+
+    $this->assertDatabaseHas('questions', [
+        'parent_question_id' => $parent->id,
+        'content' => 'Explain the result.',
+    ]);
 });

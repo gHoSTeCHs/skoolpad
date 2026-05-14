@@ -30,7 +30,6 @@ import EducationSystemController from '@/actions/App/Http/Controllers/Admin/Educ
 import GradingScaleController from '@/actions/App/Http/Controllers/Admin/GradingScaleController';
 import InstitutionController from '@/actions/App/Http/Controllers/Admin/InstitutionController';
 import InstitutionTypeController from '@/actions/App/Http/Controllers/Admin/InstitutionTypeController';
-import QuestionController from '@/actions/App/Http/Controllers/Admin/QuestionController';
 import QuestionLibraryController from '@/actions/App/Http/Controllers/Admin/QuestionLibraryController';
 import QuestionPaperController from '@/actions/App/Http/Controllers/Admin/QuestionPaperController';
 import ReviewQueueController from '@/actions/App/Http/Controllers/Admin/ReviewQueueController';
@@ -70,8 +69,7 @@ const navGroups: NavGroup[] = [
             { title: 'Disciplines', href: DisciplineController.index.url(), icon: Shapes },
             { title: 'Canonical Topics', href: CanonicalTopicController.index.url(), icon: BookOpen },
             { title: 'Question Papers', href: QuestionPaperController.index.url(), icon: FileText },
-            { title: 'Question Library', href: QuestionController.index.url(), icon: Library },
-            { title: 'Question Library · preview', href: QuestionLibraryController.index.url(), icon: Library },
+            { title: 'Question Library', href: QuestionLibraryController.index.url(), icon: Library },
             { title: 'Courses', href: CourseController.index.url(), icon: GraduationCap },
             { title: 'Curriculum Mappings', href: CurriculumMappingController.index.url(), icon: Network },
             { title: 'Scheme of Work', href: SchemeOfWorkController.index.url(), icon: CalendarDays },

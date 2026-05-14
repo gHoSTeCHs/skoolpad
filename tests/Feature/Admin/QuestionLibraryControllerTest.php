@@ -47,10 +47,10 @@ test('index returns correct counts and tab data for the library landing', functi
     ]);
 
     $this->actingAs($this->admin)
-        ->get(route('admin.question-library.preview'))
+        ->get(route('admin.question-library.index'))
         ->assertOk()
         ->assertInertia(fn ($page) => $page
-            ->component('admin/preview/question-library/index')
+            ->component('admin/question-library/index')
             ->where('counts.papers', 2)
             ->where('counts.course_pools', 1)
             ->where('counts.exam_subject_pools', 1)
@@ -69,7 +69,7 @@ test('papers carry answer fill stats', function () {
     QuestionAnswer::factory()->create(['question_id' => $q->id, 'is_published' => false]);
 
     $this->actingAs($this->admin)
-        ->get(route('admin.question-library.preview'))
+        ->get(route('admin.question-library.index'))
         ->assertOk()
         ->assertInertia(fn ($page) => $page
             ->has('papers.0', fn ($paper) => $paper
@@ -88,7 +88,7 @@ test('search endpoint returns grouped results', function () {
     ]);
 
     $this->actingAs($this->admin)
-        ->getJson(route('admin.question-library.preview.search', ['q' => 'Algorithms']))
+        ->getJson(route('admin.question-library.search', ['q' => 'Algorithms']))
         ->assertOk()
         ->assertJsonStructure([
             'results' => ['papers', 'course_pools', 'exam_pools', 'questions'],
@@ -100,7 +100,7 @@ test('search returns empty groups when query is blank', function () {
     QuestionPaper::factory()->create(['institution_course_id' => $this->course->id]);
 
     $this->actingAs($this->admin)
-        ->getJson(route('admin.question-library.preview.search', ['q' => '']))
+        ->getJson(route('admin.question-library.search', ['q' => '']))
         ->assertOk()
         ->assertJsonPath('results.papers', [])
         ->assertJsonPath('results.course_pools', [])
@@ -112,7 +112,7 @@ test('students cannot access the library', function () {
     $student = User::factory()->create();
 
     $this->actingAs($student)
-        ->get(route('admin.question-library.preview'))
+        ->get(route('admin.question-library.index'))
         ->assertForbidden();
 });
 
@@ -147,10 +147,10 @@ test('showCourse returns pool questions grouped by primary topic', function () {
     // q3 has no topic links — goes to "untagged" bucket
 
     $this->actingAs($this->admin)
-        ->get(route('admin.question-library.preview.course', ['course' => $this->course->id]))
+        ->get(route('admin.question-library.course', ['course' => $this->course->id]))
         ->assertOk()
         ->assertInertia(fn ($page) => $page
-            ->component('admin/preview/question-library/courses/show')
+            ->component('admin/question-library/courses/show')
             ->where('pool.id', $this->course->id)
             ->where('pool.questions_total', 3)
             ->has('pool.topics', 3)
@@ -169,7 +169,7 @@ test('showCourse excludes paper-bound questions', function () {
     ]);
 
     $this->actingAs($this->admin)
-        ->get(route('admin.question-library.preview.course', ['course' => $this->course->id]))
+        ->get(route('admin.question-library.course', ['course' => $this->course->id]))
         ->assertOk()
         ->assertInertia(fn ($page) => $page->where('pool.questions_total', 1));
 });
@@ -178,7 +178,7 @@ test('students cannot access pool builder', function () {
     $student = User::factory()->create();
 
     $this->actingAs($student)
-        ->get(route('admin.question-library.preview.course', ['course' => $this->course->id]))
+        ->get(route('admin.question-library.course', ['course' => $this->course->id]))
         ->assertForbidden();
 });
 
@@ -191,7 +191,7 @@ test('bulkAssign assigns unattached questions to a course', function () {
     ]);
 
     $this->actingAs($this->admin)
-        ->post(route('admin.question-library.preview.unattached.bulk-assign'), [
+        ->post(route('admin.question-library.unattached.bulk-assign'), [
             'question_ids' => $questions->pluck('id')->all(),
             'action' => 'assign_course',
             'target_id' => $targetCourse->id,
@@ -216,7 +216,7 @@ test('bulkAssign attaches unattached questions to a paper', function () {
     ]);
 
     $this->actingAs($this->admin)
-        ->post(route('admin.question-library.preview.unattached.bulk-assign'), [
+        ->post(route('admin.question-library.unattached.bulk-assign'), [
             'question_ids' => $questions->pluck('id')->all(),
             'action' => 'attach_paper',
             'target_id' => $paper->id,
@@ -246,7 +246,7 @@ test('bulkAssign delete removes only selected unattached questions', function ()
     ]);
 
     $this->actingAs($this->admin)
-        ->post(route('admin.question-library.preview.unattached.bulk-assign'), [
+        ->post(route('admin.question-library.unattached.bulk-assign'), [
             'question_ids' => $toDelete->pluck('id')->all(),
             'action' => 'delete',
         ])
@@ -268,7 +268,7 @@ test('bulkAssign does not touch questions that are no longer unattached', functi
     ]);
 
     $this->actingAs($this->admin)
-        ->post(route('admin.question-library.preview.unattached.bulk-assign'), [
+        ->post(route('admin.question-library.unattached.bulk-assign'), [
             'question_ids' => [$alreadyAttached->id],
             'action' => 'assign_course',
             'target_id' => $targetCourse->id,
@@ -291,7 +291,7 @@ test('bulkAssign rejects target_id missing when action requires one', function (
     ]);
 
     $this->actingAs($this->admin)
-        ->post(route('admin.question-library.preview.unattached.bulk-assign'), [
+        ->post(route('admin.question-library.unattached.bulk-assign'), [
             'question_ids' => [$question->id],
             'action' => 'assign_course',
         ])
@@ -307,7 +307,7 @@ test('students cannot bulkAssign', function () {
     ]);
 
     $this->actingAs($student)
-        ->post(route('admin.question-library.preview.unattached.bulk-assign'), [
+        ->post(route('admin.question-library.unattached.bulk-assign'), [
             'question_ids' => [$question->id],
             'action' => 'delete',
         ])

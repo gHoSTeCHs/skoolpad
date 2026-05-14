@@ -32,7 +32,7 @@ class QuestionLibraryController extends Controller
             'status' => $request->string('status')->toString() ?: null,
         ];
 
-        return Inertia::render('admin/preview/question-library/index', [
+        return Inertia::render('admin/question-library/index', [
             'counts' => $this->libraryService->getCounts(),
             'papers' => $this->libraryService->getPapersWithStats($filters),
             'course_pools' => $this->libraryService->getCoursePools($filters),
@@ -81,7 +81,7 @@ class QuestionLibraryController extends Controller
     {
         Gate::authorize('viewAny', Question::class);
 
-        return Inertia::render('admin/preview/question-library/courses/show', [
+        return Inertia::render('admin/question-library/courses/show', [
             'pool' => $this->libraryService->getCoursePoolBuild($course),
             'enum_options' => [
                 'question_types' => array_map(fn ($c) => ['value' => $c->value, 'label' => $c->label()], QuestionType::cases()),

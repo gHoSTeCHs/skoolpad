@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useCallback, useState, useEffect } from 'react';
 import { router } from '@inertiajs/react';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
@@ -6,13 +6,14 @@ import { Button } from '@/components/ui/button';
 import { FormField } from '@/components/ui/form-field';
 import QuestionSectionController from '@/actions/App/Http/Controllers/Admin/QuestionSectionController';
 import type { QuestionPaper, QuestionSection } from '@/types/questions';
+import { useDirtyRegistration } from './hooks/use-dirty-registration';
 
 interface SectionEditorProps {
     paper: QuestionPaper;
     section: QuestionSection;
 }
 
-export default function SectionEditor({ paper, section }: SectionEditorProps) {
+export function SectionEditor({ paper, section }: SectionEditorProps) {
     const [label, setLabel] = useState(section.label);
     const [instruction, setInstruction] = useState(section.instruction ?? '');
     const [marks, setMarks] = useState(section.marks?.toString() ?? '');
@@ -27,6 +28,22 @@ export default function SectionEditor({ paper, section }: SectionEditorProps) {
         setRequiredCount(section.required_count?.toString() ?? '');
         setErrors({});
     }, [section.id]);
+
+    const isDirty =
+        label !== section.label
+        || instruction !== (section.instruction ?? '')
+        || marks !== (section.marks?.toString() ?? '')
+        || requiredCount !== (section.required_count?.toString() ?? '');
+
+    const reset = useCallback(() => {
+        setLabel(section.label);
+        setInstruction(section.instruction ?? '');
+        setMarks(section.marks?.toString() ?? '');
+        setRequiredCount(section.required_count?.toString() ?? '');
+        setErrors({});
+    }, [section]);
+
+    useDirtyRegistration('section', isDirty, reset);
 
     function handleSave() {
         setSaving(true);
