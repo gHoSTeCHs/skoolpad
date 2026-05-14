@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { QuestionTypeBadge } from '@/components/skoolpad/questions';
-import { AnswerStatusDots } from '@/components/admin/question-builder/answer-status-dots';
+import { AnswerStatusDots } from './answer-status-dots';
 import type { QuestionPaper, QuestionSection, QuestionNode, QuestionContextData, QuestionType } from '@/types/questions';
 
 export type SelectedNode =

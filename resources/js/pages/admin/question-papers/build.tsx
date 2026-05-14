@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { Head } from '@inertiajs/react';
 import AdminLayout from '@/layouts/admin-layout';
-import PaperHeader from '@/components/admin/question-builder/paper-header';
+import { PaperHeader } from '@/components/admin/preview/question-builder/paper-header';
 import { PaperTree } from '@/components/admin/question-builder/paper-tree';
 import type { SelectedNode } from '@/components/admin/question-builder/paper-tree';
 import SectionEditor from '@/components/admin/question-builder/section-editor';

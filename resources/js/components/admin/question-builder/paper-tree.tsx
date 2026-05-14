@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { router } from '@inertiajs/react';
 import { Button } from '@/components/ui/button';
 import { QuestionTypeBadge } from '@/components/skoolpad/questions';
-import { AnswerStatusDots } from '@/components/admin/question-builder/answer-status-dots';
+import { AnswerStatusDots } from '@/components/admin/preview/question-builder/answer-status-dots';
 import QuestionSectionController from '@/actions/App/Http/Controllers/Admin/QuestionSectionController';
 import QuestionContextController from '@/actions/App/Http/Controllers/Admin/QuestionContextController';
 import QuestionController from '@/actions/App/Http/Controllers/Admin/QuestionController';

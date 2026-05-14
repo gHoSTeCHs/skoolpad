@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { QuestionTypeBadge } from '@/components/skoolpad/questions';
-import { AnswerStatusDots } from '@/components/admin/question-builder/answer-status-dots';
+import { AnswerStatusDots } from './answer-status-dots';
 import type { QuestionNode } from '@/types/questions';
 import type { PoolContainer, PoolTopic } from '@/types/question-library';
 import type { SelectedNode } from './paper-tree';

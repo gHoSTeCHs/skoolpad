@@ -11,7 +11,7 @@ interface PaperHeaderProps {
     paper: QuestionPaper;
 }
 
-export default function PaperHeader({ paper }: PaperHeaderProps) {
+export function PaperHeader({ paper }: PaperHeaderProps) {
     const [editingTitle, setEditingTitle] = useState(false);
     const [title, setTitle] = useState(paper.title);
     const [year, setYear] = useState(paper.year?.toString() ?? '');
