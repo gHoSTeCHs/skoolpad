@@ -133,6 +133,13 @@ function TopicSection({ topic, selectedNode, onSelectNode }: TopicSectionProps) 
                             onSelectNode={onSelectNode}
                         />
                     ))}
+                    <button
+                        type="button"
+                        onClick={() => onSelectNode({ type: 'draft', topicId: topic.id, defaultType: 'mcq' })}
+                        className="ml-1 mt-0.5 flex w-full items-center gap-1.5 rounded-md border border-dashed border-border px-2 py-1 text-[11px] text-muted-foreground transition-colors hover:border-[var(--fg-subtle)] hover:bg-[var(--bg-raised)] hover:text-foreground"
+                    >
+                        + Add question
+                    </button>
                 </div>
             )}
         </div>
@@ -189,10 +196,9 @@ export function PoolTree({ pool, selectedNode, onSelectNode }: PoolTreeProps) {
                 <div className="px-2 pb-1 pt-4">
                     <button
                         type="button"
+                        onClick={() => onSelectNode({ type: 'draft', defaultType: 'mcq' })}
                         className="w-full rounded-md border border-dashed border-border bg-transparent px-3 py-2 text-center text-[12px] text-muted-foreground transition-colors hover:border-[var(--fg-subtle)] hover:bg-[var(--bg-raised)] hover:text-foreground"
                         style={{ fontFamily: 'var(--font-body)' }}
-                        disabled
-                        title="Adding to pools lands later in 4.G"
                     >
                         + Add question to pool
                     </button>

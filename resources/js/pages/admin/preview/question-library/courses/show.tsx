@@ -14,6 +14,8 @@ import AdminLayout from '@/layouts/admin-layout';
 import { PoolTree } from '@/components/admin/preview/question-builder/pool-tree';
 import type { SelectedNode } from '@/components/admin/preview/question-builder/paper-tree';
 import { CompositeEditor, type EditorTab } from '@/components/admin/preview/question-builder/composite-editor';
+import { DraftModeContext } from '@/components/admin/preview/question-builder/draft-mode-context';
+import { buildDraftQuestion } from '@/components/admin/preview/question-builder/lib/draft-question';
 import QuestionLibraryController from '@/actions/App/Http/Controllers/Admin/QuestionLibraryController';
 import type { AnswerDepthLevel, QuestionEnumOptions, QuestionNode } from '@/types/questions';
 import type { PoolContainer, PoolTopic } from '@/types/question-library';
@@ -84,12 +86,19 @@ export default function CoursePoolBuild({ pool, enum_options }: Props) {
 
     const isAnyDirty = TAB_ORDER.some((t) => dirtyMap[t]);
 
+    const draftNode = selectedNode?.type === 'draft' ? selectedNode : null;
+
+    function handleCreated(newQuestionId: string) {
+        setSelectedNode({ type: 'question', id: newQuestionId });
+    }
+
     function requestSelection(next: SelectedNode | null) {
         if (isSameSelection(next, selectedNode)) return;
         if (isAnyDirty) {
             setPending({ kind: 'selection', target: next });
             return;
         }
+        if (next?.type === 'draft') setActiveTab('question');
         setSelectedNode(next);
     }
 
@@ -114,7 +123,10 @@ export default function CoursePoolBuild({ pool, enum_options }: Props) {
 
     function confirmDiscard() {
         setDirtyMap({ question: false, answers: false, links: false, contexts: false });
-        if (pending?.kind === 'selection') setSelectedNode(pending.target);
+        if (pending?.kind === 'selection') {
+            if (pending.target?.type === 'draft') setActiveTab('question');
+            setSelectedNode(pending.target);
+        }
         if (pending?.kind === 'tab') setActiveTab(pending.target);
         setPending(null);
     }
@@ -148,7 +160,37 @@ export default function CoursePoolBuild({ pool, enum_options }: Props) {
                     </div>
 
                     <div className="min-w-0 flex-1 overflow-hidden">
-                        {located ? (
+                        {draftNode ? (
+                            <DraftModeContext.Provider
+                                value={{
+                                    institutionCourseId: pool.id,
+                                    parentId: draftNode.parentId,
+                                    onCreated: handleCreated,
+                                }}
+                            >
+                                <CompositeEditor
+                                    key={`draft-${draftNode.topicId ?? 'root'}-${draftNode.parentId ?? 'root'}`}
+                                    container={{
+                                        kind: 'pool',
+                                        pool,
+                                        topic:
+                                            pool.topics.find((t) => t.id === draftNode.topicId)
+                                            ?? pool.topics[0]
+                                            ?? { id: 'untagged', title: 'Untagged', questions: [] },
+                                    }}
+                                    question={buildDraftQuestion(draftNode.defaultType)}
+                                    enumOptions={enum_options}
+                                    activeTab="question"
+                                    isDraft
+                                    onTabChange={() => {}}
+                                    onTabDirtyChange={handleTabDirtyChange}
+                                    initialDepth={null}
+                                    onInitialDepthConsumed={handleInitialDepthConsumed}
+                                    onSelectChildDepth={handleSelectChildDepth}
+                                    answersDirty={false}
+                                />
+                            </DraftModeContext.Provider>
+                        ) : located ? (
                             <CompositeEditor
                                 key={located.question.id}
                                 container={{ kind: 'pool', pool, topic: located.topic }}

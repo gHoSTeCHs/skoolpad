@@ -497,3 +497,59 @@ test('links tab put with only topic fields does not overwrite response_config', 
     expect($question->response_config['options'][0]['text'])->toBe('O(log n)');
     expect($question->response_config['options'][0]['is_correct'])->toBeTrue();
 });
+
+it('creates a paper question from the builder and flashes the new id', function () {
+    $paper = QuestionPaper::factory()->create();
+    $section = QuestionSection::factory()->for($paper)->create();
+
+    $response = $this->actingAs($this->admin)->post(route('admin.questions.store'), [
+        'question_paper_id' => $paper->id,
+        'question_section_id' => $section->id,
+        'question_type' => 'mcq',
+        'content' => 'What is 2 + 2?',
+        'status' => 'draft',
+        'source' => 'manual',
+        'response_config' => [
+            'options' => [
+                ['label' => 'A', 'text' => '4', 'is_correct' => true],
+                ['label' => 'B', 'text' => '5', 'is_correct' => false],
+            ],
+        ],
+        'from_paper_builder' => true,
+    ]);
+
+    $response->assertRedirect();
+    $response->assertSessionHas('created_question_id');
+    $this->assertDatabaseHas('questions', [
+        'question_paper_id' => $paper->id,
+        'question_section_id' => $section->id,
+        'content' => 'What is 2 + 2?',
+    ]);
+});
+
+it('creates a nested sub-question when parent_question_id is provided', function () {
+    $paper = QuestionPaper::factory()->create();
+    $section = QuestionSection::factory()->for($paper)->create();
+    $parent = Question::factory()->create([
+        'question_paper_id' => $paper->id,
+        'question_section_id' => $section->id,
+        'question_type' => 'group',
+        'response_config' => null,
+    ]);
+
+    $this->actingAs($this->admin)->post(route('admin.questions.store'), [
+        'question_paper_id' => $paper->id,
+        'question_section_id' => $section->id,
+        'parent_question_id' => $parent->id,
+        'question_type' => 'theory',
+        'content' => 'Explain the result.',
+        'status' => 'draft',
+        'source' => 'manual',
+        'from_paper_builder' => true,
+    ])->assertRedirect();
+
+    $this->assertDatabaseHas('questions', [
+        'parent_question_id' => $parent->id,
+        'content' => 'Explain the result.',
+    ]);
+});
