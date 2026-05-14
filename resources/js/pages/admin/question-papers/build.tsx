@@ -1,13 +1,5 @@
-import { useState } from 'react';
-import { Head } from '@inertiajs/react';
-import AdminLayout from '@/layouts/admin-layout';
-import { PaperHeader } from '@/components/admin/preview/question-builder/paper-header';
-import { PaperTree } from '@/components/admin/question-builder/paper-tree';
-import type { SelectedNode } from '@/components/admin/question-builder/paper-tree';
-import SectionEditor from '@/components/admin/question-builder/section-editor';
-import ContextEditor from '@/components/admin/question-builder/context-editor';
-import { QuestionEditorPanel } from '@/components/admin/question-builder/question-editor-panel';
-import { PreviewPanel } from '@/components/admin/question-builder/preview-panel';
+import { useCallback, useMemo, useState } from 'react';
+import { Head, router } from '@inertiajs/react';
 import {
     AlertDialog,
     AlertDialogAction,
@@ -18,199 +10,243 @@ import {
     AlertDialogHeader,
     AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
+import AdminLayout from '@/layouts/admin-layout';
+import { PaperHeader } from '@/components/admin/question-builder/paper-header';
+import { PaperTree } from '@/components/admin/question-builder/paper-tree';
+import type { SelectedNode } from '@/components/admin/question-builder/paper-tree';
+import { CompositeEditor, type EditorTab } from '@/components/admin/question-builder/composite-editor';
+import { DraftModeContext } from '@/components/admin/question-builder/draft-mode-context';
+import { buildDraftQuestion } from '@/components/admin/question-builder/lib/draft-question';
+import { SectionEditor } from '@/components/admin/question-builder/section-editor';
 import QuestionPaperController from '@/actions/App/Http/Controllers/Admin/QuestionPaperController';
-import type { QuestionPaper, QuestionEnumOptions, QuestionSection, QuestionNode } from '@/types/questions';
+import QuestionSectionController from '@/actions/App/Http/Controllers/Admin/QuestionSectionController';
+import type { AnswerDepthLevel, QuestionEnumOptions, QuestionNode, QuestionPaper, QuestionSection } from '@/types/questions';
 
 interface Props {
     paper: QuestionPaper;
     enum_options: QuestionEnumOptions;
 }
 
-function findQuestion(sections: QuestionSection[], questionId: string): QuestionNode | null {
+interface Located {
+    section: QuestionSection;
+    question: QuestionNode;
+}
+
+function locateQuestion(sections: QuestionSection[], questionId: string): Located | null {
     for (const section of sections) {
-        const found = findInTree(section.questions, questionId);
-        if (found) return found;
+        const found = locateInTree(section.questions, questionId);
+        if (found) return { section, question: found };
     }
     return null;
 }
 
-function findInTree(nodes: QuestionNode[], id: string): QuestionNode | null {
+function locateInTree(nodes: QuestionNode[], id: string): QuestionNode | null {
     for (const node of nodes) {
         if (node.id === id) return node;
-        const childResult = findInTree(node.children, id);
-        if (childResult) return childResult;
+        const child = locateInTree(node.children, id);
+        if (child) return child;
     }
     return null;
 }
 
-function EditorPanel({
-    paper,
-    selectedNode,
-    enumOptions,
-    onCreated,
-    onDirtyChange,
-}: {
-    paper: QuestionPaper;
-    selectedNode: SelectedNode | null;
-    enumOptions: QuestionEnumOptions;
-    onCreated: (newId: string) => void;
-    onDirtyChange: (dirty: boolean) => void;
-}) {
-    if (!selectedNode) {
-        return (
-            <div className="flex h-full items-center justify-center p-6">
-                <p className="text-center text-sm text-muted-foreground">
-                    Select an item from the tree to edit it here.
-                </p>
-            </div>
-        );
+function firstQuestion(sections: QuestionSection[]): QuestionNode | null {
+    for (const section of sections) {
+        if (section.questions.length > 0) return section.questions[0];
     }
-
-    if (selectedNode.type === 'new-question') {
-        return (
-            <QuestionEditorPanel
-                key={`draft-${selectedNode.sectionId}-${selectedNode.parentId ?? 'root'}`}
-                paper={paper}
-                draft={{
-                    sectionId: selectedNode.sectionId,
-                    parentId: selectedNode.parentId,
-                    defaultType: selectedNode.defaultType,
-                }}
-                enumOptions={enumOptions}
-                onCreated={onCreated}
-                onDirtyChange={onDirtyChange}
-            />
-        );
-    }
-
-    if (selectedNode.type === 'section') {
-        const section = paper.sections.find((s) => s.id === selectedNode.id);
-        if (!section) return null;
-        return <SectionEditor key={section.id} paper={paper} section={section} />;
-    }
-
-    if (selectedNode.type === 'question') {
-        const question = findQuestion(paper.sections, selectedNode.id);
-        if (!question) return null;
-        return (
-            <QuestionEditorPanel
-                key={question.id}
-                paper={paper}
-                question={question}
-                enumOptions={enumOptions}
-            />
-        );
-    }
-
-    if (selectedNode.type === 'context') {
-        const ctx = paper.contexts.find((c) => c.id === selectedNode.id);
-        if (!ctx) return null;
-        return (
-            <ContextEditor
-                key={ctx.id}
-                paper={paper}
-                context={ctx}
-                contextTypeOptions={enumOptions.context_types ?? []}
-            />
-        );
-    }
-
     return null;
 }
 
-export default function QuestionPapersBuild({ paper, enum_options }: Props) {
-    const [selectedNode, setSelectedNode] = useState<SelectedNode | null>(null);
-    const [draftDirty, setDraftDirty] = useState(false);
-    const [pendingNode, setPendingNode] = useState<SelectedNode | null>(null);
+const TAB_ORDER: EditorTab[] = ['question', 'answers', 'links', 'contexts'];
+
+type PendingNav =
+    | { kind: 'selection'; target: SelectedNode | null }
+    | { kind: 'tab'; target: EditorTab };
+
+function isSameSelection(a: SelectedNode | null, b: SelectedNode | null): boolean {
+    if (a === b) return true;
+    if (a === null || b === null) return false;
+    if (a.type !== b.type) return false;
+    if (a.type === 'draft' || b.type === 'draft') return false;
+    return a.id === b.id;
+}
+
+export default function PreviewQuestionPapersBuild({ paper, enum_options }: Props) {
+    const initialQuestion = useMemo(() => firstQuestion(paper.sections), [paper.sections]);
+
+    const [selectedNode, setSelectedNode] = useState<SelectedNode | null>(
+        initialQuestion ? { type: 'question', id: initialQuestion.id } : null,
+    );
+    const [activeTab, setActiveTab] = useState<EditorTab>('question');
+    const [pendingDepth, setPendingDepth] = useState<AnswerDepthLevel | null>(null);
+    const [dirtyMap, setDirtyMap] = useState<Record<EditorTab, boolean>>({
+        question: false,
+        answers: false,
+        links: false,
+        contexts: false,
+    });
+    const [pending, setPending] = useState<PendingNav | null>(null);
+
+    const isAnyDirty = TAB_ORDER.some((t) => dirtyMap[t]);
+
+    const draftNode = selectedNode?.type === 'draft' ? selectedNode : null;
+
+    function handleCreated(newQuestionId: string) {
+        setSelectedNode({ type: 'question', id: newQuestionId });
+    }
+
+    function handleAddSection() {
+        router.post(
+            QuestionSectionController.store.url({ questionPaper: paper.id }),
+            { label: `Section ${String.fromCharCode(65 + paper.sections.length)}` },
+            { preserveScroll: true, only: ['paper'] },
+        );
+    }
 
     function requestSelection(next: SelectedNode | null) {
-        const isDifferentDraft =
-            selectedNode?.type === 'new-question'
-            && next?.type === 'new-question'
-            && (next.sectionId !== selectedNode.sectionId || next.parentId !== selectedNode.parentId);
-        const isLeavingDraft =
-            selectedNode?.type === 'new-question' && next?.type !== 'new-question';
-
-        if ((isLeavingDraft || isDifferentDraft) && draftDirty) {
-            setPendingNode(next);
+        if (isSameSelection(next, selectedNode)) return;
+        if (isAnyDirty) {
+            setPending({ kind: 'selection', target: next });
             return;
         }
-
+        if (next?.type === 'draft') setActiveTab('question');
         setSelectedNode(next);
-        if (selectedNode?.type === 'new-question' && (isLeavingDraft || isDifferentDraft)) {
-            setDraftDirty(false);
-        }
     }
 
+    function requestTabChange(next: EditorTab) {
+        if (next === activeTab) return;
+        if (isAnyDirty) {
+            setPending({ kind: 'tab', target: next });
+            return;
+        }
+        setActiveTab(next);
+    }
+
+    function handleSelectChildDepth(childId: string, depth: AnswerDepthLevel) {
+        setSelectedNode({ type: 'question', id: childId });
+        setActiveTab('answers');
+        setPendingDepth(depth);
+    }
+
+    const handleInitialDepthConsumed = useCallback(() => {
+        setPendingDepth(null);
+    }, []);
+
     function confirmDiscard() {
-        setSelectedNode(pendingNode);
-        setPendingNode(null);
-        setDraftDirty(false);
+        setDirtyMap({ question: false, answers: false, links: false, contexts: false });
+        if (pending?.kind === 'selection') {
+            if (pending.target?.type === 'draft') setActiveTab('question');
+            setSelectedNode(pending.target);
+        }
+        if (pending?.kind === 'tab') setActiveTab(pending.target);
+        setPending(null);
     }
 
     function cancelDiscard() {
-        setPendingNode(null);
+        setPending(null);
     }
 
-    function handleCreated(newId: string) {
-        setDraftDirty(false);
-        setSelectedNode({ type: 'question', id: newId });
+    function handleTabDirtyChange(tab: EditorTab, dirty: boolean) {
+        setDirtyMap((prev) => (prev[tab] === dirty ? prev : { ...prev, [tab]: dirty }));
     }
+
+    const located = selectedNode?.type === 'question'
+        ? locateQuestion(paper.sections, selectedNode.id)
+        : null;
 
     const breadcrumbs = [
         { title: 'Question Papers', href: QuestionPaperController.index.url() },
         { title: paper.title, href: '#' },
-        { title: 'Build', href: '#' },
+        { title: 'Build (preview)', href: '#' },
     ];
 
     return (
         <AdminLayout breadcrumbs={breadcrumbs}>
-            <Head title={`Build: ${paper.title}`} />
+            <Head title={`Build (preview): ${paper.title}`} />
 
             <div className="flex h-[calc(100vh-4rem)] flex-col">
                 <PaperHeader paper={paper} />
 
                 <div className="flex min-h-0 flex-1">
-                    <div className="w-64 shrink-0 overflow-y-auto">
+                    <div className="w-[340px] shrink-0 overflow-hidden">
                         <PaperTree
                             paper={paper}
                             selectedNode={selectedNode}
                             onSelectNode={requestSelection}
+                            onAddSection={handleAddSection}
                         />
                     </div>
 
-                    <div className="min-w-0 flex-1 overflow-y-auto border-r border-border">
-                        <EditorPanel
-                            paper={paper}
-                            selectedNode={selectedNode}
-                            enumOptions={enum_options}
-                            onCreated={handleCreated}
-                            onDirtyChange={setDraftDirty}
-                        />
-                    </div>
-
-                    <div className="w-80 shrink-0 overflow-y-auto bg-muted/30">
-                        <div className="border-b border-border px-3 py-2">
-                            <h3 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-                                Preview
-                            </h3>
-                        </div>
-                        <PreviewPanel paper={paper} selectedNode={selectedNode} />
+                    <div className="min-w-0 flex-1 overflow-hidden">
+                        {selectedNode?.type === 'section' ? (
+                            (() => {
+                                const section = paper.sections.find((s) => s.id === selectedNode.id);
+                                return section ? (
+                                    <SectionEditor key={section.id} paper={paper} section={section} />
+                                ) : null;
+                            })()
+                        ) : draftNode ? (
+                            <DraftModeContext.Provider
+                                value={{
+                                    paperId: paper.id,
+                                    sectionId: draftNode.sectionId,
+                                    institutionCourseId: paper.institution_course_id,
+                                    parentId: draftNode.parentId,
+                                    onCreated: handleCreated,
+                                }}
+                            >
+                                <CompositeEditor
+                                    key={`draft-${draftNode.sectionId ?? 'root'}-${draftNode.parentId ?? 'root'}`}
+                                    container={{ kind: 'paper', paper, section: paper.sections.find((s) => s.id === draftNode.sectionId) ?? paper.sections[0] }}
+                                    question={buildDraftQuestion(draftNode.defaultType)}
+                                    enumOptions={enum_options}
+                                    activeTab="question"
+                                    isDraft
+                                    onTabChange={() => {}}
+                                    onTabDirtyChange={handleTabDirtyChange}
+                                    initialDepth={null}
+                                    onInitialDepthConsumed={handleInitialDepthConsumed}
+                                    onSelectChildDepth={handleSelectChildDepth}
+                                    answersDirty={false}
+                                />
+                            </DraftModeContext.Provider>
+                        ) : located ? (
+                            <CompositeEditor
+                                key={located.question.id}
+                                container={{ kind: 'paper', paper, section: located.section }}
+                                question={located.question}
+                                enumOptions={enum_options}
+                                activeTab={activeTab}
+                                onTabChange={requestTabChange}
+                                onTabDirtyChange={handleTabDirtyChange}
+                                initialDepth={pendingDepth}
+                                onInitialDepthConsumed={handleInitialDepthConsumed}
+                                onSelectChildDepth={handleSelectChildDepth}
+                                answersDirty={dirtyMap.answers}
+                            />
+                        ) : (
+                            <div className="flex h-full items-center justify-center p-6">
+                                <p className="text-center text-sm text-muted-foreground">
+                                    {selectedNode?.type === 'context'
+                                        ? 'Context editing is handled in the Contexts tab. Select a question to author it.'
+                                        : 'Select a question from the tree to begin authoring.'}
+                                </p>
+                            </div>
+                        )}
                     </div>
                 </div>
             </div>
 
-            <AlertDialog open={pendingNode !== null} onOpenChange={(open) => !open && cancelDiscard()}>
+            <AlertDialog open={pending !== null} onOpenChange={(open) => !open && cancelDiscard()}>
                 <AlertDialogContent>
                     <AlertDialogHeader>
                         <AlertDialogTitle>Unsaved changes</AlertDialogTitle>
                         <AlertDialogDescription>
-                            Your draft hasn't been saved. Discard it and continue, or stay and finish writing?
+                            You have unsaved edits on this question. Discard them and continue, or stay and save first?
                         </AlertDialogDescription>
                     </AlertDialogHeader>
                     <AlertDialogFooter>
-                        <AlertDialogCancel onClick={cancelDiscard}>Continue editing</AlertDialogCancel>
-                        <AlertDialogAction onClick={confirmDiscard}>Discard draft</AlertDialogAction>
+                        <AlertDialogCancel onClick={cancelDiscard}>Stay and save</AlertDialogCancel>
+                        <AlertDialogAction onClick={confirmDiscard}>Discard and continue</AlertDialogAction>
                     </AlertDialogFooter>
                 </AlertDialogContent>
             </AlertDialog>

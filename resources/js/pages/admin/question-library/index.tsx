@@ -3,13 +3,13 @@ import { Head, Link, router } from '@inertiajs/react';
 import { FileText, Layers, Database, Inbox, Plus } from 'lucide-react';
 import AdminLayout from '@/layouts/admin-layout';
 import QuestionPaperController from '@/actions/App/Http/Controllers/Admin/QuestionPaperController';
-import { LibraryHeader } from '@/components/admin/preview/question-library/library-header';
-import { SearchBar } from '@/components/admin/preview/question-library/search-bar';
-import { CommandPalette } from '@/components/admin/preview/question-library/command-palette';
-import { PapersTab } from '@/components/admin/preview/question-library/tabs/papers-tab';
-import { CoursePoolsTab } from '@/components/admin/preview/question-library/tabs/course-pools-tab';
-import { ExamPoolsTab } from '@/components/admin/preview/question-library/tabs/exam-pools-tab';
-import { UnattachedTab } from '@/components/admin/preview/question-library/tabs/unattached-tab';
+import { LibraryHeader } from '@/components/admin/question-library/library-header';
+import { SearchBar } from '@/components/admin/question-library/search-bar';
+import { CommandPalette } from '@/components/admin/question-library/command-palette';
+import { PapersTab } from '@/components/admin/question-library/tabs/papers-tab';
+import { CoursePoolsTab } from '@/components/admin/question-library/tabs/course-pools-tab';
+import { ExamPoolsTab } from '@/components/admin/question-library/tabs/exam-pools-tab';
+import { UnattachedTab } from '@/components/admin/question-library/tabs/unattached-tab';
 import type {
     BulkAssignTargets,
     LibraryCounts,

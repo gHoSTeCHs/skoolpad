@@ -12,7 +12,7 @@ interface SectionEditorProps {
     section: QuestionSection;
 }
 
-export default function SectionEditor({ paper, section }: SectionEditorProps) {
+export function SectionEditor({ paper, section }: SectionEditorProps) {
     const [label, setLabel] = useState(section.label);
     const [instruction, setInstruction] = useState(section.instruction ?? '');
     const [marks, setMarks] = useState(section.marks?.toString() ?? '');
