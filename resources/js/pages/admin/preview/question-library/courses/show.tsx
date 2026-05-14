@@ -62,7 +62,7 @@ function isSameSelection(a: SelectedNode | null, b: SelectedNode | null): boolea
     if (a === b) return true;
     if (a === null || b === null) return false;
     if (a.type !== b.type) return false;
-    if (a.type === 'draft') return false;
+    if (a.type === 'draft' || b.type === 'draft') return false;
     return a.id === b.id;
 }
 
