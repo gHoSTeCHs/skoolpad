@@ -1,4 +1,3 @@
-import { useCallback, useMemo, useState } from 'react';
 import { Head, router } from '@inertiajs/react';
 import {
     AlertDialog,
@@ -13,85 +12,58 @@ import {
 import AdminLayout from '@/layouts/admin-layout';
 import { PaperHeader } from '@/components/admin/question-builder/paper-header';
 import { PaperTree } from '@/components/admin/question-builder/paper-tree';
-import type { SelectedNode } from '@/components/admin/question-builder/paper-tree';
 import { CompositeEditor, type EditorTab } from '@/components/admin/question-builder/composite-editor';
 import { DraftModeContext } from '@/components/admin/question-builder/draft-mode-context';
 import { buildDraftQuestion } from '@/components/admin/question-builder/lib/draft-question';
+import { locateInSections, firstQuestionInSections } from '@/components/admin/question-builder/lib/locate-question';
 import { SectionEditor } from '@/components/admin/question-builder/section-editor';
+import { QuestionBuilderProvider, useBuilderStore } from '@/components/admin/question-builder/store/provider';
+import { selectIsAnyDirty } from '@/components/admin/question-builder/store/create-store';
 import QuestionPaperController from '@/actions/App/Http/Controllers/Admin/QuestionPaperController';
 import QuestionSectionController from '@/actions/App/Http/Controllers/Admin/QuestionSectionController';
-import type { AnswerDepthLevel, QuestionEnumOptions, QuestionNode, QuestionPaper, QuestionSection } from '@/types/questions';
+import type { QuestionEnumOptions, QuestionPaper } from '@/types/questions';
 
 interface Props {
     paper: QuestionPaper;
     enum_options: QuestionEnumOptions;
 }
 
-interface Located {
-    section: QuestionSection;
-    question: QuestionNode;
-}
+export default function QuestionPapersBuild({ paper, enum_options }: Props) {
+    const initialQuestion = firstQuestionInSections(paper.sections);
 
-function locateQuestion(sections: QuestionSection[], questionId: string): Located | null {
-    for (const section of sections) {
-        const found = locateInTree(section.questions, questionId);
-        if (found) return { section, question: found };
-    }
-    return null;
-}
-
-function locateInTree(nodes: QuestionNode[], id: string): QuestionNode | null {
-    for (const node of nodes) {
-        if (node.id === id) return node;
-        const child = locateInTree(node.children, id);
-        if (child) return child;
-    }
-    return null;
-}
-
-function firstQuestion(sections: QuestionSection[]): QuestionNode | null {
-    for (const section of sections) {
-        if (section.questions.length > 0) return section.questions[0];
-    }
-    return null;
-}
-
-const TAB_ORDER: EditorTab[] = ['question', 'answers', 'links', 'contexts'];
-
-type PendingNav =
-    | { kind: 'selection'; target: SelectedNode | null }
-    | { kind: 'tab'; target: EditorTab };
-
-function isSameSelection(a: SelectedNode | null, b: SelectedNode | null): boolean {
-    if (a === b) return true;
-    if (a === null || b === null) return false;
-    if (a.type !== b.type) return false;
-    if (a.type === 'draft' || b.type === 'draft') return false;
-    return a.id === b.id;
-}
-
-export default function PreviewQuestionPapersBuild({ paper, enum_options }: Props) {
-    const initialQuestion = useMemo(() => firstQuestion(paper.sections), [paper.sections]);
-
-    const [selectedNode, setSelectedNode] = useState<SelectedNode | null>(
-        initialQuestion ? { type: 'question', id: initialQuestion.id } : null,
+    return (
+        <QuestionBuilderProvider
+            initialSelectedNode={initialQuestion ? { type: 'question', id: initialQuestion.id } : null}
+        >
+            <BuildShell paper={paper} enumOptions={enum_options} />
+        </QuestionBuilderProvider>
     );
-    const [activeTab, setActiveTab] = useState<EditorTab>('question');
-    const [pendingDepth, setPendingDepth] = useState<AnswerDepthLevel | null>(null);
-    const [dirtyMap, setDirtyMap] = useState<Record<EditorTab, boolean>>({
-        question: false,
-        answers: false,
-        links: false,
-        contexts: false,
-    });
-    const [pending, setPending] = useState<PendingNav | null>(null);
+}
 
-    const isAnyDirty = TAB_ORDER.some((t) => dirtyMap[t]);
+function BuildShell({ paper, enumOptions }: { paper: QuestionPaper; enumOptions: QuestionEnumOptions }) {
+    const selectedNode = useBuilderStore((s) => s.selectedNode);
+    const activeTab = useBuilderStore((s) => s.activeTab);
+    const pendingDepth = useBuilderStore((s) => s.pendingDepth);
+    const pendingNav = useBuilderStore((s) => s.pendingNav);
+    const answersDirty = useBuilderStore((s) => s.dirtyRegistry.answers ?? false);
+    const requestSelection = useBuilderStore((s) => s.requestSelection);
+    const requestTabChange = useBuilderStore((s) => s.requestTabChange);
+    const confirmDiscard = useBuilderStore((s) => s.confirmDiscard);
+    const cancelDiscard = useBuilderStore((s) => s.cancelDiscard);
+    const registerDirty = useBuilderStore((s) => s.registerDirty);
+    const selectChildDepth = useBuilderStore((s) => s.selectChildDepth);
+    const consumeInitialDepth = useBuilderStore((s) => s.consumeInitialDepth);
 
     const draftNode = selectedNode?.type === 'draft' ? selectedNode : null;
+    const located = selectedNode?.type === 'question'
+        ? locateInSections(paper.sections, selectedNode.id)
+        : null;
+    const selectedSection = selectedNode?.type === 'section'
+        ? paper.sections.find((s) => s.id === selectedNode.id)
+        : null;
 
     function handleCreated(newQuestionId: string) {
-        setSelectedNode({ type: 'question', id: newQuestionId });
+        requestSelection({ type: 'question', id: newQuestionId });
     }
 
     function handleAddSection() {
@@ -102,56 +74,14 @@ export default function PreviewQuestionPapersBuild({ paper, enum_options }: Prop
         );
     }
 
-    function requestSelection(next: SelectedNode | null) {
-        if (isSameSelection(next, selectedNode)) return;
-        if (isAnyDirty) {
-            setPending({ kind: 'selection', target: next });
-            return;
-        }
-        if (next?.type === 'draft') setActiveTab('question');
-        setSelectedNode(next);
-    }
-
-    function requestTabChange(next: EditorTab) {
-        if (next === activeTab) return;
-        if (isAnyDirty) {
-            setPending({ kind: 'tab', target: next });
-            return;
-        }
-        setActiveTab(next);
-    }
-
-    function handleSelectChildDepth(childId: string, depth: AnswerDepthLevel) {
-        setSelectedNode({ type: 'question', id: childId });
-        setActiveTab('answers');
-        setPendingDepth(depth);
-    }
-
-    const handleInitialDepthConsumed = useCallback(() => {
-        setPendingDepth(null);
-    }, []);
-
-    function confirmDiscard() {
-        setDirtyMap({ question: false, answers: false, links: false, contexts: false });
-        if (pending?.kind === 'selection') {
-            if (pending.target?.type === 'draft') setActiveTab('question');
-            setSelectedNode(pending.target);
-        }
-        if (pending?.kind === 'tab') setActiveTab(pending.target);
-        setPending(null);
-    }
-
-    function cancelDiscard() {
-        setPending(null);
-    }
-
+    /**
+     * Bridge: surfaces that still report dirtiness via the legacy onDirtyChange
+     * callback are registered into the store here. Surfaces migrated to
+     * useDirtyRegistration register themselves directly.
+     */
     function handleTabDirtyChange(tab: EditorTab, dirty: boolean) {
-        setDirtyMap((prev) => (prev[tab] === dirty ? prev : { ...prev, [tab]: dirty }));
+        registerDirty(tab, dirty, () => {});
     }
-
-    const located = selectedNode?.type === 'question'
-        ? locateQuestion(paper.sections, selectedNode.id)
-        : null;
 
     const breadcrumbs = [
         { title: 'Question Papers', href: QuestionPaperController.index.url() },
@@ -177,13 +107,8 @@ export default function PreviewQuestionPapersBuild({ paper, enum_options }: Prop
                     </div>
 
                     <div className="min-w-0 flex-1 overflow-hidden">
-                        {selectedNode?.type === 'section' ? (
-                            (() => {
-                                const section = paper.sections.find((s) => s.id === selectedNode.id);
-                                return section ? (
-                                    <SectionEditor key={section.id} paper={paper} section={section} />
-                                ) : null;
-                            })()
+                        {selectedSection ? (
+                            <SectionEditor key={selectedSection.id} paper={paper} section={selectedSection} />
                         ) : draftNode ? (
                             <DraftModeContext.Provider
                                 value={{
@@ -198,14 +123,14 @@ export default function PreviewQuestionPapersBuild({ paper, enum_options }: Prop
                                     key={`draft-${draftNode.sectionId ?? 'root'}-${draftNode.parentId ?? 'root'}`}
                                     container={{ kind: 'paper', paper, section: paper.sections.find((s) => s.id === draftNode.sectionId) ?? paper.sections[0] }}
                                     question={buildDraftQuestion(draftNode.defaultType)}
-                                    enumOptions={enum_options}
+                                    enumOptions={enumOptions}
                                     activeTab="question"
                                     isDraft
                                     onTabChange={() => {}}
                                     onTabDirtyChange={handleTabDirtyChange}
                                     initialDepth={null}
-                                    onInitialDepthConsumed={handleInitialDepthConsumed}
-                                    onSelectChildDepth={handleSelectChildDepth}
+                                    onInitialDepthConsumed={consumeInitialDepth}
+                                    onSelectChildDepth={selectChildDepth}
                                     answersDirty={false}
                                 />
                             </DraftModeContext.Provider>
@@ -214,14 +139,14 @@ export default function PreviewQuestionPapersBuild({ paper, enum_options }: Prop
                                 key={located.question.id}
                                 container={{ kind: 'paper', paper, section: located.section }}
                                 question={located.question}
-                                enumOptions={enum_options}
+                                enumOptions={enumOptions}
                                 activeTab={activeTab}
                                 onTabChange={requestTabChange}
                                 onTabDirtyChange={handleTabDirtyChange}
                                 initialDepth={pendingDepth}
-                                onInitialDepthConsumed={handleInitialDepthConsumed}
-                                onSelectChildDepth={handleSelectChildDepth}
-                                answersDirty={dirtyMap.answers}
+                                onInitialDepthConsumed={consumeInitialDepth}
+                                onSelectChildDepth={selectChildDepth}
+                                answersDirty={answersDirty}
                             />
                         ) : (
                             <div className="flex h-full items-center justify-center p-6">
@@ -236,7 +161,7 @@ export default function PreviewQuestionPapersBuild({ paper, enum_options }: Prop
                 </div>
             </div>
 
-            <AlertDialog open={pending !== null} onOpenChange={(open) => !open && cancelDiscard()}>
+            <AlertDialog open={pendingNav !== null} onOpenChange={(open) => !open && cancelDiscard()}>
                 <AlertDialogContent>
                     <AlertDialogHeader>
                         <AlertDialogTitle>Unsaved changes</AlertDialogTitle>

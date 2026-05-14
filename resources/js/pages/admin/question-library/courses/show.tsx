@@ -1,4 +1,3 @@
-import { useCallback, useMemo, useState } from 'react';
 import { Head, Link } from '@inertiajs/react';
 import {
     AlertDialog,
@@ -12,134 +11,61 @@ import {
 } from '@/components/ui/alert-dialog';
 import AdminLayout from '@/layouts/admin-layout';
 import { PoolTree } from '@/components/admin/question-builder/pool-tree';
-import type { SelectedNode } from '@/components/admin/question-builder/paper-tree';
 import { CompositeEditor, type EditorTab } from '@/components/admin/question-builder/composite-editor';
 import { DraftModeContext } from '@/components/admin/question-builder/draft-mode-context';
 import { buildDraftQuestion } from '@/components/admin/question-builder/lib/draft-question';
+import { locateInPool, firstQuestionInPool } from '@/components/admin/question-builder/lib/locate-question';
+import { QuestionBuilderProvider, useBuilderStore } from '@/components/admin/question-builder/store/provider';
 import QuestionLibraryController from '@/actions/App/Http/Controllers/Admin/QuestionLibraryController';
-import type { AnswerDepthLevel, QuestionEnumOptions, QuestionNode } from '@/types/questions';
-import type { PoolContainer, PoolTopic } from '@/types/question-library';
+import type { QuestionEnumOptions } from '@/types/questions';
+import type { PoolContainer } from '@/types/question-library';
 
 interface Props {
     pool: PoolContainer;
     enum_options: QuestionEnumOptions;
 }
 
-interface Located {
-    topic: PoolTopic;
-    question: QuestionNode;
-}
-
-function locateInTree(nodes: QuestionNode[], id: string): QuestionNode | null {
-    for (const node of nodes) {
-        if (node.id === id) return node;
-        const child = locateInTree(node.children, id);
-        if (child) return child;
-    }
-    return null;
-}
-
-function locateQuestion(pool: PoolContainer, questionId: string): Located | null {
-    for (const topic of pool.topics) {
-        const found = locateInTree(topic.questions, questionId);
-        if (found) return { topic, question: found };
-    }
-    return null;
-}
-
-function firstQuestion(pool: PoolContainer): QuestionNode | null {
-    for (const topic of pool.topics) {
-        if (topic.questions.length > 0) return topic.questions[0];
-    }
-    return null;
-}
-
-const TAB_ORDER: EditorTab[] = ['question', 'answers', 'links', 'contexts'];
-
-type PendingNav =
-    | { kind: 'selection'; target: SelectedNode | null }
-    | { kind: 'tab'; target: EditorTab };
-
-function isSameSelection(a: SelectedNode | null, b: SelectedNode | null): boolean {
-    if (a === b) return true;
-    if (a === null || b === null) return false;
-    if (a.type !== b.type) return false;
-    if (a.type === 'draft' || b.type === 'draft') return false;
-    return a.id === b.id;
-}
-
 export default function CoursePoolBuild({ pool, enum_options }: Props) {
-    const initialQuestion = useMemo(() => firstQuestion(pool), [pool]);
+    const initialQuestion = firstQuestionInPool(pool);
 
-    const [selectedNode, setSelectedNode] = useState<SelectedNode | null>(
-        initialQuestion ? { type: 'question', id: initialQuestion.id } : null,
+    return (
+        <QuestionBuilderProvider
+            initialSelectedNode={initialQuestion ? { type: 'question', id: initialQuestion.id } : null}
+        >
+            <PoolShell pool={pool} enumOptions={enum_options} />
+        </QuestionBuilderProvider>
     );
-    const [activeTab, setActiveTab] = useState<EditorTab>('question');
-    const [pendingDepth, setPendingDepth] = useState<AnswerDepthLevel | null>(null);
-    const [dirtyMap, setDirtyMap] = useState<Record<EditorTab, boolean>>({
-        question: false,
-        answers: false,
-        links: false,
-        contexts: false,
-    });
-    const [pending, setPending] = useState<PendingNav | null>(null);
+}
 
-    const isAnyDirty = TAB_ORDER.some((t) => dirtyMap[t]);
+function PoolShell({ pool, enumOptions }: { pool: PoolContainer; enumOptions: QuestionEnumOptions }) {
+    const selectedNode = useBuilderStore((s) => s.selectedNode);
+    const activeTab = useBuilderStore((s) => s.activeTab);
+    const pendingDepth = useBuilderStore((s) => s.pendingDepth);
+    const pendingNav = useBuilderStore((s) => s.pendingNav);
+    const answersDirty = useBuilderStore((s) => s.dirtyRegistry.answers ?? false);
+    const requestSelection = useBuilderStore((s) => s.requestSelection);
+    const requestTabChange = useBuilderStore((s) => s.requestTabChange);
+    const confirmDiscard = useBuilderStore((s) => s.confirmDiscard);
+    const cancelDiscard = useBuilderStore((s) => s.cancelDiscard);
+    const registerDirty = useBuilderStore((s) => s.registerDirty);
+    const selectChildDepth = useBuilderStore((s) => s.selectChildDepth);
+    const consumeInitialDepth = useBuilderStore((s) => s.consumeInitialDepth);
 
     const draftNode = selectedNode?.type === 'draft' ? selectedNode : null;
+    const located = selectedNode?.type === 'question' ? locateInPool(pool, selectedNode.id) : null;
 
     function handleCreated(newQuestionId: string) {
-        setSelectedNode({ type: 'question', id: newQuestionId });
+        requestSelection({ type: 'question', id: newQuestionId });
     }
 
-    function requestSelection(next: SelectedNode | null) {
-        if (isSameSelection(next, selectedNode)) return;
-        if (isAnyDirty) {
-            setPending({ kind: 'selection', target: next });
-            return;
-        }
-        if (next?.type === 'draft') setActiveTab('question');
-        setSelectedNode(next);
-    }
-
-    function requestTabChange(next: EditorTab) {
-        if (next === activeTab) return;
-        if (isAnyDirty) {
-            setPending({ kind: 'tab', target: next });
-            return;
-        }
-        setActiveTab(next);
-    }
-
-    function handleSelectChildDepth(childId: string, depth: AnswerDepthLevel) {
-        setSelectedNode({ type: 'question', id: childId });
-        setActiveTab('answers');
-        setPendingDepth(depth);
-    }
-
-    const handleInitialDepthConsumed = useCallback(() => {
-        setPendingDepth(null);
-    }, []);
-
-    function confirmDiscard() {
-        setDirtyMap({ question: false, answers: false, links: false, contexts: false });
-        if (pending?.kind === 'selection') {
-            if (pending.target?.type === 'draft') setActiveTab('question');
-            setSelectedNode(pending.target);
-        }
-        if (pending?.kind === 'tab') setActiveTab(pending.target);
-        setPending(null);
-    }
-
-    function cancelDiscard() {
-        setPending(null);
-    }
-
+    /**
+     * Bridge: surfaces still reporting dirtiness via the legacy onDirtyChange
+     * callback are registered into the store here. Surfaces migrated to
+     * useDirtyRegistration register themselves directly.
+     */
     function handleTabDirtyChange(tab: EditorTab, dirty: boolean) {
-        setDirtyMap((prev) => (prev[tab] === dirty ? prev : { ...prev, [tab]: dirty }));
+        registerDirty(tab, dirty, () => {});
     }
-
-    const located = selectedNode?.type === 'question' ? locateQuestion(pool, selectedNode.id) : null;
 
     const breadcrumbs = [
         { title: 'Question Library', href: QuestionLibraryController.index.url() },
@@ -179,14 +105,14 @@ export default function CoursePoolBuild({ pool, enum_options }: Props) {
                                             ?? { id: 'untagged', title: 'Untagged', questions: [] },
                                     }}
                                     question={buildDraftQuestion(draftNode.defaultType)}
-                                    enumOptions={enum_options}
+                                    enumOptions={enumOptions}
                                     activeTab="question"
                                     isDraft
                                     onTabChange={() => {}}
                                     onTabDirtyChange={handleTabDirtyChange}
                                     initialDepth={null}
-                                    onInitialDepthConsumed={handleInitialDepthConsumed}
-                                    onSelectChildDepth={handleSelectChildDepth}
+                                    onInitialDepthConsumed={consumeInitialDepth}
+                                    onSelectChildDepth={selectChildDepth}
                                     answersDirty={false}
                                 />
                             </DraftModeContext.Provider>
@@ -195,14 +121,14 @@ export default function CoursePoolBuild({ pool, enum_options }: Props) {
                                 key={located.question.id}
                                 container={{ kind: 'pool', pool, topic: located.topic }}
                                 question={located.question}
-                                enumOptions={enum_options}
+                                enumOptions={enumOptions}
                                 activeTab={activeTab}
                                 onTabChange={requestTabChange}
                                 onTabDirtyChange={handleTabDirtyChange}
                                 initialDepth={pendingDepth}
-                                onInitialDepthConsumed={handleInitialDepthConsumed}
-                                onSelectChildDepth={handleSelectChildDepth}
-                                answersDirty={dirtyMap.answers}
+                                onInitialDepthConsumed={consumeInitialDepth}
+                                onSelectChildDepth={selectChildDepth}
+                                answersDirty={answersDirty}
                             />
                         ) : (
                             <EmptyState />
@@ -211,7 +137,7 @@ export default function CoursePoolBuild({ pool, enum_options }: Props) {
                 </div>
             </div>
 
-            <AlertDialog open={pending !== null} onOpenChange={(open) => !open && cancelDiscard()}>
+            <AlertDialog open={pendingNav !== null} onOpenChange={(open) => !open && cancelDiscard()}>
                 <AlertDialogContent>
                     <AlertDialogHeader>
                         <AlertDialogTitle>Unsaved changes</AlertDialogTitle>

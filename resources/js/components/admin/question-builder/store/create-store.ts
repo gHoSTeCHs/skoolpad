@@ -60,7 +60,11 @@ export function createQuestionBuilderStore(initialSelectedNode: SelectedNode | n
                 set({ pendingNav: { kind: 'selection', target: next } });
                 return;
             }
-            set({ selectedNode: next, activeTab: 'question' });
+            set(
+                next?.type === 'draft'
+                    ? { selectedNode: next, activeTab: 'question' }
+                    : { selectedNode: next },
+            );
         },
 
         requestTabChange: (next) => {
@@ -82,7 +86,9 @@ export function createQuestionBuilderStore(initialSelectedNode: SelectedNode | n
             };
             if (pendingNav?.kind === 'selection') {
                 patch.selectedNode = pendingNav.target;
-                patch.activeTab = 'question';
+                if (pendingNav.target?.type === 'draft') {
+                    patch.activeTab = 'question';
+                }
             }
             if (pendingNav?.kind === 'tab') {
                 patch.activeTab = pendingNav.target;
