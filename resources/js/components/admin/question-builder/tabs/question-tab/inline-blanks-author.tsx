@@ -16,7 +16,6 @@ interface InlineBlanksAuthorProps {
         difficulties: EnumOption[];
         bloom_levels?: EnumOption[];
     };
-    onDirtyChange: (dirty: boolean) => void;
 }
 
 const BLANK_RE = /\[\[([^\]]*)\]\]/g;
@@ -40,8 +39,8 @@ function defaultConfig(): FillBlankConfig {
     };
 }
 
-export function InlineBlanksAuthor({ question, enumOptions, onDirtyChange }: InlineBlanksAuthorProps) {
-    const { form, isDirty, save } = useQuestionForm(question, onDirtyChange);
+export function InlineBlanksAuthor({ question, enumOptions }: InlineBlanksAuthorProps) {
+    const { form, isDirty, save } = useQuestionForm(question);
     const config = (form.data.response_config as FillBlankConfig | null) ?? defaultConfig();
     const stem = form.data.content ?? '';
     const parsed = useMemo(() => parseBlanks(stem), [stem]);

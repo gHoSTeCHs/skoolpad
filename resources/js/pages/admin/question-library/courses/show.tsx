@@ -16,6 +16,7 @@ import { DraftModeContext } from '@/components/admin/question-builder/draft-mode
 import { buildDraftQuestion } from '@/components/admin/question-builder/lib/draft-question';
 import { locateInPool, firstQuestionInPool } from '@/components/admin/question-builder/lib/locate-question';
 import { QuestionBuilderProvider, useBuilderStore } from '@/components/admin/question-builder/store/provider';
+import { selectAnswersDirty } from '@/components/admin/question-builder/store/create-store';
 import QuestionLibraryController from '@/actions/App/Http/Controllers/Admin/QuestionLibraryController';
 import type { QuestionEnumOptions } from '@/types/questions';
 import type { PoolContainer } from '@/types/question-library';
@@ -42,7 +43,7 @@ function PoolShell({ pool, enumOptions }: { pool: PoolContainer; enumOptions: Qu
     const activeTab = useBuilderStore((s) => s.activeTab);
     const pendingDepth = useBuilderStore((s) => s.pendingDepth);
     const pendingNav = useBuilderStore((s) => s.pendingNav);
-    const answersDirty = useBuilderStore((s) => s.dirtyRegistry.answers ?? false);
+    const answersDirty = useBuilderStore(selectAnswersDirty);
     const requestSelection = useBuilderStore((s) => s.requestSelection);
     const requestTabChange = useBuilderStore((s) => s.requestTabChange);
     const confirmDiscard = useBuilderStore((s) => s.confirmDiscard);
@@ -50,12 +51,13 @@ function PoolShell({ pool, enumOptions }: { pool: PoolContainer; enumOptions: Qu
     const registerDirty = useBuilderStore((s) => s.registerDirty);
     const selectChildDepth = useBuilderStore((s) => s.selectChildDepth);
     const consumeInitialDepth = useBuilderStore((s) => s.consumeInitialDepth);
+    const selectCreatedQuestion = useBuilderStore((s) => s.selectCreatedQuestion);
 
     const draftNode = selectedNode?.type === 'draft' ? selectedNode : null;
     const located = selectedNode?.type === 'question' ? locateInPool(pool, selectedNode.id) : null;
 
     function handleCreated(newQuestionId: string) {
-        requestSelection({ type: 'question', id: newQuestionId });
+        selectCreatedQuestion(newQuestionId);
     }
 
     /**

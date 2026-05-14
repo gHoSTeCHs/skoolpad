@@ -137,11 +137,7 @@ export function CompositeEditor({
 
                 <div className="min-h-0 flex-1 overflow-y-auto px-7 py-6 pb-16">
                     <TabsContent value="question" className="mt-0">
-                        <QuestionTab
-                            question={question}
-                            enumOptions={enumOptions}
-                            onDirtyChange={(d) => onTabDirtyChange('question', d)}
-                        />
+                        <QuestionTab question={question} enumOptions={enumOptions} />
                     </TabsContent>
                     {!isDraft && (
                         <TabsContent value="answers" className="mt-0">
@@ -151,7 +147,6 @@ export function CompositeEditor({
                                 onInitialDepthConsumed={onInitialDepthConsumed}
                                 onSelectChildDepth={onSelectChildDepth}
                                 onEditOnQuestionTab={() => onTabChange('question')}
-                                onDirtyChange={(d) => onTabDirtyChange('answers', d)}
                             />
                         </TabsContent>
                     )}

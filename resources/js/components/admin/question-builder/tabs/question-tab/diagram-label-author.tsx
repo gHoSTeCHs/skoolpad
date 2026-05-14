@@ -17,7 +17,6 @@ interface DiagramLabelAuthorProps {
         difficulties: EnumOption[];
         bloom_levels?: EnumOption[];
     };
-    onDirtyChange: (dirty: boolean) => void;
 }
 
 interface ExtendedDiagramConfig extends DiagramLabelConfig {
@@ -33,8 +32,8 @@ function defaultConfig(): ExtendedDiagramConfig {
     };
 }
 
-export function DiagramLabelAuthor({ question, enumOptions, onDirtyChange }: DiagramLabelAuthorProps) {
-    const { form, isDirty, save } = useQuestionForm(question, onDirtyChange);
+export function DiagramLabelAuthor({ question, enumOptions }: DiagramLabelAuthorProps) {
+    const { form, isDirty, save } = useQuestionForm(question);
     const config = (form.data.response_config as ExtendedDiagramConfig | null) ?? defaultConfig();
     const canvasRef = useRef<HTMLDivElement>(null);
     const [draggingIdx, setDraggingIdx] = useState<number | null>(null);

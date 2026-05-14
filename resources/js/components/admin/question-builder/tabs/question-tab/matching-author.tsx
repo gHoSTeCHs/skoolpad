@@ -16,7 +16,6 @@ interface MatchingAuthorProps {
         difficulties: EnumOption[];
         bloom_levels?: EnumOption[];
     };
-    onDirtyChange: (dirty: boolean) => void;
 }
 
 const MIN_PAIRS = 2;
@@ -31,8 +30,8 @@ function defaultConfig(): MatchingConfig {
     };
 }
 
-export function MatchingAuthor({ question, enumOptions, onDirtyChange }: MatchingAuthorProps) {
-    const { form, isDirty, save } = useQuestionForm(question, onDirtyChange);
+export function MatchingAuthor({ question, enumOptions }: MatchingAuthorProps) {
+    const { form, isDirty, save } = useQuestionForm(question);
     const config = (form.data.response_config as MatchingConfig | null) ?? defaultConfig();
     const [editingIdx, setEditingIdx] = useState<{ row: number; side: 'left' | 'right' } | null>(null);
 

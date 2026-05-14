@@ -17,7 +17,6 @@ interface NumericAuthorProps {
         difficulties: EnumOption[];
         bloom_levels?: EnumOption[];
     };
-    onDirtyChange: (dirty: boolean) => void;
 }
 
 interface ExtendedConfig {
@@ -37,8 +36,8 @@ function defaultConfig(isCalculation: boolean): ExtendedConfig {
     };
 }
 
-export function NumericAuthor({ question, enumOptions, onDirtyChange }: NumericAuthorProps) {
-    const { form, isDirty, save } = useQuestionForm(question, onDirtyChange);
+export function NumericAuthor({ question, enumOptions }: NumericAuthorProps) {
+    const { form, isDirty, save } = useQuestionForm(question);
     const isCalculation = question.question_type === 'calculation';
     const config = (form.data.response_config as ExtendedConfig | null) ?? defaultConfig(isCalculation);
     const steps = config.steps ?? [];

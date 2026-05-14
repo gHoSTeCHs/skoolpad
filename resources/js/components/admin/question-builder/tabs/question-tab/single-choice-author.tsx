@@ -19,7 +19,6 @@ interface SingleChoiceAuthorProps {
         difficulties: EnumOption[];
         bloom_levels?: EnumOption[];
     };
-    onDirtyChange: (dirty: boolean) => void;
 }
 
 function defaultConfig(): McqConfig {
@@ -31,8 +30,8 @@ function defaultConfig(): McqConfig {
     };
 }
 
-export function SingleChoiceAuthor({ question, enumOptions, onDirtyChange }: SingleChoiceAuthorProps) {
-    const { form, isDirty, save } = useQuestionForm(question, onDirtyChange);
+export function SingleChoiceAuthor({ question, enumOptions }: SingleChoiceAuthorProps) {
+    const { form, isDirty, save } = useQuestionForm(question);
     const config = (form.data.response_config as McqConfig | null) ?? defaultConfig();
     const [editingIdx, setEditingIdx] = useState<number | null>(null);
 

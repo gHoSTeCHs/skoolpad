@@ -15,7 +15,6 @@ interface OrderingAuthorProps {
         difficulties: EnumOption[];
         bloom_levels?: EnumOption[];
     };
-    onDirtyChange: (dirty: boolean) => void;
 }
 
 const MIN_ITEMS = 2;
@@ -27,8 +26,8 @@ function defaultConfig(): OrderingConfig {
     };
 }
 
-export function OrderingAuthor({ question, enumOptions, onDirtyChange }: OrderingAuthorProps) {
-    const { form, isDirty, save } = useQuestionForm(question, onDirtyChange);
+export function OrderingAuthor({ question, enumOptions }: OrderingAuthorProps) {
+    const { form, isDirty, save } = useQuestionForm(question);
     const config = (form.data.response_config as OrderingConfig | null) ?? defaultConfig();
     const [editingIdx, setEditingIdx] = useState<number | null>(null);
 

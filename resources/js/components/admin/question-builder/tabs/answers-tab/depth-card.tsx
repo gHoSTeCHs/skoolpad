@@ -1,26 +1,25 @@
 'use no memo';
 
 import { Transition } from '@headlessui/react';
-import { useForm } from '@inertiajs/react';
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useState } from 'react';
 import AnswerController from '@/actions/App/Http/Controllers/Admin/AnswerController';
 import AnswerGenerationController from '@/actions/App/Http/Controllers/Admin/AnswerGenerationController';
 import InputError from '@/components/input-error';
 import { TiptapEditor } from '@/components/shared/tiptap-editor';
-import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
 import type { AnswerDepthData, AnswerDepthLevel } from '@/types/questions';
 import type { TiptapJSON } from '@/types/tiptap';
 import { csrfFetch } from '@/lib/utils';
+import { useEditorForm } from '../../hooks/use-editor-form';
 import { AiSeedBanner, type AnswerGenerationPlan } from './_shared/ai-seed-banner';
 import { AnswerGenerationOverlay } from './_shared/answer-generation-overlay';
+import { StatusPill } from './status-pill';
 
 interface DepthCardProps {
     questionId: string;
     depthData: AnswerDepthData;
-    onDirtyChange?: (dirty: boolean) => void;
 }
 
 const SHORT_KEY: Record<AnswerDepthLevel, string> = {
@@ -41,7 +40,7 @@ const TIER_COPY: Record<AnswerDepthLevel, string> = {
     deep_dive: 'premium · > 500 words · derivations + references',
 };
 
-export function DepthCard({ questionId, depthData, onDirtyChange }: DepthCardProps) {
+export function DepthCard({ questionId, depthData }: DepthCardProps) {
     const isExisting = depthData.answer !== null;
 
     const [planData, setPlanData] = useState<AnswerGenerationPlan | null>(null);
@@ -49,16 +48,12 @@ export function DepthCard({ questionId, depthData, onDirtyChange }: DepthCardPro
     const [generatingJobId, setGeneratingJobId] = useState<string | null>(null);
     const [generationError, setGenerationError] = useState<string | null>(null);
 
-    const form = useForm({
+    const { form, reset, submit } = useEditorForm(`answers:${depthData.depth_level}`, {
         depth_level: depthData.depth_level,
         content: (depthData.answer?.content ?? null) as TiptapJSON | null,
         content_plain: depthData.answer?.content_plain ?? '',
         is_published: depthData.answer?.is_published ?? false,
     });
-
-    useEffect(() => {
-        onDirtyChange?.(form.isDirty);
-    }, [form.isDirty, onDirtyChange]);
 
     const handlePlan = useCallback(async () => {
         setPlanLoading(true);
@@ -116,15 +111,9 @@ export function DepthCard({ questionId, depthData, onDirtyChange }: DepthCardPro
         e.preventDefault();
 
         if (isExisting) {
-            form.put(
-                AnswerController.update.url({ question: questionId, answer: depthData.answer!.id }),
-                { preserveScroll: true },
-            );
+            submit('put', AnswerController.update.url({ question: questionId, answer: depthData.answer!.id }));
         } else {
-            form.post(
-                AnswerController.store.url(questionId),
-                { preserveScroll: true },
-            );
+            submit('post', AnswerController.store.url(questionId));
         }
     }
 
@@ -249,7 +238,7 @@ export function DepthCard({ questionId, depthData, onDirtyChange }: DepthCardPro
                                     type="button"
                                     variant="ghost"
                                     size="sm"
-                                    onClick={() => form.reset()}
+                                    onClick={reset}
                                 >
                                     Discard
                                 </Button>
@@ -269,40 +258,5 @@ export function DepthCard({ questionId, depthData, onDirtyChange }: DepthCardPro
                 )}
             </form>
         </article>
-    );
-}
-
-function StatusPill({
-    isExisting,
-    isPublished,
-    dirty,
-}: {
-    isExisting: boolean;
-    isPublished: boolean;
-    dirty: boolean;
-}) {
-    if (!isExisting) {
-        return <Badge variant="secondary">Not started</Badge>;
-    }
-    if (dirty) {
-        return (
-            <Badge
-                variant="outline"
-                className="border-[rgba(212,149,42,0.40)] bg-[var(--badge-reward-bg)] text-[var(--badge-reward-fg)]"
-            >
-                Draft · unsaved
-            </Badge>
-        );
-    }
-    if (isPublished) {
-        return <Badge variant="default">Published</Badge>;
-    }
-    return (
-        <Badge
-            variant="outline"
-            className="border-[rgba(212,149,42,0.40)] bg-[var(--badge-reward-bg)] text-[var(--badge-reward-fg)]"
-        >
-            Draft
-        </Badge>
     );
 }

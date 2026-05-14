@@ -30,13 +30,12 @@ interface FreeFormAuthorProps {
         difficulties: EnumOption[];
         bloom_levels?: EnumOption[];
     };
-    onDirtyChange: (dirty: boolean) => void;
 }
 
 const CRITERION_LABELS = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H'];
 
-export function FreeFormAuthor({ question, enumOptions, onDirtyChange }: FreeFormAuthorProps) {
-    const { form, isDirty, save } = useQuestionForm(question, onDirtyChange);
+export function FreeFormAuthor({ question, enumOptions }: FreeFormAuthorProps) {
+    const { form, isDirty, save } = useQuestionForm(question);
     const config = (form.data.response_config as FreeFormConfig | null) ?? {};
     const rubric = config.rubric ?? [];
 

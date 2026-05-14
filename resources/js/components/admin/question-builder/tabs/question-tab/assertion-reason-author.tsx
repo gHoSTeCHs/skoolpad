@@ -14,7 +14,6 @@ interface AssertionReasonAuthorProps {
         difficulties: EnumOption[];
         bloom_levels?: EnumOption[];
     };
-    onDirtyChange: (dirty: boolean) => void;
 }
 
 const STANDARD_PROMPT = 'Read the assertion and reason; choose the option that best describes the relationship.';
@@ -35,8 +34,8 @@ function defaultConfig(): AssertionReasonConfig {
     };
 }
 
-export function AssertionReasonAuthor({ question, enumOptions, onDirtyChange }: AssertionReasonAuthorProps) {
-    const { form, isDirty, save } = useQuestionForm(question, onDirtyChange);
+export function AssertionReasonAuthor({ question, enumOptions }: AssertionReasonAuthorProps) {
+    const { form, isDirty, save } = useQuestionForm(question);
     const config = (form.data.response_config as AssertionReasonConfig | null) ?? defaultConfig();
 
     useEffect(() => {

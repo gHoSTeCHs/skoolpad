@@ -19,7 +19,6 @@ interface MatrixAuthorProps {
         difficulties: EnumOption[];
         bloom_levels?: EnumOption[];
     };
-    onDirtyChange: (dirty: boolean) => void;
 }
 
 function defaultConfig(): MatrixMatchingConfig {
@@ -30,8 +29,8 @@ function defaultConfig(): MatrixMatchingConfig {
     };
 }
 
-export function MatrixMatchingAuthor({ question, enumOptions, onDirtyChange }: MatrixAuthorProps) {
-    const { form, isDirty, save } = useQuestionForm(question, onDirtyChange);
+export function MatrixMatchingAuthor({ question, enumOptions }: MatrixAuthorProps) {
+    const { form, isDirty, save } = useQuestionForm(question);
     const config = (form.data.response_config as MatrixMatchingConfig | null) ?? defaultConfig();
     const [editingLeft, setEditingLeft] = useState<number | null>(null);
     const [editingRight, setEditingRight] = useState<number | null>(null);

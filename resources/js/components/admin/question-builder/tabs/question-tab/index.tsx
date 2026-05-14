@@ -19,16 +19,15 @@ interface QuestionTabProps {
         difficulties: EnumOption[];
         bloom_levels?: EnumOption[];
     };
-    onDirtyChange: (dirty: boolean) => void;
 }
 
-export function QuestionTab({ question, enumOptions, onDirtyChange }: QuestionTabProps) {
-    return getAuthor(question.question_type, { question, enumOptions, onDirtyChange });
+export function QuestionTab({ question, enumOptions }: QuestionTabProps) {
+    return getAuthor(question.question_type, { question, enumOptions });
 }
 
 function getAuthor(
     type: QuestionType,
-    props: { question: QuestionNode; enumOptions: QuestionTabProps['enumOptions']; onDirtyChange: (dirty: boolean) => void },
+    props: { question: QuestionNode; enumOptions: QuestionTabProps['enumOptions'] },
 ): React.ReactNode {
     const key = props.question.id;
     switch (type) {

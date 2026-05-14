@@ -19,7 +19,6 @@ interface MultiChoiceAuthorProps {
         difficulties: EnumOption[];
         bloom_levels?: EnumOption[];
     };
-    onDirtyChange: (dirty: boolean) => void;
 }
 
 function defaultConfig(): MultiSelectMcqConfig {
@@ -31,8 +30,8 @@ function defaultConfig(): MultiSelectMcqConfig {
     };
 }
 
-export function MultiChoiceAuthor({ question, enumOptions, onDirtyChange }: MultiChoiceAuthorProps) {
-    const { form, isDirty, save } = useQuestionForm(question, onDirtyChange);
+export function MultiChoiceAuthor({ question, enumOptions }: MultiChoiceAuthorProps) {
+    const { form, isDirty, save } = useQuestionForm(question);
     const config = (form.data.response_config as MultiSelectMcqConfig | null) ?? defaultConfig();
     const [editingIdx, setEditingIdx] = useState<number | null>(null);
 

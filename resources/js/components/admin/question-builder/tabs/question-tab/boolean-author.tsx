@@ -16,13 +16,12 @@ interface BooleanAuthorProps {
         difficulties: EnumOption[];
         bloom_levels?: EnumOption[];
     };
-    onDirtyChange: (dirty: boolean) => void;
 }
 
 const DEFAULTS: TrueFalseConfig = { correct_answer: true, requires_justification: false };
 
-export function BooleanAuthor({ question, enumOptions, onDirtyChange }: BooleanAuthorProps) {
-    const { form, isDirty, save } = useQuestionForm(question, onDirtyChange);
+export function BooleanAuthor({ question, enumOptions }: BooleanAuthorProps) {
+    const { form, isDirty, save } = useQuestionForm(question);
     const config = (form.data.response_config as TrueFalseConfig | null) ?? DEFAULTS;
 
     const setConfig = useCallback((next: TrueFalseConfig) => {

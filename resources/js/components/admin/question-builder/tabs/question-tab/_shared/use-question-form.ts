@@ -1,12 +1,13 @@
 'use no memo';
 
-import { useEffect, useRef } from 'react';
+import { useCallback, useEffect, useRef } from 'react';
 import { useForm } from '@inertiajs/react';
 import QuestionController from '@/actions/App/Http/Controllers/Admin/QuestionController';
 import type { QuestionNode, ResponseConfig, SubQuestionFormData } from '@/types/questions';
 import type { TiptapJSON } from '@/types/tiptap';
 import { useDraftMeta } from '../../../draft-mode-context';
 import { isDraftQuestion } from '../../../lib/draft-question';
+import { useDirtyRegistration } from '../../../hooks/use-dirty-registration';
 
 export interface QuestionFormShape {
     question_type: QuestionNode['question_type'];
@@ -49,7 +50,12 @@ function buildInitial(question: QuestionNode): QuestionFormShape {
     };
 }
 
-export function useQuestionForm(question: QuestionNode, onDirtyChange: (dirty: boolean) => void) {
+/**
+ * Shared form hook for every question-type author. Registers the Question tab's
+ * dirty state into the builder store via useDirtyRegistration — the discard
+ * prompt and confirmDiscard's revert flow through that contract.
+ */
+export function useQuestionForm(question: QuestionNode) {
     const draftMeta = useDraftMeta();
     const isDraft = isDraftQuestion(question);
     const form = useForm<QuestionFormShape>(buildInitial(question));
@@ -61,16 +67,17 @@ export function useQuestionForm(question: QuestionNode, onDirtyChange: (dirty: b
 
     const isDirty = JSON.stringify(form.data) !== initialRef.current;
 
-    useEffect(() => {
-        onDirtyChange(isDirty);
-    }, [isDirty, onDirtyChange]);
+    const reset = useCallback(() => {
+        form.reset();
+    }, [form]);
+
+    useDirtyRegistration('question', isDirty, reset);
 
     function save(e?: React.FormEvent) {
         if (e) e.preventDefault();
 
         if (isDraft && draftMeta) {
-            // The envelope is injected only for this create POST. It is reset in onSuccess
-            // so the form instance is clean regardless of whether the component remounts via onCreated.
+            // The envelope is injected only for this create POST; it is reset in onSuccess.
             form.transform((data) => ({
                 ...data,
                 question_paper_id: draftMeta.paperId,
@@ -85,7 +92,8 @@ export function useQuestionForm(question: QuestionNode, onDirtyChange: (dirty: b
                     form.transform((data) => data);
                     const flash = (page.props as { flash?: { created_question_id?: string } }).flash;
                     const newId = flash?.created_question_id;
-                    onDirtyChange(false);
+                    // onCreated routes through the store's selectCreatedQuestion, which
+                    // clears the dirty registry — the draft is now persisted.
                     if (newId) draftMeta.onCreated(newId);
                 },
             });
@@ -98,7 +106,6 @@ export function useQuestionForm(question: QuestionNode, onDirtyChange: (dirty: b
             only: ['paper'],
             onSuccess: () => {
                 initialRef.current = JSON.stringify(form.data);
-                onDirtyChange(false);
             },
         });
     }

@@ -14,7 +14,6 @@ interface ClozeAuthorProps {
         difficulties: EnumOption[];
         bloom_levels?: EnumOption[];
     };
-    onDirtyChange: (dirty: boolean) => void;
 }
 
 const GAP_RE = /\[\[([^\]]*)\]\]/g;
@@ -35,8 +34,8 @@ function defaultConfig(): ClozeConfig {
     return { gaps: [] };
 }
 
-export function ClozeAuthor({ question, enumOptions, onDirtyChange }: ClozeAuthorProps) {
-    const { form, isDirty, save } = useQuestionForm(question, onDirtyChange);
+export function ClozeAuthor({ question, enumOptions }: ClozeAuthorProps) {
+    const { form, isDirty, save } = useQuestionForm(question);
     const config = (form.data.response_config as ClozeConfig | null) ?? defaultConfig();
     const stem = form.data.content ?? '';
     const parsed = useMemo(() => parseGaps(stem), [stem]);

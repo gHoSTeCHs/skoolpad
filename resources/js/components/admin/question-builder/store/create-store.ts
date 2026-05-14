@@ -31,10 +31,19 @@ export interface QuestionBuilderState {
     unregisterDirty: (key: string) => void;
     selectChildDepth: (childId: string, depth: AnswerDepthLevel) => void;
     consumeInitialDepth: () => void;
+    /** Select a freshly-created question, clearing dirty state — the draft is now persisted. */
+    selectCreatedQuestion: (id: string) => void;
 }
 
 export function selectIsAnyDirty(state: QuestionBuilderState): boolean {
     return Object.values(state.dirtyRegistry).some(Boolean);
+}
+
+/** True when any answer-depth surface is dirty (keys `answers` or `answers:*`). */
+export function selectAnswersDirty(state: QuestionBuilderState): boolean {
+    return Object.entries(state.dirtyRegistry).some(
+        ([key, dirty]) => dirty && (key === 'answers' || key.startsWith('answers:')),
+    );
 }
 
 function sameSelection(a: SelectedNode | null, b: SelectedNode | null): boolean {
@@ -124,6 +133,15 @@ export function createQuestionBuilderStore(initialSelectedNode: SelectedNode | n
             }),
 
         consumeInitialDepth: () => set({ pendingDepth: null }),
+
+        selectCreatedQuestion: (id) =>
+            set({
+                selectedNode: { type: 'question', id },
+                activeTab: 'question',
+                pendingNav: null,
+                dirtyRegistry: {},
+                resetCallbacks: {},
+            }),
     }));
 }
 

@@ -15,11 +15,10 @@ interface GroupAuthorProps {
         difficulties: EnumOption[];
         bloom_levels?: EnumOption[];
     };
-    onDirtyChange: (dirty: boolean) => void;
 }
 
-export function GroupAuthor({ question, enumOptions, onDirtyChange }: GroupAuthorProps) {
-    const { form, isDirty, save } = useQuestionForm(question, onDirtyChange);
+export function GroupAuthor({ question, enumOptions }: GroupAuthorProps) {
+    const { form, isDirty, save } = useQuestionForm(question);
     const children = question.children ?? [];
 
     return (
