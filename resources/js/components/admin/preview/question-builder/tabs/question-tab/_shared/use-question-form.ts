@@ -5,6 +5,8 @@ import { useForm } from '@inertiajs/react';
 import QuestionController from '@/actions/App/Http/Controllers/Admin/QuestionController';
 import type { QuestionNode, ResponseConfig, SubQuestionFormData } from '@/types/questions';
 import type { TiptapJSON } from '@/types/tiptap';
+import { useDraftMeta } from '../../../draft-mode-context';
+import { isDraftQuestion } from '../../../lib/draft-question';
 
 export interface QuestionFormShape {
     question_type: QuestionNode['question_type'];
@@ -48,6 +50,8 @@ function buildInitial(question: QuestionNode): QuestionFormShape {
 }
 
 export function useQuestionForm(question: QuestionNode, onDirtyChange: (dirty: boolean) => void) {
+    const draftMeta = useDraftMeta();
+    const isDraft = isDraftQuestion(question);
     const form = useForm<QuestionFormShape>(buildInitial(question));
     const initialRef = useRef(JSON.stringify(form.data));
 
@@ -63,6 +67,31 @@ export function useQuestionForm(question: QuestionNode, onDirtyChange: (dirty: b
 
     function save(e?: React.FormEvent) {
         if (e) e.preventDefault();
+
+        if (isDraft && draftMeta) {
+            // The envelope is injected only for this create POST. It is reset in onSuccess
+            // so the form instance is clean regardless of whether the component remounts via onCreated.
+            form.transform((data) => ({
+                ...data,
+                question_paper_id: draftMeta.paperId,
+                question_section_id: draftMeta.sectionId,
+                parent_question_id: draftMeta.parentId,
+                institution_course_id: draftMeta.institutionCourseId ?? undefined,
+                from_paper_builder: true,
+            }));
+            form.post(QuestionController.store.url(), {
+                preserveScroll: true,
+                onSuccess: (page) => {
+                    form.transform((data) => data);
+                    const flash = (page.props as { flash?: { created_question_id?: string } }).flash;
+                    const newId = flash?.created_question_id;
+                    onDirtyChange(false);
+                    if (newId) draftMeta.onCreated(newId);
+                },
+            });
+            return;
+        }
+
         form.put(QuestionController.update.url(question.id), {
             preserveScroll: true,
             preserveState: true,
