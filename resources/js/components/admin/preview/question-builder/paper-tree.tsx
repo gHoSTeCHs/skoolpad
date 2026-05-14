@@ -13,7 +13,7 @@ interface PaperTreeProps {
     paper: QuestionPaper;
     selectedNode: SelectedNode | null;
     onSelectNode: (node: SelectedNode | null) => void;
-    onAddSection?: () => void;
+    onAddSection: () => void;
 }
 
 function countQuestionsRecursive(questions: QuestionNode[]): number {
@@ -84,20 +84,20 @@ function QuestionTreeNode({ question, depth, selectedNode, onSelectNode, section
                             sectionId={sectionId}
                         />
                     ))}
-
-                    {question.question_type === 'group' && (
-                        <button
-                            type="button"
-                            onClick={(e) => {
-                                e.stopPropagation();
-                                onSelectNode({ type: 'draft', sectionId, parentId: question.id, defaultType: 'theory' });
-                            }}
-                            className="mt-0.5 flex w-full items-center gap-1.5 rounded-md border border-dashed border-border px-2 py-1 text-[11px] text-muted-foreground transition-colors hover:border-[var(--fg-subtle)] hover:bg-[var(--bg-raised)] hover:text-foreground"
-                        >
-                            + Add sub-question
-                        </button>
-                    )}
                 </div>
+            )}
+
+            {question.question_type === 'group' && (
+                <button
+                    type="button"
+                    onClick={(e) => {
+                        e.stopPropagation();
+                        onSelectNode({ type: 'draft', sectionId, parentId: question.id, defaultType: 'theory' });
+                    }}
+                    className="mt-0.5 flex w-full items-center gap-1.5 rounded-md border border-dashed border-border px-2 py-1 text-[11px] text-muted-foreground transition-colors hover:border-[var(--fg-subtle)] hover:bg-[var(--bg-raised)] hover:text-foreground"
+                >
+                    + Add sub-question
+                </button>
             )}
         </div>
     );
@@ -193,7 +193,7 @@ function ContextTreeNode({
     );
 }
 
-export function PaperTree({ paper, selectedNode, onSelectNode, onAddSection = () => {} }: PaperTreeProps) {
+export function PaperTree({ paper, selectedNode, onSelectNode, onAddSection }: PaperTreeProps) {
     const [contextsExpanded, setContextsExpanded] = useState(true);
 
     return (
