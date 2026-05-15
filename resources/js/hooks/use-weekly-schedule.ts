@@ -1,4 +1,5 @@
 import { useCallback, useState } from 'react';
+import { randomId } from '@/lib/utils';
 
 export interface SessionPeriod {
     label: string;
@@ -36,7 +37,7 @@ export function useWeeklySchedule(): UseWeeklyScheduleReturn {
     const addSlot = useCallback((slot: Omit<WeeklyScheduleSlot, 'id'>) => {
         const newSlot: WeeklyScheduleSlot = {
             ...slot,
-            id: crypto.randomUUID(),
+            id: randomId(),
         };
         setTemplate((prev) => [...prev, newSlot]);
     }, []);

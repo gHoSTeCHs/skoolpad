@@ -1,6 +1,7 @@
 import { Head, router, usePage } from '@inertiajs/react';
 import { CheckCircle2, Loader2, Plus, Save, Search, X } from 'lucide-react';
 import { useMemo, useState } from 'react';
+import { randomId } from '@/lib/utils';
 import CurriculumMappingController from '@/actions/App/Http/Controllers/Admin/CurriculumMappingController';
 import { PageHeader } from '@/components/admin/page-header';
 import { Badge } from '@/components/ui/badge';
@@ -216,7 +217,7 @@ export default function AdminCurriculumMappings({ educationSystems, teachingDept
         setMappedBlocks((prev) => [
             ...prev,
             {
-                id: crypto.randomUUID(),
+                id: randomId(),
                 content_block_id: block.id,
                 block_title: block.title,
                 block_path: block.path,
