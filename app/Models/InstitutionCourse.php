@@ -18,9 +18,12 @@ class InstitutionCourse extends Model
     use HasFactory, HasUuids;
 
     protected $fillable = [
+        'container_type',
         'institution_id',
         'owning_department_id',
         'discipline_id',
+        'education_level_id',
+        'stream_id',
         'course_code',
         'course_title',
         'level',
@@ -40,7 +43,28 @@ class InstitutionCourse extends Model
             'is_elective' => 'boolean',
             'level' => 'string',
             'credit_units' => 'integer',
+            'container_type' => 'string',
         ];
+    }
+
+    public function isSubject(): bool
+    {
+        return $this->container_type === 'subject';
+    }
+
+    public function isCourse(): bool
+    {
+        return $this->container_type === 'course';
+    }
+
+    public function educationLevel(): BelongsTo
+    {
+        return $this->belongsTo(EducationLevel::class);
+    }
+
+    public function stream(): BelongsTo
+    {
+        return $this->belongsTo(Stream::class);
     }
 
     public function institution(): BelongsTo
