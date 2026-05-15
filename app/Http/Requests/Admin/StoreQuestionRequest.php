@@ -8,6 +8,7 @@ use App\Enums\QuestionSource;
 use App\Enums\QuestionStatus;
 use App\Enums\QuestionType;
 use App\Enums\Relevance;
+use App\Models\Question;
 use App\Rules\ResponseConfigValidator;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
@@ -18,6 +19,26 @@ class StoreQuestionRequest extends FormRequest
     public function authorize(): bool
     {
         return true;
+    }
+
+    protected function prepareForValidation(): void
+    {
+        $parentId = $this->input('parent_question_id');
+        if (! $parentId) {
+            return;
+        }
+
+        $parent = Question::query()->find($parentId);
+        if (! $parent) {
+            return;
+        }
+
+        $this->merge([
+            'question_paper_id' => $this->input('question_paper_id') ?: $parent->question_paper_id,
+            'question_section_id' => $this->input('question_section_id') ?: $parent->question_section_id,
+            'institution_course_id' => $this->input('institution_course_id') ?: $parent->institution_course_id,
+            'exam_subject_id' => $this->input('exam_subject_id') ?: $parent->exam_subject_id,
+        ]);
     }
 
     /** @return array<string, array<int, mixed>> */
@@ -32,6 +53,7 @@ class StoreQuestionRequest extends FormRequest
             'exam_subject_id' => ['nullable', 'uuid', 'exists:exam_subjects,id'],
             'question_type' => ['required', 'string', Rule::in(QuestionType::values())],
             'content' => ['required', 'string'],
+            'content_doc' => ['nullable', 'array'],
             'year' => ['nullable', 'integer', 'min:1990', 'max:'.date('Y')],
             'semester' => ['nullable', 'string', Rule::in(['first', 'second'])],
             'marks' => ['nullable', 'integer', 'min:1'],
@@ -46,6 +68,19 @@ class StoreQuestionRequest extends FormRequest
             'block_links' => ['nullable', 'array'],
             'block_links.*.content_block_id' => ['required', 'uuid', 'exists:content_blocks,id'],
             'block_links.*.relevance' => ['required', Rule::enum(Relevance::class)],
+            'sub_questions' => ['nullable', 'array', 'max:30'],
+            'sub_questions.*.id' => ['nullable', 'uuid', 'exists:questions,id'],
+            'sub_questions.*.question_type' => ['required', 'string', Rule::in(QuestionType::values())],
+            'sub_questions.*.content' => ['required', 'string'],
+            'sub_questions.*.marks' => ['nullable', 'integer', 'min:0', 'max:1000'],
+            'sub_questions.*.sort_order' => ['required', 'integer', 'min:0'],
+            'sub_questions.*.response_config' => ['nullable', 'array'],
+            'choice_group' => ['nullable', 'array'],
+            'choice_group.required' => ['nullable', 'array'],
+            'choice_group.required.*' => ['string', 'max:32'],
+            'choice_group.chooseN' => ['nullable', 'integer', 'min:1', 'max:20'],
+            'choice_group.optional' => ['nullable', 'array'],
+            'choice_group.optional.*' => ['string', 'max:32'],
         ];
     }
 
