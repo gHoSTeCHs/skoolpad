@@ -1,0 +1,3078 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Curriculum Studio — Prototype</title>
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,400;12..96,500;12..96,600;12..96,700;12..96,800&family=DM+Sans:opsz,wght@9..40,400;9..40,500;9..40,600;9..40,700&family=JetBrains+Mono:wght@400;500&family=Outfit:wght@400;500;600;700;800&family=Source+Serif+4:ital,opsz,wght@0,8..60,400;0,8..60,500;0,8..60,600;1,8..60,400;1,8..60,500&display=swap" rel="stylesheet">
+
+<script src="https://cdn.tailwindcss.com"></script>
+<script>
+  tailwind.config = {
+    theme: {
+      extend: {
+        fontFamily: {
+          display: ['"Bricolage Grotesque"', 'serif'],
+          body: ['"DM Sans"', 'system-ui', 'sans-serif'],
+          serif: ['"Source Serif 4"', 'Georgia', 'serif'],
+          mono: ['"JetBrains Mono"', 'ui-monospace', 'monospace'],
+        },
+      },
+    },
+  }
+</script>
+
+<style>
+  :root {
+    /* Warm Editorial — same tokens as Content Studio, design-showcase, architecture-showcase */
+    --bg:               #F7F2E9;
+    --bg-raised:        #F0E9DB;
+    --card:             #FBF8F1;
+    --card-2:           #F5EFE3;
+    --border:           #E0D6C2;
+    --border-2:         #EAE0CC;
+    --border-soft:      rgba(31,26,18,0.08);
+
+    --foreground:       #1F1A12;
+    --text-2:           #4A3F2C;
+    --muted-foreground: #6B5E47;
+    --text-muted:       #9C8E73;
+
+    --primary:          #1A6B4F;
+    --primary-fg:       #FBF8F1;
+    --primary-soft:     #DCE8DD;
+    --primary-line:     #A6C4A8;
+    --canopy-300:       #5BA787;
+    --canopy-400:       #3E916D;
+    --canopy-600:       #14583F;
+    --canopy-900:       #0A2F22;
+    --canopy-950:       #06201A;
+
+    --warning:          #B8862F;
+    --honey-300:        #E0BE6F;
+    --honey-400:        #D4952A;
+    --honey-600:        #8B6320;
+    --honey-soft:       #F4E8CC;
+
+    --destructive:      #9C2A2A;
+    --destructive-soft: #F4DBDB;
+    --ember-300:        #D88B6F;
+    --ember-400:        #B85F3F;
+    --ember-500:        #9A4A2A;
+
+    --bg-hero:          #161210;
+    --bg-hero-2:        #1F1A14;
+
+    --card-radius:      14px;
+
+    --shadow-sm: 0 1px 0 rgba(31,26,18,0.04), 0 1px 2px rgba(31,26,18,0.04);
+    --shadow-md: 0 6px 16px -6px rgba(31,26,18,0.10), 0 2px 4px rgba(31,26,18,0.04);
+    --shadow-lg: 0 18px 40px -12px rgba(31,26,18,0.18), 0 4px 10px rgba(31,26,18,0.06);
+  }
+
+  html, body { margin: 0; padding: 0; }
+  html { scroll-behavior: smooth; }
+  body {
+    background: var(--bg);
+    color: var(--foreground);
+    font-family: 'DM Sans', system-ui, sans-serif;
+    font-size: 14px;
+    line-height: 1.55;
+    -webkit-font-smoothing: antialiased;
+    text-rendering: optimizeLegibility;
+    font-feature-settings: "kern" 1, "liga" 1;
+  }
+  ::selection { background: var(--primary); color: var(--primary-fg); }
+
+  /* ================== ANIMATIONS ================== */
+  @keyframes fade-up {
+    from { opacity: 0; transform: translateY(14px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+  @keyframes glow-pulse {
+    0%, 100% { opacity: 0.45; }
+    50%      { opacity: 0.85; }
+  }
+  @keyframes proposal-pulse {
+    0%, 100% { opacity: 0.7; }
+    50%      { opacity: 1; }
+  }
+  @keyframes scan-bar {
+    0%   { transform: translateX(-100%); }
+    100% { transform: translateX(100%); }
+  }
+
+  /* ================== SECTION HEADER ================== */
+  .section-label-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 6px;
+  }
+  .section-label {
+    font-family: 'DM Sans';
+    font-size: 10px;
+    font-weight: 600;
+    letter-spacing: 0.10em;
+    text-transform: uppercase;
+    color: var(--primary);
+  }
+  .section-label-line {
+    height: 1px;
+    flex: 1;
+    background: linear-gradient(to right, rgba(26,107,79,0.30), transparent);
+  }
+  .section-title {
+    font-family: 'Bricolage Grotesque';
+    font-size: 28px;
+    font-weight: 700;
+    letter-spacing: -0.02em;
+    line-height: 1.05;
+    margin: 0 0 32px;
+    color: var(--foreground);
+  }
+  .section-title em {
+    font-family: 'Bricolage Grotesque';
+    font-style: italic;
+    font-weight: 700;
+    color: var(--honey-400);
+  }
+  .small-cap {
+    font-family: 'DM Sans';
+    font-size: 10px;
+    font-weight: 600;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--muted-foreground);
+  }
+  .small-cap-primary { color: var(--primary); }
+  .small-cap-warn    { color: var(--warning); }
+  .small-cap-danger  { color: var(--destructive); }
+
+  /* ================== CARD ================== */
+  .card {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: var(--card-radius);
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+  }
+  .card-lift:hover {
+    transform: translateY(-3px);
+    box-shadow: var(--shadow-md);
+  }
+  .card-head {
+    padding: 14px 20px;
+    border-bottom: 1px solid var(--border);
+  }
+  .card-body {
+    padding: 22px;
+  }
+  .card-tight .card-body { padding: 18px; }
+
+  /* Dark-headed card (sibling of CoverageCardComponent) */
+  .dark-card {
+    overflow: hidden;
+    border-radius: var(--card-radius);
+    border: 1px solid var(--border);
+    background: var(--card);
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+  }
+  .dark-card:hover {
+    transform: translateY(-3px);
+    box-shadow: var(--shadow-lg);
+  }
+  .dark-card-head {
+    padding: 18px 20px 16px;
+    color: white;
+  }
+  .dark-head-canopy { background: linear-gradient(135deg, var(--canopy-950), var(--canopy-900)); }
+  .dark-head-ember  { background: linear-gradient(135deg, #5E2214, #7A2B16); }
+  .dark-head-honey  { background: linear-gradient(135deg, #3D280C, #5F4116); }
+  .dark-head-ink    { background: linear-gradient(135deg, #0E0A06, #1F1A14); }
+
+  /* ================== PILLS (SpBadge clones) ================== */
+  .pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 2px 9px 2px 9px;
+    border-radius: 999px;
+    font-family: 'DM Sans';
+    font-size: 11px;
+    font-weight: 600;
+    line-height: 1.5;
+    letter-spacing: 0.005em;
+    white-space: nowrap;
+  }
+  .pill-primary  { background: var(--primary-soft); color: var(--primary); }
+  .pill-danger   { background: var(--destructive-soft); color: var(--destructive); }
+  .pill-warning  { background: var(--honey-soft); color: var(--honey-600); }
+  .pill-reward   {
+    background: linear-gradient(135deg, var(--honey-soft), #FBE8B5);
+    color: var(--honey-600);
+    border: 1px solid #E8C880;
+  }
+  .pill-neutral  { background: var(--bg-raised); color: var(--text-2); }
+  .pill-solid    { background: var(--foreground); color: var(--bg); }
+  .pill-outline  { background: transparent; color: var(--muted-foreground); border: 1px solid var(--border); }
+  .pill::before {
+    content: '';
+    width: 6px; height: 6px; border-radius: 999px;
+    background: currentColor;
+    opacity: 0.85;
+  }
+  .pill.no-dot::before { display: none; }
+
+  /* Source chips — like pills but with explicit source identity */
+  .src-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 3px 10px;
+    border-radius: 6px;
+    font-family: 'DM Sans';
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0.02em;
+    line-height: 1.4;
+    white-space: nowrap;
+    border: 1px solid transparent;
+  }
+  .src-chip::before {
+    content: '';
+    width: 5px; height: 5px;
+    border-radius: 999px;
+    background: currentColor;
+  }
+  .src-waec   { background: var(--primary-soft);    color: var(--primary);     border-color: var(--primary-line); }
+  .src-jamb   { background: var(--honey-soft);      color: var(--honey-600);   border-color: #E8C880; }
+  .src-nerdc  { background: rgba(212,149,42,0.10);  color: var(--honey-600);   border-color: rgba(212,149,42,0.25); }
+  .src-scheme { background: rgba(26,107,79,0.06);   color: var(--canopy-600);  border-color: rgba(26,107,79,0.18); }
+  .src-pastq  { background: rgba(184,95,63,0.08);   color: var(--ember-500);   border-color: rgba(184,95,63,0.20); }
+  .src-missing {
+    background: transparent; color: var(--text-muted);
+    border-color: var(--border); border-style: dashed;
+  }
+  .src-missing::before { background: var(--text-muted); opacity: 0.5; }
+  .src-proposed {
+    background: rgba(212,149,42,0.06); color: var(--honey-600);
+    border-color: rgba(212,149,42,0.30); border-style: dashed;
+    animation: proposal-pulse 2.5s ease-in-out infinite;
+  }
+
+  /* ================== STATS ================== */
+  .stat-card {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: var(--card-radius);
+    padding: 18px 20px;
+  }
+  .stat-card .stat-value {
+    font-family: 'Bricolage Grotesque';
+    font-size: 38px;
+    font-weight: 700;
+    line-height: 0.95;
+    letter-spacing: -0.025em;
+    color: var(--foreground);
+    font-feature-settings: "tnum" 1, "lnum" 1;
+  }
+  .stat-card .stat-value .denom {
+    color: var(--text-muted);
+    font-weight: 400;
+    font-size: 22px;
+  }
+  .stat-card .stat-label {
+    font-family: 'DM Sans';
+    font-size: 10px;
+    font-weight: 600;
+    letter-spacing: 0.10em;
+    text-transform: uppercase;
+    color: var(--muted-foreground);
+    margin-bottom: 6px;
+  }
+  .stat-card .stat-meta {
+    font-family: 'JetBrains Mono';
+    font-size: 11px;
+    color: var(--text-muted);
+    margin-top: 8px;
+    letter-spacing: 0.02em;
+  }
+
+  /* ================== INSIGHT CALLOUTS ================== */
+  .callout {
+    border-radius: var(--card-radius);
+    padding: 16px 20px;
+    border: 1px solid;
+    line-height: 1.55;
+    font-size: 13.5px;
+  }
+  .callout strong { color: var(--foreground); font-weight: 600; }
+  .callout-primary { background: rgba(26,107,79,0.05);  border-color: rgba(26,107,79,0.20);  color: var(--text-2); }
+  .callout-warning { background: rgba(184,134,47,0.05); border-color: rgba(184,134,47,0.20); color: var(--text-2); }
+  .callout-danger  { background: rgba(156,42,42,0.05);  border-color: rgba(156,42,42,0.20);  color: var(--text-2); }
+  .callout-ink     { background: var(--bg-raised); border-color: var(--border); color: var(--text-2); }
+
+  /* ================== STEP CARDS ================== */
+  .step-row {
+    display: flex; align-items: flex-start; gap: 14px;
+  }
+  .step-bullet {
+    display: inline-flex; align-items: center; justify-content: center;
+    width: 26px; height: 26px;
+    border-radius: 999px;
+    font-family: 'DM Sans';
+    font-weight: 700;
+    font-size: 11.5px;
+    color: white;
+    flex-shrink: 0;
+  }
+  .step-bullet-canopy { background: var(--primary); }
+  .step-bullet-honey  { background: var(--warning); }
+  .step-bullet-ember  { background: var(--ember-400); }
+  .step-bullet-danger { background: var(--destructive); }
+  .step-bullet-ink    { background: var(--foreground); }
+
+  /* ================== HERO ================== */
+  .hero {
+    position: relative;
+    overflow: hidden;
+    background: var(--bg-hero);
+    padding: 84px 40px 64px;
+  }
+  .hero-stripes {
+    position: absolute; inset: 0; pointer-events: none;
+    background: repeating-linear-gradient(-45deg, transparent, transparent 40px, rgba(255,255,255,0.012) 40px, rgba(255,255,255,0.012) 41px);
+  }
+  .hero-blob-1 {
+    position: absolute; pointer-events: none;
+    top: -200px; right: -100px;
+    height: 560px; width: 560px;
+    border-radius: 999px;
+    background: radial-gradient(circle, rgba(212,149,42,0.16) 0%, transparent 70%);
+  }
+  .hero-blob-2 {
+    position: absolute; pointer-events: none;
+    bottom: -260px; left: -160px;
+    height: 520px; width: 520px;
+    border-radius: 999px;
+    background: radial-gradient(circle, rgba(26,107,79,0.18) 0%, transparent 65%);
+    animation: glow-pulse 9s ease-in-out infinite;
+  }
+  .hero-grain {
+    position: absolute; inset: 0; pointer-events: none;
+    background-image: radial-gradient(rgba(255,255,255,0.018) 1px, transparent 1px);
+    background-size: 14px 14px;
+  }
+  .hero-content {
+    position: relative; z-index: 1;
+    max-width: 1200px; margin: 0 auto;
+  }
+  .hero-eyebrow {
+    display: inline-flex; align-items: center; gap: 8px;
+    margin-bottom: 22px;
+    border: 1px solid rgba(255,255,255,0.10);
+    background: rgba(255,255,255,0.06);
+    padding: 5px 14px;
+    border-radius: 999px;
+    font-family: 'DM Sans';
+    font-size: 11px; font-weight: 600;
+    letter-spacing: 0.06em; text-transform: uppercase;
+    color: var(--canopy-300);
+    animation: fade-up 0.5s cubic-bezier(0.16, 1, 0.3, 1) 0.10s both;
+  }
+  .hero-eyebrow .dot {
+    width: 6px; height: 6px; border-radius: 999px;
+    background: var(--primary);
+    box-shadow: 0 0 12px rgba(94,167,135,0.55);
+  }
+  .hero-title {
+    font-family: 'Bricolage Grotesque';
+    font-size: clamp(40px, 6vw, 76px);
+    font-weight: 800;
+    line-height: 0.96;
+    letter-spacing: -0.03em;
+    color: white;
+    margin: 0;
+    animation: fade-up 0.5s cubic-bezier(0.16, 1, 0.3, 1) 0.18s both;
+  }
+  .hero-title em {
+    font-style: italic;
+    color: var(--honey-400);
+  }
+  .hero-lede {
+    margin: 22px 0 0;
+    max-width: 640px;
+    font-family: 'DM Sans';
+    font-size: 16px; line-height: 1.6;
+    color: rgba(255,255,255,0.50);
+    animation: fade-up 0.5s cubic-bezier(0.16, 1, 0.3, 1) 0.28s both;
+  }
+  .hero-lede strong {
+    color: rgba(255,255,255,0.78);
+    font-weight: 500;
+  }
+  .hero-meta {
+    margin-top: 28px;
+    display: inline-flex;
+    gap: 22px;
+    align-items: center;
+    flex-wrap: wrap;
+    animation: fade-up 0.5s cubic-bezier(0.16, 1, 0.3, 1) 0.36s both;
+  }
+  .hero-meta-item {
+    display: inline-flex; align-items: baseline; gap: 8px;
+  }
+  .hero-meta-item .v {
+    font-family: 'Bricolage Grotesque';
+    font-size: 28px; font-weight: 700;
+    color: white;
+    font-feature-settings: "tnum" 1, "lnum" 1;
+    line-height: 1;
+  }
+  .hero-meta-item .l {
+    font-family: 'DM Sans';
+    font-size: 11px; font-weight: 500;
+    color: rgba(255,255,255,0.50);
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+  }
+  .hero-meta-sep {
+    width: 1px; height: 22px;
+    background: rgba(255,255,255,0.12);
+  }
+
+  /* ================== THEME SWITCHER (mock) ================== */
+  .theme-switch {
+    position: fixed; top: 16px; right: 16px;
+    display: inline-flex; gap: 2px;
+    border: 1px solid var(--border);
+    background: var(--card);
+    border-radius: 12px;
+    padding: 3px;
+    box-shadow: var(--shadow-md);
+    backdrop-filter: blur(20px);
+    z-index: 50;
+  }
+  .theme-switch button {
+    border: 0; cursor: pointer;
+    padding: 7px 14px;
+    border-radius: 9px;
+    font-family: 'DM Sans';
+    font-size: 12px; font-weight: 600;
+    background: transparent;
+    color: var(--muted-foreground);
+    transition: all 0.18s ease;
+  }
+  .theme-switch button.is-active {
+    background: var(--primary);
+    color: var(--primary-fg);
+    box-shadow: var(--shadow-sm);
+  }
+  .theme-switch button:hover:not(.is-active) { color: var(--foreground); }
+
+  /* ================== TABLE: ATLAS ================== */
+  table.atlas-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-feature-settings: "tnum" 1, "lnum" 1;
+  }
+  table.atlas-table thead th {
+    font-family: 'DM Sans';
+    font-size: 10px;
+    font-weight: 600;
+    letter-spacing: 0.10em;
+    text-transform: uppercase;
+    color: var(--muted-foreground);
+    padding: 12px 12px;
+    text-align: left;
+    border-bottom: 1px solid var(--border);
+    vertical-align: bottom;
+    white-space: nowrap;
+  }
+  table.atlas-table thead th.cen { text-align: center; }
+  table.atlas-table thead th.num { text-align: right; }
+  table.atlas-table tbody td {
+    padding: 14px 12px;
+    border-bottom: 1px solid var(--border-soft);
+    vertical-align: middle;
+    font-size: 13.5px;
+  }
+  table.atlas-table tbody td.cen { text-align: center; }
+  table.atlas-table tbody td.num { text-align: right; font-family: 'JetBrains Mono'; font-size: 12.5px; }
+  table.atlas-table tbody tr:hover td { background: rgba(186, 168, 132, 0.08); }
+  table.atlas-table tbody td .subj-name {
+    font-weight: 600; font-size: 14px;
+    color: var(--foreground);
+  }
+  table.atlas-table tbody td .subj-disc {
+    display: block;
+    font-family: 'JetBrains Mono';
+    font-size: 10.5px;
+    color: var(--text-muted);
+    margin-top: 2px;
+    letter-spacing: 0.02em;
+  }
+
+  /* ================== MATRIX ================== */
+  table.recon-matrix {
+    width: 100%;
+    border-collapse: collapse;
+    font-feature-settings: "tnum" 1, "lnum" 1;
+  }
+  table.recon-matrix thead th {
+    padding: 10px 6px 10px;
+    font-family: 'DM Sans';
+    font-size: 9.5px;
+    font-weight: 600;
+    letter-spacing: 0.10em;
+    text-transform: uppercase;
+    color: var(--muted-foreground);
+    border-bottom: 1px solid var(--border);
+    text-align: center;
+    vertical-align: bottom;
+    white-space: nowrap;
+  }
+  table.recon-matrix thead th.first {
+    text-align: left;
+    padding-left: 14px;
+  }
+  table.recon-matrix thead th .nh {
+    display: block;
+    font-family: 'JetBrains Mono';
+    font-weight: 500;
+    font-size: 10px;
+    color: var(--text-muted);
+    letter-spacing: 0.04em;
+    text-transform: none;
+    margin-top: 2px;
+  }
+  table.recon-matrix tbody td {
+    padding: 13px 6px;
+    border-bottom: 1px solid var(--border-soft);
+    vertical-align: middle;
+    text-align: center;
+    font-size: 13px;
+  }
+  table.recon-matrix tbody td.first {
+    text-align: left;
+    padding-left: 14px;
+  }
+  table.recon-matrix tbody tr:hover td { background: rgba(186, 168, 132, 0.06); }
+  table.recon-matrix tbody tr.is-active td {
+    background: rgba(26, 107, 79, 0.05);
+  }
+  table.recon-matrix tbody tr.is-active td.first {
+    border-left: 3px solid var(--primary);
+    padding-left: 11px;
+  }
+  .topic-cell {
+    display: flex; align-items: baseline; gap: 12px;
+  }
+  .topic-cell .tnum {
+    font-family: 'JetBrains Mono';
+    font-size: 11px;
+    color: var(--text-muted);
+    width: 32px;
+    flex-shrink: 0;
+  }
+  .topic-cell .ttitle {
+    font-family: 'DM Sans';
+    font-weight: 500;
+    font-size: 13.5px;
+    color: var(--foreground);
+  }
+  tr.is-active .topic-cell .ttitle { font-weight: 600; }
+
+  /* Cell marks */
+  .mk {
+    display: inline-block;
+    width: 10px; height: 10px;
+    border-radius: 2px;
+    background: var(--primary);
+    vertical-align: -1px;
+  }
+  .mk-proposed {
+    background: transparent;
+    border: 1.5px solid var(--honey-400);
+    animation: proposal-pulse 2.5s ease-in-out infinite;
+  }
+  .mk-empty { color: var(--text-muted); font-family: 'JetBrains Mono'; font-size: 13px; }
+  .mk-count {
+    display: inline-flex; align-items: center; justify-content: center;
+    min-width: 22px; height: 22px;
+    padding: 0 6px;
+    border-radius: 6px;
+    font-family: 'JetBrains Mono';
+    font-size: 11px;
+    font-weight: 600;
+    background: rgba(184,95,63,0.10);
+    color: var(--ember-500);
+  }
+  .mk-count.zero { background: transparent; color: var(--text-muted); font-weight: 400; }
+
+  /* ================== HEATMAP ================== */
+  table.heat-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-feature-settings: "tnum" 1, "lnum" 1;
+  }
+  table.heat-table thead th {
+    padding: 12px 12px 10px;
+    font-family: 'DM Sans';
+    font-size: 10px;
+    font-weight: 600;
+    letter-spacing: 0.10em;
+    text-transform: uppercase;
+    color: var(--muted-foreground);
+    border-bottom: 1px solid var(--border);
+    text-align: left;
+    vertical-align: bottom;
+  }
+  table.heat-table thead th.gate { width: 130px; }
+  table.heat-table thead th.gate .gn {
+    display: block;
+    font-family: 'JetBrains Mono';
+    font-weight: 500;
+    font-size: 10px;
+    color: var(--text-muted);
+    letter-spacing: 0.04em;
+    margin-bottom: 4px;
+  }
+  table.heat-table tbody td {
+    padding: 14px 12px;
+    border-bottom: 1px solid var(--border-soft);
+    vertical-align: middle;
+  }
+  table.heat-table tbody td.first {
+    font-family: 'DM Sans';
+    font-weight: 600;
+    font-size: 14px;
+    color: var(--foreground);
+  }
+  table.heat-table tbody td.first .disc {
+    display: block;
+    font-family: 'JetBrains Mono';
+    font-size: 10px;
+    color: var(--text-muted);
+    margin-top: 2px;
+    letter-spacing: 0.02em;
+  }
+  table.heat-table tbody tr:hover td { background: rgba(186, 168, 132, 0.06); }
+
+  .heat-bar {
+    position: relative;
+    height: 6px;
+    background: rgba(31,26,18,0.05);
+    border-radius: 999px;
+    overflow: hidden;
+  }
+  .heat-bar .fill {
+    position: absolute; inset: 0 auto 0 0;
+    border-radius: 999px;
+    transition: width 0.3s ease;
+  }
+  .fill-strong { background: linear-gradient(90deg, var(--canopy-600), var(--canopy-400)); }
+  .fill-mid    { background: linear-gradient(90deg, var(--honey-600), var(--honey-400)); }
+  .fill-weak   { background: linear-gradient(90deg, var(--ember-500), var(--ember-400)); }
+  .heat-cell {
+    display: grid;
+    grid-template-columns: 1fr 32px;
+    gap: 10px;
+    align-items: center;
+  }
+  .heat-cell .pct {
+    font-family: 'JetBrains Mono';
+    font-size: 11px;
+    color: var(--text-2);
+    text-align: right;
+  }
+  .heat-cell.empty .pct { color: var(--text-muted); }
+
+  /* ================== TOPIC BRIEF ================== */
+  .brief-canvas {
+    overflow: hidden;
+    border-radius: var(--card-radius);
+    border: 1px solid var(--border);
+    background: var(--card);
+  }
+  .brief-canvas-head {
+    padding: 22px 28px;
+    background: linear-gradient(135deg, #0E0A06, #1F1A14);
+    color: white;
+  }
+  .brief-canvas-head .pre {
+    font-family: 'JetBrains Mono';
+    font-size: 11px;
+    color: rgba(255,255,255,0.55);
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    margin-bottom: 8px;
+  }
+  .brief-canvas-head h3 {
+    font-family: 'Bricolage Grotesque';
+    font-size: 32px;
+    font-weight: 700;
+    line-height: 1.05;
+    letter-spacing: -0.022em;
+    margin: 0 0 10px;
+    color: white;
+  }
+  .brief-canvas-head h3 em {
+    font-style: italic;
+    color: var(--honey-300);
+  }
+  .brief-canvas-head .sub {
+    font-family: 'DM Sans';
+    font-size: 13px;
+    color: rgba(255,255,255,0.55);
+    line-height: 1.5;
+  }
+
+  .brief-grid {
+    display: grid;
+    grid-template-columns: 1fr 280px;
+    gap: 0;
+  }
+  .brief-main { padding: 26px 28px; border-right: 1px solid var(--border); }
+  .brief-side { padding: 24px 22px; background: var(--card-2); }
+
+  .brief-canon {
+    font-family: 'DM Sans';
+    font-size: 15px;
+    line-height: 1.65;
+    color: var(--foreground);
+    margin: 0 0 24px;
+  }
+  .brief-canon::first-letter {
+    font-family: 'Bricolage Grotesque';
+    font-weight: 700;
+    font-size: 64px;
+    line-height: 0.85;
+    float: left;
+    margin: 4px 10px 0 -2px;
+    color: var(--primary);
+  }
+  .brief-canon em {
+    font-family: 'Source Serif 4';
+    font-style: italic;
+    color: var(--foreground);
+  }
+
+  .src-ex {
+    margin-top: 18px;
+    padding: 14px 16px;
+    background: var(--bg-raised);
+    border-radius: 10px;
+    border-left: 3px solid var(--primary);
+  }
+  .src-ex.honey  { border-left-color: var(--honey-400); }
+  .src-ex.nerdc  { border-left-color: var(--canopy-300); }
+  .src-ex.scheme { border-left-color: var(--ember-400); }
+  .src-ex .src-ex-head {
+    display: flex; align-items: center; justify-content: space-between;
+    margin-bottom: 8px;
+  }
+  .src-ex .src-ex-name {
+    font-family: 'DM Sans';
+    font-weight: 600;
+    font-size: 12px;
+    color: var(--foreground);
+  }
+  .src-ex .src-ex-id {
+    font-family: 'JetBrains Mono';
+    font-size: 10.5px;
+    color: var(--text-muted);
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+  }
+  .src-ex .src-ex-text {
+    font-family: 'Source Serif 4';
+    font-style: italic;
+    font-size: 14.5px;
+    line-height: 1.55;
+    color: var(--text-2);
+  }
+
+  .past-q {
+    margin-top: 22px;
+    padding: 18px 20px 16px;
+    border-radius: 10px;
+    background: linear-gradient(135deg, rgba(184,95,63,0.04), rgba(184,95,63,0.08));
+    border: 1px solid rgba(184,95,63,0.16);
+  }
+  .past-q .q-pre {
+    font-family: 'JetBrains Mono';
+    font-size: 10.5px;
+    color: var(--ember-500);
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    margin-bottom: 10px;
+    font-weight: 600;
+  }
+  .past-q .q-text {
+    font-family: 'Source Serif 4';
+    font-size: 15.5px;
+    line-height: 1.55;
+    color: var(--foreground);
+  }
+  .past-q .q-text .qn {
+    font-family: 'JetBrains Mono';
+    font-weight: 500;
+    font-size: 12px;
+    color: var(--ember-500);
+    margin-right: 10px;
+    vertical-align: 2px;
+  }
+  .past-q .q-foot {
+    margin-top: 12px;
+    font-family: 'DM Sans';
+    font-size: 12px;
+    color: var(--text-2);
+    line-height: 1.55;
+  }
+  .past-q .q-foot strong { color: var(--foreground); font-weight: 600; }
+
+  /* Sidebar inside brief */
+  .side-block { margin-bottom: 24px; }
+  .side-block:last-child { margin-bottom: 0; }
+  .side-block h5 {
+    font-family: 'DM Sans';
+    font-size: 10px;
+    font-weight: 600;
+    letter-spacing: 0.10em;
+    text-transform: uppercase;
+    color: var(--muted-foreground);
+    margin: 0 0 10px;
+  }
+  .timeline {
+    display: grid;
+    grid-template-columns: repeat(9, 1fr);
+    gap: 3px;
+    margin-bottom: 6px;
+  }
+  .timeline .cell {
+    height: 22px;
+    border-radius: 4px;
+    background: rgba(31,26,18,0.06);
+  }
+  .timeline .cell.on { background: var(--primary); }
+  .timeline .cell.weak {
+    background: var(--primary-soft);
+    border: 1px dashed var(--primary-line);
+  }
+  .timeline-foot {
+    display: flex; justify-content: space-between;
+    font-family: 'JetBrains Mono';
+    font-size: 9.5px;
+    color: var(--text-muted);
+    letter-spacing: 0.04em;
+  }
+
+  .conf-row {
+    display: flex; justify-content: space-between; align-items: baseline;
+    padding: 7px 0;
+    border-bottom: 1px solid var(--border-soft);
+  }
+  .conf-row:last-child { border-bottom: 0; }
+  .conf-row .k {
+    font-family: 'DM Sans';
+    font-size: 12px;
+    color: var(--text-2);
+  }
+  .conf-row .v {
+    font-family: 'JetBrains Mono';
+    font-size: 12px;
+    color: var(--foreground);
+    font-weight: 500;
+  }
+  .conf-row .v.weak { color: var(--warning); }
+
+  .vint {
+    padding: 10px 0;
+    border-bottom: 1px solid var(--border-soft);
+  }
+  .vint:last-child { border-bottom: 0; }
+  .vint .vh {
+    display: flex; align-items: center; gap: 8px;
+    margin-bottom: 5px;
+  }
+  .vint .vh .vt {
+    font-family: 'DM Sans';
+    font-size: 11px; font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: var(--primary);
+  }
+  .vint .vd {
+    font-family: 'Source Serif 4';
+    font-style: italic;
+    font-size: 13px;
+    line-height: 1.5;
+    color: var(--text-2);
+  }
+
+  .handoff-btn {
+    display: flex; justify-content: space-between; align-items: center;
+    width: 100%;
+    padding: 10px 14px;
+    border-radius: 8px;
+    border: 1px solid var(--border);
+    background: var(--card);
+    font-family: 'DM Sans';
+    font-size: 13px; font-weight: 500;
+    color: var(--foreground);
+    cursor: pointer;
+    transition: all 0.18s ease;
+    text-decoration: none;
+  }
+  .handoff-btn:hover {
+    background: var(--primary);
+    color: var(--primary-fg);
+    border-color: var(--primary);
+    transform: translateY(-1px);
+  }
+  .handoff-btn .arrow {
+    color: var(--text-muted);
+    transition: color 0.18s ease;
+  }
+  .handoff-btn:hover .arrow { color: var(--primary-fg); }
+
+  /* ================== AI PROPOSAL ROW ================== */
+  .proposal-card {
+    display: grid;
+    grid-template-columns: 36px 1fr 240px 70px 110px;
+    gap: 18px;
+    align-items: center;
+    padding: 16px 18px;
+    border: 1px solid var(--border);
+    background: var(--card);
+    border-radius: 10px;
+    transition: all 0.18s ease;
+  }
+  .proposal-card:hover {
+    border-color: var(--honey-400);
+    background: rgba(212,149,42,0.03);
+    box-shadow: var(--shadow-sm);
+  }
+  .proposal-card .pn {
+    font-family: 'Bricolage Grotesque';
+    font-size: 22px;
+    font-weight: 700;
+    color: var(--text-muted);
+    text-align: center;
+    font-feature-settings: "tnum" 1;
+  }
+  .proposal-card .pmain .pfrom {
+    font-family: 'DM Sans';
+    font-weight: 600;
+    font-size: 14px;
+    color: var(--foreground);
+  }
+  .proposal-card .pmain .pto {
+    font-family: 'DM Sans';
+    font-weight: 500;
+    font-size: 13px;
+    color: var(--primary);
+  }
+  .proposal-card .pmain .pmeta {
+    display: block;
+    font-family: 'JetBrains Mono';
+    font-size: 10.5px;
+    color: var(--text-muted);
+    letter-spacing: 0.02em;
+    margin-top: 3px;
+  }
+  .proposal-card .pnote {
+    font-family: 'Source Serif 4';
+    font-style: italic;
+    font-size: 12.5px;
+    line-height: 1.5;
+    color: var(--text-2);
+  }
+  .proposal-card .pconf {
+    font-family: 'JetBrains Mono';
+    font-size: 18px;
+    font-weight: 600;
+    color: var(--foreground);
+    text-align: right;
+  }
+  .proposal-card .pconf.weak { color: var(--warning); }
+  .proposal-card .pact {
+    text-align: right;
+  }
+
+  /* ================== FLOW DIAGRAM ================== */
+  .flow-stage {
+    background: var(--card);
+    border: 2px solid;
+    border-radius: 12px;
+    padding: 16px 18px;
+    min-width: 170px;
+  }
+  .flow-stage .fs-label {
+    font-family: 'DM Sans';
+    font-size: 9.5px;
+    font-weight: 700;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    margin-bottom: 6px;
+  }
+  .flow-stage .fs-title {
+    font-family: 'Bricolage Grotesque';
+    font-size: 16px;
+    font-weight: 700;
+    color: var(--foreground);
+    line-height: 1.15;
+  }
+  .flow-stage .fs-meta {
+    margin-top: 6px;
+    font-family: 'DM Sans';
+    font-size: 11px;
+    color: var(--text-2);
+    line-height: 1.4;
+  }
+  .flow-warning { border-color: rgba(212,149,42,0.32); background: rgba(212,149,42,0.04); }
+  .flow-warning .fs-label { color: var(--warning); }
+  .flow-primary { border-color: rgba(26,107,79,0.32); background: rgba(26,107,79,0.04); }
+  .flow-primary .fs-label { color: var(--primary); }
+  .flow-ember   { border-color: rgba(184,95,63,0.32); background: rgba(184,95,63,0.04); }
+  .flow-ember .fs-label { color: var(--ember-500); }
+  .flow-arrow {
+    font-size: 22px;
+    color: var(--primary);
+    line-height: 1;
+  }
+
+  /* ================== TAB CHIPS ================== */
+  .tab-chips {
+    display: inline-flex; gap: 2px;
+    padding: 3px;
+    border-radius: 12px;
+    background: var(--bg-raised);
+  }
+  .tab-chips button {
+    border: 0; cursor: pointer;
+    padding: 7px 14px;
+    border-radius: 9px;
+    font-family: 'DM Sans';
+    font-size: 12px; font-weight: 500;
+    color: var(--muted-foreground);
+    background: transparent;
+    transition: all 0.18s ease;
+  }
+  .tab-chips button.is-active {
+    background: var(--card);
+    color: var(--foreground);
+    font-weight: 600;
+    box-shadow: var(--shadow-sm);
+  }
+  .tab-chips button:hover:not(.is-active) { color: var(--foreground); }
+
+  /* ================== MISC ================== */
+  .grain-bg {
+    background-image: radial-gradient(rgba(31,26,18,0.018) 1px, transparent 1px);
+    background-size: 16px 16px;
+  }
+
+  .scan-line {
+    position: relative; overflow: hidden;
+  }
+  .scan-line::after {
+    content: '';
+    position: absolute; inset: 0;
+    background: linear-gradient(90deg, transparent, rgba(212,149,42,0.10), transparent);
+    animation: scan-bar 3s ease-in-out infinite;
+  }
+
+  /* Anchor offset for sticky theme switcher */
+  section[id] { scroll-margin-top: 24px; }
+
+  /* ============================================================
+     DARK MODE — Warm Editorial (dark)
+     ============================================================ */
+  body.dark {
+    --bg:               #161210;
+    --bg-raised:        #2A231C;
+    --card:             #1F1A14;
+    --card-2:           #2A231C;
+    --border:           #3A2E1F;
+    --border-2:         #2A2218;
+    --border-soft:      rgba(255,255,255,0.05);
+
+    --foreground:       #F2EBDD;
+    --text-2:           #C4B89E;
+    --muted-foreground: #9B8E72;
+    --text-muted:       #6E624C;
+
+    --primary-soft:     rgba(94,167,135,0.16);
+    --primary-line:     rgba(94,167,135,0.40);
+
+    --honey-soft:       rgba(212,149,42,0.18);
+    --destructive-soft: rgba(156,42,42,0.20);
+
+    --bg-hero:          #0E0A06;
+    --bg-hero-2:        #161210;
+
+    --shadow-sm: 0 1px 0 rgba(0,0,0,0.20), 0 1px 2px rgba(0,0,0,0.20);
+    --shadow-md: 0 6px 16px -6px rgba(0,0,0,0.40), 0 2px 4px rgba(0,0,0,0.20);
+    --shadow-lg: 0 18px 40px -12px rgba(0,0,0,0.55), 0 4px 10px rgba(0,0,0,0.25);
+  }
+
+  body.dark .src-chip.src-nerdc  { background: rgba(212,149,42,0.10); color: var(--honey-300); border-color: rgba(212,149,42,0.28); }
+  body.dark .src-chip.src-scheme { background: rgba(26,107,79,0.14);  color: var(--canopy-300); border-color: rgba(26,107,79,0.32); }
+  body.dark .src-chip.src-pastq  { background: rgba(184,95,63,0.14);  color: var(--ember-300);  border-color: rgba(184,95,63,0.32); }
+  body.dark .src-chip.src-jamb   { background: rgba(212,149,42,0.16); color: var(--honey-300); border-color: rgba(212,149,42,0.32); }
+  body.dark .src-chip.src-waec   { background: rgba(94,167,135,0.16); color: var(--canopy-300); border-color: rgba(94,167,135,0.36); }
+  body.dark .src-chip.src-missing{ color: var(--text-muted); border-color: var(--border); }
+
+  body.dark .pill-primary  { background: rgba(94,167,135,0.16); color: var(--canopy-300); }
+  body.dark .pill-warning  { background: rgba(212,149,42,0.16); color: var(--honey-300); }
+  body.dark .pill-danger   { background: rgba(156,42,42,0.20);  color: #E69A9A; }
+  body.dark .pill-neutral  { background: var(--bg-raised);      color: var(--text-2); }
+  body.dark .pill-solid    { background: var(--foreground);     color: var(--bg); }
+  body.dark .pill-reward   { background: rgba(212,149,42,0.16); color: var(--honey-300); border-color: rgba(212,149,42,0.32); }
+
+  body.dark .heat-bar { background: rgba(255,255,255,0.06); }
+
+  body.dark .stat-card,
+  body.dark .card,
+  body.dark .dark-card {
+    background: var(--card);
+    border-color: var(--border);
+  }
+  body.dark .src-ex { background: var(--bg-raised); }
+  body.dark .past-q {
+    background: linear-gradient(135deg, rgba(184,95,63,0.06), rgba(184,95,63,0.12));
+    border-color: rgba(184,95,63,0.24);
+  }
+  body.dark .callout-primary { background: rgba(94,167,135,0.06); border-color: rgba(94,167,135,0.22); }
+  body.dark .callout-warning { background: rgba(212,149,42,0.06); border-color: rgba(212,149,42,0.22); }
+  body.dark .callout-danger  { background: rgba(156,42,42,0.06);  border-color: rgba(156,42,42,0.22); }
+  body.dark .callout-ink     { background: var(--bg-raised); border-color: var(--border); }
+
+  body.dark .handoff-btn { background: var(--card); border-color: var(--border); color: var(--foreground); }
+  body.dark .proposal-card { background: var(--card); border-color: var(--border); }
+  body.dark .proposal-card:hover { background: rgba(212,149,42,0.06); border-color: rgba(212,149,42,0.40); }
+
+  body.dark table.atlas-table thead th,
+  body.dark table.recon-matrix thead th,
+  body.dark table.heat-table thead th { border-bottom-color: var(--border); }
+  body.dark table.atlas-table tbody td,
+  body.dark table.recon-matrix tbody td,
+  body.dark table.heat-table tbody td { border-bottom-color: var(--border-soft); }
+  body.dark table.atlas-table tbody tr:hover td,
+  body.dark table.recon-matrix tbody tr:hover td,
+  body.dark table.heat-table tbody tr:hover td { background: rgba(255,255,255,0.025); }
+  body.dark table.recon-matrix tbody tr.is-active td { background: rgba(94,167,135,0.08); }
+
+  body.dark .theme-switch { background: var(--card); border-color: var(--border); }
+
+  body.dark .tab-chips { background: var(--bg-raised); }
+  body.dark .tab-chips button.is-active { background: var(--card); color: var(--foreground); }
+
+  body.dark .grain-bg,
+  body.dark body {
+    background-image: radial-gradient(rgba(255,255,255,0.018) 1px, transparent 1px);
+  }
+
+  body.dark .brief-side { background: var(--bg-raised); }
+  body.dark .brief-canon::first-letter { color: var(--canopy-300); }
+  body.dark .timeline .cell { background: rgba(255,255,255,0.06); }
+  body.dark .timeline .cell.weak { background: rgba(94,167,135,0.18); border-color: rgba(94,167,135,0.45); }
+
+  /* ============================================================
+     READER MODE — Midnight Scholar
+     ============================================================ */
+  body.reader {
+    --bg:               #0A1929;
+    --bg-raised:        #14304A;
+    --card:             #0F2238;
+    --card-2:           #14304A;
+    --border:           #1F3D5C;
+    --border-2:         #18324B;
+    --border-soft:      rgba(255,255,255,0.06);
+
+    --foreground:       #DCE9F4;
+    --text-2:           #A8C0D6;
+    --muted-foreground: #7E97AF;
+    --text-muted:       #56708A;
+
+    --primary:          #3EBD93;
+    --primary-fg:       #0A1929;
+    --primary-soft:     rgba(62,189,147,0.18);
+    --primary-line:     rgba(62,189,147,0.40);
+    --canopy-300:       #65D6AD;
+    --canopy-400:       #4DC79E;
+    --canopy-600:       #2EA679;
+
+    --warning:          #E0BE6F;
+    --honey-300:        #F2D898;
+    --honey-400:        #E0BE6F;
+    --honey-600:        #C49B4A;
+    --honey-soft:       rgba(224,190,111,0.16);
+
+    --destructive:      #E08484;
+    --destructive-soft: rgba(224,132,132,0.16);
+    --ember-300:        #F0B89E;
+    --ember-400:        #DD9070;
+    --ember-500:        #C97455;
+
+    --bg-hero:          #061421;
+    --bg-hero-2:        #0A1929;
+
+    --shadow-sm: 0 1px 0 rgba(0,0,0,0.30), 0 1px 2px rgba(0,0,0,0.30);
+    --shadow-md: 0 6px 16px -6px rgba(0,0,0,0.50), 0 2px 4px rgba(0,0,0,0.30);
+    --shadow-lg: 0 18px 40px -12px rgba(0,0,0,0.65), 0 4px 10px rgba(0,0,0,0.35);
+
+    /* Typography swap — Outfit + Source Serif 4 */
+    font-family: 'Source Serif 4', Georgia, serif;
+  }
+
+  body.reader .font-display,
+  body.reader .hero-title,
+  body.reader .section-title,
+  body.reader .stat-value,
+  body.reader .h-frame,
+  body.reader .brief-canvas-head h3,
+  body.reader .brief-canon::first-letter {
+    font-family: 'Outfit', system-ui, sans-serif !important;
+    letter-spacing: -0.018em;
+  }
+
+  body.reader,
+  body.reader .body,
+  body.reader .lede,
+  body.reader p,
+  body.reader td,
+  body.reader th,
+  body.reader button,
+  body.reader .pill,
+  body.reader .src-chip,
+  body.reader .small-cap,
+  body.reader .label,
+  body.reader .stat-label,
+  body.reader .section-label {
+    font-family: 'Outfit', system-ui, sans-serif;
+  }
+
+  body.reader .ital,
+  body.reader .src-ex .src-ex-text,
+  body.reader .past-q .q-text,
+  body.reader .vint .vd,
+  body.reader .gates-explainer .ge .dx,
+  body.reader em,
+  body.reader .brief-canon em {
+    font-family: 'Source Serif 4', Georgia, serif;
+    font-style: italic;
+  }
+
+  body.reader .hero-title em,
+  body.reader .section-title em,
+  body.reader .brief-canvas-head h3 em {
+    color: #65D6AD;
+    background: linear-gradient(135deg, #65D6AD, #3EBD93);
+    -webkit-background-clip: text;
+    background-clip: text;
+    -webkit-text-fill-color: transparent;
+    font-style: normal;
+  }
+
+  body.reader .hero-eyebrow {
+    background: rgba(62,189,147,0.10);
+    border-color: rgba(62,189,147,0.25);
+    color: #65D6AD;
+  }
+  body.reader .hero-eyebrow .dot {
+    background: #3EBD93;
+    box-shadow: 0 0 14px rgba(62,189,147,0.65);
+  }
+  body.reader .hero-blob-1 {
+    background: radial-gradient(circle, rgba(62,189,147,0.16) 0%, transparent 70%);
+  }
+  body.reader .hero-blob-2 {
+    background: radial-gradient(circle, rgba(101,214,173,0.14) 0%, transparent 65%);
+  }
+  body.reader .hero-stripes,
+  body.reader footer.hero .hero-stripes { display: none; }
+
+  body.reader .src-chip.src-waec   { background: rgba(62,189,147,0.16); color: #65D6AD; border-color: rgba(62,189,147,0.36); }
+  body.reader .src-chip.src-jamb   { background: rgba(224,190,111,0.16); color: #F2D898; border-color: rgba(224,190,111,0.32); }
+  body.reader .src-chip.src-nerdc  { background: rgba(224,190,111,0.10); color: #F2D898; border-color: rgba(224,190,111,0.24); }
+  body.reader .src-chip.src-scheme { background: rgba(62,189,147,0.10); color: #65D6AD; border-color: rgba(62,189,147,0.26); }
+  body.reader .src-chip.src-pastq  { background: rgba(221,144,112,0.14); color: #F0B89E; border-color: rgba(221,144,112,0.32); }
+  body.reader .src-chip.src-missing{ color: var(--text-muted); border-color: var(--border); }
+  body.reader .src-chip.src-proposed { background: rgba(224,190,111,0.10); color: #F2D898; border-color: rgba(224,190,111,0.32); }
+
+  body.reader .pill-primary  { background: rgba(62,189,147,0.16); color: #65D6AD; }
+  body.reader .pill-warning  { background: rgba(224,190,111,0.16); color: #F2D898; }
+  body.reader .pill-danger   { background: rgba(224,132,132,0.16); color: #F0AAAA; }
+  body.reader .pill-neutral  { background: var(--bg-raised);       color: var(--text-2); }
+  body.reader .pill-solid    { background: var(--foreground);      color: var(--bg); }
+  body.reader .pill-reward   { background: rgba(224,190,111,0.16); color: #F2D898; border-color: rgba(224,190,111,0.32); }
+
+  body.reader .stat-card,
+  body.reader .card,
+  body.reader .dark-card {
+    background: var(--card);
+    border-color: var(--border);
+  }
+  body.reader .heat-bar { background: rgba(255,255,255,0.08); }
+  body.reader .fill-strong { background: linear-gradient(90deg, #2EA679, #65D6AD); }
+  body.reader .fill-mid    { background: linear-gradient(90deg, #C49B4A, #F2D898); }
+  body.reader .fill-weak   { background: linear-gradient(90deg, #C97455, #F0B89E); }
+
+  body.reader .src-ex { background: var(--bg-raised); border-left-color: var(--primary); }
+  body.reader .src-ex.honey  { border-left-color: #E0BE6F; }
+  body.reader .src-ex.nerdc  { border-left-color: #65D6AD; }
+  body.reader .src-ex.scheme { border-left-color: #DD9070; }
+  body.reader .past-q {
+    background: linear-gradient(135deg, rgba(221,144,112,0.06), rgba(221,144,112,0.14));
+    border-color: rgba(221,144,112,0.28);
+  }
+  body.reader .past-q .q-pre,
+  body.reader .past-q .q-text .qn { color: #F0B89E; }
+
+  body.reader .callout-primary { background: rgba(62,189,147,0.07); border-color: rgba(62,189,147,0.24); color: var(--text-2); }
+  body.reader .callout-warning { background: rgba(224,190,111,0.07); border-color: rgba(224,190,111,0.24); color: var(--text-2); }
+  body.reader .callout-danger  { background: rgba(224,132,132,0.07); border-color: rgba(224,132,132,0.24); color: var(--text-2); }
+  body.reader .callout-ink     { background: var(--bg-raised); border-color: var(--border); color: var(--text-2); }
+
+  body.reader .handoff-btn { background: var(--card); border-color: var(--border); color: var(--foreground); }
+  body.reader .handoff-btn:hover { background: var(--primary); color: var(--primary-fg); border-color: var(--primary); }
+
+  body.reader .proposal-card { background: var(--card); border-color: var(--border); }
+  body.reader .proposal-card:hover { background: rgba(224,190,111,0.06); border-color: rgba(224,190,111,0.40); }
+  body.reader .proposal-card .pmain .pto { color: #65D6AD; }
+
+  body.reader table.atlas-table thead th,
+  body.reader table.recon-matrix thead th,
+  body.reader table.heat-table thead th { border-bottom-color: var(--border); }
+  body.reader table.atlas-table tbody td,
+  body.reader table.recon-matrix tbody td,
+  body.reader table.heat-table tbody td { border-bottom-color: var(--border-soft); }
+  body.reader table.atlas-table tbody tr:hover td,
+  body.reader table.recon-matrix tbody tr:hover td,
+  body.reader table.heat-table tbody tr:hover td { background: rgba(62,189,147,0.04); }
+  body.reader table.recon-matrix tbody tr.is-active td { background: rgba(62,189,147,0.08); }
+  body.reader table.recon-matrix tbody tr.is-active td.first { border-left-color: #3EBD93; }
+  body.reader .mk { background: #3EBD93; }
+  body.reader .mk-proposed { background: transparent; border-color: #E0BE6F; }
+  body.reader .mk-count { background: rgba(221,144,112,0.16); color: #F0B89E; }
+
+  body.reader .theme-switch { background: var(--card); border-color: var(--border); }
+  body.reader .theme-switch button.is-active { background: var(--primary); color: var(--primary-fg); }
+
+  body.reader .tab-chips { background: var(--bg-raised); }
+  body.reader .tab-chips button.is-active { background: var(--card); color: var(--foreground); }
+
+  body.reader body,
+  body.reader { background-image: radial-gradient(rgba(255,255,255,0.020) 1px, transparent 1px); background-size: 18px 18px; }
+
+  body.reader .brief-side { background: var(--bg-raised); }
+  body.reader .brief-canvas-head { background: linear-gradient(135deg, #061421, #0A1929); }
+  body.reader .brief-canon::first-letter { color: #3EBD93; }
+  body.reader .brief-canon em { color: var(--foreground); }
+  body.reader .timeline .cell { background: rgba(255,255,255,0.08); }
+  body.reader .timeline .cell.on { background: #3EBD93; }
+  body.reader .timeline .cell.weak { background: rgba(62,189,147,0.20); border: 1px dashed rgba(62,189,147,0.50); }
+
+  body.reader .section-label { color: #65D6AD; }
+  body.reader .small-cap-primary { color: #65D6AD; }
+  body.reader .section-label-line { background: linear-gradient(to right, rgba(62,189,147,0.30), transparent); }
+
+  body.reader .vint .vh .vt { color: #65D6AD; }
+
+  body.reader .flow-primary { border-color: rgba(62,189,147,0.36); background: rgba(62,189,147,0.06); }
+  body.reader .flow-primary .fs-label { color: #65D6AD; }
+  body.reader .flow-warning { border-color: rgba(224,190,111,0.36); background: rgba(224,190,111,0.06); }
+  body.reader .flow-warning .fs-label { color: #F2D898; }
+  body.reader .flow-ember   { border-color: rgba(221,144,112,0.36); background: rgba(221,144,112,0.06); }
+  body.reader .flow-ember .fs-label { color: #F0B89E; }
+  body.reader .flow-arrow { color: #3EBD93; }
+
+  body.reader .step-bullet-canopy { background: #3EBD93; color: #0A1929; }
+  body.reader .step-bullet-honey  { background: #E0BE6F; color: #0A1929; }
+  body.reader .step-bullet-ember  { background: #DD9070; color: #0A1929; }
+  body.reader .step-bullet-danger { background: #E08484; color: #0A1929; }
+  body.reader .step-bullet-ink    { background: var(--foreground); color: var(--bg); }
+</style>
+</head>
+<body>
+
+<!-- THEME SWITCHER -->
+<div class="theme-switch" role="group" aria-label="Theme">
+  <button data-theme="light" class="is-active">Light</button>
+  <button data-theme="dark">Dark</button>
+  <button data-theme="reader">Reader</button>
+</div>
+
+<!-- ================================================================
+     HERO
+     ================================================================ -->
+<section class="hero">
+  <div class="hero-stripes"></div>
+  <div class="hero-blob-1"></div>
+  <div class="hero-blob-2"></div>
+  <div class="hero-grain"></div>
+
+  <div class="hero-content">
+    <div class="hero-eyebrow">
+      <span class="dot"></span>
+      Internal Admin · Curriculum Studio
+    </div>
+
+    <h1 class="hero-title">Where the curriculum gets <em>reconciled.</em></h1>
+
+    <p class="hero-lede">
+      A workspace for the editorial backroom. Reconciles the WAEC syllabus, the JAMB syllabus,
+      the NERDC scheme of work, the platform-shared school scheme, and indexed past papers
+      into a single canonical topic graph.
+      <strong>Content Studio reads from it; it never writes back.</strong>
+    </p>
+
+    <div class="hero-meta">
+      <div class="hero-meta-item">
+        <span class="v">71</span>
+        <span class="l">subjects&nbsp;indexed</span>
+      </div>
+      <div class="hero-meta-sep"></div>
+      <div class="hero-meta-item">
+        <span class="v">5</span>
+        <span class="l">reconciled</span>
+      </div>
+      <div class="hero-meta-sep"></div>
+      <div class="hero-meta-item">
+        <span class="v">12</span>
+        <span class="l">past&nbsp;papers</span>
+      </div>
+      <div class="hero-meta-sep"></div>
+      <div class="hero-meta-item">
+        <span class="v">47</span>
+        <span class="l">awaiting&nbsp;review</span>
+      </div>
+    </div>
+  </div>
+</section>
+
+<main class="mx-auto max-w-[1200px] px-10 max-md:px-4">
+
+  <!-- ============================================================
+       OVERVIEW: 4 CARDS LINKING TO EACH SECTION
+       ============================================================ -->
+  <section class="border-b border-[var(--border-2)] py-14">
+    <div class="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+
+      <a href="#atlas" class="card card-lift block p-6">
+        <div class="mb-3 text-2xl">🗂️</div>
+        <h3 class="text-[16px] font-bold font-display">Subject Atlas</h3>
+        <p class="mt-1.5 text-[13px] leading-relaxed text-[var(--muted-foreground)]">
+          Index of every WAEC subject, with which sources have been ingested and how far each is from being authoring-ready.
+        </p>
+        <div class="mt-4 border-t border-[var(--border-soft)] pt-3">
+          <span class="text-[22px] font-bold font-display text-[var(--primary)]">71</span>
+          <span class="ml-2 text-[11px] text-[var(--muted-foreground)]">subjects indexed</span>
+        </div>
+      </a>
+
+      <a href="#matrix" class="card card-lift block p-6">
+        <div class="mb-3 text-2xl">🧭</div>
+        <h3 class="text-[16px] font-bold font-display">Reconciliation Matrix</h3>
+        <p class="mt-1.5 text-[13px] leading-relaxed text-[var(--muted-foreground)]">
+          Topics across the canonical graph mapped against four source channels and the past-question corpus.
+        </p>
+        <div class="mt-4 border-t border-[var(--border-soft)] pt-3">
+          <span class="text-[22px] font-bold font-display text-[var(--primary)]">14&nbsp;<span class="text-[var(--text-muted)] font-normal">/&nbsp;33</span></span>
+          <span class="ml-2 text-[11px] text-[var(--muted-foreground)]">SS1 Physics done</span>
+        </div>
+      </a>
+
+      <a href="#brief" class="card card-lift block p-6">
+        <div class="mb-3 text-2xl">📜</div>
+        <h3 class="text-[16px] font-bold font-display">Topic Brief</h3>
+        <p class="mt-1.5 text-[13px] leading-relaxed text-[var(--muted-foreground)]">
+          The artefact handed to Content Studio when a topic is ready: definition, source excerpts, calibration, viz brief.
+        </p>
+        <div class="mt-4 border-t border-[var(--border-soft)] pt-3">
+          <span class="text-[22px] font-bold font-display text-[var(--primary)]">27</span>
+          <span class="ml-2 text-[11px] text-[var(--muted-foreground)]">briefs ready</span>
+        </div>
+      </a>
+
+      <a href="#coverage" class="card card-lift block p-6">
+        <div class="mb-3 text-2xl">📊</div>
+        <h3 class="text-[16px] font-bold font-display">Coverage</h3>
+        <p class="mt-1.5 text-[13px] leading-relaxed text-[var(--muted-foreground)]">
+          Five readiness gates per subject. A bird's-eye view of where the stack is ready and where it's stuck.
+        </p>
+        <div class="mt-4 border-t border-[var(--border-soft)] pt-3">
+          <span class="text-[22px] font-bold font-display text-[var(--primary)]">5&nbsp;<span class="text-[var(--text-muted)] font-normal">/&nbsp;71</span></span>
+          <span class="ml-2 text-[11px] text-[var(--muted-foreground)]">authoring-ready</span>
+        </div>
+      </a>
+    </div>
+  </section>
+
+  <!-- ============================================================
+       SECTION 1: SUBJECT ATLAS
+       ============================================================ -->
+  <section id="atlas" class="border-b border-[var(--border-2)] py-14">
+    <div class="section-label-row">
+      <span class="section-label">Subject inventory</span>
+      <span class="section-label-line"></span>
+    </div>
+    <h2 class="section-title">What we have. <em>What's still missing.</em></h2>
+
+    <p class="mb-8 max-w-[720px] text-[14.5px] leading-relaxed text-[var(--text-2)]">
+      WAEC publishes 71 subjects in the West African Senior School Certificate. Each
+      subject needs four sources before Content Studio can author confidently against it:
+      the WAEC syllabus itself, the JAMB syllabus where applicable, the NERDC scheme of
+      work, and the platform-shared scheme. Past-question calibration is a fifth, optional
+      layer that sharpens authoring.
+    </p>
+
+    <!-- Stat ribbon -->
+    <div class="mb-10 grid grid-cols-1 gap-3 md:grid-cols-4">
+      <div class="stat-card">
+        <div class="stat-label">Subjects indexed</div>
+        <div class="stat-value">71</div>
+        <div class="stat-meta">scraped · waecsyllabus.com · 2026 ed.</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">Reconciled</div>
+        <div class="stat-value">5<span class="denom">&thinsp;/&thinsp;71</span></div>
+        <div class="stat-meta">canonical sets approved</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">Past papers indexed</div>
+        <div class="stat-value">12<span class="denom"> · waec</span></div>
+        <div class="stat-meta">+0 jamb · +0 neco</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">Authoring-ready topics</div>
+        <div class="stat-value">47<span class="denom">&thinsp;/&thinsp;~462</span></div>
+        <div class="stat-meta">10.2% of SS1 build target</div>
+      </div>
+    </div>
+
+    <!-- Flagship subject grid -->
+    <div class="mb-4 flex items-baseline justify-between">
+      <p class="small-cap small-cap-primary">Flagship subjects · top of the build queue</p>
+      <div class="tab-chips">
+        <button class="is-active">Flagship 6</button>
+        <button>All sciences</button>
+        <button>Compulsory</button>
+        <button>All 71</button>
+      </div>
+    </div>
+
+    <div class="mb-12 grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+
+      <!-- Physics — Active flagship -->
+      <div class="dark-card">
+        <div class="dark-card-head dark-head-canopy">
+          <div class="flex items-baseline justify-between">
+            <span class="font-display text-[22px] font-bold tracking-tight" style="color: var(--canopy-300);">Physics</span>
+            <span class="font-mono text-[10.5px] uppercase tracking-[0.06em] text-white/55">SS1 · 33 topics</span>
+          </div>
+          <div class="mt-1 text-[12px] text-white/55">Sciences · Priority 1</div>
+        </div>
+        <div class="space-y-3 p-5">
+          <div class="flex items-baseline justify-between">
+            <span class="font-display text-[34px] font-bold tabular-nums">64<span class="text-[18px] font-normal text-[var(--text-muted)]">%</span></span>
+            <span class="text-[11px] text-[var(--muted-foreground)]">reconciled</span>
+          </div>
+          <div class="heat-bar"><div class="fill fill-strong" style="width: 64%;"></div></div>
+          <div class="flex flex-wrap gap-1.5 pt-1">
+            <span class="src-chip src-waec">WAEC</span>
+            <span class="src-chip src-jamb">JAMB</span>
+            <span class="src-chip src-proposed">NERDC ai</span>
+            <span class="src-chip src-scheme">Scheme</span>
+            <span class="src-chip src-pastq">Past·Q · 12</span>
+          </div>
+          <div class="grid grid-cols-2 gap-y-1.5 pt-2 text-[11px]">
+            <span class="text-[var(--muted-foreground)]">Topics linked</span>
+            <span class="text-right font-semibold tabular-nums">21 / 33</span>
+            <span class="text-[var(--muted-foreground)]">Past Q corpus</span>
+            <span class="text-right font-semibold tabular-nums">247</span>
+            <span class="text-[var(--muted-foreground)]">Visualization score</span>
+            <span class="text-right font-semibold">★★★★★</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Mathematics — Furthest along -->
+      <div class="dark-card">
+        <div class="dark-card-head dark-head-honey">
+          <div class="flex items-baseline justify-between">
+            <span class="font-display text-[22px] font-bold tracking-tight" style="color: var(--honey-300);">Mathematics</span>
+            <span class="font-mono text-[10.5px] uppercase tracking-[0.06em] text-white/55">SS1 · 38 topics</span>
+          </div>
+          <div class="mt-1 text-[12px] text-white/55">Core · Priority 1</div>
+        </div>
+        <div class="space-y-3 p-5">
+          <div class="flex items-baseline justify-between">
+            <span class="font-display text-[34px] font-bold tabular-nums">87<span class="text-[18px] font-normal text-[var(--text-muted)]">%</span></span>
+            <span class="text-[11px] text-[var(--muted-foreground)]">reconciled</span>
+          </div>
+          <div class="heat-bar"><div class="fill fill-strong" style="width: 87%;"></div></div>
+          <div class="flex flex-wrap gap-1.5 pt-1">
+            <span class="src-chip src-waec">WAEC</span>
+            <span class="src-chip src-jamb">JAMB</span>
+            <span class="src-chip src-nerdc">NERDC</span>
+            <span class="src-chip src-scheme">Scheme</span>
+            <span class="src-chip src-pastq">Past·Q · 14</span>
+          </div>
+          <div class="grid grid-cols-2 gap-y-1.5 pt-2 text-[11px]">
+            <span class="text-[var(--muted-foreground)]">Topics linked</span>
+            <span class="text-right font-semibold tabular-nums">33 / 38</span>
+            <span class="text-[var(--muted-foreground)]">Past Q corpus</span>
+            <span class="text-right font-semibold tabular-nums">312</span>
+            <span class="text-[var(--muted-foreground)]">Visualization score</span>
+            <span class="text-right font-semibold">★★★★<span class="text-[var(--text-muted)]">★</span></span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Biology — Mid -->
+      <div class="dark-card">
+        <div class="dark-card-head dark-head-canopy">
+          <div class="flex items-baseline justify-between">
+            <span class="font-display text-[22px] font-bold tracking-tight" style="color: var(--canopy-300);">Biology</span>
+            <span class="font-mono text-[10.5px] uppercase tracking-[0.06em] text-white/55">SS1 · 30 topics</span>
+          </div>
+          <div class="mt-1 text-[12px] text-white/55">Sciences · Priority 2</div>
+        </div>
+        <div class="space-y-3 p-5">
+          <div class="flex items-baseline justify-between">
+            <span class="font-display text-[34px] font-bold tabular-nums">70<span class="text-[18px] font-normal text-[var(--text-muted)]">%</span></span>
+            <span class="text-[11px] text-[var(--muted-foreground)]">reconciled</span>
+          </div>
+          <div class="heat-bar"><div class="fill fill-strong" style="width: 70%;"></div></div>
+          <div class="flex flex-wrap gap-1.5 pt-1">
+            <span class="src-chip src-waec">WAEC</span>
+            <span class="src-chip src-jamb">JAMB</span>
+            <span class="src-chip src-proposed">NERDC ai</span>
+            <span class="src-chip src-scheme">Scheme</span>
+            <span class="src-chip src-pastq">Past·Q · 9</span>
+          </div>
+          <div class="grid grid-cols-2 gap-y-1.5 pt-2 text-[11px]">
+            <span class="text-[var(--muted-foreground)]">Topics linked</span>
+            <span class="text-right font-semibold tabular-nums">21 / 30</span>
+            <span class="text-[var(--muted-foreground)]">Past Q corpus</span>
+            <span class="text-right font-semibold tabular-nums">186</span>
+            <span class="text-[var(--muted-foreground)]">Visualization score</span>
+            <span class="text-right font-semibold">★★★★★</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Chemistry -->
+      <div class="dark-card">
+        <div class="dark-card-head dark-head-ember">
+          <div class="flex items-baseline justify-between">
+            <span class="font-display text-[22px] font-bold tracking-tight" style="color: var(--ember-300);">Chemistry</span>
+            <span class="font-mono text-[10.5px] uppercase tracking-[0.06em] text-white/55">SS1 · 28 topics</span>
+          </div>
+          <div class="mt-1 text-[12px] text-white/55">Sciences · Priority 2</div>
+        </div>
+        <div class="space-y-3 p-5">
+          <div class="flex items-baseline justify-between">
+            <span class="font-display text-[34px] font-bold tabular-nums">64<span class="text-[18px] font-normal text-[var(--text-muted)]">%</span></span>
+            <span class="text-[11px] text-[var(--muted-foreground)]">reconciled</span>
+          </div>
+          <div class="heat-bar"><div class="fill fill-strong" style="width: 64%;"></div></div>
+          <div class="flex flex-wrap gap-1.5 pt-1">
+            <span class="src-chip src-waec">WAEC</span>
+            <span class="src-chip src-jamb">JAMB</span>
+            <span class="src-chip src-proposed">NERDC ai</span>
+            <span class="src-chip src-scheme">Scheme</span>
+            <span class="src-chip src-pastq">Past·Q · 7</span>
+          </div>
+          <div class="grid grid-cols-2 gap-y-1.5 pt-2 text-[11px]">
+            <span class="text-[var(--muted-foreground)]">Topics linked</span>
+            <span class="text-right font-semibold tabular-nums">18 / 28</span>
+            <span class="text-[var(--muted-foreground)]">Past Q corpus</span>
+            <span class="text-right font-semibold tabular-nums">142</span>
+            <span class="text-[var(--muted-foreground)]">Visualization score</span>
+            <span class="text-right font-semibold">★★★★<span class="text-[var(--text-muted)]">★</span></span>
+          </div>
+        </div>
+      </div>
+
+      <!-- English Language -->
+      <div class="dark-card">
+        <div class="dark-card-head dark-head-honey">
+          <div class="flex items-baseline justify-between">
+            <span class="font-display text-[22px] font-bold tracking-tight" style="color: var(--honey-300);">English Language</span>
+            <span class="font-mono text-[10.5px] uppercase tracking-[0.06em] text-white/55">SS1 · 24 topics</span>
+          </div>
+          <div class="mt-1 text-[12px] text-white/55">Core · Priority 1</div>
+        </div>
+        <div class="space-y-3 p-5">
+          <div class="flex items-baseline justify-between">
+            <span class="font-display text-[34px] font-bold tabular-nums">79<span class="text-[18px] font-normal text-[var(--text-muted)]">%</span></span>
+            <span class="text-[11px] text-[var(--muted-foreground)]">reconciled</span>
+          </div>
+          <div class="heat-bar"><div class="fill fill-strong" style="width: 79%;"></div></div>
+          <div class="flex flex-wrap gap-1.5 pt-1">
+            <span class="src-chip src-waec">WAEC</span>
+            <span class="src-chip src-jamb">JAMB</span>
+            <span class="src-chip src-missing">NERDC</span>
+            <span class="src-chip src-scheme">Scheme</span>
+            <span class="src-chip src-pastq">Past·Q · 8</span>
+          </div>
+          <div class="grid grid-cols-2 gap-y-1.5 pt-2 text-[11px]">
+            <span class="text-[var(--muted-foreground)]">Topics linked</span>
+            <span class="text-right font-semibold tabular-nums">19 / 24</span>
+            <span class="text-[var(--muted-foreground)]">Past Q corpus</span>
+            <span class="text-right font-semibold tabular-nums">98</span>
+            <span class="text-[var(--muted-foreground)]">Visualization score</span>
+            <span class="text-right font-semibold">★★<span class="text-[var(--text-muted)]">★★★</span></span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Geography -->
+      <div class="dark-card">
+        <div class="dark-card-head dark-head-ember">
+          <div class="flex items-baseline justify-between">
+            <span class="font-display text-[22px] font-bold tracking-tight" style="color: var(--ember-300);">Geography</span>
+            <span class="font-mono text-[10.5px] uppercase tracking-[0.06em] text-white/55">SS1 · 26 topics</span>
+          </div>
+          <div class="mt-1 text-[12px] text-white/55">Humanities · Priority 3</div>
+        </div>
+        <div class="space-y-3 p-5">
+          <div class="flex items-baseline justify-between">
+            <span class="font-display text-[34px] font-bold tabular-nums">54<span class="text-[18px] font-normal text-[var(--text-muted)]">%</span></span>
+            <span class="text-[11px] text-[var(--muted-foreground)]">reconciled</span>
+          </div>
+          <div class="heat-bar"><div class="fill fill-mid" style="width: 54%;"></div></div>
+          <div class="flex flex-wrap gap-1.5 pt-1">
+            <span class="src-chip src-waec">WAEC</span>
+            <span class="src-chip src-jamb">JAMB</span>
+            <span class="src-chip src-missing">NERDC</span>
+            <span class="src-chip src-scheme">Scheme</span>
+            <span class="src-chip src-pastq">Past·Q · 5</span>
+          </div>
+          <div class="grid grid-cols-2 gap-y-1.5 pt-2 text-[11px]">
+            <span class="text-[var(--muted-foreground)]">Topics linked</span>
+            <span class="text-right font-semibold tabular-nums">14 / 26</span>
+            <span class="text-[var(--muted-foreground)]">Past Q corpus</span>
+            <span class="text-right font-semibold tabular-nums">71</span>
+            <span class="text-[var(--muted-foreground)]">Visualization score</span>
+            <span class="text-right font-semibold">★★★★<span class="text-[var(--text-muted)]">★</span></span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- All-subjects table preview -->
+    <div class="card overflow-hidden mb-8">
+      <div class="card-head flex items-baseline justify-between">
+        <span class="text-[13px] font-semibold">All subjects · top 18</span>
+        <span class="text-[11px] text-[var(--muted-foreground)]">Sorted by ingestion priority · scroll for the remaining 53</span>
+      </div>
+      <div class="px-2 pb-2 max-h-[420px] overflow-y-auto">
+        <table class="atlas-table">
+          <thead>
+            <tr>
+              <th>№</th>
+              <th>Subject</th>
+              <th class="cen">WAEC</th>
+              <th class="cen">JAMB</th>
+              <th class="cen">NERDC</th>
+              <th class="cen">Scheme</th>
+              <th class="num">Past&nbsp;Q</th>
+              <th class="num">Reconciled</th>
+              <th>Status</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td class="num text-[var(--text-muted)]">01</td>
+              <td><span class="subj-name">Mathematics</span><span class="subj-disc">core</span></td>
+              <td class="cen"><span class="mk"></span></td>
+              <td class="cen"><span class="mk"></span></td>
+              <td class="cen"><span class="mk"></span></td>
+              <td class="cen"><span class="mk"></span></td>
+              <td class="num">14</td>
+              <td class="num">33&nbsp;<span class="text-[var(--text-muted)]">/&nbsp;38</span></td>
+              <td><span class="pill pill-primary no-dot">Ready to author</span></td>
+            </tr>
+            <tr>
+              <td class="num text-[var(--text-muted)]">02</td>
+              <td><span class="subj-name">English Language</span><span class="subj-disc">core</span></td>
+              <td class="cen"><span class="mk"></span></td>
+              <td class="cen"><span class="mk"></span></td>
+              <td class="cen"><span class="mk-empty">—</span></td>
+              <td class="cen"><span class="mk"></span></td>
+              <td class="num">8</td>
+              <td class="num">19&nbsp;<span class="text-[var(--text-muted)]">/&nbsp;24</span></td>
+              <td><span class="pill pill-primary no-dot">Ready to author</span></td>
+            </tr>
+            <tr>
+              <td class="num text-[var(--text-muted)]">03</td>
+              <td><span class="subj-name">Physics</span><span class="subj-disc">sciences</span></td>
+              <td class="cen"><span class="mk"></span></td>
+              <td class="cen"><span class="mk"></span></td>
+              <td class="cen"><span class="mk mk-proposed"></span></td>
+              <td class="cen"><span class="mk"></span></td>
+              <td class="num">12</td>
+              <td class="num">21&nbsp;<span class="text-[var(--text-muted)]">/&nbsp;33</span></td>
+              <td><span class="pill pill-warning no-dot">Reconciling</span></td>
+            </tr>
+            <tr>
+              <td class="num text-[var(--text-muted)]">04</td>
+              <td><span class="subj-name">Biology</span><span class="subj-disc">sciences</span></td>
+              <td class="cen"><span class="mk"></span></td>
+              <td class="cen"><span class="mk"></span></td>
+              <td class="cen"><span class="mk mk-proposed"></span></td>
+              <td class="cen"><span class="mk"></span></td>
+              <td class="num">9</td>
+              <td class="num">21&nbsp;<span class="text-[var(--text-muted)]">/&nbsp;30</span></td>
+              <td><span class="pill pill-warning no-dot">Reconciling</span></td>
+            </tr>
+            <tr>
+              <td class="num text-[var(--text-muted)]">05</td>
+              <td><span class="subj-name">Chemistry</span><span class="subj-disc">sciences</span></td>
+              <td class="cen"><span class="mk"></span></td>
+              <td class="cen"><span class="mk"></span></td>
+              <td class="cen"><span class="mk mk-proposed"></span></td>
+              <td class="cen"><span class="mk"></span></td>
+              <td class="num">7</td>
+              <td class="num">18&nbsp;<span class="text-[var(--text-muted)]">/&nbsp;28</span></td>
+              <td><span class="pill pill-warning no-dot">Reconciling</span></td>
+            </tr>
+            <tr>
+              <td class="num text-[var(--text-muted)]">06</td>
+              <td><span class="subj-name">Geography</span><span class="subj-disc">humanities</span></td>
+              <td class="cen"><span class="mk"></span></td>
+              <td class="cen"><span class="mk"></span></td>
+              <td class="cen"><span class="mk-empty">—</span></td>
+              <td class="cen"><span class="mk"></span></td>
+              <td class="num">5</td>
+              <td class="num">14&nbsp;<span class="text-[var(--text-muted)]">/&nbsp;26</span></td>
+              <td><span class="pill pill-warning no-dot">Reconciling</span></td>
+            </tr>
+            <tr>
+              <td class="num text-[var(--text-muted)]">07</td>
+              <td><span class="subj-name">Economics</span><span class="subj-disc">commerce</span></td>
+              <td class="cen"><span class="mk"></span></td>
+              <td class="cen"><span class="mk"></span></td>
+              <td class="cen"><span class="mk-empty">—</span></td>
+              <td class="cen"><span class="mk"></span></td>
+              <td class="num">6</td>
+              <td class="num">12&nbsp;<span class="text-[var(--text-muted)]">/&nbsp;22</span></td>
+              <td><span class="pill pill-warning no-dot">Reconciling</span></td>
+            </tr>
+            <tr>
+              <td class="num text-[var(--text-muted)]">08</td>
+              <td><span class="subj-name">Government</span><span class="subj-disc">humanities</span></td>
+              <td class="cen"><span class="mk"></span></td>
+              <td class="cen"><span class="mk"></span></td>
+              <td class="cen"><span class="mk-empty">—</span></td>
+              <td class="cen"><span class="mk"></span></td>
+              <td class="num">4</td>
+              <td class="num">9&nbsp;<span class="text-[var(--text-muted)]">/&nbsp;20</span></td>
+              <td><span class="pill pill-warning no-dot">Reconciling</span></td>
+            </tr>
+            <tr>
+              <td class="num text-[var(--text-muted)]">09</td>
+              <td><span class="subj-name">Literature in English</span><span class="subj-disc">humanities</span></td>
+              <td class="cen"><span class="mk"></span></td>
+              <td class="cen"><span class="mk"></span></td>
+              <td class="cen"><span class="mk-empty">—</span></td>
+              <td class="cen"><span class="mk"></span></td>
+              <td class="num">3</td>
+              <td class="num">6&nbsp;<span class="text-[var(--text-muted)]">/&nbsp;16</span></td>
+              <td><span class="pill pill-warning no-dot">Reconciling</span></td>
+            </tr>
+            <tr>
+              <td class="num text-[var(--text-muted)]">10</td>
+              <td><span class="subj-name">Agricultural Science</span><span class="subj-disc">vocational</span></td>
+              <td class="cen"><span class="mk"></span></td>
+              <td class="cen"><span class="mk"></span></td>
+              <td class="cen"><span class="mk-empty">—</span></td>
+              <td class="cen"><span class="mk"></span></td>
+              <td class="num">2</td>
+              <td class="num">4&nbsp;<span class="text-[var(--text-muted)]">/&nbsp;18</span></td>
+              <td><span class="pill pill-neutral no-dot">Ingested</span></td>
+            </tr>
+            <tr>
+              <td class="num text-[var(--text-muted)]">11</td>
+              <td><span class="subj-name">Computer Studies</span><span class="subj-disc">vocational</span></td>
+              <td class="cen"><span class="mk"></span></td>
+              <td class="cen"><span class="mk-empty">—</span></td>
+              <td class="cen"><span class="mk-empty">—</span></td>
+              <td class="cen"><span class="mk"></span></td>
+              <td class="num">1</td>
+              <td class="num">2&nbsp;<span class="text-[var(--text-muted)]">/&nbsp;14</span></td>
+              <td><span class="pill pill-neutral no-dot">Ingested</span></td>
+            </tr>
+            <tr>
+              <td class="num text-[var(--text-muted)]">12</td>
+              <td><span class="subj-name">Civic Education</span><span class="subj-disc">core</span></td>
+              <td class="cen"><span class="mk"></span></td>
+              <td class="cen"><span class="mk-empty">—</span></td>
+              <td class="cen"><span class="mk-empty">—</span></td>
+              <td class="cen"><span class="mk"></span></td>
+              <td class="num text-[var(--text-muted)]">—</td>
+              <td class="num">0&nbsp;<span class="text-[var(--text-muted)]">/&nbsp;12</span></td>
+              <td><span class="pill pill-neutral no-dot">Ingested</span></td>
+            </tr>
+            <tr>
+              <td class="num text-[var(--text-muted)]">13</td>
+              <td><span class="subj-name">Christian Religious Studies</span><span class="subj-disc">humanities</span></td>
+              <td class="cen"><span class="mk"></span></td>
+              <td class="cen"><span class="mk"></span></td>
+              <td class="cen"><span class="mk-empty">—</span></td>
+              <td class="cen"><span class="mk-empty">—</span></td>
+              <td class="num text-[var(--text-muted)]">—</td>
+              <td class="num">0&nbsp;<span class="text-[var(--text-muted)]">/&nbsp;14</span></td>
+              <td><span class="pill pill-neutral no-dot">Ingested</span></td>
+            </tr>
+            <tr>
+              <td class="num text-[var(--text-muted)]">14</td>
+              <td><span class="subj-name">History</span><span class="subj-disc">humanities</span></td>
+              <td class="cen"><span class="mk"></span></td>
+              <td class="cen"><span class="mk"></span></td>
+              <td class="cen"><span class="mk-empty">—</span></td>
+              <td class="cen"><span class="mk-empty">—</span></td>
+              <td class="num text-[var(--text-muted)]">—</td>
+              <td class="num">0&nbsp;<span class="text-[var(--text-muted)]">/&nbsp;13</span></td>
+              <td><span class="pill pill-neutral no-dot">Ingested</span></td>
+            </tr>
+            <tr>
+              <td class="num text-[var(--text-muted)]">15</td>
+              <td><span class="subj-name">Further Mathematics</span><span class="subj-disc">core</span></td>
+              <td class="cen"><span class="mk"></span></td>
+              <td class="cen"><span class="mk"></span></td>
+              <td class="cen"><span class="mk-empty">—</span></td>
+              <td class="cen"><span class="mk-empty">—</span></td>
+              <td class="num text-[var(--text-muted)]">—</td>
+              <td class="num">0&nbsp;<span class="text-[var(--text-muted)]">/&nbsp;18</span></td>
+              <td><span class="pill pill-outline no-dot">Pending</span></td>
+            </tr>
+            <tr>
+              <td class="num text-[var(--text-muted)]">16</td>
+              <td><span class="subj-name">Yoruba</span><span class="subj-disc">languages</span></td>
+              <td class="cen"><span class="mk"></span></td>
+              <td class="cen"><span class="mk-empty">—</span></td>
+              <td class="cen"><span class="mk-empty">—</span></td>
+              <td class="cen"><span class="mk-empty">—</span></td>
+              <td class="num text-[var(--text-muted)]">—</td>
+              <td class="num">0&nbsp;<span class="text-[var(--text-muted)]">/&nbsp;10</span></td>
+              <td><span class="pill pill-outline no-dot">Pending</span></td>
+            </tr>
+            <tr>
+              <td class="num text-[var(--text-muted)]">17</td>
+              <td><span class="subj-name">Igbo</span><span class="subj-disc">languages</span></td>
+              <td class="cen"><span class="mk"></span></td>
+              <td class="cen"><span class="mk-empty">—</span></td>
+              <td class="cen"><span class="mk-empty">—</span></td>
+              <td class="cen"><span class="mk-empty">—</span></td>
+              <td class="num text-[var(--text-muted)]">—</td>
+              <td class="num">0&nbsp;<span class="text-[var(--text-muted)]">/&nbsp;10</span></td>
+              <td><span class="pill pill-outline no-dot">Pending</span></td>
+            </tr>
+            <tr>
+              <td class="num text-[var(--text-muted)]">18</td>
+              <td><span class="subj-name">Hausa</span><span class="subj-disc">languages</span></td>
+              <td class="cen"><span class="mk"></span></td>
+              <td class="cen"><span class="mk-empty">—</span></td>
+              <td class="cen"><span class="mk-empty">—</span></td>
+              <td class="cen"><span class="mk-empty">—</span></td>
+              <td class="num text-[var(--text-muted)]">—</td>
+              <td class="num">0&nbsp;<span class="text-[var(--text-muted)]">/&nbsp;10</span></td>
+              <td><span class="pill pill-outline no-dot">Pending</span></td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- Why this matters -->
+    <div class="grid gap-3 md:grid-cols-4">
+      <div class="card p-4">
+        <div class="mb-2 text-xl">🎯</div>
+        <h4 class="text-[13px] font-bold">Cross-source agreement</h4>
+        <p class="mt-1 text-[11.5px] leading-relaxed text-[var(--muted-foreground)]">When 3 of 4 sources agree on a topic, authoring confidence is high. The chips visualize the agreement at a glance.</p>
+      </div>
+      <div class="card p-4">
+        <div class="mb-2 text-xl">📌</div>
+        <h4 class="text-[13px] font-bold">Past-Q calibration</h4>
+        <p class="mt-1 text-[11.5px] leading-relaxed text-[var(--muted-foreground)]">Past-question counts tell us how testable each topic actually is. High counts demand worked-example treatment.</p>
+      </div>
+      <div class="card p-4">
+        <div class="mb-2 text-xl">🤝</div>
+        <h4 class="text-[13px] font-bold">Authoring trust</h4>
+        <p class="mt-1 text-[11.5px] leading-relaxed text-[var(--muted-foreground)]">Content Studio refuses to author from a topic with fewer than 2 confirmed source linkages. Saves model spend.</p>
+      </div>
+      <div class="card p-4">
+        <div class="mb-2 text-xl">🌱</div>
+        <h4 class="text-[13px] font-bold">Graceful degradation</h4>
+        <p class="mt-1 text-[11.5px] leading-relaxed text-[var(--muted-foreground)]">A subject with only WAEC + Scheme is still useful. The system never blocks on missing inputs — only flags lower confidence.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============================================================
+       SECTION 2: RECONCILIATION MATRIX
+       ============================================================ -->
+  <section id="matrix" class="border-b border-[var(--border-2)] py-14">
+    <div class="section-label-row">
+      <span class="section-label">Source reconciliation</span>
+      <span class="section-label-line"></span>
+    </div>
+    <h2 class="section-title">Four sources, one <em>canonical graph.</em></h2>
+
+    <p class="mb-8 max-w-[720px] text-[14.5px] leading-relaxed text-[var(--text-2)]">
+      Each row is a canonical topic. Each column is a source channel. Filled marks
+      mean a confirmed linkage. Hollow marks are AI proposals waiting on a human
+      review. Dashes mean the source doesn't cover the topic at all. Pick a row to
+      open the linkage detail; pick a proposal to approve, reject, or split it.
+    </p>
+
+    <!-- Matrix card -->
+    <div class="dark-card mb-8">
+      <div class="dark-card-head dark-head-ink">
+        <div class="flex items-baseline justify-between flex-wrap gap-3">
+          <div>
+            <div class="font-mono text-[10.5px] uppercase tracking-[0.06em] text-white/55">Subject · § 1</div>
+            <h3 class="mt-1 font-display text-[24px] font-bold tracking-tight text-white">Physics — Senior Secondary I</h3>
+          </div>
+          <div class="flex items-center gap-3">
+            <div class="text-right">
+              <div class="font-mono text-[10.5px] uppercase tracking-[0.06em] text-white/55">Reconciled</div>
+              <div class="font-display text-[20px] font-bold tabular-nums text-white">21<span class="text-[var(--text-muted)] font-normal text-[14px]"> / 33</span></div>
+            </div>
+            <div class="h-9 w-px bg-white/15"></div>
+            <div class="text-right">
+              <div class="font-mono text-[10.5px] uppercase tracking-[0.06em] text-white/55">Past Q</div>
+              <div class="font-display text-[20px] font-bold tabular-nums text-white">247</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="grid grid-cols-1 lg:grid-cols-[1fr_300px]">
+
+        <!-- Matrix -->
+        <div class="overflow-x-auto p-5 lg:border-r lg:border-[var(--border)]">
+          <table class="recon-matrix">
+            <thead>
+              <tr>
+                <th class="first">Canonical topic</th>
+                <th>NERDC<span class="nh">SS1·T1</span></th>
+                <th>NERDC<span class="nh">SS1·T2</span></th>
+                <th>NERDC<span class="nh">SS1·T3</span></th>
+                <th>NERDC<span class="nh">SS2</span></th>
+                <th>NERDC<span class="nh">SS3</span></th>
+                <th>WAEC<span class="nh">§ 1</span></th>
+                <th>JAMB<span class="nh">§ 1</span></th>
+                <th>Scheme<span class="nh">SS1·T1</span></th>
+                <th>Past&nbsp;Q</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td class="first"><div class="topic-cell"><span class="tnum">1.1</span><span class="ttitle">Concept of Physics</span></div></td>
+                <td><span class="mk"></span></td>
+                <td><span class="mk-empty">—</span></td>
+                <td><span class="mk-empty">—</span></td>
+                <td><span class="mk-empty">—</span></td>
+                <td><span class="mk-empty">—</span></td>
+                <td><span class="mk"></span></td>
+                <td><span class="mk"></span></td>
+                <td><span class="mk"></span></td>
+                <td><span class="mk-count">3</span></td>
+              </tr>
+              <tr class="is-active">
+                <td class="first"><div class="topic-cell"><span class="tnum">1.2</span><span class="ttitle">Position, distance, displacement</span></div></td>
+                <td><span class="mk"></span></td>
+                <td><span class="mk-empty">—</span></td>
+                <td><span class="mk-empty">—</span></td>
+                <td><span class="mk mk-proposed"></span></td>
+                <td><span class="mk-empty">—</span></td>
+                <td><span class="mk"></span></td>
+                <td><span class="mk"></span></td>
+                <td><span class="mk"></span></td>
+                <td><span class="mk-count">8</span></td>
+              </tr>
+              <tr>
+                <td class="first"><div class="topic-cell"><span class="tnum">1.3</span><span class="ttitle">Time</span></div></td>
+                <td><span class="mk"></span></td>
+                <td><span class="mk-empty">—</span></td>
+                <td><span class="mk-empty">—</span></td>
+                <td><span class="mk-empty">—</span></td>
+                <td><span class="mk-empty">—</span></td>
+                <td><span class="mk"></span></td>
+                <td><span class="mk"></span></td>
+                <td><span class="mk"></span></td>
+                <td><span class="mk-count">2</span></td>
+              </tr>
+              <tr>
+                <td class="first"><div class="topic-cell"><span class="tnum">1.4</span><span class="ttitle">Motion — linear, oscillatory, circular</span></div></td>
+                <td><span class="mk"></span></td>
+                <td><span class="mk"></span></td>
+                <td><span class="mk-empty">—</span></td>
+                <td><span class="mk"></span></td>
+                <td><span class="mk-empty">—</span></td>
+                <td><span class="mk"></span></td>
+                <td><span class="mk"></span></td>
+                <td><span class="mk"></span></td>
+                <td><span class="mk-count">14</span></td>
+              </tr>
+              <tr>
+                <td class="first"><div class="topic-cell"><span class="tnum">1.5</span><span class="ttitle">Speed and velocity</span></div></td>
+                <td><span class="mk-empty">—</span></td>
+                <td><span class="mk"></span></td>
+                <td><span class="mk-empty">—</span></td>
+                <td><span class="mk mk-proposed"></span></td>
+                <td><span class="mk-empty">—</span></td>
+                <td><span class="mk"></span></td>
+                <td><span class="mk"></span></td>
+                <td><span class="mk"></span></td>
+                <td><span class="mk-count">19</span></td>
+              </tr>
+              <tr>
+                <td class="first"><div class="topic-cell"><span class="tnum">1.6</span><span class="ttitle">Acceleration</span></div></td>
+                <td><span class="mk-empty">—</span></td>
+                <td><span class="mk"></span></td>
+                <td><span class="mk-empty">—</span></td>
+                <td><span class="mk mk-proposed"></span></td>
+                <td><span class="mk-empty">—</span></td>
+                <td><span class="mk"></span></td>
+                <td><span class="mk"></span></td>
+                <td><span class="mk"></span></td>
+                <td><span class="mk-count">17</span></td>
+              </tr>
+              <tr>
+                <td class="first"><div class="topic-cell"><span class="tnum">1.7</span><span class="ttitle">Equations of uniformly accelerated motion</span></div></td>
+                <td><span class="mk-empty">—</span></td>
+                <td><span class="mk"></span></td>
+                <td><span class="mk-empty">—</span></td>
+                <td><span class="mk-empty">—</span></td>
+                <td><span class="mk-empty">—</span></td>
+                <td><span class="mk"></span></td>
+                <td><span class="mk"></span></td>
+                <td><span class="mk"></span></td>
+                <td><span class="mk-count">22</span></td>
+              </tr>
+              <tr>
+                <td class="first"><div class="topic-cell"><span class="tnum">1.8</span><span class="ttitle">Free fall</span></div></td>
+                <td><span class="mk-empty">—</span></td>
+                <td><span class="mk"></span></td>
+                <td><span class="mk-empty">—</span></td>
+                <td><span class="mk mk-proposed"></span></td>
+                <td><span class="mk-empty">—</span></td>
+                <td><span class="mk"></span></td>
+                <td><span class="mk"></span></td>
+                <td><span class="mk"></span></td>
+                <td><span class="mk-count">11</span></td>
+              </tr>
+              <tr>
+                <td class="first"><div class="topic-cell"><span class="tnum">2.1</span><span class="ttitle">Force</span></div></td>
+                <td><span class="mk-empty">—</span></td>
+                <td><span class="mk-empty">—</span></td>
+                <td><span class="mk"></span></td>
+                <td><span class="mk"></span></td>
+                <td><span class="mk"></span></td>
+                <td><span class="mk"></span></td>
+                <td><span class="mk"></span></td>
+                <td><span class="mk"></span></td>
+                <td><span class="mk-count">26</span></td>
+              </tr>
+              <tr>
+                <td class="first"><div class="topic-cell"><span class="tnum">2.2</span><span class="ttitle">Newton's laws of motion</span></div></td>
+                <td><span class="mk-empty">—</span></td>
+                <td><span class="mk-empty">—</span></td>
+                <td><span class="mk"></span></td>
+                <td><span class="mk"></span></td>
+                <td><span class="mk"></span></td>
+                <td><span class="mk"></span></td>
+                <td><span class="mk"></span></td>
+                <td><span class="mk"></span></td>
+                <td><span class="mk-count">31</span></td>
+              </tr>
+              <tr>
+                <td class="first"><div class="topic-cell"><span class="tnum">2.3</span><span class="ttitle">Friction</span></div></td>
+                <td><span class="mk-empty">—</span></td>
+                <td><span class="mk-empty">—</span></td>
+                <td><span class="mk"></span></td>
+                <td><span class="mk"></span></td>
+                <td><span class="mk-empty">—</span></td>
+                <td><span class="mk"></span></td>
+                <td><span class="mk"></span></td>
+                <td><span class="mk"></span></td>
+                <td><span class="mk-count">9</span></td>
+              </tr>
+              <tr>
+                <td class="first"><div class="topic-cell"><span class="tnum">2.4</span><span class="ttitle">Work, energy and power</span></div></td>
+                <td><span class="mk-empty">—</span></td>
+                <td><span class="mk-empty">—</span></td>
+                <td><span class="mk"></span></td>
+                <td><span class="mk"></span></td>
+                <td><span class="mk mk-proposed"></span></td>
+                <td><span class="mk"></span></td>
+                <td><span class="mk"></span></td>
+                <td><span class="mk"></span></td>
+                <td><span class="mk-count">28</span></td>
+              </tr>
+              <tr>
+                <td class="first"><div class="topic-cell"><span class="tnum">3.1</span><span class="ttitle">Heat energy</span></div></td>
+                <td><span class="mk-empty">—</span></td>
+                <td><span class="mk-empty">—</span></td>
+                <td><span class="mk"></span></td>
+                <td><span class="mk"></span></td>
+                <td><span class="mk-empty">—</span></td>
+                <td><span class="mk"></span></td>
+                <td><span class="mk"></span></td>
+                <td><span class="mk"></span></td>
+                <td><span class="mk-count">15</span></td>
+              </tr>
+              <tr>
+                <td class="first"><div class="topic-cell"><span class="tnum">3.2</span><span class="ttitle">Temperature and its measurement</span></div></td>
+                <td><span class="mk-empty">—</span></td>
+                <td><span class="mk-empty">—</span></td>
+                <td><span class="mk"></span></td>
+                <td><span class="mk"></span></td>
+                <td><span class="mk-empty">—</span></td>
+                <td><span class="mk"></span></td>
+                <td><span class="mk"></span></td>
+                <td><span class="mk"></span></td>
+                <td><span class="mk-count">7</span></td>
+              </tr>
+            </tbody>
+          </table>
+
+          <p class="mt-4 text-[12px] text-[var(--muted-foreground)] italic font-serif">
+            14 of 33 SS1 topics shown. Heat &amp; Optics (§3.3–3.8), Sound (§4.1–4.4), Electricity (§5.1–5.6), Modern Physics (§6.1–6.5) follow.
+          </p>
+
+          <div class="mt-4 flex items-center gap-5 text-[11.5px] text-[var(--text-2)]">
+            <span class="inline-flex items-center gap-2"><span class="mk"></span> linked</span>
+            <span class="inline-flex items-center gap-2"><span class="mk mk-proposed"></span> AI-proposed</span>
+            <span class="inline-flex items-center gap-2"><span class="mk-empty">—</span> not in source</span>
+            <span class="inline-flex items-center gap-2"><span class="mk-count">n</span> past-Q count</span>
+          </div>
+        </div>
+
+        <!-- Selected detail -->
+        <div class="p-5 bg-[var(--card-2)]">
+          <div class="font-mono text-[10.5px] uppercase tracking-[0.06em] text-[var(--text-muted)]">Selected · Topic § 1.2</div>
+          <h4 class="mt-1 font-display text-[19px] font-bold tracking-tight">Position, distance, displacement</h4>
+          <div class="mt-1.5 flex gap-1.5">
+            <span class="pill pill-warning no-dot">Reconciling</span>
+            <span class="pill pill-outline no-dot tabular-nums">3 / 4 sources</span>
+          </div>
+
+          <p class="mt-3 text-[12.5px] leading-relaxed text-[var(--text-2)]">
+            Reconciled across NERDC SS1·T1, WAEC and JAMB plus the platform-shared scheme.
+            One AI-proposed linkage to NERDC SS2 is awaiting review.
+          </p>
+
+          <div class="mt-5">
+            <h5 class="text-[10px] font-semibold uppercase tracking-[0.10em] text-[var(--muted-foreground)] mb-2">Linkage confidence</h5>
+            <div class="conf-row"><span class="k">WAEC § 1 / topic 1.2</span><span class="v">0.94</span></div>
+            <div class="conf-row"><span class="k">JAMB § 1.2</span><span class="v">0.91</span></div>
+            <div class="conf-row"><span class="k">NERDC SS1·T1 § 4</span><span class="v">0.97</span></div>
+            <div class="conf-row"><span class="k">NERDC SS2 § 1.4</span><span class="v weak">0.62 ai</span></div>
+            <div class="conf-row"><span class="k">Scheme SS1·T1 wk 3</span><span class="v">0.88</span></div>
+          </div>
+
+          <div class="mt-5 space-y-2">
+            <a href="#brief" class="handoff-btn"><span>Open canonical brief</span><span class="arrow">→</span></a>
+            <a href="#" class="handoff-btn"><span>Send to Content Studio</span><span class="arrow">→</span></a>
+            <a href="#" class="handoff-btn"><span>Review proposal</span><span class="arrow">→</span></a>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- AI proposals -->
+    <div class="mb-6 flex items-baseline justify-between">
+      <div>
+        <p class="small-cap small-cap-warn">AI proposals · 4 awaiting review</p>
+        <h3 class="mt-1 font-display text-[18px] font-bold tracking-tight">Auto-approve threshold currently <span class="font-mono">0.90</span></h3>
+      </div>
+      <div class="flex items-center gap-2">
+        <span class="pill pill-warning">Below threshold</span>
+        <span class="pill pill-primary">Auto-approved</span>
+      </div>
+    </div>
+
+    <div class="space-y-3 mb-8">
+      <div class="proposal-card">
+        <div class="pn">01</div>
+        <div class="pmain">
+          <span class="pfrom">Vector and scalar quantities</span>
+          <span class="text-[var(--text-muted)] mx-2">→</span>
+          <span class="pto">§ 1.2 — Position, distance, displacement</span>
+          <span class="pmeta">NERDC SS1·T1 § 1.5 · proposed 2026·05·03 · deepseek-v4</span>
+        </div>
+        <div class="pnote">Same conceptual ground; vector framing precedes the displacement worked example.</div>
+        <div class="pconf">0.86</div>
+        <div class="pact"><span class="pill pill-warning">Review</span></div>
+      </div>
+
+      <div class="proposal-card">
+        <div class="pn">02</div>
+        <div class="pmain">
+          <span class="pfrom">Velocity-time graph</span>
+          <span class="text-[var(--text-muted)] mx-2">→</span>
+          <span class="pto">§ 1.5 &amp; § 1.6 — Speed/velocity &amp; Acceleration</span>
+          <span class="pmeta">NERDC SS2 § 3.4 · proposed 2026·05·03 · deepseek-v4</span>
+        </div>
+        <div class="pnote">Joint linkage proposed. Editor to confirm split or merge.</div>
+        <div class="pconf weak">0.78</div>
+        <div class="pact"><span class="pill pill-warning">Review</span></div>
+      </div>
+
+      <div class="proposal-card">
+        <div class="pn">03</div>
+        <div class="pmain">
+          <span class="pfrom">Mechanical energy</span>
+          <span class="text-[var(--text-muted)] mx-2">→</span>
+          <span class="pto">§ 2.4 — Work, energy and power</span>
+          <span class="pmeta">NERDC SS3 § 1.2 · proposed 2026·05·02 · deepseek-v4</span>
+        </div>
+        <div class="pnote">SS3 revisits SS1 canonical at greater depth; suggest depth tag <span class="font-mono not-italic">advanced</span>.</div>
+        <div class="pconf">0.82</div>
+        <div class="pact"><span class="pill pill-warning">Review</span></div>
+      </div>
+
+      <div class="proposal-card">
+        <div class="pn">04</div>
+        <div class="pmain">
+          <span class="pfrom">Projectile motion</span>
+          <span class="text-[var(--text-muted)] mx-2">→</span>
+          <span class="pto">§ 1.7 — Equations of uniformly accelerated motion</span>
+          <span class="pmeta">JAMB § 2.4 · proposed 2026·05·01 · claude-sonnet-4-6</span>
+        </div>
+        <div class="pnote">JAMB treats projectiles as a sub-application of UAM equations; canonical link is sound.</div>
+        <div class="pconf">0.93</div>
+        <div class="pact"><span class="pill pill-primary">Auto-approved</span></div>
+      </div>
+    </div>
+
+    <div class="callout callout-primary">
+      <strong>Why this matters:</strong> the matrix is the single screen an editor lives in for hours
+      a week during a build phase. AI does the first pass on every cross-source match; the editor
+      adjudicates. Calibration confidence above 0.90 is auto-approved &mdash; below that, into the
+      review queue. The split keeps editor attention on judgement calls, not data entry.
+    </div>
+  </section>
+
+  <!-- ============================================================
+       SECTION 3: TOPIC BRIEF
+       ============================================================ -->
+  <section id="brief" class="border-b border-[var(--border-2)] py-14">
+    <div class="section-label-row">
+      <span class="section-label">Authoring handoff</span>
+      <span class="section-label-line"></span>
+    </div>
+    <h2 class="section-title">The artefact handed to <em>Content Studio.</em></h2>
+
+    <p class="mb-8 max-w-[720px] text-[14.5px] leading-relaxed text-[var(--text-2)]">
+      When an editor declares a canonical topic ready, Curriculum Studio compiles a single
+      JSON document &mdash; the topic brief &mdash; and ships it to Content Studio. The
+      brief is the contract: it carries the canonical definition, every source excerpt
+      that supports it, the past-question calibration, the visualization brief, and the
+      class-assignment timeline. Content Studio authors against the brief verbatim.
+    </p>
+
+    <!-- The brief as a presented artifact -->
+    <div class="brief-canvas mb-10">
+      <div class="brief-canvas-head">
+        <div class="pre">Topic § 1.2 · Physics · Senior Secondary I · Term 1</div>
+        <h3>Position, distance, <em>displacement</em></h3>
+        <div class="sub">Class assignment confirmed across NERDC, WAEC, JAMB and the platform-shared scheme. Past-question calibration drawn from 8 indexed papers, 2008–2022.</div>
+      </div>
+
+      <div class="brief-grid">
+        <div class="brief-main">
+          <p class="brief-canon">
+            Position locates a body in space relative to a reference point. <em>Distance</em>
+            is the total length of the path traversed by the body &mdash; a scalar quantity,
+            measured in metres. <em>Displacement</em> is the shortest straight-line interval
+            between the initial and final positions &mdash; a vector quantity carrying both
+            magnitude and direction. Distance and displacement coincide only when motion
+            proceeds in a single straight direction without reversal; in every other case
+            displacement is strictly less than distance.
+          </p>
+
+          <h4 class="font-display text-[15px] font-bold mb-3 mt-6">Source manifest</h4>
+
+          <div class="src-ex">
+            <div class="src-ex-head">
+              <span class="src-ex-name">WAEC syllabus</span>
+              <span class="src-ex-id">§ 1 · topic 1.2 · 2026 ed.</span>
+            </div>
+            <div class="src-ex-text">
+              Distinction between distance and displacement; concepts of speed, velocity,
+              and acceleration. Candidates should be able to: distinguish between distance
+              and displacement; identify motion in a straight line; calculate distance and
+              displacement when given coordinates.
+            </div>
+          </div>
+
+          <div class="src-ex honey">
+            <div class="src-ex-head">
+              <span class="src-ex-name">JAMB syllabus</span>
+              <span class="src-ex-id">§ 1.2 · 2025/26 ed.</span>
+            </div>
+            <div class="src-ex-text">
+              Position, distance and displacement: scalar and vector representations.
+              Candidates are expected to define each quantity, distinguish their units of
+              measurement, and compute the resultant displacement of two perpendicular
+              components.
+            </div>
+          </div>
+
+          <div class="src-ex nerdc">
+            <div class="src-ex-head">
+              <span class="src-ex-name">NERDC scheme of work</span>
+              <span class="src-ex-id">SS1 · T1 · theme 1 · topic § 4</span>
+            </div>
+            <div class="src-ex-text">
+              The student shall be led to differentiate between distance and displacement
+              using the school compound, the football field, or the journey from home to
+              school. Activities to include: walking distances measured against
+              straight-line displacement; representation of displacement as a directed line
+              segment; introduction of vector notation.
+            </div>
+          </div>
+
+          <div class="src-ex scheme">
+            <div class="src-ex-head">
+              <span class="src-ex-name">Platform-shared scheme</span>
+              <span class="src-ex-id">SS1 · T1 · week 3</span>
+            </div>
+            <div class="src-ex-text">
+              Build on intuition from Junior Secondary motion topics. Suggested
+              visualization: animated journey from school gate, through the playground, to
+              the assembly point, with displacement vector overlaid. Recommended class
+              test: short calculation of two-leg perpendicular journey.
+            </div>
+          </div>
+
+          <h4 class="font-display text-[15px] font-bold mb-3 mt-7">Past-question calibration</h4>
+          <p class="text-[13.5px] leading-relaxed text-[var(--text-2)]">
+            Across 8 indexed papers (2008–2022) one calculation pattern dominates: the
+            two-leg perpendicular displacement. Any worked example authored for this topic
+            should exercise that pattern.
+          </p>
+
+          <div class="past-q">
+            <div class="q-pre">Anchor question · WAEC Nov 2011 · Paper 2 · Q 1</div>
+            <div class="q-text">
+              <span class="qn">1.</span>A car travels 30 metres due east, then 40 metres due north. Calculate, correct to the nearest whole number, the magnitude of its displacement and the angle the displacement makes with the easterly direction.
+            </div>
+            <div class="q-foot">
+              Recurrence pattern across calibration corpus: <strong>two-leg perpendicular</strong> 6/8 papers · <strong>three-leg open polygon</strong> 1/8 · <strong>circular path</strong> 1/8. Recommended difficulty band: standard. Estimated time-to-solve: 90s.
+            </div>
+          </div>
+        </div>
+
+        <!-- Sidebar -->
+        <aside class="brief-side">
+          <div class="side-block">
+            <h5>Class assignment</h5>
+            <div class="timeline">
+              <div class="cell on" title="SS1 T1"></div>
+              <div class="cell" title="SS1 T2"></div>
+              <div class="cell" title="SS1 T3"></div>
+              <div class="cell weak" title="SS2 T1 — proposed"></div>
+              <div class="cell" title="SS2 T2"></div>
+              <div class="cell" title="SS2 T3"></div>
+              <div class="cell" title="SS3 T1"></div>
+              <div class="cell" title="SS3 T2"></div>
+              <div class="cell" title="SS3 T3"></div>
+            </div>
+            <div class="timeline-foot">
+              <span>SS1 T1</span>
+              <span>SS3 T3</span>
+            </div>
+            <p class="mt-2.5 text-[11.5px] italic font-serif text-[var(--text-2)] leading-relaxed">
+              Primary placement SS1 T1. AI proposes a revisit at SS2 T1 with depth tag <span class="font-mono not-italic text-[var(--foreground)] text-[11px]">intermediate</span>.
+            </p>
+          </div>
+
+          <div class="side-block">
+            <h5>Visualization brief</h5>
+            <div class="vint">
+              <div class="vh"><span class="vt">Animation</span></div>
+              <div class="vd">Animated journey traversing two perpendicular legs, displacement vector resolving in real time.</div>
+            </div>
+            <div class="vint">
+              <div class="vh"><span class="vt">Diagram</span></div>
+              <div class="vd">Static three-leg path with all distances marked, displacement vector overlaid.</div>
+            </div>
+            <div class="vint">
+              <div class="vh"><span class="vt">Quick check</span></div>
+              <div class="vd">Numeric input prompt: given two perpendicular legs, student enters displacement magnitude.</div>
+            </div>
+          </div>
+
+          <div class="side-block">
+            <h5>Linkage confidence</h5>
+            <div class="conf-row"><span class="k">WAEC</span><span class="v">0.94</span></div>
+            <div class="conf-row"><span class="k">JAMB</span><span class="v">0.91</span></div>
+            <div class="conf-row"><span class="k">NERDC SS1·T1</span><span class="v">0.97</span></div>
+            <div class="conf-row"><span class="k">NERDC SS2 (ai)</span><span class="v weak">0.62</span></div>
+            <div class="conf-row"><span class="k">Scheme SS1·T1</span><span class="v">0.88</span></div>
+          </div>
+
+          <div class="side-block">
+            <h5>Hand-off</h5>
+            <div class="space-y-2">
+              <a href="#" class="handoff-btn"><span>Open in Content Studio</span><span class="arrow">→</span></a>
+              <a href="#" class="handoff-btn"><span>Mark canonical complete</span><span class="arrow">→</span></a>
+              <a href="#" class="handoff-btn"><span>Flag for editor review</span><span class="arrow">→</span></a>
+            </div>
+          </div>
+        </aside>
+      </div>
+    </div>
+
+    <!-- Brief shape callout -->
+    <div class="card overflow-hidden mb-8">
+      <div class="card-head flex items-baseline justify-between">
+        <span class="text-[13px] font-semibold">What's in a brief — the JSON shape</span>
+        <span class="font-mono text-[10.5px] uppercase tracking-[0.06em] text-[var(--text-muted)]">topic_brief.v1.json</span>
+      </div>
+      <div class="grid gap-4 p-5 md:grid-cols-2 lg:grid-cols-4">
+        <div class="rounded-lg border border-[var(--border)] bg-[var(--bg-raised)] p-4">
+          <div class="mb-2 text-[10px] font-semibold uppercase tracking-wider text-[var(--primary)]">Identity</div>
+          <div class="space-y-1 text-[11px] text-[var(--text-2)]">
+            <div class="flex gap-2"><span class="h-1 w-1 mt-2 shrink-0 rounded-full bg-[var(--primary)]/40"></span>canonical_topic_id</div>
+            <div class="flex gap-2"><span class="h-1 w-1 mt-2 shrink-0 rounded-full bg-[var(--primary)]/40"></span>title, slug</div>
+            <div class="flex gap-2"><span class="h-1 w-1 mt-2 shrink-0 rounded-full bg-[var(--primary)]/40"></span>discipline_id, subject_id</div>
+            <div class="flex gap-2"><span class="h-1 w-1 mt-2 shrink-0 rounded-full bg-[var(--primary)]/40"></span>canonical_definition (md)</div>
+          </div>
+        </div>
+        <div class="rounded-lg border border-[var(--border)] bg-[var(--bg-raised)] p-4">
+          <div class="mb-2 text-[10px] font-semibold uppercase tracking-wider text-[var(--warning)]">Source manifest</div>
+          <div class="space-y-1 text-[11px] text-[var(--text-2)]">
+            <div class="flex gap-2"><span class="h-1 w-1 mt-2 shrink-0 rounded-full bg-[var(--warning)]/60"></span>waec_excerpt + ref</div>
+            <div class="flex gap-2"><span class="h-1 w-1 mt-2 shrink-0 rounded-full bg-[var(--warning)]/60"></span>jamb_excerpt + ref</div>
+            <div class="flex gap-2"><span class="h-1 w-1 mt-2 shrink-0 rounded-full bg-[var(--warning)]/60"></span>nerdc_excerpt + ref</div>
+            <div class="flex gap-2"><span class="h-1 w-1 mt-2 shrink-0 rounded-full bg-[var(--warning)]/60"></span>scheme_excerpt + ref</div>
+            <div class="flex gap-2"><span class="h-1 w-1 mt-2 shrink-0 rounded-full bg-[var(--warning)]/60"></span>linkage_confidence (jsonb)</div>
+          </div>
+        </div>
+        <div class="rounded-lg border border-[var(--border)] bg-[var(--bg-raised)] p-4">
+          <div class="mb-2 text-[10px] font-semibold uppercase tracking-wider" style="color: var(--ember-500);">Calibration</div>
+          <div class="space-y-1 text-[11px] text-[var(--text-2)]">
+            <div class="flex gap-2"><span class="h-1 w-1 mt-2 shrink-0 rounded-full" style="background:rgba(184,95,63,0.5);"></span>past_q_count</div>
+            <div class="flex gap-2"><span class="h-1 w-1 mt-2 shrink-0 rounded-full" style="background:rgba(184,95,63,0.5);"></span>recurrence_patterns (jsonb)</div>
+            <div class="flex gap-2"><span class="h-1 w-1 mt-2 shrink-0 rounded-full" style="background:rgba(184,95,63,0.5);"></span>typical_difficulty</div>
+            <div class="flex gap-2"><span class="h-1 w-1 mt-2 shrink-0 rounded-full" style="background:rgba(184,95,63,0.5);"></span>required_subskills</div>
+            <div class="flex gap-2"><span class="h-1 w-1 mt-2 shrink-0 rounded-full" style="background:rgba(184,95,63,0.5);"></span>anchor_question_ids[]</div>
+          </div>
+        </div>
+        <div class="rounded-lg border border-[var(--border)] bg-[var(--bg-raised)] p-4">
+          <div class="mb-2 text-[10px] font-semibold uppercase tracking-wider" style="color: var(--canopy-400);">Authoring brief</div>
+          <div class="space-y-1 text-[11px] text-[var(--text-2)]">
+            <div class="flex gap-2"><span class="h-1 w-1 mt-2 shrink-0 rounded-full" style="background:rgba(94,167,135,0.6);"></span>class_assignments[]</div>
+            <div class="flex gap-2"><span class="h-1 w-1 mt-2 shrink-0 rounded-full" style="background:rgba(94,167,135,0.6);"></span>visualization_intents[]</div>
+            <div class="flex gap-2"><span class="h-1 w-1 mt-2 shrink-0 rounded-full" style="background:rgba(94,167,135,0.6);"></span>recommended_block_types[]</div>
+            <div class="flex gap-2"><span class="h-1 w-1 mt-2 shrink-0 rounded-full" style="background:rgba(94,167,135,0.6);"></span>nigerian_context_hints</div>
+            <div class="flex gap-2"><span class="h-1 w-1 mt-2 shrink-0 rounded-full" style="background:rgba(94,167,135,0.6);"></span>brief_version, approved_by</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="callout callout-primary">
+      <strong>Why this matters:</strong> Content Studio's prompt is only as good as the
+      brief it receives. The current pipeline asks the model to rediscover topic structure
+      every generation; a topic brief eliminates that round-trip and lets the model focus
+      on prose, examples, and visualizations &mdash; not on guessing what to write about.
+    </div>
+  </section>
+
+  <!-- ============================================================
+       SECTION 4: COVERAGE
+       ============================================================ -->
+  <section id="coverage" class="border-b border-[var(--border-2)] py-14">
+    <div class="section-label-row">
+      <span class="section-label">Readiness dashboard</span>
+      <span class="section-label-line"></span>
+    </div>
+    <h2 class="section-title">Where we're ready. <em>Where we're stuck.</em></h2>
+
+    <p class="mb-8 max-w-[720px] text-[14.5px] leading-relaxed text-[var(--text-2)]">
+      Five readiness gates per subject. A topic clears a gate when its data is complete
+      enough to support the next stage. Cell width inside each gate shows the percentage
+      of the subject's topics that have cleared it. Coverage flips from amber to green
+      above 50%.
+    </p>
+
+    <!-- Gates -->
+    <div class="mb-10 grid gap-3 md:grid-cols-2 lg:grid-cols-5">
+      <div class="card p-4">
+        <div class="font-mono text-[10px] tracking-[0.06em] uppercase text-[var(--text-muted)] mb-1">Gate 01</div>
+        <h4 class="font-display text-[14px] font-bold leading-tight">Syllabus ingested</h4>
+        <p class="mt-2 text-[11.5px] leading-relaxed text-[var(--text-2)] font-serif italic">WAEC syllabus has been scraped, parsed, and stored as canonical_subject + topic rows.</p>
+      </div>
+      <div class="card p-4">
+        <div class="font-mono text-[10px] tracking-[0.06em] uppercase text-[var(--text-muted)] mb-1">Gate 02</div>
+        <h4 class="font-display text-[14px] font-bold leading-tight">Topics linked</h4>
+        <p class="mt-2 text-[11.5px] leading-relaxed text-[var(--text-2)] font-serif italic">A canonical_topic exists and at least one additional source agrees with WAEC's framing.</p>
+      </div>
+      <div class="card p-4">
+        <div class="font-mono text-[10px] tracking-[0.06em] uppercase text-[var(--text-muted)] mb-1">Gate 03</div>
+        <h4 class="font-display text-[14px] font-bold leading-tight">NERDC depth</h4>
+        <p class="mt-2 text-[11.5px] leading-relaxed text-[var(--text-2)] font-serif italic">Performance objectives, learning activities, evaluation guide attached from NERDC scheme.</p>
+      </div>
+      <div class="card p-4">
+        <div class="font-mono text-[10px] tracking-[0.06em] uppercase text-[var(--text-muted)] mb-1">Gate 04</div>
+        <h4 class="font-display text-[14px] font-bold leading-tight">Past-Q calibration</h4>
+        <p class="mt-2 text-[11.5px] leading-relaxed text-[var(--text-2)] font-serif italic">≥3 indexed past questions tagged to the topic with computed rigor brief.</p>
+      </div>
+      <div class="card p-4">
+        <div class="font-mono text-[10px] tracking-[0.06em] uppercase text-[var(--text-muted)] mb-1">Gate 05</div>
+        <h4 class="font-display text-[14px] font-bold leading-tight">Authoring-ready</h4>
+        <p class="mt-2 text-[11.5px] leading-relaxed text-[var(--text-2)] font-serif italic">Topic brief approved by an editor; Content Studio cleared to generate.</p>
+      </div>
+    </div>
+
+    <!-- Heatmap card -->
+    <div class="card overflow-hidden mb-8">
+      <div class="card-head flex items-baseline justify-between">
+        <span class="text-[13px] font-semibold">Coverage matrix · 11 subjects</span>
+        <span class="font-mono text-[10.5px] uppercase tracking-[0.06em] text-[var(--text-muted)]">Computed 2026·05·04 · 14:22</span>
+      </div>
+      <div class="px-2 pb-2">
+        <table class="heat-table">
+          <thead>
+            <tr>
+              <th>Subject</th>
+              <th class="gate"><span class="gn">Gate 01</span>Syllabus</th>
+              <th class="gate"><span class="gn">Gate 02</span>Linked</th>
+              <th class="gate"><span class="gn">Gate 03</span>NERDC depth</th>
+              <th class="gate"><span class="gn">Gate 04</span>Past-Q</th>
+              <th class="gate"><span class="gn">Gate 05</span>Authoring</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td class="first">Mathematics<span class="disc">core</span></td>
+              <td><div class="heat-cell"><div class="heat-bar"><div class="fill fill-strong" style="width:100%;"></div></div><span class="pct">100</span></div></td>
+              <td><div class="heat-cell"><div class="heat-bar"><div class="fill fill-strong" style="width:87%;"></div></div><span class="pct">87</span></div></td>
+              <td><div class="heat-cell"><div class="heat-bar"><div class="fill fill-strong" style="width:74%;"></div></div><span class="pct">74</span></div></td>
+              <td><div class="heat-cell"><div class="heat-bar"><div class="fill fill-mid" style="width:42%;"></div></div><span class="pct">42</span></div></td>
+              <td><div class="heat-cell"><div class="heat-bar"><div class="fill fill-mid" style="width:36%;"></div></div><span class="pct">36</span></div></td>
+            </tr>
+            <tr>
+              <td class="first">Physics<span class="disc">sciences</span></td>
+              <td><div class="heat-cell"><div class="heat-bar"><div class="fill fill-strong" style="width:100%;"></div></div><span class="pct">100</span></div></td>
+              <td><div class="heat-cell"><div class="heat-bar"><div class="fill fill-strong" style="width:64%;"></div></div><span class="pct">64</span></div></td>
+              <td><div class="heat-cell"><div class="heat-bar"><div class="fill fill-mid" style="width:48%;"></div></div><span class="pct">48</span></div></td>
+              <td><div class="heat-cell"><div class="heat-bar"><div class="fill fill-strong" style="width:55%;"></div></div><span class="pct">55</span></div></td>
+              <td><div class="heat-cell"><div class="heat-bar"><div class="fill fill-weak" style="width:24%;"></div></div><span class="pct">24</span></div></td>
+            </tr>
+            <tr>
+              <td class="first">English Language<span class="disc">core</span></td>
+              <td><div class="heat-cell"><div class="heat-bar"><div class="fill fill-strong" style="width:100%;"></div></div><span class="pct">100</span></div></td>
+              <td><div class="heat-cell"><div class="heat-bar"><div class="fill fill-strong" style="width:79%;"></div></div><span class="pct">79</span></div></td>
+              <td><div class="heat-cell empty"><div class="heat-bar"></div><span class="pct">—</span></div></td>
+              <td><div class="heat-cell"><div class="heat-bar"><div class="fill fill-weak" style="width:30%;"></div></div><span class="pct">30</span></div></td>
+              <td><div class="heat-cell"><div class="heat-bar"><div class="fill fill-weak" style="width:18%;"></div></div><span class="pct">18</span></div></td>
+            </tr>
+            <tr>
+              <td class="first">Biology<span class="disc">sciences</span></td>
+              <td><div class="heat-cell"><div class="heat-bar"><div class="fill fill-strong" style="width:100%;"></div></div><span class="pct">100</span></div></td>
+              <td><div class="heat-cell"><div class="heat-bar"><div class="fill fill-strong" style="width:70%;"></div></div><span class="pct">70</span></div></td>
+              <td><div class="heat-cell"><div class="heat-bar"><div class="fill fill-mid" style="width:38%;"></div></div><span class="pct">38</span></div></td>
+              <td><div class="heat-cell"><div class="heat-bar"><div class="fill fill-mid" style="width:32%;"></div></div><span class="pct">32</span></div></td>
+              <td><div class="heat-cell"><div class="heat-bar"><div class="fill fill-weak" style="width:14%;"></div></div><span class="pct">14</span></div></td>
+            </tr>
+            <tr>
+              <td class="first">Chemistry<span class="disc">sciences</span></td>
+              <td><div class="heat-cell"><div class="heat-bar"><div class="fill fill-strong" style="width:100%;"></div></div><span class="pct">100</span></div></td>
+              <td><div class="heat-cell"><div class="heat-bar"><div class="fill fill-strong" style="width:64%;"></div></div><span class="pct">64</span></div></td>
+              <td><div class="heat-cell"><div class="heat-bar"><div class="fill fill-mid" style="width:34%;"></div></div><span class="pct">34</span></div></td>
+              <td><div class="heat-cell"><div class="heat-bar"><div class="fill fill-mid" style="width:25%;"></div></div><span class="pct">25</span></div></td>
+              <td><div class="heat-cell"><div class="heat-bar"><div class="fill fill-weak" style="width:8%;"></div></div><span class="pct">8</span></div></td>
+            </tr>
+            <tr>
+              <td class="first">Geography<span class="disc">humanities</span></td>
+              <td><div class="heat-cell"><div class="heat-bar"><div class="fill fill-strong" style="width:100%;"></div></div><span class="pct">100</span></div></td>
+              <td><div class="heat-cell"><div class="heat-bar"><div class="fill fill-mid" style="width:54%;"></div></div><span class="pct">54</span></div></td>
+              <td><div class="heat-cell empty"><div class="heat-bar"></div><span class="pct">—</span></div></td>
+              <td><div class="heat-cell"><div class="heat-bar"><div class="fill fill-weak" style="width:19%;"></div></div><span class="pct">19</span></div></td>
+              <td><div class="heat-cell"><div class="heat-bar"><div class="fill fill-weak" style="width:7%;"></div></div><span class="pct">7</span></div></td>
+            </tr>
+            <tr>
+              <td class="first">Economics<span class="disc">commerce</span></td>
+              <td><div class="heat-cell"><div class="heat-bar"><div class="fill fill-strong" style="width:100%;"></div></div><span class="pct">100</span></div></td>
+              <td><div class="heat-cell"><div class="heat-bar"><div class="fill fill-mid" style="width:45%;"></div></div><span class="pct">45</span></div></td>
+              <td><div class="heat-cell empty"><div class="heat-bar"></div><span class="pct">—</span></div></td>
+              <td><div class="heat-cell"><div class="heat-bar"><div class="fill fill-weak" style="width:23%;"></div></div><span class="pct">23</span></div></td>
+              <td><div class="heat-cell"><div class="heat-bar"><div class="fill fill-weak" style="width:4%;"></div></div><span class="pct">4</span></div></td>
+            </tr>
+            <tr>
+              <td class="first">Government<span class="disc">humanities</span></td>
+              <td><div class="heat-cell"><div class="heat-bar"><div class="fill fill-strong" style="width:100%;"></div></div><span class="pct">100</span></div></td>
+              <td><div class="heat-cell"><div class="heat-bar"><div class="fill fill-mid" style="width:40%;"></div></div><span class="pct">40</span></div></td>
+              <td><div class="heat-cell empty"><div class="heat-bar"></div><span class="pct">—</span></div></td>
+              <td><div class="heat-cell"><div class="heat-bar"><div class="fill fill-weak" style="width:18%;"></div></div><span class="pct">18</span></div></td>
+              <td><div class="heat-cell empty"><div class="heat-bar"></div><span class="pct">—</span></div></td>
+            </tr>
+            <tr>
+              <td class="first">Literature in English<span class="disc">humanities</span></td>
+              <td><div class="heat-cell"><div class="heat-bar"><div class="fill fill-strong" style="width:100%;"></div></div><span class="pct">100</span></div></td>
+              <td><div class="heat-cell"><div class="heat-bar"><div class="fill fill-weak" style="width:31%;"></div></div><span class="pct">31</span></div></td>
+              <td><div class="heat-cell empty"><div class="heat-bar"></div><span class="pct">—</span></div></td>
+              <td><div class="heat-cell"><div class="heat-bar"><div class="fill fill-weak" style="width:14%;"></div></div><span class="pct">14</span></div></td>
+              <td><div class="heat-cell empty"><div class="heat-bar"></div><span class="pct">—</span></div></td>
+            </tr>
+            <tr>
+              <td class="first">Civic Education<span class="disc">core</span></td>
+              <td><div class="heat-cell"><div class="heat-bar"><div class="fill fill-strong" style="width:100%;"></div></div><span class="pct">100</span></div></td>
+              <td><div class="heat-cell"><div class="heat-bar"><div class="fill fill-weak" style="width:18%;"></div></div><span class="pct">18</span></div></td>
+              <td><div class="heat-cell empty"><div class="heat-bar"></div><span class="pct">—</span></div></td>
+              <td><div class="heat-cell empty"><div class="heat-bar"></div><span class="pct">—</span></div></td>
+              <td><div class="heat-cell empty"><div class="heat-bar"></div><span class="pct">—</span></div></td>
+            </tr>
+            <tr>
+              <td class="first">Agricultural Science<span class="disc">vocational</span></td>
+              <td><div class="heat-cell"><div class="heat-bar"><div class="fill fill-strong" style="width:100%;"></div></div><span class="pct">100</span></div></td>
+              <td><div class="heat-cell"><div class="heat-bar"><div class="fill fill-weak" style="width:22%;"></div></div><span class="pct">22</span></div></td>
+              <td><div class="heat-cell empty"><div class="heat-bar"></div><span class="pct">—</span></div></td>
+              <td><div class="heat-cell"><div class="heat-bar"><div class="fill fill-weak" style="width:11%;"></div></div><span class="pct">11</span></div></td>
+              <td><div class="heat-cell empty"><div class="heat-bar"></div><span class="pct">—</span></div></td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- Top gaps -->
+    <div class="grid gap-3 md:grid-cols-2 lg:grid-cols-3">
+      <div class="card p-5">
+        <div class="flex items-baseline gap-3 mb-3">
+          <span class="step-bullet step-bullet-danger">1</span>
+          <h4 class="font-display text-[14.5px] font-bold leading-tight">Source NERDC schemes for sciences</h4>
+        </div>
+        <p class="text-[12px] text-[var(--text-2)] leading-relaxed">Physics, Biology and Chemistry are missing performance-objective treatment. Without it, topic briefs are partial.</p>
+        <div class="mt-3 flex gap-1.5">
+          <span class="pill pill-danger no-dot">Blocks gate 03</span>
+          <span class="pill pill-neutral no-dot">28 topics</span>
+        </div>
+      </div>
+
+      <div class="card p-5">
+        <div class="flex items-baseline gap-3 mb-3">
+          <span class="step-bullet step-bullet-honey">2</span>
+          <h4 class="font-display text-[14.5px] font-bold leading-tight">Commission SS2 &amp; SS3 scheme docs</h4>
+        </div>
+        <p class="text-[12px] text-[var(--text-2)] leading-relaxed">SS1 platform-shared scheme exists. SS2 / SS3 equivalents need authoring before vertical reconciliation can complete.</p>
+        <div class="mt-3 flex gap-1.5">
+          <span class="pill pill-warning no-dot">Blocks SS2/SS3</span>
+        </div>
+      </div>
+
+      <div class="card p-5">
+        <div class="flex items-baseline gap-3 mb-3">
+          <span class="step-bullet step-bullet-danger">3</span>
+          <h4 class="font-display text-[14.5px] font-bold leading-tight">Build past-question ingestion pipeline</h4>
+        </div>
+        <p class="text-[12px] text-[var(--text-2)] leading-relaxed">Tables referenced in CLAUDE.md but not built. No ingestion ⇒ gate 04 cannot complete for any subject.</p>
+        <div class="mt-3 flex gap-1.5">
+          <span class="pill pill-danger no-dot">Blocks gate 04</span>
+          <span class="pill pill-neutral no-dot">All subjects</span>
+        </div>
+      </div>
+
+      <div class="card p-5">
+        <div class="flex items-baseline gap-3 mb-3">
+          <span class="step-bullet step-bullet-honey">4</span>
+          <h4 class="font-display text-[14.5px] font-bold leading-tight">Audit eight tertiary-tagged Physics topics</h4>
+        </div>
+        <p class="text-[12px] text-[var(--text-2)] leading-relaxed">Engineering Mechanics, Heat Transfer, Newton's Laws appear under Physics-tertiary. Either correctly tagged as university-level or mislabelled SS1 from a prior project.</p>
+        <div class="mt-3 flex gap-1.5">
+          <span class="pill pill-warning no-dot">Investigate</span>
+        </div>
+      </div>
+
+      <div class="card p-5">
+        <div class="flex items-baseline gap-3 mb-3">
+          <span class="step-bullet step-bullet-ember">5</span>
+          <h4 class="font-display text-[14.5px] font-bold leading-tight">Migrate <span class="font-mono not-italic text-[12px]">canonical_topics.education_level</span></h4>
+        </div>
+        <p class="text-[12px] text-[var(--text-2)] leading-relaxed">Currently a free-text column. Granular SS1/SS2/SS3 rows already exist on <span class="font-mono text-[11px]">education_levels</span>. One-shot data migration.</p>
+        <div class="mt-3 flex gap-1.5">
+          <span class="pill pill-neutral no-dot">Schema cleanup</span>
+        </div>
+      </div>
+
+      <div class="card p-5">
+        <div class="flex items-baseline gap-3 mb-3">
+          <span class="step-bullet step-bullet-canopy">6</span>
+          <h4 class="font-display text-[14.5px] font-bold leading-tight">Adapter timeout 120s → model-aware</h4>
+        </div>
+        <p class="text-[12px] text-[var(--text-2)] leading-relaxed">Reasoning models (deepseek-v4-pro, claude thinking) routinely exceed 120s. Bump to 300s or branch by model class.</p>
+        <div class="mt-3 flex gap-1.5">
+          <span class="pill pill-primary no-dot">Quick win</span>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============================================================
+       SECTION 5: HOW IT FITS WITH CONTENT STUDIO
+       ============================================================ -->
+  <section class="border-b border-[var(--border-2)] py-14">
+    <div class="section-label-row">
+      <span class="section-label">The full picture</span>
+      <span class="section-label-line"></span>
+    </div>
+    <h2 class="section-title">Sources <em>&rarr;</em> Curriculum Studio <em>&rarr;</em> Everywhere else.</h2>
+
+    <p class="mb-8 max-w-[720px] text-[14.5px] leading-relaxed text-[var(--text-2)]">
+      Curriculum Studio is the single fact base for what's teachable. Every other surface
+      &mdash; Content Studio, the practice engine, past-question tagging, onboarding, guided
+      study &mdash; reads from the canonical graph. Nothing else writes to it.
+    </p>
+
+    <!-- Flow diagram -->
+    <div class="card p-7 mb-10">
+      <div class="grid gap-6 lg:grid-cols-[1fr_auto_1fr_auto_1fr] items-center">
+
+        <!-- Inputs -->
+        <div class="space-y-3">
+          <div class="small-cap small-cap-warn mb-2">Input channels</div>
+          <div class="flow-stage flow-warning">
+            <div class="fs-label">Syllabus</div>
+            <div class="fs-title">WAEC</div>
+            <div class="fs-meta">71 subjects · 2026 ed.</div>
+          </div>
+          <div class="flow-stage flow-warning">
+            <div class="fs-label">Syllabus</div>
+            <div class="fs-title">JAMB</div>
+            <div class="fs-meta">All UTME subjects</div>
+          </div>
+          <div class="flow-stage flow-warning">
+            <div class="fs-label">Scheme</div>
+            <div class="fs-title">NERDC</div>
+            <div class="fs-meta">Performance objectives</div>
+          </div>
+          <div class="flow-stage flow-warning">
+            <div class="fs-label">Scheme</div>
+            <div class="fs-title">Platform-shared</div>
+            <div class="fs-meta">Daily/weekly cadence</div>
+          </div>
+          <div class="flow-stage flow-warning">
+            <div class="fs-label">Calibration</div>
+            <div class="fs-title">Past papers</div>
+            <div class="fs-meta">WAEC + JAMB + NECO</div>
+          </div>
+        </div>
+
+        <div class="flow-arrow text-center hidden lg:block">→</div>
+
+        <!-- Curriculum Studio -->
+        <div>
+          <div class="small-cap small-cap-primary mb-2">Reconciliation layer</div>
+          <div class="flow-stage flow-primary" style="border-width: 3px; padding: 22px 24px;">
+            <div class="fs-label">Skoolpad / Admin</div>
+            <div class="fs-title text-[24px]">Curriculum Studio</div>
+            <div class="fs-meta">
+              Canonical topic graph<br/>
+              Linkage confidence + provenance<br/>
+              Per-topic rigor brief<br/>
+              Class-assignment timeline<br/>
+              Visualization intents
+            </div>
+            <div class="mt-3 flex flex-wrap gap-1.5">
+              <span class="pill pill-primary no-dot">canonical_topics</span>
+              <span class="pill pill-primary no-dot">topic_briefs</span>
+              <span class="pill pill-primary no-dot">linkages</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="flow-arrow text-center hidden lg:block">→</div>
+
+        <!-- Outputs / Consumers -->
+        <div class="space-y-3">
+          <div class="small-cap" style="color: var(--ember-500);">Read-only consumers</div>
+          <div class="flow-stage flow-ember">
+            <div class="fs-label">Authoring</div>
+            <div class="fs-title">Content Studio</div>
+            <div class="fs-meta">Generates blocks against the brief</div>
+          </div>
+          <div class="flow-stage flow-ember">
+            <div class="fs-label">Tagging</div>
+            <div class="fs-title">Past-Q ingestion</div>
+            <div class="fs-meta">Auto-tags new questions to canonical topics</div>
+          </div>
+          <div class="flow-stage flow-ember">
+            <div class="fs-label">Engine</div>
+            <div class="fs-title">Practice</div>
+            <div class="fs-meta">Pulls topic depth + rigor brief for spaced repetition</div>
+          </div>
+          <div class="flow-stage flow-ember">
+            <div class="fs-label">Onboarding</div>
+            <div class="fs-title">Student setup</div>
+            <div class="fs-meta">Topic catalog by SS year and exam target</div>
+          </div>
+          <div class="flow-stage flow-ember">
+            <div class="fs-label">Planning</div>
+            <div class="fs-title">Guided study</div>
+            <div class="fs-meta">Term cadence + class assignments</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Editor's experience flow -->
+    <div class="rounded-[var(--card-radius)] border border-[rgba(26,107,79,0.20)] bg-[rgba(26,107,79,0.04)] p-6">
+      <h4 class="mb-5 font-display text-[16px] font-bold">Editor's experience &mdash; one topic, end-to-end</h4>
+      <div class="space-y-4">
+        <div class="step-row">
+          <span class="step-bullet step-bullet-canopy">1</span>
+          <p class="text-[13.5px] leading-relaxed text-[var(--foreground)]">
+            Editor opens Physics SS1 in the <strong>Atlas</strong>. Sees that 21 of 33 topics are reconciled, 4 AI proposals pending, NERDC depth still amber.
+          </p>
+        </div>
+        <div class="step-row">
+          <span class="step-bullet step-bullet-canopy">2</span>
+          <p class="text-[13.5px] leading-relaxed text-[var(--foreground)]">
+            Drills into the <strong>Matrix</strong>. Picks <em>Position, distance, displacement</em> (§ 1.2). The right-hand rail shows linkage confidence, source excerpts, and the AI-proposed NERDC SS2 link.
+          </p>
+        </div>
+        <div class="step-row">
+          <span class="step-bullet step-bullet-canopy">3</span>
+          <p class="text-[13.5px] leading-relaxed text-[var(--foreground)]">
+            Reviews the SS2 proposal &mdash; confidence 0.62 with a sensible rationale. Approves it. The cell flips from hollow to filled; the topic row now shows 4 / 4 sources.
+          </p>
+        </div>
+        <div class="step-row">
+          <span class="step-bullet step-bullet-honey">4</span>
+          <p class="text-[13.5px] leading-relaxed text-[var(--foreground)]">
+            Opens the compiled <strong>Topic Brief</strong>. Reads through, makes one inline correction to the canonical definition, approves the visualization intents.
+          </p>
+        </div>
+        <div class="step-row">
+          <span class="step-bullet step-bullet-ink">5</span>
+          <p class="text-[13.5px] leading-relaxed text-[var(--foreground)]">
+            Hits <strong>Send to Content Studio</strong>. Brief is queued; an editor on the Content Studio side sees it appear in their inbox with a fresh authoring task. The topic flips green on the Coverage heatmap.
+          </p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============================================================
+       SECTION 6: WHAT IT UNLOCKS
+       ============================================================ -->
+  <section class="py-14">
+    <div class="section-label-row">
+      <span class="section-label">Why it earns its place</span>
+      <span class="section-label-line"></span>
+    </div>
+    <h2 class="section-title">What Curriculum Studio <em>unlocks.</em></h2>
+
+    <div class="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+      <div class="card card-lift p-6">
+        <div class="mb-3 text-2xl">🎓</div>
+        <h3 class="text-[15px] font-bold font-display">WAEC-grade content</h3>
+        <p class="mt-2 text-[12.5px] leading-relaxed text-[var(--muted-foreground)]">
+          Briefs ship with anchor past questions. Content Studio's worked examples now match the
+          actual style and difficulty of the exam. Student opens a block, recognises the question
+          type, builds calibrated confidence.
+        </p>
+      </div>
+
+      <div class="card card-lift p-6">
+        <div class="mb-3 text-2xl">🧮</div>
+        <h3 class="text-[15px] font-bold font-display">JAMB-aware authoring</h3>
+        <p class="mt-2 text-[12.5px] leading-relaxed text-[var(--muted-foreground)]">
+          Topics carry JAMB linkage flags. SS3 content can be authored with explicit awareness of
+          which questions appear on UTME, calibrated to the 30-second-per-MCQ format JAMB
+          rewards.
+        </p>
+      </div>
+
+      <div class="card card-lift p-6">
+        <div class="mb-3 text-2xl">⚡</div>
+        <h3 class="text-[15px] font-bold font-display">Faster authoring loops</h3>
+        <p class="mt-2 text-[12.5px] leading-relaxed text-[var(--muted-foreground)]">
+          Content Studio stops rediscovering topic structure on every prompt. Briefs cut model
+          context by ~60% and let the model focus on prose &mdash; not on guessing what to write
+          about.
+        </p>
+      </div>
+
+      <div class="card card-lift p-6">
+        <div class="mb-3 text-2xl">🪜</div>
+        <h3 class="text-[15px] font-bold font-display">Vertical curriculum awareness</h3>
+        <p class="mt-2 text-[12.5px] leading-relaxed text-[var(--muted-foreground)]">
+          The class-assignment timeline knows when SS3's <em>Mechanical energy</em> is a revisit of
+          SS1's <em>Work, energy, power</em>. Spaced repetition can schedule reviews across years,
+          not just within them.
+        </p>
+      </div>
+    </div>
+
+    <div class="mt-10 callout callout-ink">
+      <strong>Architecturally, Curriculum Studio sits at <span class="font-mono text-[12.5px]">/admin/curriculum/*</span></strong>,
+      a sibling module to Content Studio &mdash; not nested inside it. Curriculum data is a
+      foundational concern that belongs at the same level as <span class="font-mono text-[12.5px]">disciplines</span>,
+      <span class="font-mono text-[12.5px]">education_levels</span>, and
+      <span class="font-mono text-[12.5px]">curriculum_subjects</span>. Burying it inside an authoring tool would be the wrong abstraction.
+    </div>
+  </section>
+
+</main>
+
+<!-- ================================================================
+     FOOTER
+     ================================================================ -->
+<footer class="hero" style="padding: 38px 40px; margin-top: 0;">
+  <div class="hero-stripes"></div>
+  <div class="hero-content text-center">
+    <div class="font-mono text-[10px] font-semibold uppercase tracking-[0.10em] text-white/40">
+      Skoolpad · Curriculum Studio · Working Prototype 03 · 2026·05·04
+    </div>
+  </div>
+</footer>
+
+<script>
+  (function () {
+    var STORAGE_KEY = 'curriculum-studio-prototype-theme';
+    var body = document.body;
+    var buttons = document.querySelectorAll('.theme-switch button[data-theme]');
+
+    function apply(theme) {
+      body.classList.remove('dark', 'reader');
+      if (theme === 'dark') body.classList.add('dark');
+      else if (theme === 'reader') body.classList.add('reader');
+      buttons.forEach(function (b) {
+        b.classList.toggle('is-active', b.getAttribute('data-theme') === theme);
+      });
+      try { localStorage.setItem(STORAGE_KEY, theme); } catch (e) {}
+    }
+
+    var saved;
+    try { saved = localStorage.getItem(STORAGE_KEY); } catch (e) {}
+    apply(saved === 'dark' || saved === 'reader' ? saved : 'light');
+
+    buttons.forEach(function (b) {
+      b.addEventListener('click', function () {
+        apply(b.getAttribute('data-theme'));
+      });
+    });
+  })();
+</script>
+
+</body>
+</html>
