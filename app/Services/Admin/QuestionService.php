@@ -86,6 +86,40 @@ class QuestionService
             $children = $data['sub_questions'] ?? [];
             unset($data['sub_questions']);
 
+            // CP12 — cross-document diagram scope check on the stem.
+            // content_doc is the Tiptap source of truth; reject diagram nodes
+            // that reference assets belonging to a different question.
+            if (array_key_exists('content_doc', $data) && is_array($data['content_doc'])) {
+                $scopeViolations = \App\ContentStudio\Support\TiptapDiagramScope::findScopeViolations(
+                    $data['content_doc'],
+                    'question_id',
+                    $question->id,
+                );
+                if (! empty($scopeViolations)) {
+                    throw new DomainException(
+                        'Question stem references diagram assets from other documents: '
+                        .json_encode($scopeViolations)
+                    );
+                }
+            }
+
+            // CP12 — alt-text required for every diagram in stem when publishing.
+            $publishingNow = isset($data['status'])
+                && $data['status'] === QuestionStatus::Published->value
+                && $question->status !== QuestionStatus::Published;
+            if ($publishingNow && is_array($data['content_doc'] ?? null)) {
+                $unlabeled = \App\ContentStudio\Support\TiptapDiagramScope::findUnlabeledAssetIds(
+                    $data['content_doc']
+                );
+                if (! empty($unlabeled)) {
+                    throw new DomainException(
+                        'Cannot publish: '.count($unlabeled).' diagram'
+                        .(count($unlabeled) === 1 ? '' : 's')
+                        .' in stem missing alt-text. Asset IDs: '.implode(', ', $unlabeled)
+                    );
+                }
+            }
+
             if ($reviewer) {
                 $data = $this->markPublishedIfNeeded($question, $data, $reviewer);
             }

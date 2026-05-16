@@ -23,6 +23,8 @@ import { useEffect, useMemo, useRef } from 'react';
 import { cn } from '@/lib/utils';
 import type { TiptapJSON } from '@/types/tiptap';
 
+import { DiagramNode } from './tiptap/diagram-node';
+
 const lowlight = createLowlight();
 lowlight.register({ javascript, typescript, php, python, bash, sql, json, xml, css });
 
@@ -47,6 +49,7 @@ export function TiptapRenderer({ content, className }: TiptapRendererProps) {
             TableCell,
             CodeBlockLowlight.configure({ lowlight }),
             Mathematics,
+            DiagramNode,
         ],
         [],
     );

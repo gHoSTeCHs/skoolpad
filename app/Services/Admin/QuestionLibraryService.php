@@ -267,6 +267,34 @@ class QuestionLibraryService
             ->orderBy('sort_order')
             ->get();
 
+        // Polish B.1 — diagram-presence count for the pool tree.
+        $allIds = collect();
+        $collect = function ($qs) use (&$collect, $allIds): void {
+            foreach ($qs as $q) {
+                $allIds->push($q->id);
+                if ($q->relationLoaded('children') && $q->children->isNotEmpty()) {
+                    $collect($q->children);
+                }
+            }
+        };
+        $collect($questions);
+        if ($allIds->isNotEmpty()) {
+            $counts = \Illuminate\Support\Facades\DB::table('content_block_assets')
+                ->select('question_id', \Illuminate\Support\Facades\DB::raw('count(*) as c'))
+                ->whereIn('question_id', $allIds)
+                ->groupBy('question_id')
+                ->pluck('c', 'question_id');
+            $assign = function ($qs) use (&$assign, $counts): void {
+                foreach ($qs as $q) {
+                    $q->diagram_assets_count = (int) ($counts[$q->id] ?? 0);
+                    if ($q->relationLoaded('children') && $q->children->isNotEmpty()) {
+                        $assign($q->children);
+                    }
+                }
+            };
+            $assign($questions);
+        }
+
         $topicBuckets = [];
         foreach ($questions as $question) {
             $primary = $question->topicLinks->firstWhere('is_primary', true) ?? $question->topicLinks->first();
@@ -395,7 +423,7 @@ class QuestionLibraryService
             ->select([
                 'questions.question_paper_id as paper_id',
                 DB::raw('count(*) as filled'),
-                DB::raw("count(*) filter (where question_answers.is_published = true) as published"),
+                DB::raw('count(*) filter (where question_answers.is_published = true) as published'),
             ])
             ->get();
 

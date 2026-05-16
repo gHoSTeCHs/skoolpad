@@ -161,6 +161,8 @@ export interface QuestionNode {
         content_plain: string | null;
         is_published: boolean;
     }[];
+    /** Count of content_block_assets owned by this question (Track 2 polish B.1). */
+    diagram_assets_count?: number;
 }
 
 /** @deprecated Use McqConfig.options instead */

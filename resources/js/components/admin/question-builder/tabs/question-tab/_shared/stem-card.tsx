@@ -13,6 +13,8 @@ interface StemCardProps {
     valueDoc: TiptapJSON | null;
     error?: string;
     onChange: (json: TiptapJSON | null, plain: string) => void;
+    /** When provided, enables the Diagram toolbar button — saves attach to this question. */
+    questionId?: string;
 }
 
 async function defaultImageUpload(_file: File): Promise<string> {
@@ -26,6 +28,7 @@ export function StemCard({
     valueDoc,
     error,
     onChange,
+    questionId,
 }: StemCardProps) {
     return (
         <Card>
@@ -41,6 +44,9 @@ export function StemCard({
                         onChange={onChange}
                         onImageUpload={defaultImageUpload}
                         placeholder={placeholder}
+                        diagramOwner={
+                            questionId ? { kind: 'question', id: questionId } : undefined
+                        }
                     />
                     <InputError message={error} />
                 </div>

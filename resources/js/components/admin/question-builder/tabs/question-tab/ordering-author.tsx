@@ -71,6 +71,7 @@ export function OrderingAuthor({ question, enumOptions }: OrderingAuthorProps) {
                 valueDoc={form.data.content_doc}
                 error={form.errors.content}
                 onChange={(json, plain) => form.setData((prev) => ({ ...prev, content: plain, content_doc: json }))}
+                questionId={question.id}
             />
 
             <Card>

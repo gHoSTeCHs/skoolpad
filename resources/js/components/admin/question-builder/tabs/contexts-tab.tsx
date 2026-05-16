@@ -1,5 +1,6 @@
 import { useCallback, useState, useRef, useEffect } from 'react';
 import { router } from '@inertiajs/react';
+import { Check, PenSquare } from 'lucide-react';
 import { useDirtyRegistration } from '../hooks/use-dirty-registration';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -7,6 +8,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import ContextCard, { type ContextCardData } from '@/components/skoolpad/questions/context-card';
+import { DiagramEditModal } from '@/components/shared/tiptap/diagram-edit-modal';
 import QuestionContextController from '@/actions/App/Http/Controllers/Admin/QuestionContextController';
 import type { QuestionNode, QuestionPaper, QuestionContextData, ContextType } from '@/types/questions';
 
@@ -60,6 +62,8 @@ export function ContextsTab({ paper, question }: ContextsTabProps) {
     const [createType, setCreateType] = useState<ContextType>('passage');
     const [createTitle, setCreateTitle] = useState('');
     const [createContent, setCreateContent] = useState('');
+    const [createAssetId, setCreateAssetId] = useState<string | null>(null);
+    const [diagramOpen, setDiagramOpen] = useState(false);
     const [linking, setLinking] = useState(false);
     const [creating, setCreating] = useState(false);
 
@@ -68,12 +72,13 @@ export function ContextsTab({ paper, question }: ContextsTabProps) {
 
     // Unsubmitted input in the link/create forms is real unsaved work — register it
     // so navigating away triggers the discard prompt and confirmDiscard can clear it.
-    const dirty = createTitle.trim() !== '' || createContent.trim() !== '' || linkContextId !== '';
+    const dirty = createTitle.trim() !== '' || createContent.trim() !== '' || linkContextId !== '' || createAssetId !== null;
     const resetForm = useCallback(() => {
         setLinkContextId('');
         setCreateType('passage');
         setCreateTitle('');
         setCreateContent('');
+        setCreateAssetId(null);
     }, []);
     useDirtyRegistration('contexts', dirty, resetForm);
 
@@ -82,6 +87,7 @@ export function ContextsTab({ paper, question }: ContextsTabProps) {
         setCreateType('passage');
         setCreateTitle('');
         setCreateContent('');
+        setCreateAssetId(null);
         pendingAutoLink.current = false;
     }, [question.id]);
 
@@ -137,6 +143,9 @@ export function ContextsTab({ paper, question }: ContextsTabProps) {
         };
         if (TEXT_TYPES.includes(createType)) {
             payload.content = createContent || null;
+        }
+        if (createType === 'diagram' && createAssetId) {
+            payload.media_url = `/admin/assets/${createAssetId}/svg`;
         }
 
         router.post(
@@ -252,11 +261,55 @@ export function ContextsTab({ paper, question }: ContextsTabProps) {
                         />
                     )}
 
-                    <Button className="w-full" onClick={handleCreate} disabled={creating}>
+                    {createType === 'diagram' && (
+                        <div className="rounded-md border border-dashed border-border bg-card/50 p-3 text-center">
+                            {createAssetId ? (
+                                <div className="flex items-center justify-center gap-2 text-xs">
+                                    <Check className="size-3.5 text-[color:var(--success)]" />
+                                    <span className="text-muted-foreground">Diagram ready</span>
+                                    <Button
+                                        type="button"
+                                        size="sm"
+                                        variant="outline"
+                                        onClick={() => setDiagramOpen(true)}
+                                    >
+                                        <PenSquare className="size-3.5" />
+                                        Edit
+                                    </Button>
+                                </div>
+                            ) : (
+                                <Button
+                                    type="button"
+                                    size="sm"
+                                    onClick={() => setDiagramOpen(true)}
+                                >
+                                    <PenSquare className="size-3.5" />
+                                    Draw diagram
+                                </Button>
+                            )}
+                        </div>
+                    )}
+
+                    <Button
+                        className="w-full"
+                        onClick={handleCreate}
+                        disabled={creating || (createType === 'diagram' && !createAssetId)}
+                    >
                         {creating ? 'Creating & linking…' : 'Create & Link'}
                     </Button>
                 </CardContent>
             </Card>
+
+            <DiagramEditModal
+                open={diagramOpen}
+                onOpenChange={setDiagramOpen}
+                owner={{ kind: 'question_paper', id: paper.id }}
+                assetId={createAssetId}
+                kind="free_form"
+                caption={createTitle}
+                altText={createTitle}
+                onSaved={(assetId) => setCreateAssetId(assetId)}
+            />
         </div>
     );
 }

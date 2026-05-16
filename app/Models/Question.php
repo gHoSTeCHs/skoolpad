@@ -117,6 +117,16 @@ class Question extends Model
         return $this->hasMany(QuestionAnswer::class);
     }
 
+    /**
+     * Diagram assets attached to this question (drawn via the Excalidraw modal
+     * inside the stem or any answer-key editor). Drives the question tree's
+     * diagram-presence indicator (Track 2 polish B.1).
+     */
+    public function diagramAssets(): HasMany
+    {
+        return $this->hasMany(ContentBlockAsset::class);
+    }
+
     public function topicLinks(): HasMany
     {
         return $this->hasMany(QuestionTopicLink::class);

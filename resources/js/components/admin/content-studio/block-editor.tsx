@@ -136,6 +136,7 @@ export function BlockEditor({
                                     onChange={(json) => setEditedContent(json)}
                                     placeholder="Block content"
                                     disabled={isBusy}
+                                    diagramOwner={{ kind: 'content_block', id: block.id }}
                                 />
                             ) : (
                                 <ContentRenderer content={block.content} />

@@ -199,6 +199,7 @@ export function BlockContentDetail({
                             onChange={(json) => setEditedContent(json)}
                             placeholder="Block content"
                             disabled={false}
+                            diagramOwner={{ kind: 'content_block', id: block.id }}
                         />
                     ) : (
                         <div className="rounded-md border border-border bg-background p-6">

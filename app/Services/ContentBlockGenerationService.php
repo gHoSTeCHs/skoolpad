@@ -388,10 +388,24 @@ class ContentBlockGenerationService
             throw new \DomainException('Container blocks have no content.');
         }
 
-        $violations = \App\ContentStudio\Support\TiptapAllowList::findViolations($payload['content'] ?? []);
+        $content = $payload['content'] ?? [];
+
+        $violations = \App\ContentStudio\Support\TiptapAllowList::findViolations($content);
         if (! empty($violations)) {
             throw new \DomainException(
                 'Content contains disallowed Tiptap nodes: '.json_encode($violations)
+            );
+        }
+
+        // CP12 — reject cross-document diagram references (defence-in-depth).
+        $scopeViolations = \App\ContentStudio\Support\TiptapDiagramScope::findScopeViolations(
+            $content,
+            'content_block_id',
+            $block->id,
+        );
+        if (! empty($scopeViolations)) {
+            throw new \DomainException(
+                'Content references diagram assets from other documents: '.json_encode($scopeViolations)
             );
         }
 
@@ -489,6 +503,18 @@ class ContentBlockGenerationService
         if ($block->generation_status !== \App\Enums\BlockGenerationStatus::Generated) {
             throw new \DomainException(
                 "Block must be in 'generated' state to approve; current state: {$block->generation_status->value}"
+            );
+        }
+
+        // CP12 — alt-text required for every diagram in the block at publish time.
+        $unlabeled = \App\ContentStudio\Support\TiptapDiagramScope::findUnlabeledAssetIds(
+            $block->content ?? []
+        );
+        if (! empty($unlabeled)) {
+            throw new \DomainException(
+                'Cannot approve: '.count($unlabeled).' diagram'.(count($unlabeled) === 1 ? '' : 's')
+                .' missing alt-text. Add alt-text on the diagram(s) before publishing. Asset IDs: '
+                .implode(', ', $unlabeled)
             );
         }
 

@@ -9,6 +9,8 @@ use App\Http\Controllers\Admin\AssessmentTypeController;
 use App\Http\Controllers\Admin\BulkImportController;
 use App\Http\Controllers\Admin\CalendarTermController;
 use App\Http\Controllers\Admin\CanonicalTopicController;
+use App\Http\Controllers\Admin\CanvasStencilController;
+use App\Http\Controllers\Admin\ContentBlockAssetController;
 use App\Http\Controllers\Admin\ContentBlockController;
 use App\Http\Controllers\Admin\ContentStudioController;
 use App\Http\Controllers\Admin\CourseBlockMappingController;
@@ -73,6 +75,24 @@ Route::middleware(['auth', 'verified', 'staff'])->prefix('admin')->name('admin.'
     Route::delete('question-papers/{questionPaper}/contexts/{questionContext}', [QuestionContextController::class, 'destroy'])->name('question-papers.contexts.destroy');
     Route::post('questions/{question}/contexts/link', [QuestionContextController::class, 'link'])->name('questions.contexts.link');
     Route::delete('questions/{question}/contexts/{questionContext}/unlink', [QuestionContextController::class, 'unlink'])->name('questions.contexts.unlink');
+
+    // Diagram-authoring assets (Track 2, Checkpoint 2). One row per drawn diagram;
+    // scope determined by which owner FK is set (content_block / question / question_paper).
+    Route::post('assets', [ContentBlockAssetController::class, 'store'])->name('assets.store');
+    Route::get('assets/{asset}', [ContentBlockAssetController::class, 'show'])->name('assets.show');
+    Route::put('assets/{asset}', [ContentBlockAssetController::class, 'update'])->name('assets.update');
+    Route::get('assets/{asset}/svg', [ContentBlockAssetController::class, 'svg'])->name('assets.svg');
+
+    // Canvas stencil library (Track 2 CP11). Browse + CRUD + SVG-serve endpoints.
+    // Catalog is the lightweight metadata feed consumed by the Excalidraw modal sidebar.
+    Route::get('canvas-stencils/catalog', [CanvasStencilController::class, 'catalog'])->name('canvas-stencils.catalog');
+    Route::get('canvas-stencils/json', [CanvasStencilController::class, 'jsonIndex'])->name('canvas-stencils.json-index');
+    Route::get('canvas-stencils', [CanvasStencilController::class, 'index'])->name('canvas-stencils.index');
+    Route::post('canvas-stencils', [CanvasStencilController::class, 'store'])->name('canvas-stencils.store');
+    Route::get('canvas-stencils/{canvasStencil}', [CanvasStencilController::class, 'show'])->name('canvas-stencils.show');
+    Route::get('canvas-stencils/{canvasStencil}/svg', [CanvasStencilController::class, 'svg'])->name('canvas-stencils.svg');
+    Route::put('canvas-stencils/{canvasStencil}', [CanvasStencilController::class, 'update'])->name('canvas-stencils.update');
+    Route::delete('canvas-stencils/{canvasStencil}', [CanvasStencilController::class, 'destroy'])->name('canvas-stencils.destroy');
 
     Route::get('question-library', [QuestionLibraryController::class, 'index'])->name('question-library.index');
     Route::get('question-library/search', [QuestionLibraryController::class, 'search'])->name('question-library.search');

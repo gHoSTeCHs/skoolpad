@@ -3,13 +3,14 @@
 import { useCallback, useRef, useState } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { ImagePlus, Sparkles, Trash2 } from 'lucide-react';
+import { ImagePlus, PenSquare, Sparkles, Trash2 } from 'lucide-react';
 import type { DiagramLabelConfig, EnumOption, QuestionNode } from '@/types/questions';
 import { useQuestionForm } from './_shared/use-question-form';
 import { StemCard } from './_shared/stem-card';
 import { MetadataCard } from './_shared/metadata-card';
 import { SaveBar } from './_shared/save-bar';
 import { AcceptChips } from './_shared/accept-chips';
+import { DiagramEditModal } from '@/components/shared/tiptap/diagram-edit-modal';
 
 interface DiagramLabelAuthorProps {
     question: QuestionNode;
@@ -21,6 +22,8 @@ interface DiagramLabelAuthorProps {
 
 interface ExtendedDiagramConfig extends DiagramLabelConfig {
     image_url?: string;
+    /** Set when the image was authored via Excalidraw — lets the modal re-open the same scene. */
+    asset_id?: string | null;
     accepted?: Record<number, string[]>;
     per_label_marks?: Record<number, number>;
 }
@@ -37,6 +40,7 @@ export function DiagramLabelAuthor({ question, enumOptions }: DiagramLabelAuthor
     const config = (form.data.response_config as ExtendedDiagramConfig | null) ?? defaultConfig();
     const canvasRef = useRef<HTMLDivElement>(null);
     const [draggingIdx, setDraggingIdx] = useState<number | null>(null);
+    const [diagramOpen, setDiagramOpen] = useState(false);
 
     const setConfig = useCallback((next: ExtendedDiagramConfig) => {
         form.setData('response_config', next as never);
@@ -107,6 +111,7 @@ export function DiagramLabelAuthor({ question, enumOptions }: DiagramLabelAuthor
                 valueDoc={form.data.content_doc}
                 error={form.errors.content}
                 onChange={(json, plain) => form.setData((prev) => ({ ...prev, content: plain, content_doc: json }))}
+                questionId={question.id}
             />
 
             <Card>
@@ -128,17 +133,17 @@ export function DiagramLabelAuthor({ question, enumOptions }: DiagramLabelAuthor
                                 <Button
                                     type="button"
                                     size="sm"
-                                    variant="outline"
-                                    onClick={() => setConfig({ ...config, image_url: '/placeholder-image.png' })}
+                                    onClick={() => setDiagramOpen(true)}
                                 >
-                                    Upload (placeholder)
+                                    <PenSquare className="size-3.5" />
+                                    Draw with Excalidraw
                                 </Button>
-                                <Button type="button" size="sm" variant="outline" disabled>
-                                    Paste SVG
+                                <Button type="button" size="sm" variant="outline" disabled title="Coming soon">
+                                    Upload image
                                 </Button>
-                                <Button type="button" size="sm" disabled>
+                                <Button type="button" size="sm" variant="outline" disabled title="Thread A — Track 2 follow-on">
                                     <Sparkles className="size-3.5" />
-                                    AI generate (4.D)
+                                    AI generate
                                 </Button>
                             </div>
                         </div>
@@ -184,14 +189,24 @@ export function DiagramLabelAuthor({ question, enumOptions }: DiagramLabelAuthor
                             </div>
                             <div className="flex items-center justify-between text-[11px] text-muted-foreground">
                                 <span>{config.labels.length} hotspot{config.labels.length === 1 ? '' : 's'} placed</span>
-                                <button
-                                    type="button"
-                                    onClick={() => setConfig({ ...config, image_url: '', labels: [], accepted: {}, per_label_marks: {} })}
-                                    className="font-mono text-[11px] text-[var(--fg-subtle)] hover:text-destructive"
-                                >
-                                    <Trash2 className="mr-1 inline-block size-3" />
-                                    Replace image
-                                </button>
+                                <div className="flex items-center gap-3">
+                                    <button
+                                        type="button"
+                                        onClick={() => setDiagramOpen(true)}
+                                        className="font-mono text-[11px] text-[var(--fg-subtle)] hover:text-foreground"
+                                    >
+                                        <PenSquare className="mr-1 inline-block size-3" />
+                                        Edit diagram
+                                    </button>
+                                    <button
+                                        type="button"
+                                        onClick={() => setConfig({ ...config, image_url: '', asset_id: null, labels: [], accepted: {}, per_label_marks: {} })}
+                                        className="font-mono text-[11px] text-[var(--fg-subtle)] hover:text-destructive"
+                                    >
+                                        <Trash2 className="mr-1 inline-block size-3" />
+                                        Replace image
+                                    </button>
+                                </div>
                             </div>
                         </div>
                     )}
@@ -260,6 +275,23 @@ export function DiagramLabelAuthor({ question, enumOptions }: DiagramLabelAuthor
             />
 
             <SaveBar isDirty={isDirty} processing={form.processing} recentlySuccessful={form.recentlySuccessful} />
+
+            <DiagramEditModal
+                open={diagramOpen}
+                onOpenChange={setDiagramOpen}
+                owner={{ kind: 'question', id: question.id }}
+                assetId={config.asset_id ?? null}
+                kind="free_form"
+                caption=""
+                altText=""
+                onSaved={(assetId) =>
+                    setConfig({
+                        ...config,
+                        asset_id: assetId,
+                        image_url: `/admin/assets/${assetId}/svg?v=${Date.now()}`,
+                    })
+                }
+            />
         </form>
     );
 }

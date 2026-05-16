@@ -40,6 +40,7 @@ import {
     List,
     ListOrdered,
     Minus,
+    PenSquare,
     Pilcrow,
     Quote,
     Redo2,
@@ -80,6 +81,8 @@ import {
 import { cn } from '@/lib/utils';
 import type { TiptapJSON } from '@/types/tiptap';
 
+import { DiagramNode, type DiagramOwner } from './tiptap/diagram-node';
+
 const lowlight = createLowlight();
 lowlight.register({
     javascript,
@@ -100,6 +103,12 @@ interface TiptapEditorProps {
     onImageUpload?: (file: File) => Promise<string>;
     className?: string;
     disabled?: boolean;
+    /**
+     * Identifies the entity any diagrams drawn in this editor should attach to.
+     * When provided, reveals the Diagram toolbar button and wires saves into
+     * `editor.storage.diagram.owner`. When undefined, the button is hidden.
+     */
+    diagramOwner?: DiagramOwner;
 }
 
 export function TiptapEditor({
@@ -109,6 +118,7 @@ export function TiptapEditor({
     onImageUpload,
     className,
     disabled = false,
+    diagramOwner,
 }: TiptapEditorProps) {
     'use no memo';
     const { t } = useTranslation();
@@ -134,6 +144,7 @@ export function TiptapEditor({
                 placeholder: placeholder ?? t('editor.placeholder'),
             }),
             Mathematics,
+            DiagramNode,
         ],
         // eslint-disable-next-line react-hooks/exhaustive-deps
         [placeholder],
@@ -162,6 +173,14 @@ export function TiptapEditor({
         }
     }, [editor, disabled]);
 
+    // Wire diagram owner into editor.storage whenever it changes. The modal reads
+    // from this storage slot at save time to know which entity FK to set.
+    useEffect(() => {
+        if (!editor) return;
+        if (!editor.storage.diagram) editor.storage.diagram = { owner: null };
+        editor.storage.diagram.owner = diagramOwner ?? null;
+    }, [editor, diagramOwner]);
+
     if (!editor) return null;
 
     return (
@@ -177,6 +196,7 @@ export function TiptapEditor({
                 disabled={disabled}
                 onLinkClick={() => setLinkDialogOpen(true)}
                 onImageClick={() => setImageDialogOpen(true)}
+                diagramEnabled={!!diagramOwner}
             />
             <div className="min-h-[400px] px-4 py-3">
                 <EditorContent editor={editor} />
@@ -238,6 +258,7 @@ interface EditorToolbarProps {
     disabled: boolean;
     onLinkClick: () => void;
     onImageClick: () => void;
+    diagramEnabled: boolean;
 }
 
 function EditorToolbar({
@@ -245,6 +266,7 @@ function EditorToolbar({
     disabled,
     onLinkClick,
     onImageClick,
+    diagramEnabled,
 }: EditorToolbarProps) {
     'use no memo';
     const { t } = useTranslation();
@@ -415,6 +437,16 @@ function EditorToolbar({
                 onClick={onImageClick}
                 disabled={disabled}
             />
+            {diagramEnabled && (
+                <ToolbarButton
+                    icon={<PenSquare className={iconSize} />}
+                    label={t('Diagram')}
+                    onClick={() =>
+                        editor.chain().focus().insertDiagram({ kind: 'free_form' }).run()
+                    }
+                    disabled={disabled}
+                />
+            )}
             <ToolbarButton
                 icon={<TableIcon className={iconSize} />}
                 label={t('Table')}

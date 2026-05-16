@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { QuestionTypeBadge } from '@/components/skoolpad/questions';
 import { AnswerStatusDots } from './answer-status-dots';
+import { DiagramPresenceChip } from './diagram-presence-chip';
 import type { QuestionNode } from '@/types/questions';
 import type { PoolContainer, PoolTopic } from '@/types/question-library';
 import type { SelectedNode } from './paper-tree';
@@ -63,6 +64,7 @@ function QuestionRow({ question, depth, selectedNode, onSelectNode }: QuestionRo
 
                 <QuestionTypeBadge type={question.question_type} className="shrink-0 px-1 py-0 text-[8px]" />
 
+                <DiagramPresenceChip question={question} />
                 <AnswerStatusDots question={question} />
             </div>
 

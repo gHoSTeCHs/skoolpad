@@ -95,6 +95,17 @@ class QuestionPaperController extends Controller
     }
 
     /** @return array<string, mixed> */
+    /** Walk the recursive question tree, pushing every node into $sink. */
+    private static function collectQuestionsRecursive(iterable $questions, \Illuminate\Support\Collection $sink): void
+    {
+        foreach ($questions as $q) {
+            $sink->push($q);
+            if ($q->relationLoaded('children') && $q->children->isNotEmpty()) {
+                self::collectQuestionsRecursive($q->children, $sink);
+            }
+        }
+    }
+
     private function buildPayload(QuestionPaper $paper): array
     {
         $paper->load([
@@ -121,6 +132,23 @@ class QuestionPaperController extends Controller
             'sections.questions.questionContextLinks',
             'contexts',
         ]);
+
+        // Polish B.1 — diagram-presence indicator for the question tree.
+        // Walk the loaded tree once; one keyed COUNT query covers every depth.
+        $allQuestions = collect();
+        foreach ($paper->sections as $section) {
+            self::collectQuestionsRecursive($section->questions, $allQuestions);
+        }
+        if ($allQuestions->isNotEmpty()) {
+            $counts = \Illuminate\Support\Facades\DB::table('content_block_assets')
+                ->select('question_id', \Illuminate\Support\Facades\DB::raw('count(*) as c'))
+                ->whereIn('question_id', $allQuestions->pluck('id'))
+                ->groupBy('question_id')
+                ->pluck('c', 'question_id');
+            foreach ($allQuestions as $q) {
+                $q->diagram_assets_count = (int) ($counts[$q->id] ?? 0);
+            }
+        }
 
         return [
             'paper' => $paper,

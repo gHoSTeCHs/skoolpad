@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { QuestionTypeBadge } from '@/components/skoolpad/questions';
 import { AnswerStatusDots } from './answer-status-dots';
+import { DiagramPresenceChip } from './diagram-presence-chip';
 import type { QuestionPaper, QuestionSection, QuestionNode, QuestionContextData, QuestionType } from '@/types/questions';
 
 export type SelectedNode =
@@ -69,6 +70,7 @@ function QuestionTreeNode({ question, depth, selectedNode, onSelectNode, section
 
                 <QuestionTypeBadge type={question.question_type} className="shrink-0 text-[8px] px-1 py-0" />
 
+                <DiagramPresenceChip question={question} />
                 <AnswerStatusDots question={question} />
             </div>
 

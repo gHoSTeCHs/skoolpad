@@ -176,6 +176,7 @@ export function DepthCard({ questionId, depthData }: DepthCardProps) {
                                     }}
                                     onImageUpload={handleImageUpload}
                                     placeholder={`Write the ${depthData.label.toLowerCase()} answer here...`}
+                                    diagramOwner={{ kind: 'question', id: questionId }}
                                 />
                             </div>
                             <InputError message={form.errors.content} />
