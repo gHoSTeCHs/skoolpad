@@ -4,6 +4,7 @@ import { useForm } from '@inertiajs/react';
 import { useCallback, useEffect, useRef } from 'react';
 import QuestionController from '@/actions/App/Http/Controllers/Admin/QuestionController';
 import { AnchorStrip } from './anchor-strip';
+import { AnswersBody } from './answers-body';
 import { findSectionOf } from './lib/drill';
 import { McqBody } from './mcq-body';
 import { MetadataForm } from './metadata-form';
@@ -117,13 +118,7 @@ export function QuestionEditor({ paper, question }: QuestionEditorProps) {
 
             <BodyDispatch form={bridge} type={question.question_type} />
 
-            <PlaceholderSection
-                id="sec-answers"
-                eyebrow="Section 3"
-                title="Answer keys"
-                landingCp="CP5"
-                blurb="Quick / Standard / Deep dive — a 3-segment chip with one editor below, plus per-segment fill state. Arrives in Checkpoint 5."
-            />
+            <AnswersBody question={question} />
 
             <section
                 id="sec-meta"
