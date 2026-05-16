@@ -50,7 +50,10 @@ class ResponseConfigValidator implements ValidationRule
         }
 
         $method = 'validate'.str_replace('_', '', ucwords($this->questionType, '_'));
-        if (method_exists($this, $method)) {
+        // Guard: the dispatched name must be a real per-type validator, not the
+        // outer ::validate() — an empty/unknown questionType used to recurse
+        // and explode with a TypeError.
+        if ($method !== 'validate' && method_exists($this, $method)) {
             $this->$method($config, $fail);
         }
     }

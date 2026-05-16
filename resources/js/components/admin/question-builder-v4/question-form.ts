@@ -1,12 +1,20 @@
+import type { QuestionType, ResponseConfig } from '@/types/questions';
 import type { TiptapJSON } from '@/types/tiptap';
 
 export interface QuestionFormData {
+    /**
+     * Sent on every partial PUT so the backend's ResponseConfigValidator
+     * can dispatch to the right per-type rule (mcq vs theory vs matching, ...).
+     * Not user-editable from the editor column.
+     */
+    question_type: QuestionType;
     marks: number | '';
     difficulty_level: string;
     bloom_level: string;
     content: string;
     content_doc: TiptapJSON | null;
-    [key: string]: string | number | TiptapJSON | null;
+    response_config: ResponseConfig;
+    [key: string]: string | number | TiptapJSON | ResponseConfig | null;
 }
 
 /**

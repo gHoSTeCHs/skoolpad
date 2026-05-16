@@ -5,6 +5,7 @@ import { useCallback, useEffect, useRef } from 'react';
 import QuestionController from '@/actions/App/Http/Controllers/Admin/QuestionController';
 import { AnchorStrip } from './anchor-strip';
 import { findSectionOf } from './lib/drill';
+import { McqBody } from './mcq-body';
 import { MetadataForm } from './metadata-form';
 import { QuestionHeader } from './question-header';
 import {
@@ -16,21 +17,40 @@ import { StemForm } from './stem-form';
 import { TYPE_META } from './lib/question-meta';
 import { useDirtyRegistration } from './hooks/use-dirty-registration';
 import { useBuilderV4Store } from './store/provider';
-import type { QuestionNode, QuestionPaper, QuestionType } from '@/types/questions';
+import type {
+    QuestionNode,
+    QuestionPaper,
+    QuestionType,
+    ResponseConfig,
+} from '@/types/questions';
 
 interface QuestionEditorProps {
     paper: QuestionPaper;
     question: QuestionNode;
 }
 
+function defaultConfigForType(type: QuestionType): ResponseConfig {
+    if (type === 'mcq' || type === 'multi_select_mcq') {
+        return {
+            options: [
+                { label: 'A', text: '', is_correct: false },
+                { label: 'B', text: '', is_correct: false },
+            ],
+        };
+    }
+    return null;
+}
+
 function buildInitial(q: QuestionNode): QuestionFormData {
     const content = q.content ?? '';
     return {
+        question_type: q.question_type,
         marks: q.marks ?? '',
         difficulty_level: q.difficulty_level ?? '',
         bloom_level: q.bloom_level ?? '',
         content,
         content_doc: q.content_doc ?? deriveContentDoc(content),
+        response_config: q.response_config ?? defaultConfigForType(q.question_type),
     };
 }
 
@@ -95,7 +115,7 @@ export function QuestionEditor({ paper, question }: QuestionEditorProps) {
                 <StemForm form={bridge} questionId={question.id} />
             </section>
 
-            <BodyPlaceholder type={question.question_type} />
+            <BodyDispatch form={bridge} type={question.question_type} />
 
             <PlaceholderSection
                 id="sec-answers"
@@ -129,20 +149,23 @@ export function QuestionEditor({ paper, question }: QuestionEditorProps) {
     );
 }
 
-function BodyPlaceholder({ type }: { type: QuestionType }) {
+function BodyDispatch({ form, type }: { form: QuestionFormBridge; type: QuestionType }) {
+    if (type === 'mcq' || type === 'multi_select_mcq') {
+        return <McqBody form={form} mode={type} />;
+    }
+
     const blurb =
-        type === 'mcq' || type === 'multi_select_mcq' || type === 'true_false'
-            ? 'Option rows, correct toggle, reorder, add/delete. Multiple-choice authoring arrives in Checkpoint 4 (MCQ first).'
+        type === 'true_false'
+            ? 'True/False is structurally MCQ with two fixed options. Arrives in Checkpoint 8.'
             : type === 'group'
-              ? 'Sub-question list with inline create. Group authoring wires the drill-in for sub-question children. Arrives in Checkpoint 4/9.'
-              : 'Per-type authoring (matching pairs, ordering sequence, matrix, cloze gaps, etc.) arrives across Checkpoints 4 and 8 — reusing the MCQ pattern as the template.';
-    const landingCp = type === 'mcq' ? 'CP4' : 'CP8';
+              ? 'Sub-question list with inline create. Group authoring wires the drill-in for sub-question children. Arrives in Checkpoint 9.'
+              : 'Per-type authoring (matching pairs, ordering sequence, matrix, cloze gaps, etc.) arrives in Checkpoint 8 — reusing the MCQ pattern as the template.';
     return (
         <PlaceholderSection
             id="sec-body"
             eyebrow="Section 2"
             title={TYPE_META[type].bodyAnchorLabel}
-            landingCp={landingCp}
+            landingCp="CP8"
             blurb={blurb}
         />
     );
