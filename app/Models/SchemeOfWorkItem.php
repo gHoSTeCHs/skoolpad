@@ -14,6 +14,10 @@ class SchemeOfWorkItem extends Model
 
     protected $fillable = [
         'curriculum_subject_level_id',
+        'source_type',
+        'source_url',
+        'source_version_year',
+        'source_meta',
         'term',
         'week_number',
         'topic_label',
@@ -27,6 +31,8 @@ class SchemeOfWorkItem extends Model
         return [
             'term' => 'integer',
             'week_number' => 'integer',
+            'source_version_year' => 'integer',
+            'source_meta' => 'array',
         ];
     }
 

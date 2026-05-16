@@ -11,6 +11,7 @@ enum QuestionSource: string
     case Crowdsourced = 'crowdsourced';
     case AiGenerated = 'ai_generated';
     case BulkImport = 'bulk_import';
+    case PastPaperImported = 'past_paper_imported';
 
     public function label(): string
     {
@@ -19,6 +20,7 @@ enum QuestionSource: string
             self::Crowdsourced => 'Crowdsourced',
             self::AiGenerated => 'AI Generated',
             self::BulkImport => 'Bulk Import',
+            self::PastPaperImported => 'Past Paper (Imported)',
         };
     }
 

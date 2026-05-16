@@ -11,10 +11,27 @@ class ResponseConfigValidator implements ValidationRule
 
     public function validate(string $attribute, mixed $value, Closure $fail): void
     {
-        if ($this->isWrittenType() || $this->questionType === 'group') {
+        if ($this->questionType === 'group') {
             if ($value !== null) {
                 $fail('This question type must not have response_config.');
             }
+
+            return;
+        }
+
+        if ($this->isWrittenType()) {
+            if ($value === null) {
+                return;
+            }
+
+            $config = is_array($value) ? $value : json_decode($value, true);
+            if (! is_array($config)) {
+                $fail('response_config must be a valid JSON object.');
+
+                return;
+            }
+
+            $this->validateFreeForm($config, $fail);
 
             return;
         }
@@ -35,6 +52,51 @@ class ResponseConfigValidator implements ValidationRule
         $method = 'validate'.str_replace('_', '', ucwords($this->questionType, '_'));
         if (method_exists($this, $method)) {
             $this->$method($config, $fail);
+        }
+    }
+
+    private function validateFreeForm(array $config, Closure $fail): void
+    {
+        $allowed = ['minWords', 'maxWords', 'rubric'];
+        foreach (array_keys($config) as $key) {
+            if (! in_array($key, $allowed, true)) {
+                $fail('Free-form response_config may only contain: '.implode(', ', $allowed).'.');
+
+                return;
+            }
+        }
+
+        if (isset($config['minWords']) && (! is_int($config['minWords']) || $config['minWords'] < 0)) {
+            $fail('minWords must be a non-negative integer.');
+
+            return;
+        }
+
+        if (isset($config['maxWords']) && (! is_int($config['maxWords']) || $config['maxWords'] < 0)) {
+            $fail('maxWords must be a non-negative integer.');
+
+            return;
+        }
+
+        if (isset($config['rubric'])) {
+            if (! is_array($config['rubric'])) {
+                $fail('rubric must be an array.');
+
+                return;
+            }
+
+            foreach ($config['rubric'] as $i => $criterion) {
+                if (! isset($criterion['label']) || ! isset($criterion['text']) || ! isset($criterion['points'])) {
+                    $fail("Rubric criterion {$i} requires label, text, and points.");
+
+                    return;
+                }
+                if (! is_int($criterion['points']) || $criterion['points'] < 0) {
+                    $fail("Rubric criterion {$i} points must be a non-negative integer.");
+
+                    return;
+                }
+            }
         }
     }
 

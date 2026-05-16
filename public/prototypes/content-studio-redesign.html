@@ -1,0 +1,1339 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Content Studio — Redesign Prototype</title>
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,400;12..96,500;12..96,600;12..96,700&family=DM+Sans:opsz,wght@9..40,400;9..40,500;9..40,600;9..40,700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+
+<script src="https://cdn.tailwindcss.com"></script>
+<script>
+  tailwind.config = {
+    theme: {
+      extend: {
+        fontFamily: {
+          display: ['"Bricolage Grotesque"', 'serif'],
+          sans: ['"DM Sans"', 'system-ui', 'sans-serif'],
+          mono: ['"JetBrains Mono"', 'ui-monospace', 'monospace'],
+        },
+      },
+    },
+  }
+</script>
+
+<style>
+  :root {
+    /* Warm Editorial palette */
+    --bg:            #F7F2E9;
+    --surface:       #FBF8F1;
+    --surface-2:     #F0E9DB;
+    --surface-3:     #E8DFCB;
+    --border:        #E0D6C2;
+    --border-strong: #C9BCA0;
+    --fg:            #1F1A12;
+    --fg-muted:      #6B5E47;
+    --fg-subtle:     #9C8E73;
+
+    --primary:       #1A6B4F;
+    --primary-fg:    #FBF8F1;
+    --primary-soft:  #DCE8DD;
+    --primary-line:  #A6C4A8;
+
+    --honey:         #B8862F;
+    --honey-soft:    #F4E8CC;
+    --honey-line:    #E0C679;
+
+    --success:       #1A6B4F;
+    --warning:       #B8862F;
+    --danger:        #9C2A2A;
+    --danger-soft:   #F4DBDB;
+
+    --shadow-sm: 0 1px 0 rgba(31,26,18,0.04), 0 1px 2px rgba(31,26,18,0.04);
+    --shadow-md: 0 4px 12px -4px rgba(31,26,18,0.08), 0 2px 4px rgba(31,26,18,0.04);
+  }
+
+  html, body { height: 100%; }
+  body {
+    background: var(--bg);
+    color: var(--fg);
+    font-family: 'DM Sans', system-ui, sans-serif;
+    font-size: 14px;
+    line-height: 1.5;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  /* Subtle paper grain on the editor surface */
+  .paper {
+    background: var(--surface);
+    background-image:
+      radial-gradient(rgba(31,26,18,0.018) 1px, transparent 1px);
+    background-size: 16px 16px;
+  }
+
+  /* Manuscript reading column */
+  .prose-body {
+    font-family: 'DM Sans';
+    font-size: 15px;
+    line-height: 1.65;
+    color: var(--fg);
+  }
+  .prose-body p { margin-bottom: 1.1em; }
+  .prose-body h2 {
+    font-family: 'Bricolage Grotesque';
+    font-weight: 600;
+    font-size: 28px;
+    letter-spacing: -0.012em;
+    line-height: 1.15;
+    margin-bottom: 0.6em;
+  }
+  .prose-body h3 {
+    font-family: 'Bricolage Grotesque';
+    font-weight: 600;
+    font-size: 18px;
+    letter-spacing: -0.005em;
+    margin-top: 1.6em;
+    margin-bottom: 0.5em;
+  }
+  .prose-body em { color: var(--fg-muted); font-style: italic; }
+  .prose-body code {
+    font-family: 'JetBrains Mono';
+    font-size: 0.88em;
+    background: var(--surface-2);
+    padding: 1px 5px;
+    border-radius: 3px;
+  }
+  .prose-body .formula {
+    display: block;
+    padding: 0.85em 1em;
+    margin: 1em 0;
+    background: var(--surface-2);
+    border-left: 2px solid var(--border-strong);
+    font-family: 'JetBrains Mono';
+    font-size: 14px;
+    color: var(--fg);
+  }
+
+  /* Status pills */
+  .pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 2px 8px 2px 7px;
+    border-radius: 999px;
+    font-size: 11.5px;
+    font-weight: 500;
+    line-height: 1.4;
+    letter-spacing: 0;
+    white-space: nowrap;
+  }
+  .pill::before {
+    content: '';
+    width: 6px;
+    height: 6px;
+    border-radius: 999px;
+    background: currentColor;
+    opacity: 0.85;
+  }
+  .pill-success    { background: var(--primary-soft);  color: var(--primary); }
+  .pill-warning    { background: var(--honey-soft);    color: #6B4F18; }
+  .pill-warning::before { background: var(--honey); opacity: 1; }
+  .pill-neutral    { background: var(--surface-2);     color: var(--fg-muted); }
+  .pill-neutral::before { background: var(--fg-subtle); }
+  .pill-danger     { background: var(--danger-soft);   color: var(--danger); }
+
+  /* Compound generate button */
+  .gen-button {
+    display: inline-flex;
+    align-items: stretch;
+    height: 36px;
+    border-radius: 8px;
+    background: var(--fg);
+    color: var(--bg);
+    font-family: 'DM Sans';
+    font-weight: 500;
+    box-shadow: var(--shadow-md), inset 0 1px 0 rgba(255,255,255,0.06);
+    overflow: hidden;
+    transition: transform 0.06s ease;
+  }
+  .gen-button:hover { transform: translateY(-0.5px); }
+  .gen-button:active { transform: translateY(0); }
+  .gen-button .gen-action {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 0 14px 0 14px;
+    font-size: 13.5px;
+  }
+  .gen-button .gen-divider {
+    width: 1px;
+    background: rgba(255,255,255,0.12);
+    margin: 6px 0;
+  }
+  .gen-button .gen-model {
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+    padding: 0 12px;
+    font-size: 12px;
+    color: rgba(255,255,255,0.78);
+  }
+  .gen-button .gen-model:hover { color: var(--bg); background: rgba(255,255,255,0.05); }
+  .gen-button .gen-dot {
+    width: 5px; height: 5px;
+    border-radius: 999px;
+    background: var(--honey-line);
+    box-shadow: 0 0 0 2px rgba(228,198,121,0.18);
+  }
+
+  /* Stage rail */
+  .rail-step {
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 40px;
+    height: 40px;
+    margin: 0 auto;
+    border-radius: 10px;
+    color: var(--fg-subtle);
+    transition: all 0.15s ease;
+    cursor: pointer;
+  }
+  .rail-step:hover { background: var(--surface-2); color: var(--fg-muted); }
+  .rail-step[data-state="active"] {
+    background: var(--fg);
+    color: var(--bg);
+    box-shadow: var(--shadow-md);
+  }
+  .rail-step[data-state="completed"] { color: var(--primary); }
+  .rail-step[data-state="completed"]:hover { background: var(--primary-soft); }
+  .rail-step[data-state="pending"] { opacity: 0.5; }
+  .rail-step .rail-tooltip {
+    position: absolute;
+    left: calc(100% + 12px);
+    top: 50%;
+    transform: translateY(-50%);
+    padding: 4px 10px;
+    background: var(--fg);
+    color: var(--bg);
+    font-size: 12px;
+    font-weight: 500;
+    white-space: nowrap;
+    border-radius: 6px;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.12s ease;
+    z-index: 50;
+  }
+  .rail-step:hover .rail-tooltip { opacity: 1; }
+
+  /* Block list rows */
+  .block-row {
+    display: grid;
+    grid-template-columns: 32px 1fr auto;
+    align-items: start;
+    gap: 10px;
+    padding: 10px 14px 10px 12px;
+    border-left: 2px solid transparent;
+    cursor: pointer;
+    transition: background 0.12s ease;
+    position: relative;
+  }
+  .block-row:hover { background: var(--surface-2); }
+  .block-row[data-state="selected"] {
+    background: var(--surface);
+    border-left-color: var(--fg);
+  }
+  .block-row .block-path {
+    font-family: 'JetBrains Mono';
+    font-size: 11px;
+    color: var(--fg-subtle);
+    letter-spacing: 0;
+    padding-top: 1px;
+    text-align: right;
+  }
+  .block-row .block-status {
+    width: 8px; height: 8px; border-radius: 999px;
+    margin-top: 5px;
+    background: var(--surface-3);
+  }
+  .block-row[data-status="approved"] .block-status { background: var(--primary); }
+  .block-row[data-status="generated"] .block-status { background: var(--honey); }
+  .block-row[data-status="generating"] .block-status {
+    background: var(--honey);
+    box-shadow: 0 0 0 4px rgba(184,134,47,0.18);
+    animation: gen-pulse 1.4s ease-in-out infinite;
+  }
+  .block-row[data-status="advisory"] .block-status {
+    background: var(--danger);
+  }
+  @keyframes gen-pulse {
+    0%, 100% { box-shadow: 0 0 0 0 rgba(184,134,47,0.32); }
+    50%      { box-shadow: 0 0 0 6px rgba(184,134,47,0.06); }
+  }
+
+  /* Topic rows */
+  .topic-row {
+    padding: 12px 16px;
+    cursor: pointer;
+    border-bottom: 1px solid var(--border);
+    transition: background 0.12s ease;
+  }
+  .topic-row:hover { background: var(--surface-2); }
+  .topic-row[data-state="active"] { background: var(--surface); position: relative; }
+  .topic-row[data-state="active"]::before {
+    content: '';
+    position: absolute;
+    left: 0; top: 8px; bottom: 8px;
+    width: 2px;
+    background: var(--fg);
+    border-radius: 0 2px 2px 0;
+  }
+
+  /* Inspector right panel — peek state */
+  .inspector-peek {
+    width: 44px;
+    background: var(--surface);
+    border-left: 1px solid var(--border);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 12px 0;
+    gap: 4px;
+  }
+  .inspector-tab {
+    width: 32px; height: 32px;
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--fg-subtle);
+    cursor: pointer;
+    transition: all 0.12s ease;
+  }
+  .inspector-tab:hover { background: var(--surface-2); color: var(--fg); }
+  .inspector-tab[data-active="true"] { background: var(--surface-2); color: var(--fg); }
+
+  /* Section label — replaces the mono-uppercase pattern */
+  .section-label {
+    font-size: 12.5px;
+    font-weight: 600;
+    color: var(--fg-muted);
+    letter-spacing: -0.002em;
+  }
+
+  /* Tech string — actual technical metadata */
+  .tech {
+    font-family: 'JetBrains Mono';
+    font-size: 11px;
+    color: var(--fg-subtle);
+    letter-spacing: 0;
+  }
+
+  /* Generation progress overlay */
+  .gen-overlay {
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(180deg, rgba(247,242,233,0.9) 0%, rgba(247,242,233,0.98) 100%);
+    backdrop-filter: blur(2px);
+    -webkit-backdrop-filter: blur(2px);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 30;
+  }
+  .gen-card {
+    width: 460px;
+    background: var(--surface);
+    border: 1px solid var(--border-strong);
+    border-radius: 14px;
+    padding: 28px;
+    box-shadow: 0 24px 48px -12px rgba(31,26,18,0.18), 0 0 0 1px rgba(184,134,47,0.08);
+    position: relative;
+    overflow: hidden;
+  }
+  .gen-card::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 2px;
+    background: linear-gradient(90deg, transparent, var(--honey), transparent);
+    background-size: 200% 100%;
+    animation: shimmer 2.4s linear infinite;
+  }
+  @keyframes shimmer {
+    0%   { background-position: -100% 0; }
+    100% { background-position: 100% 0; }
+  }
+
+  /* Subtle disclosure for inspector peek labels */
+  .vert-label {
+    writing-mode: vertical-rl;
+    transform: rotate(180deg);
+    font-family: 'DM Sans';
+    font-size: 10.5px;
+    font-weight: 500;
+    color: var(--fg-subtle);
+    letter-spacing: 0.04em;
+    margin-top: 6px;
+  }
+
+  /* Top-bar focus ring */
+  button:focus-visible, [role="button"]:focus-visible, a:focus-visible {
+    outline: 2px solid var(--primary);
+    outline-offset: 2px;
+    border-radius: 4px;
+  }
+
+  /* Annotation pin (for the prototype) */
+  .pin {
+    position: absolute;
+    z-index: 60;
+    background: var(--fg);
+    color: var(--bg);
+    font-size: 11px;
+    font-weight: 500;
+    padding: 5px 9px;
+    border-radius: 6px;
+    box-shadow: 0 8px 20px -6px rgba(31,26,18,0.3);
+    pointer-events: none;
+  }
+  .pin::before {
+    content: '';
+    position: absolute;
+    width: 8px; height: 8px;
+    background: var(--fg);
+    transform: rotate(45deg);
+  }
+  .pin-up::before    { top: -3px; left: 14px; }
+  .pin-down::before  { bottom: -3px; left: 14px; }
+  .pin-left::before  { top: 50%; left: -3px; margin-top: -4px; }
+  .pin-right::before { top: 50%; right: -3px; margin-top: -4px; }
+</style>
+</head>
+
+<body class="font-sans antialiased">
+
+<!-- =================================================================== -->
+<!-- DOC HEADER — outside of the prototype frame, just for context        -->
+<!-- =================================================================== -->
+<div class="max-w-[1400px] mx-auto px-8 pt-10 pb-6">
+  <div class="flex items-baseline justify-between mb-3">
+    <h1 class="font-display text-[26px] font-bold tracking-tight text-[color:var(--fg)]">
+      Content Studio &mdash; redesign prototype
+    </h1>
+    <span class="tech">v0.1 · throwaway · static mockup</span>
+  </div>
+  <p class="text-[13.5px] text-[color:var(--fg-muted)] max-w-[68ch] leading-relaxed">
+    Workspace-first layout. Content Studio show pages break out of <code class="tech bg-[color:var(--surface-2)] px-1 py-0.5 rounded">AdminLayout</code>
+    into a dedicated <code class="tech bg-[color:var(--surface-2)] px-1 py-0.5 rounded">ContentStudioLayout</code>
+    so the authoring surface gets the full viewport. Index and create pages keep the admin sidebar.
+    The studio carries its own 56px vertical stage rail, a compressed top bar with an
+    "&larr; Admin" escape hatch, a three-column persistent layout (topics &middot; blocks &middot; editor),
+    and a peek-state inspector. Generation moments become focal events. Mono-uppercase labels
+    are replaced with sentence-case sans where they aren't actual technical strings.
+  </p>
+</div>
+
+<!-- =================================================================== -->
+<!-- PROTOTYPE FRAME 0 — Index page (still inside AdminLayout)             -->
+<!-- =================================================================== -->
+<div class="max-w-[1400px] mx-auto px-8">
+  <div class="flex items-center gap-3 mb-3">
+    <span class="font-display text-[16px] font-semibold">0.</span>
+    <span class="font-display text-[16px] font-semibold">Index page &mdash; stays inside <code class="tech bg-[color:var(--surface-2)] px-1.5 py-0.5 rounded">AdminLayout</code></span>
+    <span class="tech ml-auto">/admin/content-studio</span>
+  </div>
+
+  <div class="rounded-xl border border-[color:var(--border-strong)] overflow-hidden shadow-[var(--shadow-md)] bg-[color:var(--bg)]">
+    <div class="grid" style="grid-template-columns: 240px 1fr; height: 540px;">
+
+      <!-- Mock admin sidebar (TailAdmin-style) -->
+      <aside class="border-r border-[color:var(--border)] bg-[color:var(--surface)] flex flex-col">
+        <div class="h-[56px] px-5 flex items-center gap-2.5 border-b border-[color:var(--border)]">
+          <div class="w-7 h-7 rounded-md bg-[color:var(--primary)] text-[color:var(--primary-fg)] flex items-center justify-center font-display font-bold text-[13px]">S</div>
+          <span class="font-display text-[15px] font-semibold tracking-tight">Skoolpad</span>
+        </div>
+
+        <div class="flex-1 px-3 py-4 overflow-y-auto">
+          <div class="px-2 mb-1">
+            <div class="text-[10.5px] tracking-[0.06em] uppercase text-[color:var(--fg-subtle)] font-semibold">General</div>
+          </div>
+          <div class="space-y-0.5 mb-4">
+            <a class="flex items-center gap-2.5 px-2.5 py-1.5 rounded-md text-[13px] text-[color:var(--fg-muted)] hover:bg-[color:var(--surface-2)]">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>
+              Dashboard
+            </a>
+            <a class="flex items-center gap-2.5 px-2.5 py-1.5 rounded-md text-[13px] text-[color:var(--fg-muted)] hover:bg-[color:var(--surface-2)]">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+              Users
+            </a>
+            <a class="flex items-center gap-2.5 px-2.5 py-1.5 rounded-md text-[13px] text-[color:var(--fg-muted)] hover:bg-[color:var(--surface-2)]">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/></svg>
+              Institutions
+            </a>
+          </div>
+
+          <div class="px-2 mb-1">
+            <div class="text-[10.5px] tracking-[0.06em] uppercase text-[color:var(--fg-subtle)] font-semibold">Content</div>
+          </div>
+          <div class="space-y-0.5 mb-4">
+            <a class="flex items-center gap-2.5 px-2.5 py-1.5 rounded-md text-[13px] text-[color:var(--fg-muted)] hover:bg-[color:var(--surface-2)]">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/></svg>
+              Disciplines
+            </a>
+            <a class="flex items-center gap-2.5 px-2.5 py-1.5 rounded-md text-[13px] text-[color:var(--fg-muted)] hover:bg-[color:var(--surface-2)]">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 8v8M8 12h8"/></svg>
+              Topics
+            </a>
+            <a class="flex items-center gap-2.5 px-2.5 py-1.5 rounded-md text-[13px] text-[color:var(--fg-muted)] hover:bg-[color:var(--surface-2)]">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>
+              Questions
+            </a>
+            <a class="flex items-center gap-2.5 px-2.5 py-1.5 rounded-md text-[13px] font-semibold text-[color:var(--fg)] bg-[color:var(--surface-2)]">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
+              Content Studio
+            </a>
+            <a class="flex items-center gap-2.5 px-2.5 py-1.5 rounded-md text-[13px] text-[color:var(--fg-muted)] hover:bg-[color:var(--surface-2)]">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+              AI Models
+            </a>
+          </div>
+        </div>
+
+        <div class="border-t border-[color:var(--border)] px-3 py-3 flex items-center gap-2.5">
+          <div class="w-7 h-7 rounded-full bg-[color:var(--surface-3)] flex items-center justify-center font-display text-[11px] font-semibold">SO</div>
+          <div class="flex-1 min-w-0">
+            <div class="text-[12px] font-medium truncate">Somadina</div>
+            <div class="tech truncate">super_admin</div>
+          </div>
+        </div>
+      </aside>
+
+      <!-- Admin top bar + index content -->
+      <div class="flex flex-col min-w-0">
+        <header class="h-[56px] border-b border-[color:var(--border)] flex items-center px-6 gap-3 bg-[color:var(--surface)]">
+          <span class="text-[13px] text-[color:var(--fg-subtle)]">Admin</span>
+          <span class="text-[color:var(--fg-subtle)]">/</span>
+          <span class="text-[13px] font-medium text-[color:var(--fg)]">Content Studio</span>
+          <div class="flex-1"></div>
+          <button class="inline-flex items-center gap-2 h-8 px-3.5 rounded-md bg-[color:var(--primary)] text-[color:var(--primary-fg)] text-[12.5px] font-medium hover:opacity-92 transition-opacity">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M5 12h14"/></svg>
+            New project
+          </button>
+        </header>
+
+        <div class="flex-1 overflow-y-auto p-6 bg-[color:var(--bg)]">
+          <div class="flex items-baseline justify-between mb-5">
+            <div>
+              <h1 class="font-display text-[22px] font-bold tracking-tight">Content Studio</h1>
+              <p class="text-[13px] text-[color:var(--fg-muted)] mt-0.5">AI-assisted authoring projects.</p>
+            </div>
+            <span class="text-[12px] text-[color:var(--fg-subtle)]">12 projects</span>
+          </div>
+
+          <div class="grid grid-cols-2 gap-3">
+            <a class="group rounded-lg border border-[color:var(--border)] bg-[color:var(--surface)] hover:border-[color:var(--border-strong)] hover:shadow-[var(--shadow-sm)] transition-all p-4 cursor-pointer relative">
+              <div class="flex items-baseline justify-between mb-2">
+                <div class="font-display text-[15px] font-semibold">Calculus &mdash; Limits &amp; Continuity</div>
+                <span class="pill pill-warning">Generating</span>
+              </div>
+              <div class="text-[12.5px] text-[color:var(--fg-muted)] mb-3">Computer Science &middot; tertiary</div>
+              <div class="flex items-center gap-3 text-[11.5px] text-[color:var(--fg-subtle)]">
+                <span class="tech">8 / 12 topics</span>
+                <span>&middot;</span>
+                <span>Edited 12 min ago</span>
+              </div>
+              <span class="absolute top-3 right-3 opacity-0 group-hover:opacity-60 transition-opacity">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
+              </span>
+            </a>
+            <a class="group rounded-lg border border-[color:var(--border)] bg-[color:var(--surface)] hover:border-[color:var(--border-strong)] hover:shadow-[var(--shadow-sm)] transition-all p-4 cursor-pointer">
+              <div class="flex items-baseline justify-between mb-2">
+                <div class="font-display text-[15px] font-semibold">Linear Algebra &mdash; Vectors</div>
+                <span class="pill pill-success">Complete</span>
+              </div>
+              <div class="text-[12.5px] text-[color:var(--fg-muted)] mb-3">Mathematics &middot; tertiary</div>
+              <div class="flex items-center gap-3 text-[11.5px] text-[color:var(--fg-subtle)]">
+                <span class="tech">14 / 14 topics</span>
+                <span>&middot;</span>
+                <span>Edited 2 days ago</span>
+              </div>
+            </a>
+            <a class="group rounded-lg border border-[color:var(--border)] bg-[color:var(--surface)] hover:border-[color:var(--border-strong)] hover:shadow-[var(--shadow-sm)] transition-all p-4 cursor-pointer">
+              <div class="flex items-baseline justify-between mb-2">
+                <div class="font-display text-[15px] font-semibold">SS2 Biology &mdash; Genetics</div>
+                <span class="pill pill-neutral">Draft</span>
+              </div>
+              <div class="text-[12.5px] text-[color:var(--fg-muted)] mb-3">NERDC SS2 &middot; secondary</div>
+              <div class="flex items-center gap-3 text-[11.5px] text-[color:var(--fg-subtle)]">
+                <span class="tech">0 / 9 topics</span>
+                <span>&middot;</span>
+                <span>Created today</span>
+              </div>
+            </a>
+            <a class="group rounded-lg border border-[color:var(--border)] bg-[color:var(--surface)] hover:border-[color:var(--border-strong)] hover:shadow-[var(--shadow-sm)] transition-all p-4 cursor-pointer">
+              <div class="flex items-baseline justify-between mb-2">
+                <div class="font-display text-[15px] font-semibold">JAMB Chemistry &mdash; Organic</div>
+                <span class="pill pill-warning">Reviewing</span>
+              </div>
+              <div class="text-[12.5px] text-[color:var(--fg-muted)] mb-3">JAMB &middot; exam prep</div>
+              <div class="flex items-center gap-3 text-[11.5px] text-[color:var(--fg-subtle)]">
+                <span class="tech">11 / 11 topics</span>
+                <span>&middot;</span>
+                <span>Edited yesterday</span>
+              </div>
+            </a>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Transition annotation -->
+  <div class="flex items-center justify-center gap-3 my-6 text-[12.5px] text-[color:var(--fg-muted)]">
+    <span>Click a project &rarr;</span>
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" class="text-[color:var(--fg-subtle)]"><path d="M5 12h14M13 5l7 7-7 7"/></svg>
+    <span>admin sidebar drops away &middot; studio takes over the viewport</span>
+  </div>
+</div>
+
+<!-- =================================================================== -->
+<!-- PROTOTYPE FRAME 1 — Default authoring state                          -->
+<!-- =================================================================== -->
+<div class="max-w-[1400px] mx-auto px-8">
+  <div class="flex items-center gap-3 mb-3">
+    <span class="font-display text-[16px] font-semibold">1.</span>
+    <span class="font-display text-[16px] font-semibold">Default authoring state &mdash; content stage</span>
+    <span class="tech ml-auto">1280 × 800 viewport</span>
+  </div>
+
+  <div class="rounded-xl border border-[color:var(--border-strong)] overflow-hidden shadow-[var(--shadow-md)] bg-[color:var(--bg)]">
+    <div class="grid" style="grid-template-columns: 56px 1fr 44px; height: 800px;">
+
+      <!-- ============================================ -->
+      <!-- LEFT RAIL — vertical stage navigation        -->
+      <!-- ============================================ -->
+      <aside class="border-r border-[color:var(--border)] bg-[color:var(--surface)] flex flex-col">
+        <div class="h-[56px] border-b border-[color:var(--border)] flex items-center justify-center">
+          <div class="w-7 h-7 rounded-md bg-[color:var(--fg)] text-[color:var(--bg)] flex items-center justify-center font-display font-bold text-[12px] tracking-tight">cs</div>
+        </div>
+
+        <nav class="flex-1 py-3 flex flex-col gap-2">
+          <div class="rail-step" data-state="completed" title="Research">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.35-4.35"/></svg>
+            <span class="rail-tooltip">Research &middot; complete</span>
+          </div>
+          <div class="rail-step" data-state="completed" title="Scheme">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"/><path d="M3 12h18"/><path d="M3 18h12"/></svg>
+            <span class="rail-tooltip">Scheme of work &middot; approved</span>
+          </div>
+          <div class="rail-step" data-state="completed" title="Blocks">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>
+            <span class="rail-tooltip">Block structure &middot; approved</span>
+          </div>
+          <div class="rail-step" data-state="active" title="Content">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6"/><path d="M9 13h6"/><path d="M9 17h4"/></svg>
+            <span class="rail-tooltip">Content &middot; in progress</span>
+          </div>
+          <div class="rail-step" data-state="pending" title="Questions">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><path d="M12 17h.01"/><circle cx="12" cy="12" r="10"/></svg>
+            <span class="rail-tooltip">Questions &middot; locked</span>
+          </div>
+        </nav>
+
+        <div class="border-t border-[color:var(--border)] py-3 flex flex-col gap-2">
+          <div class="rail-step" title="Settings">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+            <span class="rail-tooltip">Project settings</span>
+          </div>
+        </div>
+      </aside>
+
+      <!-- ============================================ -->
+      <!-- MAIN COLUMN                                  -->
+      <!-- ============================================ -->
+      <div class="flex flex-col min-w-0">
+
+        <!-- TOP BAR -->
+        <header class="h-[56px] border-b border-[color:var(--border)] bg-[color:var(--surface)] flex items-center px-4 gap-3">
+          <!-- Escape hatch back to AdminLayout -->
+          <button class="inline-flex items-center gap-1.5 h-8 px-2.5 rounded-md text-[color:var(--fg-muted)] hover:bg-[color:var(--surface-2)] hover:text-[color:var(--fg)] transition-colors text-[12.5px] font-medium border border-transparent hover:border-[color:var(--border)]" title="Back to Content Studio index (admin)">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
+            Admin
+          </button>
+          <span class="w-px h-4 bg-[color:var(--border)]"></span>
+
+          <div class="flex items-center gap-2.5 min-w-0">
+            <span class="text-[13px] text-[color:var(--fg-subtle)] truncate">Computer Science</span>
+            <span class="text-[color:var(--fg-subtle)]">/</span>
+            <h1 class="font-display text-[16px] font-semibold tracking-tight truncate">Calculus &mdash; Limits &amp; Continuity</h1>
+            <span class="pill pill-warning">Generating</span>
+          </div>
+
+          <div class="flex-1"></div>
+
+          <!-- Global model chip — single source of truth -->
+          <button class="inline-flex items-center gap-2 h-8 px-3 rounded-md border border-[color:var(--border)] bg-[color:var(--surface)] hover:border-[color:var(--border-strong)] transition-colors text-[12.5px] font-medium">
+            <span class="w-1.5 h-1.5 rounded-full bg-[color:var(--primary)]"></span>
+            <span>GPT&#8209;4o</span>
+            <span class="tech text-[color:var(--fg-subtle)]">project default</span>
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" class="opacity-60"><path d="m6 9 6 6 6-6"/></svg>
+          </button>
+
+          <!-- Log access -->
+          <button class="inline-flex items-center gap-2 h-8 px-3 rounded-md text-[color:var(--fg-muted)] hover:bg-[color:var(--surface-2)] hover:text-[color:var(--fg)] transition-colors text-[12.5px] font-medium">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+            <span>Log</span>
+            <span class="tech text-[10.5px] text-[color:var(--fg-subtle)]">42</span>
+          </button>
+        </header>
+
+        <!-- WORKSPACE — three columns -->
+        <section class="flex-1 grid min-h-0" style="grid-template-columns: 240px 300px 1fr;">
+
+          <!-- ============================ -->
+          <!-- TOPICS column                -->
+          <!-- ============================ -->
+          <div class="border-r border-[color:var(--border)] bg-[color:var(--surface)] flex flex-col">
+            <div class="h-[44px] px-4 flex items-center justify-between border-b border-[color:var(--border)]">
+              <div class="flex items-center gap-2">
+                <span class="section-label">Topics</span>
+                <span class="tech">8</span>
+              </div>
+              <button class="text-[color:var(--fg-subtle)] hover:text-[color:var(--fg)] transition-colors">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18M3 12h18M3 18h18"/></svg>
+              </button>
+            </div>
+
+            <div class="flex-1 overflow-y-auto">
+              <div class="topic-row">
+                <div class="text-[13.5px] font-medium leading-snug">Introduction to limits</div>
+                <div class="flex items-center gap-2 mt-1.5">
+                  <span class="pill pill-success">Published</span>
+                </div>
+              </div>
+
+              <div class="topic-row" data-state="active">
+                <div class="text-[13.5px] font-semibold leading-snug">Limit laws &amp; properties</div>
+                <div class="flex items-center gap-2 mt-1.5">
+                  <span class="pill pill-warning">8 / 12</span>
+                </div>
+              </div>
+
+              <div class="topic-row">
+                <div class="text-[13.5px] font-medium leading-snug">One-sided &amp; infinite limits</div>
+                <div class="flex items-center gap-2 mt-1.5">
+                  <span class="pill pill-warning">Ready</span>
+                  <span class="text-[11.5px] text-[color:var(--fg-subtle)]">7 / 7</span>
+                </div>
+              </div>
+
+              <div class="topic-row">
+                <div class="text-[13.5px] font-medium leading-snug">Continuity at a point</div>
+                <div class="flex items-center gap-2 mt-1.5">
+                  <span class="pill pill-neutral">3 / 9</span>
+                </div>
+              </div>
+
+              <div class="topic-row">
+                <div class="text-[13.5px] font-medium leading-snug">Intermediate value theorem</div>
+                <div class="flex items-center gap-2 mt-1.5">
+                  <span class="pill pill-neutral">Not started</span>
+                </div>
+              </div>
+
+              <div class="topic-row">
+                <div class="text-[13.5px] font-medium leading-snug">Asymptotes &amp; end behaviour</div>
+                <div class="flex items-center gap-2 mt-1.5">
+                  <span class="pill pill-neutral">Not started</span>
+                </div>
+              </div>
+
+              <div class="topic-row">
+                <div class="text-[13.5px] font-medium leading-snug">Squeeze theorem</div>
+                <div class="flex items-center gap-2 mt-1.5">
+                  <span class="pill pill-neutral">Not started</span>
+                </div>
+              </div>
+
+              <div class="topic-row">
+                <div class="text-[13.5px] font-medium leading-snug">Worked exam-style problems</div>
+                <div class="flex items-center gap-2 mt-1.5">
+                  <span class="pill pill-neutral">Not started</span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- ============================ -->
+          <!-- BLOCKS column                -->
+          <!-- ============================ -->
+          <div class="border-r border-[color:var(--border)] bg-[color:var(--bg)] flex flex-col min-h-0">
+            <div class="px-4 pt-4 pb-3 border-b border-[color:var(--border)]">
+              <div class="flex items-baseline justify-between gap-2 mb-2">
+                <h2 class="font-display text-[15px] font-semibold tracking-tight truncate">Limit laws &amp; properties</h2>
+                <span class="tech">8/12</span>
+              </div>
+              <div class="flex items-center gap-2">
+                <button class="inline-flex items-center gap-1.5 h-7 px-2.5 rounded-md border border-[color:var(--border)] bg-[color:var(--surface)] text-[12px] font-medium text-[color:var(--fg-muted)] hover:text-[color:var(--fg)] hover:border-[color:var(--border-strong)] transition-colors">
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
+                  Generate all (4 left)
+                </button>
+                <button class="inline-flex items-center justify-center w-7 h-7 rounded-md text-[color:var(--fg-subtle)] hover:bg-[color:var(--surface-2)] hover:text-[color:var(--fg)] transition-colors" title="More">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="1"/><circle cx="19" cy="12" r="1"/><circle cx="5" cy="12" r="1"/></svg>
+                </button>
+              </div>
+            </div>
+
+            <div class="flex-1 overflow-y-auto py-1">
+              <div class="block-row" data-status="approved">
+                <span class="block-path">1</span>
+                <div>
+                  <div class="text-[13px] text-[color:var(--fg)] leading-snug">Why limit laws matter</div>
+                </div>
+                <span class="block-status"></span>
+              </div>
+
+              <div class="block-row" data-status="approved">
+                <span class="block-path">2.1</span>
+                <div>
+                  <div class="text-[13px] text-[color:var(--fg)] leading-snug">Sum &amp; difference law</div>
+                </div>
+                <span class="block-status"></span>
+              </div>
+
+              <div class="block-row" data-status="approved">
+                <span class="block-path">2.2</span>
+                <div>
+                  <div class="text-[13px] text-[color:var(--fg)] leading-snug">Product law</div>
+                </div>
+                <span class="block-status"></span>
+              </div>
+
+              <div class="block-row" data-status="approved">
+                <span class="block-path">2.3</span>
+                <div>
+                  <div class="text-[13px] text-[color:var(--fg)] leading-snug">Quotient law</div>
+                </div>
+                <span class="block-status"></span>
+              </div>
+
+              <div class="block-row" data-status="approved">
+                <span class="block-path">2.4</span>
+                <div>
+                  <div class="text-[13px] text-[color:var(--fg)] leading-snug">Constant multiple law</div>
+                </div>
+                <span class="block-status"></span>
+              </div>
+
+              <div class="block-row" data-status="approved">
+                <span class="block-path">2.5</span>
+                <div>
+                  <div class="text-[13px] text-[color:var(--fg)] leading-snug">Power &amp; root laws</div>
+                </div>
+                <span class="block-status"></span>
+              </div>
+
+              <div class="block-row" data-status="approved">
+                <span class="block-path">3.1</span>
+                <div>
+                  <div class="text-[13px] text-[color:var(--fg)] leading-snug">Substitution: when it just works</div>
+                </div>
+                <span class="block-status"></span>
+              </div>
+
+              <div class="block-row" data-status="advisory">
+                <span class="block-path">3.2</span>
+                <div>
+                  <div class="text-[13px] text-[color:var(--fg)] leading-snug">Indeterminate forms &mdash; <span class="font-mono text-[12px]">0/0</span></div>
+                  <div class="text-[11.5px] text-[color:var(--danger)] mt-0.5">Drift advisory &middot; review</div>
+                </div>
+                <span class="block-status"></span>
+              </div>
+
+              <div class="block-row" data-state="selected" data-status="generated">
+                <span class="block-path">3.3</span>
+                <div>
+                  <div class="text-[13px] font-medium text-[color:var(--fg)] leading-snug">Algebraic simplification before substituting</div>
+                  <div class="text-[11.5px] text-[color:var(--fg-muted)] mt-0.5">Awaiting approval</div>
+                </div>
+                <span class="block-status"></span>
+              </div>
+
+              <div class="block-row" data-status="generating">
+                <span class="block-path">4.1</span>
+                <div>
+                  <div class="text-[13px] text-[color:var(--fg)] leading-snug">Conjugate trick for radicals</div>
+                  <div class="text-[11.5px] text-[color:var(--honey)] mt-0.5 font-medium">Generating&hellip; <span class="tech text-[color:var(--honey)]/80">12s</span></div>
+                </div>
+                <span class="block-status"></span>
+              </div>
+
+              <div class="block-row" data-status="not_started">
+                <span class="block-path">4.2</span>
+                <div>
+                  <div class="text-[13px] text-[color:var(--fg-muted)] leading-snug">Trigonometric limits</div>
+                </div>
+                <span class="block-status"></span>
+              </div>
+
+              <div class="block-row" data-status="not_started">
+                <span class="block-path">5</span>
+                <div>
+                  <div class="text-[13px] text-[color:var(--fg-muted)] leading-snug">Summary &amp; common pitfalls</div>
+                </div>
+                <span class="block-status"></span>
+              </div>
+            </div>
+          </div>
+
+          <!-- ============================ -->
+          <!-- EDITOR column                -->
+          <!-- ============================ -->
+          <div class="paper flex flex-col min-w-0 relative">
+
+            <!-- Editor header strip -->
+            <div class="h-[44px] px-6 flex items-center justify-between border-b border-[color:var(--border)] bg-[color:var(--surface)]/60 backdrop-blur-sm">
+              <div class="flex items-center gap-3 min-w-0">
+                <span class="tech">limits.laws.3.3</span>
+                <span class="pill pill-warning">Generated &middot; awaiting approval</span>
+              </div>
+              <div class="flex items-center gap-1">
+                <button class="inline-flex items-center justify-center w-7 h-7 rounded-md text-[color:var(--fg-subtle)] hover:bg-[color:var(--surface-2)] hover:text-[color:var(--fg)] transition-colors" title="Previous block">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
+                </button>
+                <button class="inline-flex items-center justify-center w-7 h-7 rounded-md text-[color:var(--fg-subtle)] hover:bg-[color:var(--surface-2)] hover:text-[color:var(--fg)] transition-colors" title="Next block">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
+                </button>
+                <span class="w-px h-4 bg-[color:var(--border)] mx-2"></span>
+                <button class="inline-flex items-center gap-1.5 h-7 px-2.5 rounded-md text-[color:var(--fg-muted)] hover:bg-[color:var(--surface-2)] hover:text-[color:var(--fg)] transition-colors text-[12px] font-medium">
+                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+                  Edit
+                </button>
+              </div>
+            </div>
+
+            <!-- Manuscript surface -->
+            <div class="flex-1 overflow-y-auto">
+              <div class="max-w-[680px] mx-auto px-10 py-12">
+                <div class="text-[11px] text-[color:var(--fg-subtle)] tracking-wide mb-3 uppercase font-medium">Block 3.3 &middot; intermediate</div>
+                <h2 class="font-display text-[30px] font-bold leading-[1.1] tracking-tight mb-2">Algebraic simplification before substituting</h2>
+                <p class="text-[14px] text-[color:var(--fg-muted)] mb-8 leading-relaxed">When direct substitution gives you 0/0, you don't give up &mdash; you reshape the expression until the singularity disappears.</p>
+
+                <div class="prose-body">
+                  <p>The first thing every student tries when computing a limit is to simply plug in the value. Most of the time it works, and the limit is just the value of the function at that point. But occasionally substitution returns the indeterminate form <code>0/0</code> &mdash; and that&rsquo;s where algebra earns its keep.</p>
+
+                  <p>Consider the limit</p>
+                  <span class="formula">lim<sub>x&rarr;2</sub>  (x&sup2; &minus; 4) / (x &minus; 2)</span>
+                  <p>Direct substitution gives <code>0/0</code>, which tells us nothing. But the numerator factors as <em>(x&minus;2)(x+2)</em>, so we can cancel the troublesome <em>(x&minus;2)</em> term:</p>
+                  <span class="formula">= lim<sub>x&rarr;2</sub>  (x + 2)  =  4</span>
+
+                  <h3>Why this is allowed</h3>
+                  <p>Cancelling <em>(x&minus;2)</em> changes the function at <em>x = 2</em>, but limits don&rsquo;t care about the value at the point &mdash; only what&rsquo;s happening on the way there. Since the simplified function agrees with the original everywhere except at <em>x = 2</em>, both functions have the same limit.</p>
+
+                  <h3>The pattern</h3>
+                  <p>Whenever you hit <code>0/0</code> with a rational function, ask: <em>can I factor either piece?</em> The cancellation almost always reveals the limit. For exam-style WAEC and JAMB problems, this single trick handles a surprising share of the questions.</p>
+                </div>
+              </div>
+            </div>
+
+            <!-- Floating action bar -->
+            <div class="border-t border-[color:var(--border)] bg-[color:var(--surface)]/95 backdrop-blur-sm px-6 py-3 flex items-center justify-between gap-3">
+              <div class="flex items-center gap-2 text-[12px] text-[color:var(--fg-muted)]">
+                <span class="tech">643 words</span>
+                <span class="text-[color:var(--fg-subtle)]">&middot;</span>
+                <span>3 min read</span>
+                <span class="text-[color:var(--fg-subtle)]">&middot;</span>
+                <span>2 formulas, 4 key terms</span>
+              </div>
+              <div class="flex items-center gap-2">
+                <button class="inline-flex items-center gap-1.5 h-9 px-3 rounded-md text-[color:var(--fg-muted)] hover:bg-[color:var(--surface-2)] hover:text-[color:var(--fg)] transition-colors text-[13px] font-medium">
+                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a9 9 0 0 1-9 9m9-9a9 9 0 0 0-9-9m9 9H3m9 9a9 9 0 0 1-9-9m9 9c-2.5-2.5-2.5-15.5 0-18m0 18a9 9 0 0 0 9-9"/></svg>
+                  Regenerate
+                </button>
+                <button class="inline-flex items-center gap-1.5 h-9 px-3 rounded-md border border-[color:var(--border)] bg-[color:var(--surface)] hover:border-[color:var(--border-strong)] transition-colors text-[13px] font-medium">
+                  Save draft
+                </button>
+                <button class="inline-flex items-center gap-1.5 h-9 px-4 rounded-md bg-[color:var(--primary)] text-[color:var(--primary-fg)] hover:opacity-92 transition-opacity text-[13px] font-medium shadow-[var(--shadow-sm)]">
+                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+                  Approve
+                </button>
+              </div>
+            </div>
+          </div>
+        </section>
+      </div>
+
+      <!-- ============================================ -->
+      <!-- INSPECTOR PEEK (right rail)                   -->
+      <!-- ============================================ -->
+      <aside class="inspector-peek">
+        <div class="inspector-tab" data-active="false" title="Guidance">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>
+        </div>
+        <div class="inspector-tab" title="Metadata">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4M12 8h.01"/></svg>
+        </div>
+        <div class="inspector-tab" title="Drift advisory">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+        </div>
+        <div class="inspector-tab" title="History">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+        </div>
+        <span class="vert-label">Inspector</span>
+      </aside>
+    </div>
+  </div>
+</div>
+
+<!-- =================================================================== -->
+<!-- PROTOTYPE FRAME 2 — Generation focal moment                          -->
+<!-- =================================================================== -->
+<div class="max-w-[1400px] mx-auto px-8 mt-12">
+  <div class="flex items-center gap-3 mb-3">
+    <span class="font-display text-[16px] font-semibold">2.</span>
+    <span class="font-display text-[16px] font-semibold">Generation focal moment &mdash; "Generate all blocks"</span>
+    <span class="tech ml-auto">streaming structured progress</span>
+  </div>
+
+  <div class="rounded-xl border border-[color:var(--border-strong)] overflow-hidden shadow-[var(--shadow-md)] bg-[color:var(--bg)]">
+    <div class="grid" style="grid-template-columns: 56px 1fr 44px; height: 600px;">
+
+      <!-- Left rail (compact reuse) -->
+      <aside class="border-r border-[color:var(--border)] bg-[color:var(--surface)] flex flex-col">
+        <div class="h-[56px] border-b border-[color:var(--border)] flex items-center justify-center">
+          <div class="w-7 h-7 rounded-md bg-[color:var(--fg)] text-[color:var(--bg)] flex items-center justify-center font-display font-bold text-[12px] tracking-tight">cs</div>
+        </div>
+        <nav class="flex-1 py-3 flex flex-col gap-2">
+          <div class="rail-step" data-state="completed">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.35-4.35"/></svg>
+          </div>
+          <div class="rail-step" data-state="completed">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"/><path d="M3 12h18"/><path d="M3 18h12"/></svg>
+          </div>
+          <div class="rail-step" data-state="completed">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>
+          </div>
+          <div class="rail-step" data-state="active">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6"/><path d="M9 13h6"/><path d="M9 17h4"/></svg>
+          </div>
+          <div class="rail-step" data-state="pending">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><path d="M12 17h.01"/><circle cx="12" cy="12" r="10"/></svg>
+          </div>
+        </nav>
+      </aside>
+
+      <!-- Main with overlay -->
+      <div class="flex flex-col min-w-0 relative">
+        <header class="h-[56px] border-b border-[color:var(--border)] bg-[color:var(--surface)] flex items-center px-4 gap-3">
+          <button class="inline-flex items-center gap-1.5 h-8 px-2.5 rounded-md text-[color:var(--fg-muted)] hover:bg-[color:var(--surface-2)] hover:text-[color:var(--fg)] transition-colors text-[12.5px] font-medium">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
+            Admin
+          </button>
+          <span class="w-px h-4 bg-[color:var(--border)]"></span>
+          <div class="flex items-center gap-2.5 min-w-0">
+            <span class="text-[13px] text-[color:var(--fg-subtle)] truncate">Computer Science</span>
+            <span class="text-[color:var(--fg-subtle)]">/</span>
+            <h1 class="font-display text-[16px] font-semibold tracking-tight truncate">Calculus &mdash; Limits &amp; Continuity</h1>
+            <span class="pill pill-warning">Generating</span>
+          </div>
+          <div class="flex-1"></div>
+          <button class="inline-flex items-center gap-2 h-8 px-3 rounded-md border border-[color:var(--border)] bg-[color:var(--surface)] text-[12.5px] font-medium opacity-60">
+            <span class="w-1.5 h-1.5 rounded-full bg-[color:var(--primary)]"></span>
+            <span>GPT&#8209;4o</span>
+          </button>
+        </header>
+
+        <!-- Dim background showing the workspace -->
+        <div class="flex-1 bg-[color:var(--surface)]/40 grid min-h-0 relative" style="grid-template-columns: 240px 300px 1fr;">
+          <div class="border-r border-[color:var(--border)]"></div>
+          <div class="border-r border-[color:var(--border)]"></div>
+          <div></div>
+
+          <!-- Focal generation card -->
+          <div class="gen-overlay">
+            <div class="gen-card">
+              <div class="flex items-center gap-3 mb-5">
+                <div class="w-9 h-9 rounded-full bg-[color:var(--honey-soft)] border border-[color:var(--honey-line)] flex items-center justify-center">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--honey)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
+                </div>
+                <div class="flex-1">
+                  <div class="font-display text-[16px] font-semibold tracking-tight">Generating content for 4 blocks</div>
+                  <div class="text-[12px] text-[color:var(--fg-muted)]">Limit laws &amp; properties &middot; <span class="tech">GPT-4o</span></div>
+                </div>
+                <div class="text-right">
+                  <div class="font-display text-[20px] font-semibold tabular-nums">2 / 4</div>
+                  <div class="tech">elapsed 47s</div>
+                </div>
+              </div>
+
+              <!-- Streaming progress events -->
+              <div class="space-y-2 max-h-[200px] overflow-y-auto pr-1">
+                <div class="flex items-start gap-2.5 text-[13px]">
+                  <svg class="mt-1 flex-none" width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="var(--primary)" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+                  <div class="flex-1">
+                    <span class="text-[color:var(--fg)]">Block 4.1 &middot; Conjugate trick for radicals</span>
+                    <span class="tech text-[color:var(--fg-subtle)] ml-2">12s &middot; 1,847 tokens</span>
+                  </div>
+                </div>
+                <div class="flex items-start gap-2.5 text-[13px]">
+                  <svg class="mt-1 flex-none" width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="var(--primary)" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+                  <div class="flex-1">
+                    <span class="text-[color:var(--fg)]">Block 4.2 &middot; Trigonometric limits</span>
+                    <span class="tech text-[color:var(--fg-subtle)] ml-2">14s &middot; 2,103 tokens</span>
+                  </div>
+                </div>
+                <div class="flex items-start gap-2.5 text-[13px]">
+                  <span class="mt-1.5 flex-none w-2 h-2 rounded-full bg-[color:var(--honey)] animate-pulse"></span>
+                  <div class="flex-1">
+                    <span class="text-[color:var(--fg)] font-medium">Block 5 &middot; Summary &amp; common pitfalls</span>
+                    <span class="text-[color:var(--honey)] ml-2 font-medium">drafting&hellip;</span>
+                  </div>
+                </div>
+                <div class="flex items-start gap-2.5 text-[13px] opacity-50">
+                  <span class="mt-1.5 flex-none w-2 h-2 rounded-full border border-[color:var(--fg-subtle)]"></span>
+                  <div class="flex-1">
+                    <span class="text-[color:var(--fg-muted)]">Block 5.1 &middot; Worked example: WAEC 2021 Q14</span>
+                  </div>
+                </div>
+              </div>
+
+              <div class="mt-6 pt-5 border-t border-[color:var(--border)] flex items-center justify-between">
+                <span class="text-[11.5px] text-[color:var(--fg-muted)]">You can keep editing while this runs.</span>
+                <div class="flex items-center gap-2">
+                  <button class="inline-flex items-center h-8 px-3 rounded-md text-[12px] font-medium text-[color:var(--fg-muted)] hover:text-[color:var(--fg)] hover:bg-[color:var(--surface-2)] transition-colors">
+                    Run in background
+                  </button>
+                  <button class="inline-flex items-center h-8 px-3 rounded-md text-[12px] font-medium text-[color:var(--danger)] hover:bg-[color:var(--danger-soft)] transition-colors">
+                    Cancel
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Inspector peek (reuse) -->
+      <aside class="inspector-peek">
+        <div class="inspector-tab"></div>
+        <div class="inspector-tab"></div>
+        <div class="inspector-tab"></div>
+      </aside>
+    </div>
+  </div>
+</div>
+
+<!-- =================================================================== -->
+<!-- PROTOTYPE FRAME 3 — Compound generate button + model picker           -->
+<!-- =================================================================== -->
+<div class="max-w-[1400px] mx-auto px-8 mt-12 mb-16">
+  <div class="flex items-center gap-3 mb-3">
+    <span class="font-display text-[16px] font-semibold">3.</span>
+    <span class="font-display text-[16px] font-semibold">Compound generate button &amp; flattened model picker</span>
+    <span class="tech ml-auto">replaces 22rem 3-mode popover</span>
+  </div>
+
+  <div class="grid grid-cols-2 gap-6">
+
+    <!-- Compound button states -->
+    <div class="rounded-xl border border-[color:var(--border)] bg-[color:var(--surface)] p-8">
+      <div class="section-label mb-5">Compound generate button &mdash; states</div>
+
+      <div class="space-y-4">
+
+        <div>
+          <div class="text-[11.5px] text-[color:var(--fg-muted)] mb-2">Idle</div>
+          <button class="gen-button">
+            <span class="gen-action">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
+              Generate content
+            </span>
+            <span class="gen-divider"></span>
+            <span class="gen-model">
+              <span class="gen-dot"></span>
+              GPT-4o
+              <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
+            </span>
+          </button>
+        </div>
+
+        <div>
+          <div class="text-[11.5px] text-[color:var(--fg-muted)] mb-2">After picking a different model for this run</div>
+          <button class="gen-button" style="background: var(--honey); color: var(--bg);">
+            <span class="gen-action">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
+              Generate with Claude Opus 4.7
+            </span>
+            <span class="gen-divider" style="background: rgba(0,0,0,0.12);"></span>
+            <span class="gen-model" style="color: rgba(31,26,18,0.7);">
+              <span class="gen-dot" style="background: var(--bg); box-shadow: 0 0 0 2px rgba(255,255,255,0.3);"></span>
+              this run
+              <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
+            </span>
+          </button>
+        </div>
+
+        <div>
+          <div class="text-[11.5px] text-[color:var(--fg-muted)] mb-2">Generating</div>
+          <button class="gen-button" disabled style="opacity: 0.85; cursor: progress;">
+            <span class="gen-action">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" class="animate-spin"><path d="M21 12a9 9 0 1 1-6.219-8.56"/></svg>
+              Generating&hellip; <span class="tech text-[color:var(--bg)]/70 ml-1">14s</span>
+            </span>
+          </button>
+        </div>
+
+      </div>
+
+      <p class="text-[12px] text-[color:var(--fg-muted)] mt-6 leading-relaxed">
+        The model name lives <em>inside</em> the action. Picking a different model for this run is one click into the chevron menu. There&rsquo;s no three-mode radio &mdash; the picker remembers the last choice and offers a quiet "save as default" link.
+      </p>
+    </div>
+
+    <!-- Picker dropdown content -->
+    <div class="rounded-xl border border-[color:var(--border)] bg-[color:var(--surface)] p-8">
+      <div class="section-label mb-5">Picker dropdown content</div>
+
+      <div class="rounded-xl border border-[color:var(--border-strong)] bg-[color:var(--surface)] shadow-[var(--shadow-md)] overflow-hidden w-full max-w-[360px]">
+
+        <div class="px-4 pt-4 pb-3 border-b border-[color:var(--border)]">
+          <div class="text-[11.5px] text-[color:var(--fg-subtle)] mb-1">Use for this generation</div>
+          <div class="font-display text-[14px] font-semibold">Pick a model</div>
+        </div>
+
+        <div class="max-h-[320px] overflow-y-auto">
+
+          <div class="px-4 pt-3 pb-1">
+            <div class="text-[10.5px] tracking-[0.06em] uppercase text-[color:var(--fg-subtle)] font-semibold">OpenAI</div>
+          </div>
+          <button class="w-full flex items-center justify-between px-4 py-2 hover:bg-[color:var(--surface-2)] transition-colors">
+            <div class="flex items-center gap-2.5">
+              <span class="w-1.5 h-1.5 rounded-full bg-[color:var(--primary)]"></span>
+              <span class="text-[13.5px] font-medium">GPT-4o</span>
+              <span class="tech">project default</span>
+            </div>
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--primary)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+          </button>
+          <button class="w-full flex items-center justify-between px-4 py-2 hover:bg-[color:var(--surface-2)] transition-colors">
+            <div class="flex items-center gap-2.5">
+              <span class="w-1.5 h-1.5 rounded-full bg-transparent border border-[color:var(--fg-subtle)]"></span>
+              <span class="text-[13.5px]">o1</span>
+            </div>
+            <span class="pill" style="background: var(--danger-soft); color: var(--danger); padding: 1px 6px; font-size: 10px;">think max</span>
+          </button>
+          <button class="w-full flex items-center justify-between px-4 py-2 hover:bg-[color:var(--surface-2)] transition-colors">
+            <div class="flex items-center gap-2.5">
+              <span class="w-1.5 h-1.5 rounded-full bg-transparent border border-[color:var(--fg-subtle)]"></span>
+              <span class="text-[13.5px]">GPT-4o mini</span>
+            </div>
+          </button>
+
+          <div class="px-4 pt-3 pb-1">
+            <div class="text-[10.5px] tracking-[0.06em] uppercase text-[color:var(--fg-subtle)] font-semibold">Anthropic</div>
+          </div>
+          <button class="w-full flex items-center justify-between px-4 py-2 hover:bg-[color:var(--surface-2)] transition-colors">
+            <div class="flex items-center gap-2.5">
+              <span class="w-1.5 h-1.5 rounded-full bg-transparent border border-[color:var(--fg-subtle)]"></span>
+              <span class="text-[13.5px]">Claude Sonnet 4.6</span>
+            </div>
+          </button>
+          <button class="w-full flex items-center justify-between px-4 py-2 hover:bg-[color:var(--surface-2)] transition-colors">
+            <div class="flex items-center gap-2.5">
+              <span class="w-1.5 h-1.5 rounded-full bg-transparent border border-[color:var(--fg-subtle)]"></span>
+              <span class="text-[13.5px]">Claude Opus 4.7</span>
+              <span class="pill" style="background: var(--honey-soft); color: #6B4F18; padding: 1px 6px; font-size: 10px;">think</span>
+            </div>
+          </button>
+
+          <div class="px-4 pt-3 pb-1">
+            <div class="text-[10.5px] tracking-[0.06em] uppercase text-[color:var(--fg-subtle)] font-semibold">Google</div>
+          </div>
+          <button class="w-full flex items-center justify-between px-4 py-2 hover:bg-[color:var(--surface-2)] transition-colors">
+            <div class="flex items-center gap-2.5">
+              <span class="w-1.5 h-1.5 rounded-full bg-transparent border border-[color:var(--fg-subtle)]"></span>
+              <span class="text-[13.5px]">Gemini 2.0 Pro</span>
+            </div>
+          </button>
+        </div>
+
+        <div class="border-t border-[color:var(--border)] px-4 py-2.5 flex items-center justify-between bg-[color:var(--bg)]/40">
+          <button class="text-[12px] text-[color:var(--fg-muted)] hover:text-[color:var(--fg)] transition-colors flex items-center gap-1.5">
+            <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/></svg>
+            Save as default for content stage
+          </button>
+          <button class="text-[11.5px] text-[color:var(--fg-subtle)] hover:text-[color:var(--fg-muted)] transition-colors">
+            Manage models &rarr;
+          </button>
+        </div>
+      </div>
+
+      <p class="text-[12px] text-[color:var(--fg-muted)] mt-6 leading-relaxed">
+        One flat list grouped by provider. Selecting a model = use it for the next run. The "save as default" affordance is quiet at the bottom &mdash; not a radio mode the user has to think about.
+      </p>
+    </div>
+  </div>
+</div>
+
+<!-- =================================================================== -->
+<!-- DESIGN NOTES                                                          -->
+<!-- =================================================================== -->
+<div class="max-w-[1400px] mx-auto px-8 pb-20">
+  <div class="rounded-xl border border-[color:var(--border)] bg-[color:var(--surface)] p-8">
+    <div class="font-display text-[18px] font-semibold mb-5">Design moves demonstrated</div>
+
+    <div class="grid grid-cols-2 gap-x-10 gap-y-4 text-[13.5px] leading-relaxed">
+      <div>
+        <div class="font-semibold mb-1">0. Layout breakout</div>
+        <div class="text-[color:var(--fg-muted)]">Show pages opt out of <code class="tech bg-[color:var(--surface-2)] px-1 py-0.5 rounded">AdminLayout</code> and render in a new <code class="tech bg-[color:var(--surface-2)] px-1 py-0.5 rounded">ContentStudioLayout</code>. Index and create pages keep the admin sidebar. An "&larr; Admin" affordance in the top bar returns to the shell. <em>Zero backend change.</em></div>
+      </div>
+      <div>
+        <div class="font-semibold mb-1">1. Vertical stage rail</div>
+        <div class="text-[color:var(--fg-muted)]">56px wide. Replaces the horizontal 5-step stepper, frees ~64px vertical, always accessible. Tooltip on hover gives context without taking space.</div>
+      </div>
+      <div>
+        <div class="font-semibold mb-1">2. 56px top bar</div>
+        <div class="text-[color:var(--fg-muted)]">Project breadcrumb &middot; status pill &middot; single global model chip &middot; log access. Replaces the "AI Routing" mega-card that previously restated stage models four times.</div>
+      </div>
+      <div>
+        <div class="font-semibold mb-1">3. Three-column persistent layout</div>
+        <div class="text-[color:var(--fg-muted)]">Topics &middot; Blocks &middot; Editor &mdash; all visible at once. No drilldown navigation. Switch topics in one click, like an email client or IDE file tree.</div>
+      </div>
+      <div>
+        <div class="font-semibold mb-1">4. Document-first editor surface</div>
+        <div class="text-[color:var(--fg-muted)]">Manuscript column at 680px max-width with paper grain background. Bricolage Grotesque for the block title. Floating action bar with Approve as the primary action.</div>
+      </div>
+      <div>
+        <div class="font-semibold mb-1">5. Compound generate button</div>
+        <div class="text-[color:var(--fg-muted)]">Model name lives inside the action. Picking a different model = one click into the chevron. Three-mode "default / stage / run" radio collapsed into a single quiet "save as default" link.</div>
+      </div>
+      <div>
+        <div class="font-semibold mb-1">6. Generation as focal moment</div>
+        <div class="text-[color:var(--fg-muted)]">Workspace dims, centered card streams structured progress events with per-block timing. Honey accent identifies AI moments. "Run in background" lets you keep editing.</div>
+      </div>
+      <div>
+        <div class="font-semibold mb-1">7. Status as filled pills</div>
+        <div class="text-[color:var(--fg-muted)]">Decisive colored pills replace the mono-uppercase status text that drained hierarchy. Block list shows status as a colored dot with breathing-room pulse for the active generation.</div>
+      </div>
+      <div>
+        <div class="font-semibold mb-1">8. Inspector peek (right rail)</div>
+        <div class="text-[color:var(--fg-muted)]">Guidance, metadata, drift advisory, history each get an icon tab. Click to slide open over the editor. Default state is closed &mdash; the editor gets the room.</div>
+      </div>
+      <div>
+        <div class="font-semibold mb-1">9. Typography hierarchy reset</div>
+        <div class="text-[color:var(--fg-muted)]">Mono-uppercase reserved for actual technical strings (model_ids, paths, token counts, durations). Section labels in sentence-case sans semibold &mdash; readable, not a whisper.</div>
+      </div>
+      <div>
+        <div class="font-semibold mb-1">10. Honey palette claims AI moments</div>
+        <div class="text-[color:var(--fg-muted)]">The existing but underused Honey accent now consistently signals "this is an AI generation event" &mdash; pulse on generating blocks, shimmer on the focal card, accent on the run-override button.</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+</body>
+</html>

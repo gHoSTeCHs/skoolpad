@@ -8,8 +8,8 @@ import {
     GraduationCap,
     Landmark,
     LayoutGrid,
+    Library,
     ListChecks,
-    MessageSquareMore,
     Network,
     Ruler,
     Settings,
@@ -21,6 +21,8 @@ import {
 } from 'lucide-react';
 import AIModelController from '@/actions/App/Http/Controllers/Admin/AIModelController';
 import BulkImportController from '@/actions/App/Http/Controllers/Admin/BulkImportController';
+import CanvasStencilController from '@/actions/App/Http/Controllers/Admin/CanvasStencilController';
+import ContentBlockAssetController from '@/actions/App/Http/Controllers/Admin/ContentBlockAssetController';
 import ContentStudioController from '@/actions/App/Http/Controllers/Admin/ContentStudioController';
 import CanonicalTopicController from '@/actions/App/Http/Controllers/Admin/CanonicalTopicController';
 import CourseController from '@/actions/App/Http/Controllers/Admin/CourseController';
@@ -30,8 +32,9 @@ import EducationSystemController from '@/actions/App/Http/Controllers/Admin/Educ
 import GradingScaleController from '@/actions/App/Http/Controllers/Admin/GradingScaleController';
 import InstitutionController from '@/actions/App/Http/Controllers/Admin/InstitutionController';
 import InstitutionTypeController from '@/actions/App/Http/Controllers/Admin/InstitutionTypeController';
-import QuestionController from '@/actions/App/Http/Controllers/Admin/QuestionController';
+import QuestionLibraryController from '@/actions/App/Http/Controllers/Admin/QuestionLibraryController';
 import QuestionPaperController from '@/actions/App/Http/Controllers/Admin/QuestionPaperController';
+import ReviewQueueController from '@/actions/App/Http/Controllers/Admin/ReviewQueueController';
 import SchemeOfWorkController from '@/actions/App/Http/Controllers/Admin/SchemeOfWorkController';
 import SettingsController from '@/actions/App/Http/Controllers/Admin/SettingsController';
 import UserController from '@/actions/App/Http/Controllers/Admin/UserController';
@@ -67,13 +70,20 @@ const navGroups: NavGroup[] = [
         items: [
             { title: 'Disciplines', href: DisciplineController.index.url(), icon: Shapes },
             { title: 'Canonical Topics', href: CanonicalTopicController.index.url(), icon: BookOpen },
-            { title: 'Questions', href: QuestionController.index.url(), icon: MessageSquareMore },
             { title: 'Question Papers', href: QuestionPaperController.index.url(), icon: FileText },
+            { title: 'Question Library', href: QuestionLibraryController.index.url(), icon: Library },
             { title: 'Courses', href: CourseController.index.url(), icon: GraduationCap },
             { title: 'Curriculum Mappings', href: CurriculumMappingController.index.url(), icon: Network },
             { title: 'Scheme of Work', href: SchemeOfWorkController.index.url(), icon: CalendarDays },
-            { title: 'Review Queue', href: '/admin/review-queue', icon: ListChecks },
+            { title: 'Review Queue', href: ReviewQueueController.index.url(), icon: ListChecks },
             { title: 'Bulk Import', href: BulkImportController.index.url(), icon: Upload },
+        ],
+    },
+    {
+        label: 'Canvas Library',
+        items: [
+            { title: 'Stencils', href: CanvasStencilController.index.url(), icon: Shapes },
+            { title: 'Asset Ledger', href: ContentBlockAssetController.adminIndex.url(), icon: Library },
         ],
     },
     {

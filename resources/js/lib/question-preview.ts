@@ -24,7 +24,7 @@ export function formDataToShowcaseQuestion(data: QuestionFormData): ShowcaseQues
         number: '1',
         displayLabel: 'Q1',
         type: data.question_type,
-        content: data.content,
+        content: data.content_doc ?? data.content,
         marks: data.marks === '' ? null : (data.marks as number),
         children: [],
     };

@@ -18,8 +18,14 @@ use Illuminate\Support\Facades\Validator;
 
 class ContentGenerationService
 {
-    public function generate(ContentPromptTemplate $template, array $context, ContentProject $project, ?string $modelId = null): ContentResponse
-    {
+    public function generate(
+        ContentPromptTemplate $template,
+        array $context,
+        ContentProject $project,
+        ?string $modelId = null,
+        ?string $contentBlockId = null,
+        ?string $canonicalTopicId = null,
+    ): ContentResponse {
         $model = $this->resolveModel($modelId, $template->promptType(), $project);
         $prompt = $template->build($context);
         $prompt = $this->capMaxTokens($prompt, $model);
@@ -36,7 +42,7 @@ class ContentGenerationService
             $response = $this->retryWithCorrection($adapter, $prompt, $response, fn (array $data) => $template->normalize($data));
         }
 
-        $log = $this->logGeneration($project, $model, $template, $prompt, $response);
+        $log = $this->logGeneration($project, $model, $template, $prompt, $response, null, $contentBlockId, $canonicalTopicId);
 
         return new ContentResponse(
             valid: $response->valid,
@@ -52,8 +58,14 @@ class ContentGenerationService
         );
     }
 
-    public function generateFromPrompt(ContentPrompt $prompt, ContentProject $project, string $promptType, ?string $modelId = null): ContentResponse
-    {
+    public function generateFromPrompt(
+        ContentPrompt $prompt,
+        ContentProject $project,
+        string $promptType,
+        ?string $modelId = null,
+        ?string $contentBlockId = null,
+        ?string $canonicalTopicId = null,
+    ): ContentResponse {
         $model = $this->resolveModel($modelId, $promptType, $project);
         $prompt = $this->capMaxTokens($prompt, $model);
         $adapter = $this->resolveAdapter($model);
@@ -68,7 +80,7 @@ class ContentGenerationService
             $response = $this->retryWithCorrection($adapter, $prompt, $response);
         }
 
-        $log = $this->logGeneration($project, $model, null, $prompt, $response, $promptType);
+        $log = $this->logGeneration($project, $model, null, $prompt, $response, $promptType, $contentBlockId, $canonicalTopicId);
 
         return new ContentResponse(
             valid: $response->valid,
@@ -305,12 +317,16 @@ class ContentGenerationService
         ContentPrompt $prompt,
         ContentResponse $response,
         ?string $promptType = null,
+        ?string $contentBlockId = null,
+        ?string $canonicalTopicId = null,
     ): AIGenerationLog {
         $inputCost = ($response->input_tokens / 1_000_000) * $model->input_cost_per_million;
         $outputCost = ($response->output_tokens / 1_000_000) * $model->output_cost_per_million;
 
         return AIGenerationLog::query()->create([
             'content_project_id' => $project->id,
+            'content_block_id' => $contentBlockId,
+            'canonical_topic_id' => $canonicalTopicId,
             'ai_model_id' => $model->id,
             'prompt_type' => $promptType ?? $template?->promptType() ?? 'unknown',
             'system_prompt' => $prompt->system_prompt,

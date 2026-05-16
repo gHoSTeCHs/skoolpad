@@ -1,0 +1,4276 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Question Builder · v3 — composite authoring, library, pool, 16 type shapes</title>
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,400;12..96,500;12..96,600;12..96,700&family=DM+Sans:opsz,wght@9..40,400;9..40,500;9..40,600;9..40,700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+
+<style>
+  /* =============================================================
+     CANONICAL TOKENS — copied verbatim from resources/css/app.css
+     (Light · Warm Editorial). Same names so anyone auditing can
+     diff this prototype against production CSS line-by-line.
+     ============================================================= */
+  :root {
+    --background: #F7F2E9;
+    --foreground: #1F1A12;
+
+    --card: #FBF8F1;
+    --card-foreground: #1F1A12;
+
+    --primary: #1A6B4F;
+    --primary-foreground: #FBF8F1;
+
+    --secondary: #F0E9DB;
+    --muted: #F0E9DB;
+    --muted-foreground: #6B5E47;
+    --fg-subtle: #9C8E73;
+    --accent: #F0E9DB;
+
+    --destructive: #D4542B;
+    --success: #0D9668;
+    --warning: #D4952A;
+
+    --border: #E0D6C2;
+    --border-2: #F3EDE7;
+    --input: #E0D6C2;
+
+    --bg-raised: #F3EDE7;
+    --text-2: #5C5148;
+
+    --btn-primary-bg: #1A6B4F;
+    --btn-primary-fg: #FFFFFF;
+    --btn-primary-hover: #0C7B56;
+
+    --badge-primary-bg: rgba(13, 150, 104, 0.10);
+    --badge-primary-fg: #0C7B56;
+    --badge-danger-bg:  rgba(212, 84, 43, 0.08);
+    --badge-danger-fg:  #B8411F;
+    --badge-reward-bg:  rgba(212, 149, 42, 0.08);
+    --badge-reward-fg:  #B07920;
+    --badge-neutral-bg: #F3EDE7;
+    --badge-neutral-fg: #998A79;
+
+    --opt-correct-border: #10B981;
+    --opt-correct-bg:     rgba(13, 150, 104, 0.08);
+    --opt-correct-dot:    #0D9668;
+    --opt-wrong-border:   #F07A52;
+    --opt-wrong-bg:       rgba(212, 84, 43, 0.06);
+    --opt-wrong-dot:      #D4542B;
+
+    --card-radius: 20px;
+    --radius: 0.625rem;
+
+    --font-display: 'Bricolage Grotesque', Georgia, serif;
+    --font-body:    'DM Sans', -apple-system, sans-serif;
+    --font-content: 'DM Sans', -apple-system, sans-serif;
+    --font-mono:    'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+
+    --shadow-sm: 0 1px 0 rgba(31,26,18,0.04), 0 1px 2px rgba(31,26,18,0.04);
+    --shadow-md: 0 4px 12px -4px rgba(31,26,18,0.08), 0 2px 4px rgba(31,26,18,0.04);
+    --shadow-lg: 0 18px 40px -20px rgba(31,26,18,0.18), 0 4px 12px -6px rgba(31,26,18,0.08);
+  }
+
+  *, *::before, *::after { box-sizing: border-box; }
+  html, body { height: 100%; }
+  body {
+    margin: 0;
+    background: var(--background);
+    color: var(--foreground);
+    font-family: var(--font-body);
+    font-size: 14px;
+    line-height: 1.5;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  ::-webkit-scrollbar { width: 8px; height: 8px; }
+  ::-webkit-scrollbar-thumb { background: #C9BCA0; border-radius: 4px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+
+  /* utilities */
+  .display { font-family: var(--font-display); letter-spacing: -0.012em; }
+  .mono    { font-family: var(--font-mono); }
+  .container-wrap { max-width: 1280px; margin: 0 auto; padding: 0 24px; }
+
+  /* ========== Page-load cascade animation ========== */
+  @keyframes rise-in {
+    from { opacity: 0; transform: translateY(8px); }
+    to   { opacity: 1; transform: none; }
+  }
+  .rise { opacity: 0; animation: rise-in 0.6s cubic-bezier(0.16, 1, 0.3, 1) forwards; }
+  .rise-1 { animation-delay: 0.05s; }
+  .rise-2 { animation-delay: 0.18s; }
+  .rise-3 { animation-delay: 0.32s; }
+  .rise-4 { animation-delay: 0.48s; }
+
+  /* =============================================================
+     CANONICAL PRIMITIVES — produced from QuestionRenderer + SpBadge
+     ============================================================= */
+
+  /* SpBadge — base shape from sp-badge.tsx:23 */
+  .sp-badge {
+    display: inline-flex; align-items: center; gap: 5px;
+    border-radius: 999px;
+    padding: 4px 10px;
+    font-family: var(--font-body);
+    font-size: 11px;
+    font-weight: 600;
+    line-height: 1;
+    white-space: nowrap;
+  }
+  .sp-badge--xs { padding: 0 5px; font-size: 9px; height: 16px; }
+  .sp-badge--primary { background: var(--badge-primary-bg); color: var(--badge-primary-fg); }
+  .sp-badge--danger  { background: var(--badge-danger-bg);  color: var(--badge-danger-fg); }
+  .sp-badge--reward  { background: var(--badge-reward-bg);  color: var(--badge-reward-fg); }
+  .sp-badge--neutral { background: var(--badge-neutral-bg); color: var(--badge-neutral-fg); }
+  .sp-badge--solid   { background: var(--btn-primary-bg);  color: var(--btn-primary-fg); font-weight: 700; }
+
+  /* Question row — verbatim from question-renderer.tsx:51 */
+  .qr-row {
+    display: flex;
+    align-items: flex-start;
+    gap: 8px;
+    border-radius: 8px;
+    padding: 8px 12px;
+    transition: background-color 0.12s ease;
+  }
+  .qr-row[data-leaf="true"]:hover { background: var(--bg-raised); }
+  .qr-row .qr-toggle {
+    margin-top: 2px;
+    background: transparent;
+    border: 0;
+    padding: 0;
+    color: var(--muted-foreground);
+    font-size: 10px;
+    cursor: pointer;
+    transition: transform 0.15s ease;
+    width: 12px;
+  }
+  .qr-row .qr-toggle[data-open="true"] { transform: rotate(90deg); }
+  .qr-row .qr-leafdot {
+    margin-top: 6px;
+    display: inline-block;
+    width: 6px; height: 6px;
+    flex-shrink: 0;
+    border-radius: 999px;
+    background: rgba(26, 107, 79, 0.4);
+  }
+  .qr-row .qr-body { flex: 1; min-width: 0; }
+  .qr-row .qr-head {
+    display: flex; align-items: center; gap: 8px;
+    flex-wrap: wrap;
+  }
+  .qr-row .qr-num {
+    font-family: var(--font-body);
+    font-size: 12px;
+    font-weight: 700;
+    color: var(--primary);
+  }
+  .qr-row .qr-content {
+    margin-top: 4px;
+    font-family: var(--font-content);
+    font-size: 13px;
+    line-height: 1.55;
+    color: var(--foreground);
+    white-space: pre-wrap;
+  }
+  .qr-row .qr-marks {
+    flex-shrink: 0;
+    border-radius: 6px;
+    background: var(--bg-raised);
+    padding: 2px 8px;
+    font-family: var(--font-body);
+    font-size: 10px;
+    font-weight: 700;
+    color: var(--muted-foreground);
+    margin-top: 2px;
+  }
+  .qr-children {
+    margin-top: 4px;
+    margin-left: 20px;
+    border-left: 1px solid rgba(224, 214, 194, 0.4);
+    padding-left: 16px;
+  }
+
+  /* Option list row — question-renderer.tsx:80 */
+  .qr-opt {
+    display: flex; align-items: center; gap: 8px;
+    border-radius: 8px;
+    border: 1px solid var(--border);
+    padding: 6px 12px;
+    font-family: var(--font-body);
+    font-size: 12px;
+    margin-bottom: 4px;
+  }
+  .qr-opt[data-correct="true"] {
+    border-color: var(--opt-correct-border);
+    background: var(--opt-correct-bg);
+  }
+  .qr-opt .qr-opt-key {
+    display: inline-flex; align-items: center; justify-content: center;
+    width: 20px; height: 20px;
+    border-radius: 999px;
+    background: var(--bg-raised);
+    color: var(--muted-foreground);
+    font-size: 10px;
+    font-weight: 700;
+  }
+  .qr-opt[data-correct="true"] .qr-opt-key {
+    background: var(--opt-correct-dot);
+    color: white;
+  }
+
+  /* Matching pair — question-renderer.tsx:99 */
+  .qr-match-row {
+    display: flex; align-items: center; gap: 8px;
+    font-family: var(--font-body);
+    font-size: 12px;
+    margin-bottom: 4px;
+  }
+  .qr-match-left {
+    width: 140px;
+    flex-shrink: 0;
+    border-radius: 4px;
+    border: 1px solid var(--border);
+    background: var(--bg-raised);
+    padding: 4px 8px;
+    text-align: center;
+    font-weight: 500;
+  }
+  .qr-match-right {
+    flex: 1;
+    border-radius: 4px;
+    border: 1px solid var(--opt-correct-border);
+    background: var(--opt-correct-bg);
+    padding: 4px 8px;
+  }
+  .qr-match-arrow { color: var(--primary); font-size: 14px; }
+  .qr-distractors {
+    display: flex; flex-wrap: wrap; gap: 4px;
+    margin-top: 6px;
+  }
+  .qr-distractor {
+    border-radius: 4px;
+    border: 1px solid var(--border);
+    background: var(--bg-raised);
+    padding: 2px 8px;
+    font-size: 10px;
+    color: var(--muted-foreground);
+    text-decoration: line-through;
+  }
+
+  /* Order item — question-renderer.tsx:117 */
+  .qr-order {
+    display: flex; align-items: center; gap: 8px;
+    border-radius: 6px;
+    border: 1px solid var(--border);
+    padding: 6px 12px;
+    font-family: var(--font-body);
+    font-size: 12px;
+    margin-bottom: 4px;
+  }
+  .qr-order .qr-order-pos {
+    display: inline-flex; align-items: center; justify-content: center;
+    width: 20px; height: 20px;
+    flex-shrink: 0;
+    border-radius: 4px;
+    background: rgba(26, 107, 79, 0.10);
+    color: var(--primary);
+    font-size: 10px;
+    font-weight: 700;
+  }
+
+  /* True/false pills — question-renderer.tsx:128 */
+  .qr-tf {
+    display: flex; align-items: center; gap: 12px;
+    margin-top: 8px;
+  }
+  .qr-tf-pill {
+    border-radius: 6px;
+    padding: 4px 12px;
+    font-family: var(--font-body);
+    font-size: 11px;
+    font-weight: 700;
+    background: var(--bg-raised);
+    color: var(--muted-foreground);
+  }
+  .qr-tf-pill[data-correct="true"] {
+    background: var(--opt-correct-bg);
+    color: var(--opt-correct-dot);
+  }
+  .qr-tf-pill[data-correct="wrong"] {
+    background: rgba(212, 84, 43, 0.10);
+    color: var(--destructive);
+  }
+  .qr-tf-justify {
+    font-size: 10px;
+    font-style: italic;
+    color: var(--muted-foreground);
+  }
+
+  /* Diagram label grid — question-renderer.tsx:135 */
+  .qr-diagram-grid {
+    display: grid; grid-template-columns: 1fr 1fr;
+    gap: 4px;
+    margin-top: 8px;
+  }
+  .qr-diagram-cell {
+    display: flex; align-items: center; gap: 8px;
+    border-radius: 4px;
+    border: 1px solid var(--border);
+    padding: 4px 8px;
+    font-size: 11px;
+    font-family: var(--font-body);
+  }
+  .qr-diagram-cell .qr-diagram-key {
+    font-weight: 700; color: var(--primary);
+  }
+  .qr-diagram-cell .qr-diagram-val {
+    color: var(--muted-foreground);
+  }
+
+  /* Calculation answer pill — question-renderer.tsx:145 */
+  .qr-calc {
+    display: inline-flex; align-items: center;
+    border-radius: 4px;
+    border: 1px solid var(--opt-correct-border);
+    background: var(--opt-correct-bg);
+    padding: 4px 12px;
+    font-family: var(--font-body);
+    font-size: 12px;
+    font-weight: 700;
+    margin-top: 8px;
+  }
+
+  /* Cloze gap row — question-renderer.tsx:154 */
+  .qr-gap-row {
+    display: flex; align-items: center; gap: 8px;
+    font-family: var(--font-body);
+    font-size: 11px;
+    margin-bottom: 4px;
+  }
+  .qr-gap-label { font-weight: 700; color: var(--primary); flex-shrink: 0; }
+  .qr-gap-options { display: flex; flex-wrap: wrap; gap: 4px; }
+  .qr-gap-chip {
+    border-radius: 4px;
+    background: var(--bg-raised);
+    padding: 1px 8px;
+    font-size: 11px;
+  }
+  .qr-gap-chip[data-correct="true"] {
+    border: 1px solid var(--opt-correct-border);
+    background: var(--opt-correct-bg);
+    font-weight: 700;
+  }
+
+  /* Assertion / Reason — question-renderer.tsx:165 */
+  .qr-ar {
+    margin-top: 8px;
+    border-radius: 6px;
+    border: 1px solid var(--border);
+    background: var(--bg-raised);
+    padding: 12px;
+    font-family: var(--font-body);
+    font-size: 11px;
+    line-height: 1.55;
+  }
+  .qr-ar-row { margin-bottom: 4px; white-space: pre-wrap; }
+  .qr-ar-row:last-child { margin-bottom: 0; }
+  .qr-ar-row .qr-ar-label { font-weight: 700; }
+  .qr-ar-row .qr-ar-label--a { color: var(--primary); }
+  .qr-ar-row .qr-ar-label--r { color: var(--warning); }
+
+  /* Matrix matching — question-renderer.tsx:176 */
+  .qr-matrix {
+    margin-top: 8px;
+    border-radius: 6px;
+    border: 1px solid var(--border);
+    overflow: hidden;
+  }
+  .qr-matrix table {
+    width: 100%;
+    border-collapse: collapse;
+    font-family: var(--font-body);
+    font-size: 11px;
+  }
+  .qr-matrix th {
+    background: var(--bg-raised);
+    border-bottom: 1px solid var(--border);
+    padding: 6px 8px;
+    font-weight: 700;
+    text-align: left;
+  }
+  .qr-matrix th:first-child { border-right: 1px solid var(--border); }
+  .qr-matrix th.col { color: var(--primary); text-align: center; }
+  .qr-matrix td {
+    border-bottom: 1px solid rgba(224, 214, 194, 0.4);
+    padding: 6px 8px;
+  }
+  .qr-matrix tbody tr:last-child td { border-bottom: 0; }
+  .qr-matrix td.label {
+    border-right: 1px solid var(--border);
+    font-weight: 500;
+  }
+  .qr-matrix td.cell {
+    text-align: center;
+  }
+  .qr-matrix .qr-matrix-tick {
+    display: inline-flex; align-items: center; justify-content: center;
+    width: 16px; height: 16px;
+    border-radius: 999px;
+    background: var(--opt-correct-dot);
+    color: white;
+    font-size: 9px;
+  }
+  .qr-matrix .qr-matrix-dash { color: var(--border); }
+  .qr-matrix-legend {
+    border-top: 1px solid var(--border);
+    background: var(--bg-raised);
+    padding: 6px 8px;
+    font-size: 10px;
+    color: var(--muted-foreground);
+  }
+  .qr-matrix-legend strong { color: var(--primary); }
+
+  /* Numeric entry pill — question-renderer.tsx:212 */
+  .qr-numeric {
+    display: inline-flex; align-items: center; gap: 8px;
+    margin-top: 8px;
+  }
+  .qr-numeric-pill {
+    display: inline-flex; align-items: center; gap: 4px;
+    border-radius: 4px;
+    border: 2px dashed rgba(26, 107, 79, 0.30);
+    background: var(--bg-raised);
+    padding: 6px 12px;
+  }
+  .qr-numeric-val {
+    font-family: var(--font-body);
+    font-size: 12px;
+    font-weight: 700;
+  }
+  .qr-numeric-unit {
+    font-size: 10px;
+    color: var(--muted-foreground);
+  }
+  .qr-numeric-tol {
+    font-size: 10px;
+    color: var(--muted-foreground);
+    font-family: var(--font-body);
+  }
+
+  /* Choice group banner — question-renderer.tsx:223 */
+  .qr-choicegroup {
+    margin-top: 8px;
+    border-radius: 4px;
+    border: 1px solid rgba(212, 149, 42, 0.30);
+    background: rgba(212, 149, 42, 0.05);
+    padding: 6px 12px;
+  }
+  .qr-choicegroup span {
+    font-family: var(--font-body);
+    font-size: 10px;
+    font-weight: 700;
+    color: var(--warning);
+  }
+
+  /* =============================================================
+     COVER
+     ============================================================= */
+  .cover {
+    max-width: 1280px;
+    margin: 36px auto 22px;
+    padding: 0 24px;
+    display: grid;
+    grid-template-columns: 1fr auto;
+    gap: 28px;
+    align-items: end;
+  }
+  .cover .ribbon {
+    display: flex; align-items: center; gap: 10px;
+    font-family: var(--font-display);
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.16em;
+    color: var(--fg-subtle);
+    margin-bottom: 8px;
+  }
+  .sigil {
+    display: inline-flex; align-items: center; justify-content: center;
+    width: 26px; height: 26px;
+    border-radius: 6px;
+    background: var(--foreground);
+    color: var(--background);
+    font-family: var(--font-display);
+    font-weight: 700;
+    font-size: 13px;
+    letter-spacing: -0.04em;
+    box-shadow: var(--shadow-sm);
+  }
+  .cover h1 {
+    font-family: var(--font-display);
+    font-weight: 600;
+    font-size: 40px;
+    letter-spacing: -0.020em;
+    line-height: 1.02;
+    margin: 0;
+  }
+  .cover h1 em {
+    font-style: italic;
+    color: var(--primary);
+    font-weight: 500;
+  }
+  .cover .sub {
+    margin-top: 14px;
+    color: var(--muted-foreground);
+    font-size: 14.5px;
+    line-height: 1.55;
+    max-width: 720px;
+  }
+  .cover .meta {
+    text-align: right;
+    color: var(--fg-subtle);
+    font-family: var(--font-mono);
+    font-size: 11px;
+    line-height: 1.85;
+  }
+  .cover .meta strong { color: var(--muted-foreground); font-weight: 500; }
+
+  /* Section labels (annotation strips between major sections) */
+  .anno {
+    margin: 56px auto 16px;
+    max-width: 1280px;
+    padding: 0 24px;
+    display: grid;
+    grid-template-columns: auto 1fr auto;
+    align-items: baseline;
+    gap: 18px;
+  }
+  .anno .nm {
+    font-family: var(--font-mono);
+    font-size: 11px;
+    color: var(--fg-subtle);
+    letter-spacing: 0.06em;
+  }
+  .anno .ttl {
+    font-family: var(--font-display);
+    font-size: 22px;
+    font-weight: 600;
+    letter-spacing: -0.012em;
+    line-height: 1.15;
+  }
+  .anno .desc {
+    font-size: 13px;
+    color: var(--muted-foreground);
+    max-width: 540px;
+    text-align: right;
+  }
+
+  /* =============================================================
+     CHROME REFERENCE STRIP — shows the canonical primitives we are
+     respecting. This isn't decoration; it's an audit aid.
+     ============================================================= */
+  .chrome-strip {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: var(--card-radius);
+    box-shadow: var(--shadow-sm);
+    padding: 22px 26px 20px;
+    display: grid;
+    grid-template-columns: 200px 1fr;
+    gap: 28px;
+  }
+  .chrome-strip .left {
+    border-right: 1px dashed var(--border);
+    padding-right: 22px;
+  }
+  .chrome-strip .left .h {
+    font-family: var(--font-display);
+    font-size: 12px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.12em;
+    color: var(--fg-subtle);
+    margin-bottom: 6px;
+  }
+  .chrome-strip .left .src {
+    font-family: var(--font-mono);
+    font-size: 10.5px;
+    color: var(--fg-subtle);
+    line-height: 1.7;
+    margin-top: 8px;
+  }
+  .chrome-strip .left .src code {
+    background: var(--bg-raised);
+    padding: 1px 5px;
+    border-radius: 3px;
+    color: var(--muted-foreground);
+  }
+  .chrome-strip .right {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 14px;
+  }
+  .chrome-row {
+    display: grid;
+    grid-template-columns: 110px 1fr;
+    align-items: center;
+    gap: 14px;
+  }
+  .chrome-row .lbl {
+    font-family: var(--font-mono);
+    font-size: 10.5px;
+    color: var(--fg-subtle);
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+  }
+  .chrome-row .swatches {
+    display: flex; flex-wrap: wrap; gap: 8px; align-items: center;
+  }
+</style>
+</head>
+<body>
+
+<!-- ============= COVER ============= -->
+<section class="cover rise rise-1">
+  <div>
+    <div class="ribbon">
+      <span class="sigil">Q</span>
+      <span>Skoolpad · Question Builder · v3 · supersedes v1 + v2</span>
+    </div>
+    <h1>Author every question, every type,<br/>every depth — <em>in one place</em>.</h1>
+    <p class="sub">
+      Composite editor with Question / Answers / Links / Contexts tabs. A container-first Library that retires the flat <span class="mono">/admin/questions</span> index. A pool-builder variant for paperless containers. The 16 question types collapse to 10 authoring shapes — each shown both populated and empty, all rendered through canonical <span class="mono">QuestionRenderer</span> chrome with author affordances layered on top.
+    </p>
+  </div>
+  <div class="meta">
+    <div><strong>Spec</strong>&nbsp;&nbsp;2026-05-07-complete-question-authoring-in-builder-plan.md</div>
+    <div><strong>Route</strong>&nbsp;&nbsp;/admin/question-papers/{paper}/build/preview</div>
+    <div><strong>Live data</strong>&nbsp;&nbsp;80 q · 4 papers · 14 in pools · 24 unattached</div>
+    <div><strong>Chrome source</strong>&nbsp;&nbsp;question-renderer.tsx · sp-badge.tsx</div>
+    <div><strong>Tokens</strong>&nbsp;&nbsp;app.css · light · warm-editorial</div>
+  </div>
+</section>
+
+<!-- ============= CHROME REFERENCE ============= -->
+<div class="anno rise rise-2">
+  <span class="nm">section · 00</span>
+  <span class="ttl">Canonical chrome we're respecting</span>
+  <span class="desc">Every question render in this prototype uses these exact primitives, in these exact tokens. Nothing below is a parallel design — only author affordances are net-new.</span>
+</div>
+
+<div class="container-wrap rise rise-2">
+  <div class="chrome-strip">
+    <div class="left">
+      <div class="h">Sources</div>
+      <div class="src">
+        <div><code>question-renderer.tsx</code></div>
+        <div><code>question-type-badge.tsx</code></div>
+        <div><code>sp-badge.tsx</code></div>
+        <div><code>resources/css/app.css</code> · <code>:root</code></div>
+        <div style="margin-top: 10px; color: var(--muted-foreground);">Card radius · <strong style="color: var(--foreground);">20px</strong></div>
+        <div style="color: var(--muted-foreground);">Bg-raised · <strong style="color: var(--foreground);">#F3EDE7</strong></div>
+        <div style="color: var(--muted-foreground);">Opt-correct · <strong style="color: var(--opt-correct-dot);">#10B981</strong></div>
+      </div>
+    </div>
+    <div class="right">
+
+      <!-- Type badges — all 5 SpBadge variants -->
+      <div class="chrome-row">
+        <span class="lbl">type badges</span>
+        <div class="swatches">
+          <span class="sp-badge sp-badge--solid">MCQ</span>
+          <span class="sp-badge sp-badge--solid">multi-select</span>
+          <span class="sp-badge sp-badge--solid">assert-reason</span>
+          <span class="sp-badge sp-badge--primary">theory</span>
+          <span class="sp-badge sp-badge--primary">short answer</span>
+          <span class="sp-badge sp-badge--primary">essay</span>
+          <span class="sp-badge sp-badge--reward">fill blank</span>
+          <span class="sp-badge sp-badge--reward">cloze</span>
+          <span class="sp-badge sp-badge--reward">matching</span>
+          <span class="sp-badge sp-badge--reward">ordering</span>
+          <span class="sp-badge sp-badge--reward">matrix match</span>
+          <span class="sp-badge sp-badge--danger">true/false</span>
+          <span class="sp-badge sp-badge--danger">diagram</span>
+          <span class="sp-badge sp-badge--danger">calculation</span>
+          <span class="sp-badge sp-badge--danger">numeric</span>
+          <span class="sp-badge sp-badge--neutral">group</span>
+        </div>
+      </div>
+
+      <!-- Question row + marks -->
+      <div class="chrome-row">
+        <span class="lbl">question row</span>
+        <div style="border: 1px dashed var(--border); border-radius: 8px; padding: 4px;">
+          <div class="qr-row" data-leaf="true">
+            <span class="qr-leafdot"></span>
+            <div class="qr-body">
+              <div class="qr-head">
+                <span class="qr-num">3 (a)</span>
+                <span class="sp-badge sp-badge--xs sp-badge--primary">theory</span>
+              </div>
+              <div class="qr-content">State the LRU page replacement algorithm.</div>
+            </div>
+            <span class="qr-marks">5m</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Option row -->
+      <div class="chrome-row">
+        <span class="lbl">option row</span>
+        <div style="display: flex; flex-direction: column; gap: 0; flex: 1;">
+          <div class="qr-opt">
+            <span class="qr-opt-key">A</span>
+            <span>Least Recently Used (LRU)</span>
+          </div>
+          <div class="qr-opt" data-correct="true">
+            <span class="qr-opt-key">✓</span>
+            <span>Round Robin Scheduling</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Marks pill, true/false, calc, numeric -->
+      <div class="chrome-row">
+        <span class="lbl">scalar pills</span>
+        <div class="swatches">
+          <span class="qr-marks">5m</span>
+          <span class="qr-tf-pill" data-correct="true">TRUE</span>
+          <span class="qr-tf-pill">FALSE</span>
+          <span class="qr-calc" style="margin: 0;">= 256 sets</span>
+          <span class="qr-numeric-pill" style="margin: 0;">
+            <span class="qr-numeric-val">9.8</span>
+            <span class="qr-numeric-unit">m/s²</span>
+          </span>
+          <span style="font-size: 10px; color: var(--muted-foreground);">±0.1</span>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<!-- =============================================================
+     SECTION 1 · LIBRARY LANDING
+     Container browser. Replaces the flat /admin/questions index.
+     Cards mirror CoverageCardComponent shape from architecture-showcase.tsx:1353
+     ============================================================= -->
+
+<style>
+  .lib-shell {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: var(--card-radius);
+    box-shadow: var(--shadow-md);
+    overflow: hidden;
+  }
+  .lib-header {
+    padding: 26px 30px 22px;
+    border-bottom: 1px solid var(--border-2);
+    background: linear-gradient(180deg, var(--card) 0%, var(--bg-raised) 100%);
+  }
+  .lib-header h2 {
+    font-family: var(--font-display);
+    font-size: 30px;
+    font-weight: 600;
+    letter-spacing: -0.018em;
+    line-height: 1.1;
+    margin: 6px 0 0;
+  }
+  .lib-header .meta {
+    display: flex; align-items: center; gap: 14px;
+    margin-top: 12px;
+    color: var(--muted-foreground);
+    font-size: 13px;
+    flex-wrap: wrap;
+  }
+  .lib-header .meta strong { color: var(--foreground); font-weight: 600; }
+  .lib-header .meta .dot { width: 3px; height: 3px; border-radius: 999px; background: var(--fg-subtle); }
+
+  .lib-toolbar {
+    display: grid;
+    grid-template-columns: 1fr auto;
+    gap: 18px;
+    padding: 16px 30px;
+    border-bottom: 1px solid var(--border-2);
+    align-items: center;
+  }
+  .search-box {
+    display: flex; align-items: center; gap: 12px;
+    background: var(--background);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 9px 14px;
+    color: var(--fg-subtle);
+    font-size: 13px;
+  }
+  .search-box .kbd {
+    margin-left: auto;
+    font-family: var(--font-mono);
+    font-size: 10.5px;
+    color: var(--fg-subtle);
+    background: var(--bg-raised);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    padding: 1px 6px;
+  }
+  .filters-row { display: flex; align-items: center; gap: 8px; }
+  .chip {
+    display: inline-flex; align-items: center; gap: 6px;
+    padding: 6px 11px;
+    background: var(--background);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    font-size: 12px;
+    color: var(--muted-foreground);
+    cursor: pointer;
+    font-family: var(--font-body);
+  }
+  .chip:hover { color: var(--foreground); border-color: var(--fg-subtle); }
+  .chip[data-on="true"] { background: var(--foreground); color: var(--background); border-color: var(--foreground); }
+
+  .lib-tabs {
+    display: flex;
+    padding: 0 30px;
+    gap: 6px;
+    border-bottom: 1px solid var(--border-2);
+    align-items: center;
+  }
+  .lib-tab {
+    display: inline-flex; align-items: center; gap: 8px;
+    padding: 14px 14px 15px;
+    font-family: var(--font-body);
+    font-size: 13px;
+    font-weight: 500;
+    color: var(--muted-foreground);
+    cursor: pointer;
+    border-bottom: 2px solid transparent;
+    margin-bottom: -1px;
+  }
+  .lib-tab:hover { color: var(--foreground); }
+  .lib-tab[data-active="true"] {
+    color: var(--foreground);
+    border-bottom-color: var(--foreground);
+  }
+  .lib-tab .lt-count {
+    font-family: var(--font-mono);
+    font-size: 10.5px;
+    color: var(--fg-subtle);
+  }
+  .lib-tab[data-active="true"] .lt-count { color: var(--foreground); }
+  .lib-tab[data-tone="warn"] .lt-count { color: var(--warning); }
+
+  .btn {
+    display: inline-flex; align-items: center; gap: 7px;
+    height: 32px; padding: 0 12px;
+    border-radius: 8px;
+    font-family: var(--font-body);
+    font-size: 13px;
+    font-weight: 500;
+    border: 1px solid var(--border);
+    background: var(--card);
+    color: var(--foreground);
+    cursor: pointer;
+    transition: all 0.1s ease;
+  }
+  .btn:hover { background: var(--bg-raised); }
+  .btn-primary {
+    background: var(--foreground); color: var(--background); border-color: transparent;
+    box-shadow: var(--shadow-sm), inset 0 1px 0 rgba(255,255,255,0.06);
+  }
+  .btn-primary:hover { background: #2A2418; }
+  .btn-canopy {
+    background: var(--btn-primary-bg); color: var(--btn-primary-fg); border-color: transparent;
+  }
+  .btn-canopy:hover { background: var(--btn-primary-hover); }
+  .btn-ghost { background: transparent; border-color: transparent; color: var(--muted-foreground); }
+  .btn-ghost:hover { background: var(--bg-raised); color: var(--foreground); }
+  .btn-sm { height: 28px; padding: 0 10px; font-size: 12px; }
+
+  /* Container card — mirrors CoverageCardComponent at architecture-showcase.tsx:1353 */
+  .lib-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 18px;
+    padding: 24px 30px 32px;
+  }
+  .lib-card {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: var(--card-radius);
+    overflow: hidden;
+    cursor: pointer;
+    transition: transform 0.25s ease, box-shadow 0.25s ease;
+  }
+  .lib-card:hover {
+    transform: translateY(-3px);
+    box-shadow: var(--shadow-lg);
+  }
+  .lib-card .gradient-head {
+    padding: 20px 22px 16px;
+    color: white;
+    position: relative;
+  }
+  .lib-card .gradient-head .code {
+    font-family: var(--font-display);
+    font-size: 22px;
+    font-weight: 700;
+    letter-spacing: -0.012em;
+  }
+  .lib-card .gradient-head .ttl {
+    margin-top: 2px;
+    font-family: var(--font-body);
+    font-size: 12.5px;
+    color: rgba(255,255,255,0.78);
+    line-height: 1.4;
+  }
+  .lib-card .gradient-head .pill-row {
+    position: absolute;
+    top: 18px; right: 20px;
+    display: flex; gap: 6px;
+  }
+  .lib-card .gradient-head .pill-row .lp {
+    background: rgba(255,255,255,0.15);
+    border: 1px solid rgba(255,255,255,0.20);
+    border-radius: 999px;
+    padding: 2px 8px;
+    font-family: var(--font-mono);
+    font-size: 10px;
+    color: rgba(255,255,255,0.92);
+    backdrop-filter: blur(6px);
+  }
+  .lib-card .body {
+    padding: 18px 22px 16px;
+  }
+  .lib-card .body .progress-row {
+    display: flex; align-items: baseline; justify-content: space-between;
+    margin-bottom: 10px;
+  }
+  .lib-card .body .progress-row .ratio {
+    font-family: var(--font-display);
+    font-size: 16px;
+    font-weight: 600;
+    color: var(--foreground);
+  }
+  .lib-card .body .progress-row .ratio em {
+    color: var(--muted-foreground);
+    font-style: normal;
+    font-weight: 500;
+    font-size: 12.5px;
+    margin-left: 6px;
+  }
+  .lib-card .body .progress-row .label {
+    font-family: var(--font-mono);
+    font-size: 10px;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: var(--fg-subtle);
+  }
+  .lib-card .progress {
+    height: 6px;
+    width: 100%;
+    border-radius: 999px;
+    background: var(--border-2);
+    overflow: hidden;
+    display: flex;
+  }
+  .lib-card .progress .seg-pub { background: var(--success); }
+  .lib-card .progress .seg-drf { background: var(--warning); }
+  .lib-card .progress .seg-emp { background: var(--bg-raised); }
+
+  .lib-card .stats {
+    display: grid; grid-template-columns: 1fr 1fr;
+    gap: 6px 14px;
+    margin-top: 14px;
+    font-family: var(--font-body);
+    font-size: 11px;
+  }
+  .lib-card .stats .stat {
+    display: flex; align-items: center; justify-content: space-between;
+    color: var(--muted-foreground);
+  }
+  .lib-card .stats .stat strong {
+    color: var(--foreground);
+    font-weight: 600;
+  }
+  .lib-card .footer {
+    border-top: 1px solid var(--border-2);
+    padding: 10px 22px;
+    display: flex; align-items: center; justify-content: space-between;
+    font-family: var(--font-mono);
+    font-size: 10.5px;
+    color: var(--fg-subtle);
+    background: var(--card);
+  }
+  .lib-card .footer .arrow {
+    color: var(--muted-foreground);
+    font-family: var(--font-body);
+    font-weight: 500;
+  }
+
+  /* Gradient variants — match the CoverageCardComponent palette idea */
+  .lib-card[data-tone="canopy"] .gradient-head {
+    background: linear-gradient(135deg, #1A6B4F 0%, #0C7B56 100%);
+  }
+  .lib-card[data-tone="ember"] .gradient-head {
+    background: linear-gradient(135deg, #B8411F 0%, #D4542B 100%);
+  }
+  .lib-card[data-tone="honey"] .gradient-head {
+    background: linear-gradient(135deg, #B07920 0%, #D4952A 100%);
+  }
+  .lib-card[data-tone="ink"] .gradient-head {
+    background: linear-gradient(135deg, #1F1A12 0%, #3A3225 100%);
+  }
+  .lib-card[data-tone="dust"] .gradient-head {
+    background: linear-gradient(135deg, #6B5E47 0%, #9C8E73 100%);
+  }
+  .lib-card[data-tone="warn"] .gradient-head {
+    background: repeating-linear-gradient(135deg, #B07920 0 12px, #D4952A 12px 24px);
+  }
+</style>
+
+<div class="anno rise rise-3">
+  <span class="nm">section · 01</span>
+  <span class="ttl">Library landing — container-first, not question-first</span>
+  <span class="desc">Replaces <span class="mono">/admin/questions</span>. Three legitimate container types from the schema (papers, course pools, exam pools) plus an inbox for the 24 unattached questions. Flat list survives only as ⌘K search.</span>
+</div>
+
+<div class="container-wrap rise rise-3">
+  <div class="lib-shell">
+
+    <header class="lib-header">
+      <div style="display:flex; align-items:center; gap:10px; font-family: var(--font-display); font-size: 11px; text-transform: uppercase; letter-spacing: 0.14em; color: var(--fg-subtle);">
+        <span class="sigil">Q</span>
+        <span>Question Library</span>
+        <span style="color: var(--fg-subtle);">·</span>
+        <span style="text-transform: none; letter-spacing: 0; font-family: var(--font-body); font-size: 13px; color: var(--muted-foreground);">browse by container, not by question</span>
+      </div>
+      <h2>Where do you want to author today?</h2>
+      <div class="meta">
+        <span><strong>80</strong> questions</span>
+        <span class="dot"></span>
+        <span><strong>4</strong> papers · <strong>14</strong> course-pool · <strong>24</strong> unattached</span>
+        <span class="dot"></span>
+        <span style="font-family: var(--font-mono); font-size: 12px;">last activity 14m ago — Q3(a) standard answer edited by you</span>
+      </div>
+    </header>
+
+    <div class="lib-toolbar">
+      <div class="search-box">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/></svg>
+        <span>Search across all containers — paper title, question stem, topic, course code…</span>
+        <span class="kbd">⌘ K</span>
+      </div>
+      <div class="filters-row">
+        <span class="chip" data-on="true">All status</span>
+        <span class="chip">Published</span>
+        <span class="chip">Draft</span>
+        <span class="chip" style="border-style: dashed;">+ filter</span>
+      </div>
+    </div>
+
+    <div class="lib-tabs">
+      <div class="lib-tab" data-active="true">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6"/></svg>
+        Papers <span class="lt-count">4</span>
+      </div>
+      <div class="lib-tab">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M2 3h20v18H2zM2 9h20"/></svg>
+        Course pools <span class="lt-count">3</span>
+      </div>
+      <div class="lib-tab">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 4l3 3-3 3M12 4l3 3-3 3M19 4l-3 3 3 3"/></svg>
+        Exam-subject pools <span class="lt-count">0</span>
+      </div>
+      <div class="lib-tab" data-tone="warn" style="margin-left: auto;">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2v20M2 12h20"/></svg>
+        Unattached inbox <span class="lt-count">24</span>
+      </div>
+      <div style="padding: 8px 0;">
+        <button class="btn btn-primary btn-sm">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12h14"/></svg>
+          New paper
+        </button>
+      </div>
+    </div>
+
+    <div class="lib-grid">
+
+      <!-- Paper 1 -->
+      <article class="lib-card" data-tone="ink">
+        <div class="gradient-head">
+          <div class="code">CSC302 · 2024</div>
+          <div class="ttl">Computer Architecture · Final Exam · 100 marks</div>
+          <div class="pill-row">
+            <span class="lp">paper</span>
+            <span class="lp">tertiary</span>
+          </div>
+        </div>
+        <div class="body">
+          <div class="progress-row">
+            <div class="ratio">42<em>/ 51 answers filled</em></div>
+            <div class="label">82% complete</div>
+          </div>
+          <div class="progress">
+            <div class="seg-pub" style="flex: 0 0 60%;"></div>
+            <div class="seg-drf" style="flex: 0 0 22%;"></div>
+            <div class="seg-emp" style="flex: 0 0 18%;"></div>
+          </div>
+          <div class="stats">
+            <div class="stat"><span>Questions</span><strong>17</strong></div>
+            <div class="stat"><span>Sections</span><strong>3</strong></div>
+            <div class="stat"><span>Contexts</span><strong>6</strong></div>
+            <div class="stat"><span>Status</span><strong style="color: var(--success);">Published</strong></div>
+          </div>
+        </div>
+        <div class="footer">
+          <span>edited 14m ago · you</span>
+          <span class="arrow">open builder →</span>
+        </div>
+      </article>
+
+      <!-- Paper 2 -->
+      <article class="lib-card" data-tone="canopy">
+        <div class="gradient-head">
+          <div class="code">MAT201 · 2023</div>
+          <div class="ttl">Linear Algebra · Mid-Semester · 50 marks</div>
+          <div class="pill-row">
+            <span class="lp">paper</span>
+            <span class="lp">tertiary</span>
+          </div>
+        </div>
+        <div class="body">
+          <div class="progress-row">
+            <div class="ratio">22<em>/ 36 answers filled</em></div>
+            <div class="label">61% complete</div>
+          </div>
+          <div class="progress">
+            <div class="seg-pub" style="flex: 0 0 38%;"></div>
+            <div class="seg-drf" style="flex: 0 0 24%;"></div>
+            <div class="seg-emp" style="flex: 0 0 38%;"></div>
+          </div>
+          <div class="stats">
+            <div class="stat"><span>Questions</span><strong>12</strong></div>
+            <div class="stat"><span>Sections</span><strong>2</strong></div>
+            <div class="stat"><span>Contexts</span><strong>3</strong></div>
+            <div class="stat"><span>Status</span><strong style="color: var(--warning);">In review</strong></div>
+          </div>
+        </div>
+        <div class="footer">
+          <span>edited 2h ago · A. Adekunle</span>
+          <span class="arrow">open builder →</span>
+        </div>
+      </article>
+
+      <!-- Paper 3 -->
+      <article class="lib-card" data-tone="dust">
+        <div class="gradient-head">
+          <div class="code">PHY101 · 2024</div>
+          <div class="ttl">Mechanics · First CA · 30 marks</div>
+          <div class="pill-row">
+            <span class="lp">paper</span>
+            <span class="lp">tertiary</span>
+          </div>
+        </div>
+        <div class="body">
+          <div class="progress-row">
+            <div class="ratio">5<em>/ 24 answers filled</em></div>
+            <div class="label">21% complete</div>
+          </div>
+          <div class="progress">
+            <div class="seg-pub" style="flex: 0 0 12%;"></div>
+            <div class="seg-drf" style="flex: 0 0 8%;"></div>
+            <div class="seg-emp" style="flex: 0 0 80%;"></div>
+          </div>
+          <div class="stats">
+            <div class="stat"><span>Questions</span><strong>8</strong></div>
+            <div class="stat"><span>Sections</span><strong>1</strong></div>
+            <div class="stat"><span>Contexts</span><strong>2</strong></div>
+            <div class="stat"><span>Status</span><strong style="color: var(--fg-subtle);">Draft</strong></div>
+          </div>
+        </div>
+        <div class="footer">
+          <span>edited yesterday · B. Eze</span>
+          <span class="arrow">open builder →</span>
+        </div>
+      </article>
+
+      <!-- Paper 4 -->
+      <article class="lib-card" data-tone="ember">
+        <div class="gradient-head">
+          <div class="code">JAMB · 2023</div>
+          <div class="ttl">English Language · past paper · 60 marks</div>
+          <div class="pill-row">
+            <span class="lp">paper</span>
+            <span class="lp">exam-prep</span>
+          </div>
+        </div>
+        <div class="body">
+          <div class="progress-row">
+            <div class="ratio">15<em>/ 15 answers filled</em></div>
+            <div class="label">100% · complete</div>
+          </div>
+          <div class="progress">
+            <div class="seg-pub" style="flex: 0 0 100%;"></div>
+          </div>
+          <div class="stats">
+            <div class="stat"><span>Questions</span><strong>5</strong></div>
+            <div class="stat"><span>Sections</span><strong>1</strong></div>
+            <div class="stat"><span>Contexts</span><strong>1</strong></div>
+            <div class="stat"><span>Status</span><strong style="color: var(--success);">Published</strong></div>
+          </div>
+        </div>
+        <div class="footer">
+          <span>edited 6 days ago · OCR import</span>
+          <span class="arrow">open builder →</span>
+        </div>
+      </article>
+
+    </div>
+  </div>
+</div>
+
+<!-- Course pools tab — second view of the same shell -->
+<div class="anno">
+  <span class="nm">section · 01b</span>
+  <span class="ttl">Course pools tab — same shell, course-shaped containers</span>
+  <span class="desc">Live: 14 questions across 3 course pools. Card chrome is identical; only the tone palette and pill row differ to telegraph "no paper".</span>
+</div>
+
+<div class="container-wrap">
+  <div class="lib-shell">
+    <header class="lib-header" style="padding: 18px 30px 14px;">
+      <div style="display:flex; align-items:center; gap:10px; font-family: var(--font-display); font-size: 11px; text-transform: uppercase; letter-spacing: 0.14em; color: var(--fg-subtle);">
+        <span class="sigil" style="background: var(--primary); color: var(--primary-foreground);">C</span>
+        <span style="text-transform: none; letter-spacing: 0; font-family: var(--font-body); font-size: 13.5px; color: var(--foreground);"><strong style="font-weight: 600;">Course pools</strong> · platform-curated questions attached to a course, not a paper</span>
+      </div>
+    </header>
+
+    <div class="lib-grid" style="padding: 22px 30px 28px;">
+
+      <article class="lib-card" data-tone="canopy">
+        <div class="gradient-head">
+          <div class="code">CSC302</div>
+          <div class="ttl">Computer Architecture · practice pool · University of Lagos</div>
+          <div class="pill-row">
+            <span class="lp">course pool</span>
+            <span class="lp">no paper</span>
+          </div>
+        </div>
+        <div class="body">
+          <div class="progress-row">
+            <div class="ratio">21<em>/ 24 answers filled</em></div>
+            <div class="label">grouped by 3 topics</div>
+          </div>
+          <div class="progress">
+            <div class="seg-pub" style="flex: 0 0 70%;"></div>
+            <div class="seg-drf" style="flex: 0 0 18%;"></div>
+            <div class="seg-emp" style="flex: 0 0 12%;"></div>
+          </div>
+          <div class="stats">
+            <div class="stat"><span>Questions</span><strong>8</strong></div>
+            <div class="stat"><span>Topics</span><strong>3</strong></div>
+            <div class="stat"><span>Tertiary</span><strong>UNILAG</strong></div>
+            <div class="stat"><span>Status</span><strong style="color: var(--success);">Active</strong></div>
+          </div>
+        </div>
+        <div class="footer">
+          <span>edited 3d ago · A. Adekunle</span>
+          <span class="arrow">open pool builder →</span>
+        </div>
+      </article>
+
+      <article class="lib-card" data-tone="canopy">
+        <div class="gradient-head">
+          <div class="code">MAT201</div>
+          <div class="ttl">Linear Algebra · practice pool · University of Lagos</div>
+          <div class="pill-row">
+            <span class="lp">course pool</span>
+            <span class="lp">no paper</span>
+          </div>
+        </div>
+        <div class="body">
+          <div class="progress-row">
+            <div class="ratio">8<em>/ 12 answers filled</em></div>
+            <div class="label">grouped by 2 topics</div>
+          </div>
+          <div class="progress">
+            <div class="seg-pub" style="flex: 0 0 50%;"></div>
+            <div class="seg-drf" style="flex: 0 0 17%;"></div>
+            <div class="seg-emp" style="flex: 0 0 33%;"></div>
+          </div>
+          <div class="stats">
+            <div class="stat"><span>Questions</span><strong>4</strong></div>
+            <div class="stat"><span>Topics</span><strong>2</strong></div>
+            <div class="stat"><span>Tertiary</span><strong>UNILAG</strong></div>
+            <div class="stat"><span>Status</span><strong style="color: var(--success);">Active</strong></div>
+          </div>
+        </div>
+        <div class="footer">
+          <span>edited 1w ago · B. Eze</span>
+          <span class="arrow">open pool builder →</span>
+        </div>
+      </article>
+
+      <article class="lib-card" data-tone="dust">
+        <div class="gradient-head">
+          <div class="code">CSC205</div>
+          <div class="ttl">Data Structures · practice pool · University of Ibadan</div>
+          <div class="pill-row">
+            <span class="lp">course pool</span>
+            <span class="lp">sparse</span>
+          </div>
+        </div>
+        <div class="body">
+          <div class="progress-row">
+            <div class="ratio">2<em>/ 6 answers filled</em></div>
+            <div class="label">grouped by 1 topic</div>
+          </div>
+          <div class="progress">
+            <div class="seg-pub" style="flex: 0 0 33%;"></div>
+            <div class="seg-emp" style="flex: 0 0 67%;"></div>
+          </div>
+          <div class="stats">
+            <div class="stat"><span>Questions</span><strong>2</strong></div>
+            <div class="stat"><span>Topics</span><strong>1</strong></div>
+            <div class="stat"><span>Tertiary</span><strong>UI</strong></div>
+            <div class="stat"><span>Status</span><strong style="color: var(--fg-subtle);">Sparse</strong></div>
+          </div>
+        </div>
+        <div class="footer">
+          <span>edited 3w ago · OCR import</span>
+          <span class="arrow">open pool builder →</span>
+        </div>
+      </article>
+
+      <article class="lib-card" data-tone="warn">
+        <div class="gradient-head">
+          <div class="code">⚠ Inbox</div>
+          <div class="ttl">Unattached questions · need a container</div>
+          <div class="pill-row">
+            <span class="lp">triage</span>
+          </div>
+        </div>
+        <div class="body">
+          <div class="progress-row">
+            <div class="ratio">24<em>questions floating</em></div>
+            <div class="label">no paper · no course · no exam</div>
+          </div>
+          <div style="font-size: 12px; color: var(--muted-foreground); line-height: 1.5; margin-top: 12px;">
+            Likely seeder noise or aborted imports. Bulk-assign to a course, attach to a paper, or delete. Not a permanent state.
+          </div>
+        </div>
+        <div class="footer">
+          <span>data hygiene · round 4.F</span>
+          <span class="arrow">review →</span>
+        </div>
+      </article>
+
+    </div>
+  </div>
+</div>
+
+<!-- =============================================================
+     SECTION 2 · COMPOSITE EDITOR (PAPER BUILDER)
+     Three-pane shell. Middle pane: tabbed composite editor.
+     Default state: Answers tab active, MCQ question selected so we
+     can showcase the structural split (Correct Response on top +
+     three explanation depths) using canonical option chrome.
+     ============================================================= -->
+
+<style>
+  .builder-shell {
+    display: grid;
+    grid-template-columns: 340px 1fr 380px;
+    height: 780px;
+    border: 1px solid var(--border);
+    border-radius: var(--card-radius);
+    overflow: hidden;
+    background: var(--card);
+    box-shadow: var(--shadow-lg);
+  }
+
+  /* tree pane */
+  .tree-pane {
+    border-right: 1px solid var(--border);
+    background: var(--card);
+    display: flex; flex-direction: column;
+    min-height: 0;
+  }
+  .tree-head {
+    padding: 16px 18px 12px;
+    border-bottom: 1px solid var(--border-2);
+    background: linear-gradient(180deg, var(--card) 0%, var(--bg-raised) 100%);
+  }
+  .tree-head h3 {
+    font-family: var(--font-display);
+    font-weight: 600;
+    font-size: 15px;
+    letter-spacing: -0.005em;
+    margin: 0;
+  }
+  .tree-head .sub {
+    font-size: 11.5px;
+    color: var(--fg-subtle);
+    margin-top: 3px;
+    font-family: var(--font-mono);
+  }
+  .tree-scroll {
+    flex: 1; overflow-y: auto;
+    padding: 8px 6px 24px;
+  }
+  .section-row {
+    margin: 12px 14px 4px;
+    display: flex; align-items: center; justify-content: space-between;
+  }
+  .section-row .lbl {
+    font-family: var(--font-display);
+    font-size: 11px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.10em;
+    color: var(--fg-subtle);
+  }
+  .section-row .ct {
+    font-family: var(--font-mono);
+    font-size: 10.5px;
+    color: var(--fg-subtle);
+  }
+
+  /* Selection state on canonical question row */
+  .qr-row[data-selected="true"] {
+    background: var(--background);
+    box-shadow: 0 0 0 1px var(--border) inset;
+    position: relative;
+  }
+  .qr-row[data-selected="true"]::before {
+    content: '';
+    position: absolute;
+    left: -1px; top: 8px; bottom: 8px;
+    width: 3px;
+    background: var(--foreground);
+    border-radius: 0 3px 3px 0;
+  }
+  .qr-row[data-selected="true"] .qr-content {
+    font-weight: 500;
+  }
+
+  /* Answer status dots inside marks slot — replaces the marks pill on tree rows */
+  .qr-statusdots {
+    display: inline-flex; gap: 3px;
+    padding: 5px 8px;
+    border-radius: 999px;
+    background: var(--bg-raised);
+    border: 1px solid var(--border);
+    flex-shrink: 0;
+    margin-top: 1px;
+  }
+  .qr-statusdots .d {
+    width: 6px; height: 6px;
+    border-radius: 999px;
+    background: rgba(224, 214, 194, 0.85);
+  }
+  .qr-statusdots .d[data-fill="published"] { background: var(--success); }
+  .qr-statusdots .d[data-fill="draft"] { background: var(--warning); }
+  .qr-statusdots[data-empty="true"] { opacity: 0.55; }
+
+  /* editor pane */
+  .editor-pane {
+    background: var(--background);
+    display: flex; flex-direction: column;
+    min-height: 0;
+  }
+  .q-header {
+    padding: 22px 30px 16px;
+    border-bottom: 1px solid var(--border-2);
+    background: var(--card);
+  }
+  .q-path {
+    font-family: var(--font-mono);
+    font-size: 11px;
+    color: var(--fg-subtle);
+    letter-spacing: 0.04em;
+    margin-bottom: 8px;
+  }
+  .q-title {
+    font-family: var(--font-display);
+    font-size: 24px;
+    font-weight: 600;
+    letter-spacing: -0.014em;
+    line-height: 1.2;
+    color: var(--foreground);
+    margin: 0;
+  }
+  .q-meta {
+    display: flex; align-items: center; gap: 14px;
+    margin-top: 12px;
+    font-size: 12.5px;
+    color: var(--muted-foreground);
+    flex-wrap: wrap;
+  }
+  .q-meta .dot { width: 3px; height: 3px; border-radius: 999px; background: var(--fg-subtle); }
+  .q-meta strong { color: var(--foreground); font-weight: 600; }
+
+  .tabbar {
+    display: flex;
+    padding: 0 30px;
+    gap: 4px;
+    background: var(--card);
+    border-bottom: 1px solid var(--border-2);
+    align-items: center;
+  }
+  .tab {
+    display: inline-flex; align-items: center; gap: 8px;
+    padding: 13px 14px 14px;
+    font-family: var(--font-body);
+    font-size: 13px;
+    font-weight: 500;
+    color: var(--muted-foreground);
+    cursor: pointer;
+    border-bottom: 2px solid transparent;
+    margin-bottom: -1px;
+  }
+  .tab:hover { color: var(--foreground); }
+  .tab[data-active="true"] {
+    color: var(--foreground);
+    border-bottom-color: var(--foreground);
+  }
+  .tab .tb {
+    display: inline-flex; align-items: center; justify-content: center;
+    min-width: 18px; height: 18px;
+    padding: 0 5px;
+    background: var(--bg-raised);
+    color: var(--muted-foreground);
+    border-radius: 999px;
+    font-family: var(--font-mono);
+    font-size: 10px;
+    font-weight: 500;
+  }
+  .tab[data-active="true"] .tb {
+    background: var(--foreground);
+    color: var(--background);
+  }
+  .tab[data-tone="warn"] .tb {
+    background: var(--badge-reward-bg);
+    color: var(--badge-reward-fg);
+  }
+  .tab[data-active="true"][data-tone="warn"] .tb {
+    background: var(--warning);
+    color: white;
+  }
+
+  .tabcontent {
+    flex: 1; overflow-y: auto;
+    padding: 24px 30px 64px;
+  }
+
+  /* Editor card — used for answers, links, contexts, etc. */
+  .ed-card {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    margin-bottom: 18px;
+    box-shadow: var(--shadow-sm);
+    overflow: hidden;
+  }
+  .ed-card[data-state="empty"] {
+    background: var(--card);
+  }
+  .ed-card-head {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 14px 18px;
+    border-bottom: 1px solid var(--border-2);
+    background: linear-gradient(180deg, var(--card) 0%, var(--bg-raised) 100%);
+  }
+  .ed-card-head .left { display: flex; align-items: center; gap: 12px; }
+  .ed-card-head .title {
+    font-family: var(--font-display);
+    font-weight: 600;
+    font-size: 15px;
+    letter-spacing: -0.004em;
+    margin: 0;
+  }
+  .ed-card-head .sub {
+    font-family: var(--font-mono);
+    font-size: 11px;
+    color: var(--fg-subtle);
+    margin-top: 2px;
+  }
+  .ed-card-head .right { display: flex; align-items: center; gap: 8px; }
+  .ed-card-body { padding: 16px 18px; }
+  .ed-card-foot {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 10px 18px;
+    border-top: 1px solid var(--border-2);
+    background: var(--bg-raised);
+    font-family: var(--font-mono);
+    font-size: 11px;
+    color: var(--fg-subtle);
+  }
+  .ed-card-foot .saved {
+    display: inline-flex; align-items: center; gap: 6px;
+  }
+  .ed-card-foot .saved::before {
+    content: '';
+    width: 6px; height: 6px; border-radius: 999px;
+    background: var(--success);
+  }
+  .ed-card-foot .saved[data-dirty="true"]::before { background: var(--warning); }
+
+  /* Depth icon (for explanation cards) */
+  .depth-icon {
+    display: inline-flex; align-items: center; justify-content: center;
+    width: 32px; height: 32px;
+    border-radius: 8px;
+    font-family: var(--font-mono);
+    font-size: 13px;
+    font-weight: 700;
+  }
+  .depth-q { background: var(--badge-primary-bg); color: var(--badge-primary-fg); border: 1px solid rgba(13, 150, 104, 0.20); }
+  .depth-s { background: var(--badge-reward-bg); color: var(--badge-reward-fg); border: 1px solid rgba(212, 149, 42, 0.30); }
+  .depth-d { background: var(--foreground); color: var(--background); }
+  .correct-icon {
+    background: var(--opt-correct-dot); color: white;
+  }
+
+  /* Tiptap-like editor surface (read-mode rendering inside answers) */
+  .editor-shell {
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    background: var(--background);
+  }
+  .editor-shell:focus-within {
+    border-color: var(--fg-subtle);
+    box-shadow: 0 0 0 3px rgba(31,26,18,0.04);
+  }
+  .editor-shell[data-dirty="true"] {
+    border-color: rgba(212, 149, 42, 0.55);
+    box-shadow: 0 0 0 3px rgba(212, 149, 42, 0.08);
+  }
+  .editor-toolbar {
+    display: flex; align-items: center; gap: 2px;
+    padding: 6px 10px;
+    border-bottom: 1px solid var(--border-2);
+    background: var(--card);
+    border-radius: 12px 12px 0 0;
+  }
+  .tb-btn {
+    width: 26px; height: 26px;
+    border-radius: 5px;
+    display: inline-flex; align-items: center; justify-content: center;
+    color: var(--muted-foreground);
+    cursor: pointer;
+    font-size: 13px;
+    font-weight: 500;
+  }
+  .tb-btn:hover { background: var(--bg-raised); color: var(--foreground); }
+  .tb-divider {
+    width: 1px; height: 16px;
+    background: var(--border);
+    margin: 0 4px;
+  }
+  .editor-body {
+    padding: 14px 16px;
+    font-family: var(--font-content);
+    font-size: 14px;
+    line-height: 1.65;
+    color: var(--foreground);
+  }
+  .editor-body p + p { margin-top: 0.7em; }
+
+  /* Right preview pane */
+  .preview-pane {
+    border-left: 1px solid var(--border);
+    background: var(--card);
+    display: flex; flex-direction: column;
+    min-height: 0;
+  }
+  .preview-head {
+    padding: 13px 20px;
+    border-bottom: 1px solid var(--border-2);
+    background: var(--bg-raised);
+    display: flex; align-items: center; justify-content: space-between;
+  }
+  .preview-head .label {
+    font-family: var(--font-display);
+    font-weight: 600;
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.10em;
+    color: var(--fg-subtle);
+  }
+  .preview-tabs { display: flex; gap: 2px; }
+  .preview-tabs .pt {
+    padding: 4px 9px;
+    font-size: 11px;
+    font-family: var(--font-mono);
+    color: var(--fg-subtle);
+    border-radius: 4px;
+    cursor: pointer;
+  }
+  .preview-tabs .pt[data-on="true"] { background: var(--foreground); color: var(--background); }
+  .preview-scroll { padding: 22px 22px 30px; overflow-y: auto; }
+
+  .student-card {
+    background: var(--background);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    padding: 18px 20px 16px;
+    margin-bottom: 16px;
+  }
+  .student-card .marks {
+    float: right;
+    font-family: var(--font-mono);
+    font-size: 11px;
+    color: var(--fg-subtle);
+  }
+  .student-card .qtext {
+    font-family: var(--font-content);
+    font-size: 14.5px;
+    line-height: 1.55;
+    color: var(--foreground);
+    margin: 0;
+  }
+  .student-card .qtext strong { font-weight: 600; }
+
+  .ans-preview {
+    background: var(--background);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    overflow: hidden;
+  }
+  .ap-tabs {
+    display: flex;
+    background: var(--bg-raised);
+    border-bottom: 1px solid var(--border-2);
+  }
+  .ap-tabs .ap-tab {
+    flex: 1;
+    text-align: center;
+    padding: 9px 6px;
+    font-size: 12px;
+    font-weight: 500;
+    color: var(--muted-foreground);
+    cursor: pointer;
+    border-right: 1px solid var(--border-2);
+  }
+  .ap-tabs .ap-tab:last-child { border-right: 0; }
+  .ap-tabs .ap-tab[data-on="true"] {
+    background: var(--background);
+    color: var(--foreground);
+    border-bottom: 2px solid var(--success);
+    margin-bottom: -1px;
+  }
+  .ap-tabs .ap-tab[data-empty="true"] { color: var(--fg-subtle); opacity: 0.6; }
+  .ap-body {
+    padding: 16px 18px;
+    font-family: var(--font-content);
+    font-size: 13.5px;
+    line-height: 1.6;
+    color: var(--foreground);
+  }
+</style>
+
+<div class="anno">
+  <span class="nm">section · 02</span>
+  <span class="ttl">Composite editor — Q3a selected · Answers tab active</span>
+  <span class="desc">Three-pane shell. Middle pane shows the Answers tab with structural split: <strong>Correct Response</strong> card on top (canonical option chrome, locked, "Edit on Question tab →" link), three explanation depth cards below.</span>
+</div>
+
+<div class="container-wrap">
+
+  <!-- Topbar -->
+  <div style="display: flex; align-items: center; gap: 16px; height: 56px; padding: 0 20px; background: var(--card); border: 1px solid var(--border); border-bottom: 0; border-radius: var(--card-radius) var(--card-radius) 0 0;">
+    <div style="display: inline-flex; align-items: center; gap: 8px; font-size: 13px; color: var(--muted-foreground);">
+      <span>Admin</span>
+      <span style="color: var(--fg-subtle);">/</span>
+      <span>Question papers</span>
+      <span style="color: var(--fg-subtle);">/</span>
+      <span style="color: var(--foreground); font-weight: 500;">CSC302 · 2024 Final</span>
+    </div>
+    <span class="sp-badge sp-badge--primary">Published</span>
+    <div style="margin-left: auto; display: flex; align-items: center; gap: 8px;">
+      <button class="btn btn-ghost btn-sm">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 12h18M3 6h18M3 18h18"/></svg>
+        Export
+      </button>
+      <button class="btn btn-sm">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83"/></svg>
+        Generate with AI
+      </button>
+      <button class="btn btn-primary btn-sm">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 13l4 4L19 7"/></svg>
+        Publish paper
+      </button>
+    </div>
+  </div>
+
+  <div class="builder-shell" style="border-radius: 0 0 var(--card-radius) var(--card-radius); border-top: 0; box-shadow: none;">
+
+    <!-- TREE -->
+    <aside class="tree-pane">
+      <div class="tree-head">
+        <h3>CSC302 · 2024 Final</h3>
+        <div class="sub">17 questions · 3 sections · 6 contexts</div>
+      </div>
+      <div class="tree-scroll">
+
+        <div class="section-row">
+          <span class="lbl">Section A · Objective</span>
+          <span class="ct">5 · 5</span>
+        </div>
+
+        <div class="qr-row" data-leaf="true">
+          <span class="qr-leafdot"></span>
+          <div class="qr-body">
+            <div class="qr-head">
+              <span class="qr-num">1</span>
+              <span class="sp-badge sp-badge--xs sp-badge--solid">MCQ</span>
+            </div>
+            <div class="qr-content" style="font-size: 12.5px;">Define a virtual address.</div>
+          </div>
+          <span class="qr-statusdots" title="all 3 depths published">
+            <span class="d" data-fill="published"></span>
+            <span class="d" data-fill="published"></span>
+            <span class="d" data-fill="published"></span>
+          </span>
+        </div>
+
+        <div class="qr-row" data-leaf="true" data-selected="true">
+          <span class="qr-leafdot"></span>
+          <div class="qr-body">
+            <div class="qr-head">
+              <span class="qr-num">2</span>
+              <span class="sp-badge sp-badge--xs sp-badge--solid">MCQ</span>
+            </div>
+            <div class="qr-content" style="font-size: 12.5px;">Which of these is NOT a cache replacement policy?</div>
+          </div>
+          <span class="qr-statusdots">
+            <span class="d" data-fill="published"></span>
+            <span class="d" data-fill="draft"></span>
+            <span class="d"></span>
+          </span>
+        </div>
+
+        <div class="section-row">
+          <span class="lbl">Section B · Theory</span>
+          <span class="ct">7 · 7</span>
+        </div>
+
+        <div class="qr-row">
+          <button class="qr-toggle" data-open="true">▶</button>
+          <div class="qr-body">
+            <div class="qr-head">
+              <span class="qr-num">3</span>
+              <span class="sp-badge sp-badge--xs sp-badge--neutral">group</span>
+            </div>
+            <div class="qr-content" style="font-size: 12.5px;">Page replacement &amp; the working set</div>
+          </div>
+          <span class="qr-statusdots" data-empty="true" title="group — children carry answers">
+            <span class="d"></span>
+            <span class="d"></span>
+            <span class="d"></span>
+          </span>
+        </div>
+
+        <div class="qr-children">
+          <div class="qr-row" data-leaf="true">
+            <span class="qr-leafdot"></span>
+            <div class="qr-body">
+              <div class="qr-head">
+                <span class="qr-num">3 (a)</span>
+                <span class="sp-badge sp-badge--xs sp-badge--primary">theory</span>
+              </div>
+              <div class="qr-content" style="font-size: 12.5px;">State the LRU page replacement algorithm.</div>
+            </div>
+            <span class="qr-statusdots">
+              <span class="d" data-fill="published"></span>
+              <span class="d" data-fill="draft"></span>
+              <span class="d"></span>
+            </span>
+          </div>
+          <div class="qr-row" data-leaf="true">
+            <span class="qr-leafdot"></span>
+            <div class="qr-body">
+              <div class="qr-head">
+                <span class="qr-num">3 (b)</span>
+                <span class="sp-badge sp-badge--xs sp-badge--danger">calculation</span>
+              </div>
+              <div class="qr-content" style="font-size: 12.5px;">Trace the reference string 1, 2, 3, 4…</div>
+            </div>
+            <span class="qr-statusdots">
+              <span class="d" data-fill="published"></span>
+              <span class="d"></span>
+              <span class="d"></span>
+            </span>
+          </div>
+          <div class="qr-row" data-leaf="true">
+            <span class="qr-leafdot"></span>
+            <div class="qr-body">
+              <div class="qr-head">
+                <span class="qr-num">3 (c)</span>
+                <span class="sp-badge sp-badge--xs sp-badge--primary">essay</span>
+              </div>
+              <div class="qr-content" style="font-size: 12.5px;">Discuss thrashing &amp; the working set.</div>
+            </div>
+            <span class="qr-statusdots">
+              <span class="d"></span>
+              <span class="d"></span>
+              <span class="d"></span>
+            </span>
+          </div>
+        </div>
+
+        <div class="qr-row" data-leaf="true">
+          <span class="qr-leafdot"></span>
+          <div class="qr-body">
+            <div class="qr-head">
+              <span class="qr-num">4</span>
+              <span class="sp-badge sp-badge--xs sp-badge--primary">essay</span>
+            </div>
+            <div class="qr-content" style="font-size: 12.5px;">Compare write-through vs write-back caching.</div>
+          </div>
+          <span class="qr-statusdots">
+            <span class="d" data-fill="published"></span>
+            <span class="d" data-fill="published"></span>
+            <span class="d" data-fill="draft"></span>
+          </span>
+        </div>
+
+        <div class="qr-row" data-leaf="true">
+          <span class="qr-leafdot"></span>
+          <div class="qr-body">
+            <div class="qr-head">
+              <span class="qr-num">5</span>
+              <span class="sp-badge sp-badge--xs sp-badge--danger">diagram</span>
+            </div>
+            <div class="qr-content" style="font-size: 12.5px;">Identify hazards in the pipeline diagram.</div>
+          </div>
+          <span class="qr-statusdots">
+            <span class="d" data-fill="published"></span>
+            <span class="d"></span>
+            <span class="d"></span>
+          </span>
+        </div>
+
+        <div class="section-row">
+          <span class="lbl">Section C · Calculation</span>
+          <span class="ct">5 · 5</span>
+        </div>
+
+        <div class="qr-row" data-leaf="true">
+          <span class="qr-leafdot"></span>
+          <div class="qr-body">
+            <div class="qr-head">
+              <span class="qr-num">6</span>
+              <span class="sp-badge sp-badge--xs sp-badge--danger">calculation</span>
+            </div>
+            <div class="qr-content" style="font-size: 12.5px;">A 4-way set associative cache has 64 KB…</div>
+          </div>
+          <span class="qr-statusdots">
+            <span class="d" data-fill="published"></span>
+            <span class="d" data-fill="published"></span>
+            <span class="d"></span>
+          </span>
+        </div>
+
+        <div style="padding: 16px 14px 4px;">
+          <button class="btn btn-ghost btn-sm" style="width: 100%; justify-content: center; border: 1px dashed var(--border);">+ Add question to Section C</button>
+        </div>
+
+      </div>
+    </aside>
+
+    <!-- EDITOR -->
+    <main class="editor-pane">
+
+      <div class="q-header">
+        <div class="q-path">SECTION A · Q2 · single-choice MCQ</div>
+        <h1 class="q-title">Which of these is NOT a cache replacement policy?</h1>
+        <div class="q-meta">
+          <span class="sp-badge sp-badge--solid">MCQ</span>
+          <span>2 marks</span>
+          <span class="dot"></span>
+          <span>Difficulty <strong>Standard</strong></span>
+          <span class="dot"></span>
+          <span>Bloom <strong>Apply</strong></span>
+          <span class="dot"></span>
+          <span style="font-family: var(--font-mono); font-size: 11px;">created 2026-04-12 · last edit 2 min ago</span>
+        </div>
+      </div>
+
+      <div class="tabbar">
+        <div class="tab">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 4h14v16H5z"/><path d="M9 9h6M9 13h6M9 17h3"/></svg>
+          Question
+        </div>
+        <div class="tab" data-active="true" data-tone="warn">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"/></svg>
+          Answers
+          <span class="tb">2 / 3</span>
+        </div>
+        <div class="tab">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>
+          Links
+          <span class="tb">4</span>
+        </div>
+        <div class="tab">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6"/></svg>
+          Contexts
+          <span class="tb">1</span>
+        </div>
+        <div style="margin-left: auto; display: flex; align-items: center; gap: 8px; padding: 8px 0; font-family: var(--font-mono); font-size: 11px; color: var(--fg-subtle);">
+          ⌘ S save · ⌘ ⏎ next
+        </div>
+      </div>
+
+      <div class="tabcontent">
+
+        <!-- CORRECT RESPONSE CARD — uses canonical option chrome -->
+        <article class="ed-card" style="border-color: rgba(13, 150, 104, 0.40);">
+          <header class="ed-card-head" style="background: linear-gradient(180deg, var(--opt-correct-bg) 0%, rgba(13, 150, 104, 0.04) 100%); border-bottom-color: rgba(13, 150, 104, 0.20);">
+            <div class="left">
+              <span class="depth-icon correct-icon">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M5 13l4 4L19 7"/></svg>
+              </span>
+              <div>
+                <div class="title">Correct response</div>
+                <div class="sub">structured · type-specific · what the engine grades against</div>
+              </div>
+            </div>
+            <div class="right">
+              <span class="sp-badge sp-badge--primary">Locked · saved</span>
+              <button class="btn btn-ghost btn-sm">Edit on Question tab →</button>
+            </div>
+          </header>
+          <div class="ed-card-body">
+            <!-- Canonical option rows from QuestionRenderer -->
+            <div class="qr-opt">
+              <span class="qr-opt-key">A</span>
+              <span style="flex: 1;">Least Recently Used (LRU)</span>
+              <span style="font-family: var(--font-mono); font-size: 10px; color: var(--fg-subtle);">a real cache replacement policy</span>
+            </div>
+            <div class="qr-opt">
+              <span class="qr-opt-key">B</span>
+              <span style="flex: 1;">First-In First-Out (FIFO)</span>
+              <span style="font-family: var(--font-mono); font-size: 10px; color: var(--fg-subtle);">a real cache replacement policy</span>
+            </div>
+            <div class="qr-opt" data-correct="true">
+              <span class="qr-opt-key">✓</span>
+              <span style="flex: 1;"><strong>Round Robin Scheduling</strong></span>
+              <span style="font-family: var(--font-mono); font-size: 10px; color: var(--badge-primary-fg);">CPU scheduling — not cache. The trick.</span>
+            </div>
+            <div class="qr-opt">
+              <span class="qr-opt-key">D</span>
+              <span style="flex: 1;">Belady's Optimal</span>
+              <span style="font-family: var(--font-mono); font-size: 10px; color: var(--fg-subtle);">theoretical lower-bound benchmark</span>
+            </div>
+
+            <div style="margin-top: 14px; padding: 10px 12px; background: var(--bg-raised); border-radius: 6px; font-family: var(--font-mono); font-size: 11px; color: var(--muted-foreground); line-height: 1.6;">
+              <div><span style="color: var(--foreground);">For free-form types</span> (Theory · ShortAnswer · Essay) this card holds the model answer + rubric.</div>
+              <div><span style="color: var(--foreground);">For Group questions</span> this card is suppressed — children carry their own.</div>
+            </div>
+          </div>
+        </article>
+
+        <!-- QUICK -->
+        <article class="ed-card">
+          <header class="ed-card-head">
+            <div class="left">
+              <span class="depth-icon depth-q">Q</span>
+              <div>
+                <div class="title">Quick explanation</div>
+                <div class="sub">free tier · ~50 words · why C is correct</div>
+              </div>
+            </div>
+            <div class="right">
+              <span class="sp-badge sp-badge--primary">Published</span>
+            </div>
+          </header>
+          <div class="ed-card-body">
+            <div class="editor-shell">
+              <div class="editor-toolbar">
+                <span class="tb-btn" style="font-weight: 700;">B</span>
+                <span class="tb-btn" style="font-style: italic;">I</span>
+                <span class="tb-btn" style="text-decoration: underline;">U</span>
+                <span class="tb-divider"></span>
+                <span class="tb-btn">H2</span>
+                <span class="tb-btn">•</span>
+                <span class="tb-divider"></span>
+                <span class="tb-btn mono" style="font-size: 11px;" title="Math">∑</span>
+                <span class="tb-btn mono" style="font-size: 11px;" title="Code">{ }</span>
+                <span class="tb-btn" title="Image / illustration" style="color: var(--destructive);">
+                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="9" cy="9" r="2"/><path d="M21 15l-5-5L5 21"/></svg>
+                </span>
+                <span style="margin-left: auto; font-family: var(--font-mono); font-size: 10.5px; color: var(--fg-subtle); padding-right: 4px;">42 words</span>
+              </div>
+              <div class="editor-body">
+                <p>
+                  <strong>Round Robin</strong> belongs to CPU scheduling, not memory caching. The other three are cache replacement policies — LRU, FIFO, and Belady's Optimal all decide which cache line to evict on a miss.
+                </p>
+              </div>
+            </div>
+          </div>
+          <footer class="ed-card-foot">
+            <span class="saved">Saved · 2 min ago</span>
+            <div style="display: flex; gap: 6px;">
+              <button class="btn btn-ghost btn-sm">Discard</button>
+              <button class="btn btn-canopy btn-sm">Save quick</button>
+            </div>
+          </footer>
+        </article>
+
+        <!-- STANDARD (dirty) -->
+        <article class="ed-card">
+          <header class="ed-card-head">
+            <div class="left">
+              <span class="depth-icon depth-s">S</span>
+              <div>
+                <div class="title">Standard explanation</div>
+                <div class="sub">paid · ~200 words · context + why distractors are tempting</div>
+              </div>
+            </div>
+            <div class="right">
+              <span class="sp-badge sp-badge--reward">Draft · unsaved</span>
+            </div>
+          </header>
+          <div class="ed-card-body">
+            <div class="editor-shell" data-dirty="true">
+              <div class="editor-toolbar">
+                <span class="tb-btn" style="font-weight: 700;">B</span>
+                <span class="tb-btn" style="font-style: italic;">I</span>
+                <span class="tb-divider"></span>
+                <span class="tb-btn">H2</span>
+                <span class="tb-btn">•</span>
+                <span class="tb-divider"></span>
+                <span class="tb-btn mono" style="font-size: 11px;">∑</span>
+                <span class="tb-btn mono" style="font-size: 11px;">{ }</span>
+                <span class="tb-btn" style="color: var(--destructive);">
+                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="9" cy="9" r="2"/><path d="M21 15l-5-5L5 21"/></svg>
+                </span>
+                <span style="margin-left: auto; font-family: var(--font-mono); font-size: 10.5px; color: var(--warning); padding-right: 4px;">187 words · editing</span>
+              </div>
+              <div class="editor-body">
+                <p>
+                  <strong>Cache replacement policies</strong> decide which cache line to evict when a new line must be loaded. Common choices include LRU, FIFO, Belady's Optimal (theoretical), LFU, and clock approximations.
+                </p>
+                <p>
+                  <strong>Round Robin</strong>, in contrast, is a CPU scheduling algorithm — it gives each ready process a fixed time slice in turn. Students often confuse it because both involve a "rotating" mental model and because some N-way set associative cache implementations describe their fill order as round-robin within a set. The trick of this question is that surface similarity.
+                </p>
+                <p style="color: var(--fg-subtle); font-style: italic;">
+                  [continues with mnemonics for distinguishing scheduling from replacement]
+                </p>
+              </div>
+            </div>
+          </div>
+          <footer class="ed-card-foot">
+            <span class="saved" data-dirty="true">Unsaved · 14 min</span>
+            <div style="display: flex; gap: 6px;">
+              <button class="btn btn-ghost btn-sm">Discard</button>
+              <button class="btn btn-primary btn-sm">Save standard</button>
+            </div>
+          </footer>
+        </article>
+
+        <!-- DEEP DIVE EMPTY -->
+        <article class="ed-card" data-state="empty">
+          <header class="ed-card-head">
+            <div class="left">
+              <span class="depth-icon depth-d">D</span>
+              <div>
+                <div class="title">Deep dive</div>
+                <div class="sub">premium · &gt; 500 words · derivations, edge cases, references</div>
+              </div>
+            </div>
+            <div class="right">
+              <span class="sp-badge sp-badge--neutral">Not started</span>
+            </div>
+          </header>
+          <div class="ed-card-body">
+
+            <div style="display: flex; align-items: center; gap: 14px; padding: 12px 14px; background: linear-gradient(180deg, var(--card) 0%, var(--bg-raised) 100%); border: 1px solid rgba(212, 149, 42, 0.30); border-radius: 10px;">
+              <span style="display: inline-flex; align-items: center; justify-content: center; width: 32px; height: 32px; background: var(--foreground); color: var(--background); border-radius: 8px; font-family: var(--font-display); font-weight: 700; font-size: 13px;">AI</span>
+              <div style="flex: 1; font-size: 12.5px; color: var(--foreground); line-height: 1.5;">
+                <strong>Seed this depth from the Standard explanation + linked context.</strong>
+                <div style="color: var(--muted-foreground); font-size: 11.5px; margin-top: 2px;">
+                  AI generates prose <em>and</em> any required illustrations together (recency stack diagram, scheduling-vs-replacement comparison plot). You review, edit, and publish.
+                </div>
+              </div>
+              <button class="btn btn-primary btn-sm" style="white-space: nowrap;">
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4"/></svg>
+                Generate
+              </button>
+            </div>
+
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-top: 12px;">
+              <div style="border: 1px solid var(--border); border-radius: 10px; padding: 12px 14px; background: var(--background);">
+                <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 8px;">
+                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="var(--primary)" stroke-width="2"><path d="M3 6h18M3 12h18M3 18h12"/></svg>
+                  <span class="display" style="font-weight: 600; font-size: 12px;">Prose plan</span>
+                </div>
+                <ul style="margin: 0; padding-left: 18px; font-size: 12px; color: var(--muted-foreground); line-height: 1.6;">
+                  <li>Why the question is a misclassification trap</li>
+                  <li>Full taxonomy: scheduling vs replacement vs allocation</li>
+                  <li>Where the round-robin pattern legitimately appears in caches</li>
+                  <li>References: Patterson &amp; Hennessy ch. 5</li>
+                </ul>
+              </div>
+              <div style="border: 1px solid rgba(212, 84, 43, 0.30); border-radius: 10px; padding: 12px 14px; background: rgba(212, 84, 43, 0.04);">
+                <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 8px;">
+                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="var(--destructive)" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="9" cy="9" r="2"/><path d="M21 15l-5-5L5 21"/></svg>
+                  <span class="display" style="font-weight: 600; font-size: 12px; color: var(--destructive);">Illustration plan</span>
+                  <span style="margin-left: auto; font-family: var(--font-mono); font-size: 10px; color: var(--fg-subtle);">2 figures</span>
+                </div>
+                <ul style="margin: 0; padding-left: 18px; font-size: 12px; color: var(--muted-foreground); line-height: 1.6;">
+                  <li>Side-by-side: scheduling timeline vs cache eviction</li>
+                  <li>Decision tree: "is this scheduling or replacement?"</li>
+                </ul>
+              </div>
+            </div>
+
+            <div style="display: flex; align-items: center; gap: 8px; margin-top: 12px; padding: 8px 12px; background: var(--bg-raised); border-radius: 6px; font-family: var(--font-mono); font-size: 11px; color: var(--muted-foreground);">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 8v4l3 3"/><circle cx="12" cy="12" r="10"/></svg>
+              ~ 22 sec · uses claude-opus-4-7 · counts against today's AI budget
+              <span style="margin-left: auto; color: var(--fg-subtle);">edit plan before generating →</span>
+            </div>
+
+          </div>
+        </article>
+
+        <p style="text-align: center; font-family: var(--font-mono); font-size: 11px; color: var(--fg-subtle); margin-top: 22px;">
+          each depth saves independently · gated by AnswerDepthService · diagrams render via TiptapRenderer (math · code · image · SVG) · group questions hide this tab
+        </p>
+
+      </div>
+    </main>
+
+    <!-- PREVIEW -->
+    <aside class="preview-pane">
+      <div class="preview-head">
+        <span class="label">Student preview</span>
+        <div class="preview-tabs">
+          <span class="pt" data-on="true">Read</span>
+          <span class="pt">Print</span>
+          <span class="pt">JSON</span>
+        </div>
+      </div>
+      <div class="preview-scroll">
+
+        <div class="student-card">
+          <span class="marks">[2 mks]</span>
+          <p class="qtext"><strong>2.</strong>&nbsp;&nbsp;Which of these is NOT a cache replacement policy?</p>
+
+          <div style="margin-top: 12px;">
+            <div class="qr-opt"><span class="qr-opt-key">A</span><span>Least Recently Used (LRU)</span></div>
+            <div class="qr-opt"><span class="qr-opt-key">B</span><span>First-In First-Out (FIFO)</span></div>
+            <div class="qr-opt"><span class="qr-opt-key">C</span><span>Round Robin Scheduling</span></div>
+            <div class="qr-opt"><span class="qr-opt-key">D</span><span>Belady's Optimal</span></div>
+          </div>
+        </div>
+
+        <div class="ans-preview">
+          <div class="ap-tabs">
+            <div class="ap-tab" data-on="true">Quick</div>
+            <div class="ap-tab">Standard <span style="color: var(--warning); font-size: 9px;">●</span></div>
+            <div class="ap-tab" data-empty="true">Deep dive</div>
+          </div>
+          <div class="ap-body">
+            <p style="margin: 0;">
+              <strong>Round Robin</strong> belongs to CPU scheduling, not memory caching. The other three are cache replacement policies — LRU, FIFO, and Belady's Optimal all decide which cache line to evict on a miss.
+            </p>
+            <p style="margin-top: 0.7em; font-size: 11.5px; color: var(--fg-subtle); font-style: italic;">
+              ↳ student-side answer panel · this is what they get on submit.
+            </p>
+          </div>
+        </div>
+
+        <div style="margin-top: 22px; padding: 14px 0 0; border-top: 1px solid var(--border-2); font-family: var(--font-mono); font-size: 11px; color: var(--fg-subtle); line-height: 1.85;">
+          <div><span style="color: var(--muted-foreground);">parent</span>&nbsp;&nbsp;Section A</div>
+          <div><span style="color: var(--muted-foreground);">topics</span>&nbsp;&nbsp;Cache replacement<sup style="color: var(--warning);"> ★</sup>, CPU scheduling</div>
+          <div><span style="color: var(--muted-foreground);">blocks</span>&nbsp;&nbsp;3.2.1, 4.1.2</div>
+          <div><span style="color: var(--muted-foreground);">visible</span>&nbsp;&nbsp;Quick · Standard hidden (draft)</div>
+        </div>
+
+      </div>
+    </aside>
+
+  </div>
+</div>
+
+<!-- =============================================================
+     SECTION 3 · POOL BUILDER VARIANT
+     Same shell. Left tree groups questions by canonical topic
+     (no sections, no contexts). Uses canonical question row chrome.
+     ============================================================= -->
+
+<div class="anno">
+  <span class="nm">section · 03</span>
+  <span class="ttl">Pool builder — paperless container, topic-grouped tree</span>
+  <span class="desc">Selecting a course pool opens the same composite editor. Tree drops sections + contexts; questions group by canonical topic. Middle pane and preview unchanged.</span>
+</div>
+
+<div class="container-wrap">
+  <div class="builder-shell" style="height: 660px;">
+
+    <aside class="tree-pane">
+      <div class="tree-head">
+        <h3>CSC302 · practice pool</h3>
+        <div class="sub">8 questions · 3 topics · no paper</div>
+      </div>
+      <div class="tree-scroll">
+
+        <div class="section-row">
+          <span class="lbl">Memory Management</span>
+          <span class="ct">4</span>
+        </div>
+
+        <div class="qr-row" data-leaf="true" data-selected="true">
+          <span class="qr-leafdot"></span>
+          <div class="qr-body">
+            <div class="qr-head">
+              <span class="qr-num">·</span>
+              <span class="sp-badge sp-badge--xs sp-badge--primary">theory</span>
+            </div>
+            <div class="qr-content" style="font-size: 12.5px;">Define a virtual address and explain how it maps to a physical address.</div>
+          </div>
+          <span class="qr-statusdots">
+            <span class="d" data-fill="published"></span>
+            <span class="d" data-fill="published"></span>
+            <span class="d" data-fill="draft"></span>
+          </span>
+        </div>
+
+        <div class="qr-row" data-leaf="true">
+          <span class="qr-leafdot"></span>
+          <div class="qr-body">
+            <div class="qr-head">
+              <span class="qr-num">·</span>
+              <span class="sp-badge sp-badge--xs sp-badge--solid">MCQ</span>
+            </div>
+            <div class="qr-content" style="font-size: 12.5px;">Which of these is NOT a cache replacement policy?</div>
+          </div>
+          <span class="qr-statusdots">
+            <span class="d" data-fill="published"></span>
+            <span class="d" data-fill="published"></span>
+            <span class="d"></span>
+          </span>
+        </div>
+
+        <div class="qr-row" data-leaf="true">
+          <span class="qr-leafdot"></span>
+          <div class="qr-body">
+            <div class="qr-head">
+              <span class="qr-num">·</span>
+              <span class="sp-badge sp-badge--xs sp-badge--danger">calculation</span>
+            </div>
+            <div class="qr-content" style="font-size: 12.5px;">A 4-way set associative cache has 64 KB capacity, 64-byte lines…</div>
+          </div>
+          <span class="qr-statusdots">
+            <span class="d" data-fill="published"></span>
+            <span class="d"></span>
+            <span class="d"></span>
+          </span>
+        </div>
+
+        <div class="qr-row" data-leaf="true">
+          <span class="qr-leafdot"></span>
+          <div class="qr-body">
+            <div class="qr-head">
+              <span class="qr-num">·</span>
+              <span class="sp-badge sp-badge--xs sp-badge--danger">true/false</span>
+            </div>
+            <div class="qr-content" style="font-size: 12.5px;">Write-back caches always have higher bandwidth than write-through.</div>
+          </div>
+          <span class="qr-statusdots">
+            <span class="d" data-fill="published"></span>
+            <span class="d" data-fill="published"></span>
+            <span class="d" data-fill="published"></span>
+          </span>
+        </div>
+
+        <div class="section-row">
+          <span class="lbl">Pipelining &amp; Hazards</span>
+          <span class="ct">3</span>
+        </div>
+
+        <div class="qr-row" data-leaf="true">
+          <span class="qr-leafdot"></span>
+          <div class="qr-body">
+            <div class="qr-head">
+              <span class="qr-num">·</span>
+              <span class="sp-badge sp-badge--xs sp-badge--danger">diagram</span>
+            </div>
+            <div class="qr-content" style="font-size: 12.5px;">Identify all data and structural hazards in the pipeline diagram.</div>
+          </div>
+          <span class="qr-statusdots">
+            <span class="d" data-fill="published"></span>
+            <span class="d"></span>
+            <span class="d"></span>
+          </span>
+        </div>
+
+        <div class="qr-row" data-leaf="true">
+          <span class="qr-leafdot"></span>
+          <div class="qr-body">
+            <div class="qr-head">
+              <span class="qr-num">·</span>
+              <span class="sp-badge sp-badge--xs sp-badge--reward">matching</span>
+            </div>
+            <div class="qr-content" style="font-size: 12.5px;">Match each hazard type to its standard mitigation strategy.</div>
+          </div>
+          <span class="qr-statusdots">
+            <span class="d" data-fill="published"></span>
+            <span class="d" data-fill="published"></span>
+            <span class="d"></span>
+          </span>
+        </div>
+
+        <div class="qr-row" data-leaf="true">
+          <span class="qr-leafdot"></span>
+          <div class="qr-body">
+            <div class="qr-head">
+              <span class="qr-num">·</span>
+              <span class="sp-badge sp-badge--xs sp-badge--danger">numeric</span>
+            </div>
+            <div class="qr-content" style="font-size: 12.5px;">Compute the speed-up of a 5-stage pipeline given the following stalls.</div>
+          </div>
+          <span class="qr-statusdots">
+            <span class="d"></span>
+            <span class="d"></span>
+            <span class="d"></span>
+          </span>
+        </div>
+
+        <div class="section-row">
+          <span class="lbl">Instruction Set Architecture</span>
+          <span class="ct">1</span>
+        </div>
+
+        <div class="qr-row" data-leaf="true">
+          <span class="qr-leafdot"></span>
+          <div class="qr-body">
+            <div class="qr-head">
+              <span class="qr-num">·</span>
+              <span class="sp-badge sp-badge--xs sp-badge--primary">essay</span>
+            </div>
+            <div class="qr-content" style="font-size: 12.5px;">Compare RISC and CISC architectures with examples.</div>
+          </div>
+          <span class="qr-statusdots">
+            <span class="d" data-fill="published"></span>
+            <span class="d" data-fill="published"></span>
+            <span class="d" data-fill="draft"></span>
+          </span>
+        </div>
+
+        <div style="padding: 16px 14px 4px;">
+          <button class="btn btn-ghost btn-sm" style="width: 100%; justify-content: center; border: 1px dashed var(--border);">+ Add question to pool</button>
+        </div>
+
+      </div>
+    </aside>
+
+    <!-- POOL EDITOR — compact -->
+    <main class="editor-pane">
+
+      <div class="q-header">
+        <div class="q-path">CSC302 POOL · TOPIC: Memory Management · no paper</div>
+        <h1 class="q-title" style="font-size: 20px;">Define a virtual address and explain how it maps to a physical address.</h1>
+        <div class="q-meta">
+          <span class="sp-badge sp-badge--primary">theory</span>
+          <span>5 marks</span>
+          <span class="dot"></span>
+          <span>Difficulty <strong>Standard</strong></span>
+          <span class="dot"></span>
+          <span style="font-family: var(--font-mono); font-size: 11px;">course-pool · no paper context</span>
+        </div>
+      </div>
+
+      <div class="tabbar">
+        <div class="tab">Question</div>
+        <div class="tab" data-active="true">
+          Answers
+          <span class="tb">2 / 3</span>
+        </div>
+        <div class="tab">
+          Links
+          <span class="tb">3</span>
+        </div>
+        <div class="tab" style="opacity: 0.55; color: var(--fg-subtle);">
+          Contexts
+          <span style="font-family: var(--font-mono); font-size: 10.5px; margin-left: 6px;">— pools rarely use</span>
+        </div>
+      </div>
+
+      <div class="tabcontent">
+
+        <article class="ed-card">
+          <header class="ed-card-head">
+            <div class="left">
+              <span class="depth-icon depth-q">Q</span>
+              <div>
+                <div class="title">Quick answer</div>
+                <div class="sub">free tier · 47 words</div>
+              </div>
+            </div>
+            <span class="sp-badge sp-badge--primary">Published</span>
+          </header>
+          <div class="ed-card-body">
+            <p style="margin: 0; font-family: var(--font-content); font-size: 14px; line-height: 1.6;">
+              <strong>A virtual address</strong> is the address generated by the CPU during program execution; it lives in the process's logical address space. The MMU translates it to a physical address using a page table, mapping virtual page number → physical frame number plus the unchanged page offset.
+            </p>
+          </div>
+        </article>
+
+        <article class="ed-card">
+          <header class="ed-card-head">
+            <div class="left">
+              <span class="depth-icon depth-s">S</span>
+              <div>
+                <div class="title">Standard answer</div>
+                <div class="sub">paid · 187 words</div>
+              </div>
+            </div>
+            <span class="sp-badge sp-badge--reward">Draft</span>
+          </header>
+          <div class="ed-card-body">
+            <p style="margin: 0; font-family: var(--font-content); font-size: 14px; line-height: 1.6;">
+              <strong>Virtual addressing</strong> decouples program-visible memory from physical RAM. Each process sees a contiguous, private address space starting at zero, while the OS + MMU map those addresses to scattered physical frames at runtime…
+              <span style="color: var(--fg-subtle); font-style: italic;"> [continues for ~140 more words with diagram]</span>
+            </p>
+          </div>
+        </article>
+
+        <article class="ed-card" data-state="empty">
+          <header class="ed-card-head">
+            <div class="left">
+              <span class="depth-icon depth-d">D</span>
+              <div>
+                <div class="title">Deep dive</div>
+                <div class="sub">empty · seed from Standard + AI illustration</div>
+              </div>
+            </div>
+            <button class="btn btn-primary btn-sm">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4"/></svg>
+              Generate
+            </button>
+          </header>
+        </article>
+
+      </div>
+    </main>
+
+    <aside class="preview-pane">
+      <div class="preview-head">
+        <span class="label">Student preview · pool</span>
+      </div>
+      <div class="preview-scroll">
+
+        <div class="student-card">
+          <p class="qtext" style="font-size: 13.5px;">Define a virtual address and explain how it maps to a physical address.</p>
+          <div style="margin-top: 10px; font-family: var(--font-mono); font-size: 11px; color: var(--fg-subtle);">5 marks · CSC302 practice pool</div>
+        </div>
+
+        <div class="ans-preview">
+          <div class="ap-tabs">
+            <div class="ap-tab" data-on="true">Quick</div>
+            <div class="ap-tab">Standard <span style="color: var(--warning); font-size: 9px;">●</span></div>
+            <div class="ap-tab" data-empty="true">Deep dive</div>
+          </div>
+          <div class="ap-body">
+            <p style="margin: 0; font-size: 12.5px;">
+              <strong>A virtual address</strong> is the address generated by the CPU during program execution…
+            </p>
+          </div>
+        </div>
+
+        <div style="margin-top: 18px; padding: 12px 0 0; border-top: 1px solid var(--border-2); font-family: var(--font-mono); font-size: 11px; color: var(--fg-subtle); line-height: 1.85;">
+          <div><span style="color: var(--muted-foreground);">topic</span>&nbsp;&nbsp;Memory Management <sup style="color: var(--warning);">★</sup></div>
+          <div><span style="color: var(--muted-foreground);">blocks</span>&nbsp;&nbsp;3.1.1, 3.1.2</div>
+          <div><span style="color: var(--muted-foreground);">paper</span>&nbsp;&nbsp;<em>none</em> · pool-only</div>
+        </div>
+
+      </div>
+    </aside>
+
+  </div>
+</div>
+
+<!-- =============================================================
+     SECTION 4 · GROUP CHILDREN MATRIX (alternate Answers tab state)
+     ============================================================= -->
+
+<style>
+  .matrix-table {
+    width: 100%;
+    border-collapse: separate;
+    border-spacing: 0;
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    overflow: hidden;
+    background: var(--background);
+  }
+  .matrix-table th, .matrix-table td {
+    padding: 10px 14px;
+    text-align: left;
+    border-bottom: 1px solid var(--border-2);
+    font-family: var(--font-body);
+    font-size: 13px;
+  }
+  .matrix-table th {
+    background: var(--bg-raised);
+    font-family: var(--font-display);
+    font-weight: 600;
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--muted-foreground);
+  }
+  .matrix-table tr:last-child td { border-bottom: 0; }
+  .matrix-table .row-meta {
+    font-family: var(--font-mono);
+    font-size: 11px;
+    color: var(--muted-foreground);
+    margin-top: 2px;
+  }
+  .matrix-table .cell {
+    text-align: center;
+    cursor: pointer;
+  }
+  .matrix-table .cell:hover { background: var(--bg-raised); }
+  .matrix-table .cell .cdot {
+    width: 10px; height: 10px;
+    border-radius: 999px;
+    background: rgba(224, 214, 194, 0.85);
+    margin: 0 auto;
+  }
+  .matrix-table .cell[data-fill="published"] .cdot { background: var(--success); }
+  .matrix-table .cell[data-fill="draft"] .cdot { background: var(--warning); }
+</style>
+
+<div class="anno">
+  <span class="nm">section · 04</span>
+  <span class="ttl">Alternate state — Group parent selected · children's-answer matrix</span>
+  <span class="desc">When the user selects a Group question, the Answers tab swaps from depth Cards to a status matrix. Click any cell → that child + that depth opens. Compresses the ~9-click navigation.</span>
+</div>
+
+<div class="container-wrap">
+  <div class="builder-shell" style="grid-template-columns: 340px 1fr; height: auto; min-height: 520px;">
+
+    <aside class="tree-pane">
+      <div class="tree-head">
+        <h3>CSC302 · 2024 Final</h3>
+        <div class="sub">selected: Q3 · Group</div>
+      </div>
+      <div class="tree-scroll" style="max-height: 420px;">
+
+        <div class="section-row">
+          <span class="lbl">Section B · Theory</span>
+          <span class="ct">7 · 7</span>
+        </div>
+
+        <div class="qr-row" data-selected="true">
+          <button class="qr-toggle" data-open="true">▶</button>
+          <div class="qr-body">
+            <div class="qr-head">
+              <span class="qr-num">3</span>
+              <span class="sp-badge sp-badge--xs sp-badge--neutral">group</span>
+            </div>
+            <div class="qr-content" style="font-size: 12.5px;">Page replacement &amp; the working set</div>
+          </div>
+          <span class="qr-statusdots" data-empty="true">
+            <span class="d"></span>
+            <span class="d"></span>
+            <span class="d"></span>
+          </span>
+        </div>
+
+        <div class="qr-children">
+          <div class="qr-row" data-leaf="true">
+            <span class="qr-leafdot"></span>
+            <div class="qr-body">
+              <div class="qr-head">
+                <span class="qr-num">3 (a)</span>
+                <span class="sp-badge sp-badge--xs sp-badge--primary">theory</span>
+              </div>
+              <div class="qr-content" style="font-size: 12.5px;">State the LRU page replacement algorithm.</div>
+            </div>
+            <span class="qr-marks">5m</span>
+          </div>
+          <div class="qr-row" data-leaf="true">
+            <span class="qr-leafdot"></span>
+            <div class="qr-body">
+              <div class="qr-head">
+                <span class="qr-num">3 (b)</span>
+                <span class="sp-badge sp-badge--xs sp-badge--danger">calculation</span>
+              </div>
+              <div class="qr-content" style="font-size: 12.5px;">Trace the reference string 1, 2, 3, 4…</div>
+            </div>
+            <span class="qr-marks">6m</span>
+          </div>
+          <div class="qr-row" data-leaf="true">
+            <span class="qr-leafdot"></span>
+            <div class="qr-body">
+              <div class="qr-head">
+                <span class="qr-num">3 (c)</span>
+                <span class="sp-badge sp-badge--xs sp-badge--primary">essay</span>
+              </div>
+              <div class="qr-content" style="font-size: 12.5px;">Discuss thrashing &amp; the working set.</div>
+            </div>
+            <span class="qr-marks">4m</span>
+          </div>
+        </div>
+
+      </div>
+    </aside>
+
+    <main class="editor-pane">
+      <div class="q-header">
+        <div class="q-path">SECTION B · Q3</div>
+        <h1 class="q-title">Page replacement &amp; the working set</h1>
+        <div class="q-meta">
+          <span class="sp-badge sp-badge--neutral">group · parent</span>
+          <span>15 marks total</span>
+          <span class="dot"></span>
+          <span>3 sub-questions</span>
+          <span class="dot"></span>
+          <span style="font-style: italic;">Group questions don't have answers — author each child individually.</span>
+        </div>
+      </div>
+
+      <div class="tabbar">
+        <div class="tab">Question</div>
+        <div class="tab" data-active="true" data-tone="warn">
+          Children's answers
+          <span class="tb">3 / 9</span>
+        </div>
+        <div class="tab">
+          Links
+          <span class="tb">2</span>
+        </div>
+        <div class="tab">
+          Contexts
+          <span class="tb">1</span>
+        </div>
+      </div>
+
+      <div class="tabcontent">
+
+        <article class="ed-card">
+          <header class="ed-card-head">
+            <div class="left">
+              <div>
+                <div class="title">Children's answer status</div>
+                <div class="sub">3 sub-questions × 3 depths · click any cell to open that depth</div>
+              </div>
+            </div>
+            <span class="sp-badge sp-badge--reward">3 / 9 published · 1 draft</span>
+          </header>
+          <div class="ed-card-body">
+            <table class="matrix-table">
+              <thead>
+                <tr>
+                  <th style="width: 42%;">Sub-question</th>
+                  <th style="width: 130px;">Type</th>
+                  <th style="text-align: center;">Quick</th>
+                  <th style="text-align: center;">Standard</th>
+                  <th style="text-align: center;">Deep dive</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td>
+                    <div style="font-weight: 500;">3 (a) · State the LRU page replacement algorithm.</div>
+                    <div class="row-meta">5 mks</div>
+                  </td>
+                  <td><span class="sp-badge sp-badge--primary">theory</span></td>
+                  <td class="cell" data-fill="published"><div class="cdot"></div></td>
+                  <td class="cell" data-fill="draft"><div class="cdot"></div></td>
+                  <td class="cell"><div class="cdot"></div></td>
+                </tr>
+                <tr>
+                  <td>
+                    <div style="font-weight: 500;">3 (b) · Trace the reference string 1, 2, 3, 4, 1, 2, 5, 1, 2, 3, 4, 5</div>
+                    <div class="row-meta">6 mks</div>
+                  </td>
+                  <td><span class="sp-badge sp-badge--danger">calculation</span></td>
+                  <td class="cell" data-fill="published"><div class="cdot"></div></td>
+                  <td class="cell"><div class="cdot"></div></td>
+                  <td class="cell"><div class="cdot"></div></td>
+                </tr>
+                <tr>
+                  <td>
+                    <div style="font-weight: 500;">3 (c) · Discuss thrashing and how the working-set model addresses it.</div>
+                    <div class="row-meta">4 mks</div>
+                  </td>
+                  <td><span class="sp-badge sp-badge--primary">essay</span></td>
+                  <td class="cell"><div class="cdot"></div></td>
+                  <td class="cell"><div class="cdot"></div></td>
+                  <td class="cell"><div class="cdot"></div></td>
+                </tr>
+              </tbody>
+            </table>
+            <p style="font-family: var(--font-mono); font-size: 11px; color: var(--fg-subtle); margin-top: 14px;">
+              clicking a cell selects that child + opens its Answers tab on that depth · keyboard: ↑ ↓ ← → and ⏎
+            </p>
+          </div>
+          <footer class="ed-card-foot">
+            <span style="font-family: var(--font-mono);">read-only summary · individual children save against AnswerController</span>
+            <button class="btn btn-sm">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4"/></svg>
+              Generate missing answers
+            </button>
+          </footer>
+        </article>
+
+      </div>
+    </main>
+  </div>
+</div>
+
+<!-- =============================================================
+     SECTION 5 · TYPE AUTHORING SHAPES
+     16 question types collapse to 10 distinct authoring patterns.
+     Each card shows: populated example (canonical render with author
+     affordances overlaid) + empty authoring state (first-time entry).
+     ============================================================= -->
+
+<style>
+  .shape-card {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: var(--card-radius);
+    box-shadow: var(--shadow-sm);
+    overflow: hidden;
+    margin-bottom: 22px;
+  }
+  .shape-card-head {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 16px 22px;
+    border-bottom: 1px solid var(--border-2);
+    background: linear-gradient(180deg, var(--card) 0%, var(--bg-raised) 100%);
+  }
+  .shape-card-head .left { display: flex; align-items: center; gap: 14px; }
+  .shape-card-head .num {
+    font-family: var(--font-display);
+    font-size: 26px;
+    font-weight: 600;
+    letter-spacing: -0.018em;
+    color: var(--fg-subtle);
+    line-height: 1;
+    min-width: 40px;
+  }
+  .shape-card-head .name {
+    font-family: var(--font-display);
+    font-weight: 600;
+    font-size: 16px;
+    letter-spacing: -0.005em;
+    margin: 0;
+  }
+  .shape-card-head .types {
+    font-family: var(--font-mono);
+    font-size: 11px;
+    color: var(--fg-subtle);
+    margin-top: 2px;
+  }
+  .shape-split {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    background: var(--background);
+  }
+  .shape-pane {
+    padding: 18px 22px;
+    min-height: 200px;
+  }
+  .shape-pane:first-child {
+    border-right: 1px dashed var(--border);
+  }
+  .shape-pane .pane-label {
+    display: inline-flex; align-items: center; gap: 6px;
+    font-family: var(--font-mono);
+    font-size: 10px;
+    text-transform: uppercase;
+    letter-spacing: 0.10em;
+    color: var(--fg-subtle);
+    margin-bottom: 14px;
+  }
+  .shape-pane .pane-label .dot {
+    width: 6px; height: 6px; border-radius: 999px;
+    background: var(--success);
+  }
+  .shape-pane[data-state="empty"] .pane-label .dot { background: var(--fg-subtle); }
+  .shape-pane .stem-edit {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 10px 12px;
+    font-family: var(--font-content);
+    font-size: 13px;
+    color: var(--foreground);
+    margin-bottom: 12px;
+  }
+  .shape-pane .stem-edit .stem-label {
+    font-family: var(--font-mono);
+    font-size: 9.5px;
+    color: var(--fg-subtle);
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    margin-bottom: 4px;
+    display: block;
+  }
+  .shape-pane[data-state="empty"] .stem-edit {
+    border-style: dashed;
+    color: var(--fg-subtle);
+    font-style: italic;
+  }
+
+  /* Author affordances overlaid on canonical render */
+  .author-controls {
+    display: flex; align-items: center; gap: 6px;
+    margin-top: 10px;
+  }
+  .author-add {
+    display: inline-flex; align-items: center; gap: 6px;
+    padding: 5px 10px;
+    border-radius: 6px;
+    border: 1px dashed var(--border);
+    background: transparent;
+    color: var(--muted-foreground);
+    font-family: var(--font-body);
+    font-size: 12px;
+    cursor: pointer;
+  }
+  .author-add:hover { border-color: var(--fg-subtle); color: var(--foreground); background: var(--bg-raised); }
+
+  /* Add row affordance — matches qr-opt visual but dashed */
+  .qr-opt-add {
+    display: flex; align-items: center; gap: 8px;
+    border-radius: 8px;
+    border: 1px dashed var(--border);
+    padding: 6px 12px;
+    font-family: var(--font-body);
+    font-size: 12px;
+    color: var(--fg-subtle);
+    cursor: pointer;
+  }
+  .qr-opt-add:hover { color: var(--foreground); border-color: var(--fg-subtle); background: var(--bg-raised); }
+
+  /* edit pencil affordance overlaid on existing rows */
+  .qr-opt[data-editable="true"] {
+    position: relative;
+    padding-right: 36px;
+  }
+  .qr-opt[data-editable="true"] .qr-edit {
+    position: absolute;
+    right: 8px;
+    width: 22px; height: 22px;
+    border-radius: 4px;
+    display: inline-flex; align-items: center; justify-content: center;
+    color: var(--fg-subtle);
+    cursor: pointer;
+  }
+  .qr-opt[data-editable="true"]:hover .qr-edit { color: var(--muted-foreground); background: var(--bg-raised); }
+
+  /* drag grip for ordering rows */
+  .grip {
+    color: var(--fg-subtle);
+    cursor: grab;
+    font-family: var(--font-mono);
+    font-size: 13px;
+    padding: 0 4px;
+    user-select: none;
+  }
+
+  /* Cloze stem with inline blank pills */
+  .cloze-stem-edit {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 14px 16px;
+    font-family: var(--font-content);
+    font-size: 13.5px;
+    line-height: 1.85;
+    color: var(--foreground);
+    margin-bottom: 12px;
+  }
+  .blank-pill {
+    display: inline-flex; align-items: center; gap: 4px;
+    background: var(--badge-primary-bg);
+    color: var(--badge-primary-fg);
+    border-bottom: 2px solid var(--badge-primary-fg);
+    padding: 1px 8px;
+    border-radius: 4px 4px 0 0;
+    font-family: var(--font-mono);
+    font-size: 12px;
+    font-weight: 500;
+    cursor: pointer;
+    margin: 0 2px;
+  }
+  .blank-pill .nm {
+    background: var(--badge-primary-fg);
+    color: white;
+    padding: 0 4px;
+    border-radius: 999px;
+    font-size: 9px;
+    font-weight: 700;
+  }
+
+  /* Per-blank accepted-answer editor row */
+  .blank-edit {
+    display: grid;
+    grid-template-columns: auto 1fr auto;
+    gap: 12px;
+    align-items: center;
+    padding: 8px 12px;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    background: var(--card);
+    margin-bottom: 6px;
+  }
+  .blank-edit .nm {
+    background: var(--badge-primary-fg);
+    color: white;
+    padding: 2px 8px;
+    border-radius: 999px;
+    font-family: var(--font-mono);
+    font-size: 10px;
+    font-weight: 700;
+  }
+  .blank-edit .accepts {
+    display: flex; flex-wrap: wrap; gap: 4px;
+  }
+  .accept-chip {
+    font-family: var(--font-mono);
+    font-size: 11px;
+    background: var(--bg-raised);
+    color: var(--muted-foreground);
+    padding: 2px 8px;
+    border-radius: 4px;
+  }
+  .accept-chip.add {
+    border: 1px dashed var(--border);
+    background: transparent;
+    cursor: pointer;
+  }
+  .blank-edit .case {
+    font-family: var(--font-mono);
+    font-size: 10px;
+    color: var(--fg-subtle);
+  }
+
+  /* Author-only note inside type cards */
+  .author-note {
+    margin-top: 14px;
+    padding: 8px 12px;
+    background: var(--bg-raised);
+    border-radius: 6px;
+    font-family: var(--font-mono);
+    font-size: 11px;
+    color: var(--muted-foreground);
+    line-height: 1.55;
+  }
+  .author-note strong { color: var(--foreground); }
+</style>
+
+<div class="anno">
+  <span class="nm">section · 05</span>
+  <span class="ttl">Type authoring shapes — populated + empty for each</span>
+  <span class="desc">16 types → 10 patterns. Read-mode chrome inside each card is canonical <span class="mono">QuestionRenderer</span>; only author affordances (+ Add option, drag grip, accepted-answer chip editor, hotspot placement) are net-new.</span>
+</div>
+
+<div class="container-wrap">
+
+  <!-- ========== 01. SINGLE-CHOICE ========== -->
+  <article class="shape-card">
+    <header class="shape-card-head">
+      <div class="left">
+        <span class="num">01</span>
+        <div>
+          <span class="sp-badge sp-badge--solid">MCQ</span>
+          <span class="sp-badge sp-badge--solid" style="margin-left: 4px;">assert-reason</span>
+          <h3 class="name" style="margin-top: 4px;">Single-choice option list</h3>
+          <div class="types">MCQ · AssertionReason</div>
+        </div>
+      </div>
+      <span class="sp-badge sp-badge--neutral">2 mks · 4 options</span>
+    </header>
+    <div class="shape-split">
+
+      <!-- POPULATED -->
+      <div class="shape-pane">
+        <span class="pane-label"><span class="dot"></span>Populated · canonical render + author affordances</span>
+
+        <div class="stem-edit">
+          <span class="stem-label">Stem</span>
+          Which of these is NOT a cache replacement policy?
+        </div>
+
+        <div class="qr-opt" data-editable="true">
+          <span class="qr-opt-key">A</span>
+          <span style="flex: 1;">Least Recently Used (LRU)</span>
+          <span class="qr-edit"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg></span>
+        </div>
+        <div class="qr-opt" data-editable="true">
+          <span class="qr-opt-key">B</span>
+          <span style="flex: 1;">First-In First-Out (FIFO)</span>
+          <span class="qr-edit"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg></span>
+        </div>
+        <div class="qr-opt" data-correct="true" data-editable="true">
+          <span class="qr-opt-key">✓</span>
+          <span style="flex: 1;">Round Robin Scheduling</span>
+          <span class="qr-edit"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg></span>
+        </div>
+        <div class="qr-opt" data-editable="true">
+          <span class="qr-opt-key">D</span>
+          <span style="flex: 1;">Belady's Optimal</span>
+          <span class="qr-edit"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg></span>
+        </div>
+
+        <div class="qr-opt-add">
+          <span style="font-size: 14px;">+</span>
+          <span>Add option</span>
+        </div>
+
+        <div class="author-note">
+          🌗 <strong>per-option explanation</strong> shown alongside on Answers tab · click any row to mark correct
+        </div>
+      </div>
+
+      <!-- EMPTY -->
+      <div class="shape-pane" data-state="empty">
+        <span class="pane-label"><span class="dot"></span>Empty · first-time author</span>
+
+        <div class="stem-edit">
+          <span class="stem-label">Stem</span>
+          Type the question stem…
+        </div>
+
+        <div class="qr-opt-add">
+          <span style="font-size: 14px;">+</span>
+          <span>Add option A</span>
+        </div>
+
+        <div class="author-note" style="margin-top: 18px;">
+          🌗 author shortcut: <strong>type the stem, then ⏎ ⏎</strong> drops you into the first option · ⏎ again creates the next · <strong>⌘ K</strong> on a row marks it correct
+        </div>
+      </div>
+
+    </div>
+  </article>
+
+  <!-- ========== 02. MULTI-CHOICE ========== -->
+  <article class="shape-card">
+    <header class="shape-card-head">
+      <div class="left">
+        <span class="num">02</span>
+        <div>
+          <span class="sp-badge sp-badge--solid">multi-select</span>
+          <h3 class="name" style="margin-top: 4px;">Multi-choice option list</h3>
+          <div class="types">MultiSelectMcq · pick all that apply</div>
+        </div>
+      </div>
+      <span class="sp-badge sp-badge--neutral">3 mks · 3 of 5 correct</span>
+    </header>
+    <div class="shape-split">
+
+      <div class="shape-pane">
+        <span class="pane-label"><span class="dot"></span>Populated</span>
+
+        <div class="stem-edit">
+          <span class="stem-label">Stem</span>
+          Which of the following are valid pipeline hazards?  <em>(select all)</em>
+        </div>
+
+        <div class="qr-opt" data-correct="true" data-editable="true">
+          <span class="qr-opt-key" style="border-radius: 3px;">✓</span>
+          <span style="flex: 1;">Data hazard (RAW)</span>
+          <span class="qr-edit"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg></span>
+        </div>
+        <div class="qr-opt" data-editable="true">
+          <span class="qr-opt-key" style="border-radius: 3px;">☐</span>
+          <span style="flex: 1;">Memory leak</span>
+          <span class="qr-edit"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg></span>
+        </div>
+        <div class="qr-opt" data-correct="true" data-editable="true">
+          <span class="qr-opt-key" style="border-radius: 3px;">✓</span>
+          <span style="flex: 1;">Control hazard (branch misprediction)</span>
+          <span class="qr-edit"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg></span>
+        </div>
+        <div class="qr-opt" data-correct="true" data-editable="true">
+          <span class="qr-opt-key" style="border-radius: 3px;">✓</span>
+          <span style="flex: 1;">Structural hazard</span>
+          <span class="qr-edit"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg></span>
+        </div>
+        <div class="qr-opt" data-editable="true">
+          <span class="qr-opt-key" style="border-radius: 3px;">☐</span>
+          <span style="flex: 1;">Cache coherency hazard</span>
+          <span class="qr-edit"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg></span>
+        </div>
+
+        <div class="author-note">
+          🌗 <strong>partial credit</strong> configurable on Answers tab · default = all-or-nothing · <strong>3 of 5</strong> shown as a quiet meta-pill
+        </div>
+      </div>
+
+      <div class="shape-pane" data-state="empty">
+        <span class="pane-label"><span class="dot"></span>Empty</span>
+
+        <div class="stem-edit">
+          <span class="stem-label">Stem</span>
+          Type the multi-select prompt…
+        </div>
+
+        <div class="qr-opt-add">
+          <span style="font-size: 14px;">+</span>
+          <span>Add first option</span>
+        </div>
+
+        <div class="author-note" style="margin-top: 18px;">
+          🌗 visually identical to single-choice in empty state · the <strong>scoring mode</strong> (single vs multi) is set on a small toggle in the Question tab header
+        </div>
+      </div>
+
+    </div>
+  </article>
+
+  <!-- ========== 03. BOOLEAN ========== -->
+  <article class="shape-card">
+    <header class="shape-card-head">
+      <div class="left">
+        <span class="num">03</span>
+        <div>
+          <span class="sp-badge sp-badge--danger">true/false</span>
+          <h3 class="name" style="margin-top: 4px;">Boolean</h3>
+          <div class="types">TrueFalse · with optional justification flag</div>
+        </div>
+      </div>
+      <span class="sp-badge sp-badge--neutral">1 mk</span>
+    </header>
+    <div class="shape-split">
+
+      <div class="shape-pane">
+        <span class="pane-label"><span class="dot"></span>Populated · answer = false</span>
+
+        <div class="stem-edit">
+          <span class="stem-label">Stem</span>
+          Write-back caches always have higher bandwidth than write-through caches.
+        </div>
+
+        <div class="qr-tf" style="margin-top: 4px;">
+          <span class="qr-tf-pill">TRUE</span>
+          <span class="qr-tf-pill" data-correct="wrong">FALSE</span>
+          <span class="qr-tf-justify">requires student justification</span>
+        </div>
+
+        <div class="author-note">
+          🌗 click either pill to flip the correct answer · <strong>optional toggle:</strong> require justification → routes to manual grading
+        </div>
+      </div>
+
+      <div class="shape-pane" data-state="empty">
+        <span class="pane-label"><span class="dot"></span>Empty</span>
+
+        <div class="stem-edit">
+          <span class="stem-label">Stem</span>
+          Type the proposition…
+        </div>
+
+        <div class="qr-tf" style="margin-top: 4px;">
+          <span class="qr-tf-pill">TRUE</span>
+          <span class="qr-tf-pill">FALSE</span>
+          <span style="font-family: var(--font-mono); font-size: 10px; color: var(--fg-subtle); font-style: italic;">click one to mark correct →</span>
+        </div>
+
+        <div class="author-note" style="margin-top: 18px;">
+          🌗 simplest type · <strong>fastest authoring</strong> · keyboard: T or F immediately marks correct after typing the stem
+        </div>
+      </div>
+
+    </div>
+  </article>
+
+  <!-- ========== 04. INLINE BLANKS ========== -->
+  <article class="shape-card">
+    <header class="shape-card-head">
+      <div class="left">
+        <span class="num">04</span>
+        <div>
+          <span class="sp-badge sp-badge--reward">cloze</span>
+          <span class="sp-badge sp-badge--reward" style="margin-left: 4px;">fill blank</span>
+          <h3 class="name" style="margin-top: 4px;">Inline blanks</h3>
+          <div class="types">FillBlank · Cloze · type [[ to insert</div>
+        </div>
+      </div>
+      <span class="sp-badge sp-badge--neutral">3 mks · 3 blanks</span>
+    </header>
+    <div class="shape-split">
+
+      <div class="shape-pane">
+        <span class="pane-label"><span class="dot"></span>Populated</span>
+
+        <div class="cloze-stem-edit">
+          The MMU translates a virtual address into a physical address by looking up the
+          <span class="blank-pill"><span class="nm">1</span>page number</span>
+          in the
+          <span class="blank-pill"><span class="nm">2</span>page table</span>
+          to obtain a frame number, then concatenating it with the unchanged
+          <span class="blank-pill"><span class="nm">3</span>offset</span>
+          bits.
+        </div>
+
+        <span class="pane-label"><span class="dot"></span>Accepted answers per blank</span>
+
+        <div class="blank-edit">
+          <span class="nm">1</span>
+          <div class="accepts">
+            <span class="accept-chip">virtual page</span>
+            <span class="accept-chip">page number</span>
+            <span class="accept-chip">VPN</span>
+            <span class="accept-chip add">+ add</span>
+          </div>
+          <span class="case">case-insensitive</span>
+        </div>
+        <div class="blank-edit">
+          <span class="nm">2</span>
+          <div class="accepts">
+            <span class="accept-chip">page table</span>
+            <span class="accept-chip">PTE table</span>
+            <span class="accept-chip add">+ add</span>
+          </div>
+          <span class="case">exact match</span>
+        </div>
+        <div class="blank-edit">
+          <span class="nm">3</span>
+          <div class="accepts">
+            <span class="accept-chip">offset</span>
+            <span class="accept-chip">page offset</span>
+            <span class="accept-chip">byte offset</span>
+            <span class="accept-chip add">+ add</span>
+          </div>
+          <span class="case">case-insensitive</span>
+        </div>
+      </div>
+
+      <div class="shape-pane" data-state="empty">
+        <span class="pane-label"><span class="dot"></span>Empty</span>
+
+        <div class="cloze-stem-edit" style="border-style: dashed; color: var(--fg-subtle); font-style: italic;">
+          Type the passage. Surround any fill-in target with <span class="mono" style="background: var(--bg-raised); padding: 1px 5px; border-radius: 3px; font-style: normal; color: var(--muted-foreground);">[[double brackets]]</span> to make it a blank.
+          <br/><br/>
+          <span style="font-style: normal; color: var(--muted-foreground);">e.g. "The MMU translates a [[virtual address]] into a [[physical address]]…"</span>
+        </div>
+
+        <div class="author-note" style="margin-top: 14px;">
+          🌗 each <strong>[[ ]]</strong> auto-creates a numbered blank · per-blank accepted-answer editor appears below as soon as you type the closing brackets
+        </div>
+      </div>
+
+    </div>
+  </article>
+
+  <!-- ========== 05. MATCHING ========== -->
+  <article class="shape-card">
+    <header class="shape-card-head">
+      <div class="left">
+        <span class="num">05</span>
+        <div>
+          <span class="sp-badge sp-badge--reward">matching</span>
+          <h3 class="name" style="margin-top: 4px;">Matching pairs</h3>
+          <div class="types">Matching · with optional distractors</div>
+        </div>
+      </div>
+      <span class="sp-badge sp-badge--neutral">4 mks · 4 pairs · 2 distractors</span>
+    </header>
+    <div class="shape-split">
+
+      <div class="shape-pane">
+        <span class="pane-label"><span class="dot"></span>Populated</span>
+
+        <div class="stem-edit">
+          <span class="stem-label">Stem</span>
+          Match each hazard type to its standard mitigation strategy.
+        </div>
+
+        <div class="qr-match-row">
+          <span class="grip">⋮⋮</span>
+          <div class="qr-match-left">Data hazard (RAW)</div>
+          <span class="qr-match-arrow">↔</span>
+          <div class="qr-match-right">Operand forwarding</div>
+          <span class="qr-edit" style="margin-left: 8px; color: var(--fg-subtle);"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg></span>
+        </div>
+        <div class="qr-match-row">
+          <span class="grip">⋮⋮</span>
+          <div class="qr-match-left">Control hazard</div>
+          <span class="qr-match-arrow">↔</span>
+          <div class="qr-match-right">Branch prediction</div>
+          <span class="qr-edit" style="margin-left: 8px; color: var(--fg-subtle);"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg></span>
+        </div>
+        <div class="qr-match-row">
+          <span class="grip">⋮⋮</span>
+          <div class="qr-match-left">Structural hazard</div>
+          <span class="qr-match-arrow">↔</span>
+          <div class="qr-match-right">Pipeline stall / duplicate unit</div>
+          <span class="qr-edit" style="margin-left: 8px; color: var(--fg-subtle);"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg></span>
+        </div>
+        <div class="qr-match-row">
+          <span class="grip">⋮⋮</span>
+          <div class="qr-match-left">Memory hazard</div>
+          <span class="qr-match-arrow">↔</span>
+          <div class="qr-match-right">Cache coherence protocol</div>
+          <span class="qr-edit" style="margin-left: 8px; color: var(--fg-subtle);"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg></span>
+        </div>
+
+        <div style="margin-top: 12px;">
+          <span class="pane-label" style="margin-bottom: 8px;"><span class="dot" style="background: var(--fg-subtle);"></span>Distractors (right-column noise · don't pair with anything)</span>
+          <div class="qr-distractors">
+            <span class="qr-distractor">Static branch ordering</span>
+            <span class="qr-distractor">Memory aliasing detection</span>
+            <span class="accept-chip add">+ add distractor</span>
+          </div>
+        </div>
+
+        <div class="author-note">
+          🌗 right column auto-shuffles for the student · drag to reorder authoring view only · <strong>distractors</strong> raise the difficulty without affecting marks
+        </div>
+      </div>
+
+      <div class="shape-pane" data-state="empty">
+        <span class="pane-label"><span class="dot"></span>Empty</span>
+
+        <div class="stem-edit">
+          <span class="stem-label">Stem</span>
+          Type the matching prompt…
+        </div>
+
+        <div class="qr-match-row">
+          <span class="grip">⋮⋮</span>
+          <div class="qr-match-left" style="border-style: dashed; color: var(--fg-subtle); font-style: italic;">left item 1</div>
+          <span class="qr-match-arrow" style="color: var(--fg-subtle);">↔</span>
+          <div class="qr-match-right" style="border-style: dashed; background: transparent; color: var(--fg-subtle); font-style: italic;">right answer</div>
+        </div>
+        <div class="qr-opt-add">
+          <span style="font-size: 14px;">+</span>
+          <span>Add pair</span>
+        </div>
+
+        <div class="author-note" style="margin-top: 18px;">
+          🌗 first pair pre-seeded to show the shape · ⏎ inside a right cell creates the next pair below
+        </div>
+      </div>
+
+    </div>
+  </article>
+
+  <!-- ========== 06. ORDERING ========== -->
+  <article class="shape-card">
+    <header class="shape-card-head">
+      <div class="left">
+        <span class="num">06</span>
+        <div>
+          <span class="sp-badge sp-badge--reward">ordering</span>
+          <h3 class="name" style="margin-top: 4px;">Ordering — sequence-graded</h3>
+          <div class="types">Ordering · single column with positional grading</div>
+        </div>
+      </div>
+      <span class="sp-badge sp-badge--neutral">5 mks · 5 positions</span>
+    </header>
+    <div class="shape-split">
+
+      <div class="shape-pane">
+        <span class="pane-label"><span class="dot"></span>Populated · drag to reorder</span>
+
+        <div class="stem-edit">
+          <span class="stem-label">Stem</span>
+          Place the following stages of the instruction lifecycle in correct execution order.
+        </div>
+
+        <div class="qr-order">
+          <span class="grip">⋮⋮</span>
+          <span class="qr-order-pos">1</span>
+          <span style="flex: 1;">Fetch instruction from memory</span>
+          <span style="font-family: var(--font-mono); font-size: 10px; color: var(--fg-subtle);">1m</span>
+          <span class="qr-edit" style="color: var(--fg-subtle);"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg></span>
+        </div>
+        <div class="qr-order">
+          <span class="grip">⋮⋮</span>
+          <span class="qr-order-pos">2</span>
+          <span style="flex: 1;">Decode instruction &amp; read registers</span>
+          <span style="font-family: var(--font-mono); font-size: 10px; color: var(--fg-subtle);">1m</span>
+          <span class="qr-edit" style="color: var(--fg-subtle);"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg></span>
+        </div>
+        <div class="qr-order">
+          <span class="grip">⋮⋮</span>
+          <span class="qr-order-pos">3</span>
+          <span style="flex: 1;">Execute in ALU</span>
+          <span style="font-family: var(--font-mono); font-size: 10px; color: var(--fg-subtle);">1m</span>
+          <span class="qr-edit" style="color: var(--fg-subtle);"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg></span>
+        </div>
+        <div class="qr-order">
+          <span class="grip">⋮⋮</span>
+          <span class="qr-order-pos">4</span>
+          <span style="flex: 1;">Access memory if needed</span>
+          <span style="font-family: var(--font-mono); font-size: 10px; color: var(--fg-subtle);">1m</span>
+          <span class="qr-edit" style="color: var(--fg-subtle);"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg></span>
+        </div>
+        <div class="qr-order">
+          <span class="grip">⋮⋮</span>
+          <span class="qr-order-pos">5</span>
+          <span style="flex: 1;">Write result back to register</span>
+          <span style="font-family: var(--font-mono); font-size: 10px; color: var(--fg-subtle);">1m</span>
+          <span class="qr-edit" style="color: var(--fg-subtle);"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg></span>
+        </div>
+
+        <div class="qr-opt-add" style="margin-top: 6px;">
+          <span style="font-size: 14px;">+</span>
+          <span>Add step</span>
+        </div>
+
+        <div class="author-note">
+          🌗 author sees correct sequence top-to-bottom · student sees a shuffled list · <strong>partial credit</strong> per correctly-positioned item
+        </div>
+      </div>
+
+      <div class="shape-pane" data-state="empty">
+        <span class="pane-label"><span class="dot"></span>Empty</span>
+
+        <div class="stem-edit">
+          <span class="stem-label">Stem</span>
+          Type the ordering prompt…
+        </div>
+
+        <div class="qr-order">
+          <span class="grip">⋮⋮</span>
+          <span class="qr-order-pos">1</span>
+          <span style="flex: 1; color: var(--fg-subtle); font-style: italic;">first step…</span>
+        </div>
+        <div class="qr-opt-add">
+          <span style="font-size: 14px;">+</span>
+          <span>Add step</span>
+        </div>
+
+        <div class="author-note" style="margin-top: 18px;">
+          🌗 dragging an item updates its position number live · positions are 1-indexed for student-facing display
+        </div>
+      </div>
+
+    </div>
+  </article>
+
+  <!-- ========== 07. MATRIX MATCHING ========== -->
+  <article class="shape-card">
+    <header class="shape-card-head">
+      <div class="left">
+        <span class="num">07</span>
+        <div>
+          <span class="sp-badge sp-badge--reward">matrix match</span>
+          <h3 class="name" style="margin-top: 4px;">Matrix matching — N × M grid</h3>
+          <div class="types">MatrixMatching · multiple right-column items can map to one left-column item</div>
+        </div>
+      </div>
+      <span class="sp-badge sp-badge--neutral">6 mks · 4 × 4</span>
+    </header>
+    <div class="shape-split" style="grid-template-columns: 1fr;">
+
+      <div class="shape-pane">
+        <span class="pane-label"><span class="dot"></span>Populated · click cells to toggle correct mappings</span>
+
+        <div class="stem-edit">
+          <span class="stem-label">Stem</span>
+          Match each compiler phase (Column I) to the artifacts it produces (Column II).
+        </div>
+
+        <div class="qr-matrix">
+          <table>
+            <thead>
+              <tr>
+                <th>Column I</th>
+                <th class="col">P</th>
+                <th class="col">Q</th>
+                <th class="col">R</th>
+                <th class="col">S</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td class="label">1. Lexical analysis</td>
+                <td class="cell"><span class="qr-matrix-tick">✓</span></td>
+                <td class="cell"><span class="qr-matrix-dash">–</span></td>
+                <td class="cell"><span class="qr-matrix-dash">–</span></td>
+                <td class="cell"><span class="qr-matrix-dash">–</span></td>
+              </tr>
+              <tr>
+                <td class="label">2. Parsing</td>
+                <td class="cell"><span class="qr-matrix-dash">–</span></td>
+                <td class="cell"><span class="qr-matrix-tick">✓</span></td>
+                <td class="cell"><span class="qr-matrix-dash">–</span></td>
+                <td class="cell"><span class="qr-matrix-dash">–</span></td>
+              </tr>
+              <tr>
+                <td class="label">3. Semantic analysis</td>
+                <td class="cell"><span class="qr-matrix-dash">–</span></td>
+                <td class="cell"><span class="qr-matrix-dash">–</span></td>
+                <td class="cell"><span class="qr-matrix-tick">✓</span></td>
+                <td class="cell"><span class="qr-matrix-tick">✓</span></td>
+              </tr>
+              <tr>
+                <td class="label">4. Code generation</td>
+                <td class="cell"><span class="qr-matrix-dash">–</span></td>
+                <td class="cell"><span class="qr-matrix-dash">–</span></td>
+                <td class="cell"><span class="qr-matrix-dash">–</span></td>
+                <td class="cell"><span class="qr-matrix-tick">✓</span></td>
+              </tr>
+            </tbody>
+          </table>
+          <div class="qr-matrix-legend">
+            <strong>P</strong> = Token stream &nbsp;·&nbsp;
+            <strong>Q</strong> = Parse tree (AST) &nbsp;·&nbsp;
+            <strong>R</strong> = Symbol table &nbsp;·&nbsp;
+            <strong>S</strong> = Annotated tree / IR
+          </div>
+        </div>
+
+        <div style="display: flex; gap: 8px; margin-top: 12px; flex-wrap: wrap;">
+          <button class="author-add">+ Add Column-I row</button>
+          <button class="author-add">+ Add Column-II item</button>
+        </div>
+
+        <div class="author-note">
+          🌗 a single Column-I item <strong>can map to multiple Column-II items</strong> (row 3 here) · click any cell to toggle the tick
+        </div>
+      </div>
+
+    </div>
+  </article>
+
+  <!-- ========== 08. NUMERIC / CALCULATION ========== -->
+  <article class="shape-card">
+    <header class="shape-card-head">
+      <div class="left">
+        <span class="num">08</span>
+        <div>
+          <span class="sp-badge sp-badge--danger">calculation</span>
+          <span class="sp-badge sp-badge--danger" style="margin-left: 4px;">numeric</span>
+          <h3 class="name" style="margin-top: 4px;">Numeric · with optional steps</h3>
+          <div class="types">Calculation · NumericEntry (without steps)</div>
+        </div>
+      </div>
+      <span class="sp-badge sp-badge--neutral">10 mks</span>
+    </header>
+    <div class="shape-split">
+
+      <div class="shape-pane">
+        <span class="pane-label"><span class="dot"></span>Populated · Calculation</span>
+
+        <div class="stem-edit">
+          <span class="stem-label">Stem</span>
+          A 4-way set associative cache has 64 KB capacity, 64-byte lines. Compute the number of sets for a 32-bit address space.
+        </div>
+
+        <span class="pane-label" style="margin-bottom: 6px;"><span class="dot"></span>Final answer (canonical render)</span>
+
+        <div class="qr-numeric" style="margin-top: 4px;">
+          <span class="qr-numeric-pill">
+            <span class="qr-numeric-val">256</span>
+            <span class="qr-numeric-unit">sets</span>
+          </span>
+          <span class="qr-numeric-tol">±0</span>
+        </div>
+
+        <div style="margin-top: 14px;">
+          <span class="pane-label"><span class="dot"></span>Worked steps · part-marks</span>
+          <div style="border: 1px solid var(--border); border-radius: 8px; padding: 10px 14px; background: var(--card);">
+            <ol style="margin: 0; padding-left: 22px; font-family: var(--font-content); font-size: 13px; color: var(--foreground); line-height: 1.7;">
+              <li>Lines per set <span class="mono" style="background: var(--bg-raised); padding: 1px 6px; border-radius: 3px; font-size: 12px;">= cap / (assoc × line) = 65536 / (4 × 64)</span> = 256</li>
+              <li>Offset bits <span class="mono" style="background: var(--bg-raised); padding: 1px 6px; border-radius: 3px; font-size: 12px;">log₂(64) = 6</span></li>
+              <li>Index bits <span class="mono" style="background: var(--bg-raised); padding: 1px 6px; border-radius: 3px; font-size: 12px;">log₂(256) = 8</span></li>
+              <li>Tag bits <span class="mono" style="background: var(--bg-raised); padding: 1px 6px; border-radius: 3px; font-size: 12px;">32 − 8 − 6 = 18</span></li>
+            </ol>
+            <button class="author-add" style="margin-top: 10px;">+ Add step</button>
+          </div>
+        </div>
+
+        <div class="author-note">
+          🌗 NumericEntry skips the steps block · <strong>tolerance</strong> can be absolute (±0.1) or percentage (±5%) · per-step part-marks awarded automatically when the student's working contains the formula chips
+        </div>
+      </div>
+
+      <div class="shape-pane" data-state="empty">
+        <span class="pane-label"><span class="dot"></span>Empty · NumericEntry minimal</span>
+
+        <div class="stem-edit">
+          <span class="stem-label">Stem</span>
+          Type the numeric question…
+        </div>
+
+        <span class="pane-label" style="margin-bottom: 6px;"><span class="dot"></span>Final answer</span>
+
+        <div class="qr-numeric" style="margin-top: 4px;">
+          <span class="qr-numeric-pill" style="border-color: var(--border); background: var(--bg-raised);">
+            <span class="qr-numeric-val" style="color: var(--fg-subtle); font-style: italic;">value</span>
+            <span class="qr-numeric-unit" style="font-style: italic;">unit</span>
+          </span>
+          <span class="qr-numeric-tol" style="font-style: italic;">±tolerance</span>
+        </div>
+
+        <div style="margin-top: 14px;">
+          <button class="author-add">+ Add worked-steps block (Calculation)</button>
+        </div>
+
+        <div class="author-note" style="margin-top: 18px;">
+          🌗 Numeric vs Calculation: just whether the steps block is present · author can toggle without retyping the stem
+        </div>
+      </div>
+
+    </div>
+  </article>
+
+  <!-- ========== 09. DIAGRAM LABEL ========== -->
+  <article class="shape-card">
+    <header class="shape-card-head">
+      <div class="left">
+        <span class="num">09</span>
+        <div>
+          <span class="sp-badge sp-badge--danger">diagram</span>
+          <h3 class="name" style="margin-top: 4px;">Diagram-label — click to place hotspots</h3>
+          <div class="types">DiagramLabel · upload image / SVG, click to place numbered hotspots</div>
+        </div>
+      </div>
+      <span class="sp-badge sp-badge--neutral">8 mks · 4 labels</span>
+    </header>
+    <div class="shape-split">
+
+      <div class="shape-pane">
+        <span class="pane-label"><span class="dot"></span>Populated · 4 hotspots placed</span>
+
+        <div class="stem-edit">
+          <span class="stem-label">Stem</span>
+          Identify the components of the 5-stage pipeline marked 1–4.
+        </div>
+
+        <div style="position: relative; background: #FBF8F1; border: 1px solid var(--border); border-radius: 10px; overflow: hidden; cursor: crosshair;">
+          <svg viewBox="0 0 320 140" width="100%" style="display: block;">
+            <rect x="8" y="8" width="304" height="124" rx="6" fill="none" stroke="#E0D6C2"/>
+            <g font-family="JetBrains Mono" font-size="10" fill="#1F1A12">
+              <rect x="20"  y="46" width="48" height="40" rx="4" fill="#FBF8F1" stroke="#C9BCA0"/>
+              <text x="44" y="70" text-anchor="middle">IF</text>
+              <rect x="80"  y="46" width="48" height="40" rx="4" fill="#FBF8F1" stroke="#C9BCA0"/>
+              <text x="104" y="70" text-anchor="middle">ID</text>
+              <rect x="140" y="46" width="48" height="40" rx="4" fill="#FBF8F1" stroke="#C9BCA0"/>
+              <text x="164" y="70" text-anchor="middle">EX</text>
+              <rect x="200" y="46" width="48" height="40" rx="4" fill="#FBF8F1" stroke="#C9BCA0"/>
+              <text x="224" y="70" text-anchor="middle">MEM</text>
+              <rect x="260" y="46" width="48" height="40" rx="4" fill="#FBF8F1" stroke="#C9BCA0"/>
+              <text x="284" y="70" text-anchor="middle">WB</text>
+            </g>
+            <line x1="68" y1="66" x2="80" y2="66" stroke="#9C8E73"/>
+            <line x1="128" y1="66" x2="140" y2="66" stroke="#9C8E73"/>
+            <line x1="188" y1="66" x2="200" y2="66" stroke="#9C8E73"/>
+            <line x1="248" y1="66" x2="260" y2="66" stroke="#9C8E73"/>
+          </svg>
+          <span style="position: absolute; left: 13.7%; top: 32%; transform: translate(-50%, -50%); width: 22px; height: 22px; border-radius: 999px; background: var(--primary); color: white; display: inline-flex; align-items: center; justify-content: center; font-family: var(--font-mono); font-size: 11px; font-weight: 700; box-shadow: 0 0 0 4px rgba(26,107,79,0.16); cursor: grab;">1</span>
+          <span style="position: absolute; left: 32.3%; top: 32%; transform: translate(-50%, -50%); width: 22px; height: 22px; border-radius: 999px; background: var(--primary); color: white; display: inline-flex; align-items: center; justify-content: center; font-family: var(--font-mono); font-size: 11px; font-weight: 700; box-shadow: 0 0 0 4px rgba(26,107,79,0.16); cursor: grab;">2</span>
+          <span style="position: absolute; left: 51.1%; top: 32%; transform: translate(-50%, -50%); width: 22px; height: 22px; border-radius: 999px; background: var(--primary); color: white; display: inline-flex; align-items: center; justify-content: center; font-family: var(--font-mono); font-size: 11px; font-weight: 700; box-shadow: 0 0 0 4px rgba(26,107,79,0.16); cursor: grab;">3</span>
+          <span style="position: absolute; left: 70%; top: 32%; transform: translate(-50%, -50%); width: 22px; height: 22px; border-radius: 999px; background: var(--primary); color: white; display: inline-flex; align-items: center; justify-content: center; font-family: var(--font-mono); font-size: 11px; font-weight: 700; box-shadow: 0 0 0 4px rgba(26,107,79,0.16); cursor: grab;">4</span>
+        </div>
+
+        <div style="margin-top: 12px;">
+          <!-- Canonical diagram label grid from QuestionRenderer -->
+          <div class="qr-diagram-grid">
+            <div class="qr-diagram-cell">
+              <span class="qr-diagram-key">1:</span>
+              <span class="qr-diagram-val">Instruction Fetch</span>
+            </div>
+            <div class="qr-diagram-cell">
+              <span class="qr-diagram-key">2:</span>
+              <span class="qr-diagram-val">Instruction Decode</span>
+            </div>
+            <div class="qr-diagram-cell">
+              <span class="qr-diagram-key">3:</span>
+              <span class="qr-diagram-val">Execute</span>
+            </div>
+            <div class="qr-diagram-cell">
+              <span class="qr-diagram-key">4:</span>
+              <span class="qr-diagram-val">Memory Access</span>
+            </div>
+          </div>
+
+          <!-- Author affordance: per-label accepted-answers expanded -->
+          <div style="margin-top: 12px;">
+            <span class="pane-label" style="margin-bottom: 6px;"><span class="dot"></span>Per-label accepted answers · 2 mks each</span>
+            <div class="blank-edit">
+              <span class="nm">1</span>
+              <div class="accepts">
+                <span class="accept-chip">Instruction Fetch</span>
+                <span class="accept-chip">IF</span>
+                <span class="accept-chip">Fetch</span>
+                <span class="accept-chip add">+ add</span>
+              </div>
+              <span class="case">2 mks</span>
+            </div>
+            <div class="blank-edit">
+              <span class="nm">2</span>
+              <div class="accepts">
+                <span class="accept-chip">Instruction Decode</span>
+                <span class="accept-chip">ID</span>
+                <span class="accept-chip">Decode</span>
+                <span class="accept-chip add">+ add</span>
+              </div>
+              <span class="case">2 mks</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="author-note">
+          🌗 click anywhere on the diagram to place a new hotspot · drag to reposition · <strong>image source</strong> can be uploaded, pasted SVG, or generated by AI alongside the answer
+        </div>
+      </div>
+
+      <div class="shape-pane" data-state="empty">
+        <span class="pane-label"><span class="dot"></span>Empty · before image</span>
+
+        <div class="stem-edit">
+          <span class="stem-label">Stem</span>
+          Type the diagram-label prompt…
+        </div>
+
+        <div style="border: 2px dashed var(--border); border-radius: 10px; padding: 36px 24px; text-align: center; color: var(--fg-subtle); background: var(--card);">
+          <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" style="margin-bottom: 10px;"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="9" cy="9" r="2"/><path d="M21 15l-5-5L5 21"/></svg>
+          <div style="font-family: var(--font-display); font-size: 14px; font-weight: 500; color: var(--muted-foreground);">Drop an image, paste an SVG, or generate one with AI</div>
+          <div style="font-family: var(--font-mono); font-size: 11px; margin-top: 6px;">PNG · JPG · SVG · max 4 MB</div>
+          <div style="display: inline-flex; gap: 6px; margin-top: 14px;">
+            <button class="btn btn-sm">Upload</button>
+            <button class="btn btn-sm">Paste SVG</button>
+            <button class="btn btn-primary btn-sm">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4"/></svg>
+              AI generate
+            </button>
+          </div>
+        </div>
+
+        <div class="author-note" style="margin-top: 18px;">
+          🌗 diagram first, then click to drop hotspots · <strong>can also reuse a question context</strong> as the diagram source if the same image was used in the stem
+        </div>
+      </div>
+
+    </div>
+  </article>
+
+  <!-- ========== 10. ASSERTION-REASON ========== -->
+  <article class="shape-card">
+    <header class="shape-card-head">
+      <div class="left">
+        <span class="num">10</span>
+        <div>
+          <span class="sp-badge sp-badge--solid">assert-reason</span>
+          <h3 class="name" style="margin-top: 4px;">Assertion + reason — 5-option pattern</h3>
+          <div class="types">AssertionReason · standard JEE/NEET shape</div>
+        </div>
+      </div>
+      <span class="sp-badge sp-badge--neutral">3 mks</span>
+    </header>
+    <div class="shape-split">
+
+      <div class="shape-pane">
+        <span class="pane-label"><span class="dot"></span>Populated</span>
+
+        <div class="stem-edit">
+          <span class="stem-label">Stem · select the correct relationship</span>
+          Read the assertion and reason; choose the option that best describes the relationship.
+        </div>
+
+        <!-- Canonical assertion/reason render -->
+        <div class="qr-ar">
+          <div class="qr-ar-row"><span class="qr-ar-label qr-ar-label--a">Assertion:</span> <span>Cache hit time is independent of cache size in a fully associative cache.</span></div>
+          <div class="qr-ar-row"><span class="qr-ar-label qr-ar-label--r">Reason:</span> <span>All entries in a fully associative cache are searched in parallel.</span></div>
+        </div>
+
+        <div style="margin-top: 12px;">
+          <span class="pane-label" style="margin-bottom: 6px;"><span class="dot"></span>Standard 5 options · pick the correct one</span>
+          <div class="qr-opt"><span class="qr-opt-key">A</span><span style="font-size: 11.5px;">Both A and R are true; R is the correct explanation of A</span></div>
+          <div class="qr-opt" data-correct="true"><span class="qr-opt-key">✓</span><span style="font-size: 11.5px;"><strong>Both A and R are true; R is NOT the correct explanation of A</strong></span></div>
+          <div class="qr-opt"><span class="qr-opt-key">C</span><span style="font-size: 11.5px;">A is true but R is false</span></div>
+          <div class="qr-opt"><span class="qr-opt-key">D</span><span style="font-size: 11.5px;">A is false but R is true</span></div>
+          <div class="qr-opt"><span class="qr-opt-key">E</span><span style="font-size: 11.5px;">Both A and R are false</span></div>
+        </div>
+
+        <div class="author-note">
+          🌗 the 5 options are <strong>fixed templates</strong> — author only writes the assertion + reason · standard pattern means consistent student experience
+        </div>
+      </div>
+
+      <div class="shape-pane" data-state="empty">
+        <span class="pane-label"><span class="dot"></span>Empty</span>
+
+        <div class="stem-edit">
+          <span class="stem-label">Stem · always the same prompt</span>
+          <span style="color: var(--fg-subtle); font-style: italic;">Read the assertion and reason; choose the option that best describes the relationship.</span>
+        </div>
+
+        <div class="qr-ar">
+          <div class="qr-ar-row"><span class="qr-ar-label qr-ar-label--a">Assertion:</span> <span style="color: var(--fg-subtle); font-style: italic;">type the assertion claim…</span></div>
+          <div class="qr-ar-row"><span class="qr-ar-label qr-ar-label--r">Reason:</span> <span style="color: var(--fg-subtle); font-style: italic;">type the reasoning that supports (or appears to support) it…</span></div>
+        </div>
+
+        <div style="margin-top: 12px;">
+          <div style="font-family: var(--font-mono); font-size: 11px; color: var(--fg-subtle); padding: 8px 12px; background: var(--bg-raised); border-radius: 6px;">
+            standard 5 options will appear automatically · click one to mark correct after typing both
+          </div>
+        </div>
+
+        <div class="author-note" style="margin-top: 18px;">
+          🌗 most authoring time goes into <strong>writing a reason that's plausible but incorrect</strong> — the trick lives in the relationship, not the truth values
+        </div>
+      </div>
+
+    </div>
+  </article>
+
+  <!-- ========== 11. FREE-FORM ========== -->
+  <article class="shape-card">
+    <header class="shape-card-head">
+      <div class="left">
+        <span class="num">11</span>
+        <div>
+          <span class="sp-badge sp-badge--primary">theory</span>
+          <span class="sp-badge sp-badge--primary" style="margin-left: 4px;">short answer</span>
+          <span class="sp-badge sp-badge--primary" style="margin-left: 4px;">essay</span>
+          <h3 class="name" style="margin-top: 4px;">Free-form — with rubric</h3>
+          <div class="types">Theory · ShortAnswer · Essay · manual + AI-assist grading</div>
+        </div>
+      </div>
+      <span class="sp-badge sp-badge--neutral">15 mks · essay</span>
+    </header>
+    <div class="shape-split">
+
+      <div class="shape-pane">
+        <span class="pane-label"><span class="dot"></span>Populated · with rubric</span>
+
+        <div class="stem-edit">
+          <span class="stem-label">Stem</span>
+          Compare RISC and CISC architectures. Discuss with examples and contemporary trends.
+        </div>
+
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 12px;">
+          <div style="border: 1px solid var(--border); border-radius: 6px; padding: 8px 12px; background: var(--card);">
+            <span style="font-family: var(--font-mono); font-size: 9.5px; color: var(--fg-subtle); text-transform: uppercase; letter-spacing: 0.06em;">min words</span>
+            <div style="font-family: var(--font-mono); font-size: 14px; font-weight: 600; margin-top: 2px;">300</div>
+          </div>
+          <div style="border: 1px solid var(--border); border-radius: 6px; padding: 8px 12px; background: var(--card);">
+            <span style="font-family: var(--font-mono); font-size: 9.5px; color: var(--fg-subtle); text-transform: uppercase; letter-spacing: 0.06em;">max words</span>
+            <div style="font-family: var(--font-mono); font-size: 14px; font-weight: 600; margin-top: 2px;">600</div>
+          </div>
+        </div>
+
+        <span class="pane-label" style="margin-bottom: 6px;"><span class="dot"></span>Rubric · used by graders + AI assist</span>
+        <div style="border: 1px dashed var(--border); border-radius: 8px; padding: 10px 14px; background: var(--card);">
+          <div style="display: grid; grid-template-columns: 28px 1fr 50px; gap: 10px; align-items: center; padding: 6px 0; border-bottom: 1px dashed var(--border-2); font-size: 12.5px;">
+            <span style="background: var(--primary); color: white; border-radius: 4px; text-align: center; font-family: var(--font-mono); font-size: 11px; padding: 1px 0;">A</span>
+            <span>Defines RISC and CISC with at least two technical distinctions each</span>
+            <span style="text-align: right; font-family: var(--font-mono); font-size: 11px; color: var(--primary); font-weight: 600;">5 pts</span>
+          </div>
+          <div style="display: grid; grid-template-columns: 28px 1fr 50px; gap: 10px; align-items: center; padding: 6px 0; border-bottom: 1px dashed var(--border-2); font-size: 12.5px;">
+            <span style="background: var(--primary); color: white; border-radius: 4px; text-align: center; font-family: var(--font-mono); font-size: 11px; padding: 1px 0;">B</span>
+            <span>Names a real-world RISC processor (e.g. ARM) and a CISC (e.g. x86)</span>
+            <span style="text-align: right; font-family: var(--font-mono); font-size: 11px; color: var(--primary); font-weight: 600;">3 pts</span>
+          </div>
+          <div style="display: grid; grid-template-columns: 28px 1fr 50px; gap: 10px; align-items: center; padding: 6px 0; border-bottom: 1px dashed var(--border-2); font-size: 12.5px;">
+            <span style="background: var(--primary); color: white; border-radius: 4px; text-align: center; font-family: var(--font-mono); font-size: 11px; padding: 1px 0;">C</span>
+            <span>Discusses convergence trends (RISC-V, x86 micro-ops)</span>
+            <span style="text-align: right; font-family: var(--font-mono); font-size: 11px; color: var(--primary); font-weight: 600;">4 pts</span>
+          </div>
+          <div style="display: grid; grid-template-columns: 28px 1fr 50px; gap: 10px; align-items: center; padding: 6px 0; font-size: 12.5px;">
+            <span style="background: var(--primary); color: white; border-radius: 4px; text-align: center; font-family: var(--font-mono); font-size: 11px; padding: 1px 0;">D</span>
+            <span>Coherent structure, accurate technical language</span>
+            <span style="text-align: right; font-family: var(--font-mono); font-size: 11px; color: var(--primary); font-weight: 600;">3 pts</span>
+          </div>
+          <button class="author-add" style="margin-top: 10px;">+ Add criterion</button>
+        </div>
+
+        <div class="author-note">
+          🌗 ShortAnswer: rubric collapses to a single accepted-answer chip · Essay: word range raised · <strong>model answer</strong> sits on Answers tab as the "correct response"
+        </div>
+      </div>
+
+      <div class="shape-pane" data-state="empty">
+        <span class="pane-label"><span class="dot"></span>Empty · ShortAnswer</span>
+
+        <div class="stem-edit">
+          <span class="stem-label">Stem</span>
+          Type the prompt…
+        </div>
+
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 12px;">
+          <div style="border: 1px dashed var(--border); border-radius: 6px; padding: 8px 12px; color: var(--fg-subtle); font-style: italic;">
+            <span style="font-family: var(--font-mono); font-size: 9.5px; text-transform: uppercase; letter-spacing: 0.06em; font-style: normal;">min words</span>
+            <div style="font-family: var(--font-mono); font-size: 14px; margin-top: 2px;">—</div>
+          </div>
+          <div style="border: 1px dashed var(--border); border-radius: 6px; padding: 8px 12px; color: var(--fg-subtle); font-style: italic;">
+            <span style="font-family: var(--font-mono); font-size: 9.5px; text-transform: uppercase; letter-spacing: 0.06em; font-style: normal;">max words</span>
+            <div style="font-family: var(--font-mono); font-size: 14px; margin-top: 2px;">—</div>
+          </div>
+        </div>
+
+        <button class="author-add" style="width: 100%; justify-content: center;">+ Add rubric (optional · enables AI grading assist)</button>
+
+        <div class="author-note" style="margin-top: 18px;">
+          🌗 free-form types <strong>can ship without a rubric</strong> — they fall back to fully manual grading · adding a rubric unlocks AI-assisted scoring
+        </div>
+      </div>
+
+    </div>
+  </article>
+
+  <!-- ========== 12. GROUP ========== -->
+  <article class="shape-card">
+    <header class="shape-card-head">
+      <div class="left">
+        <span class="num">12</span>
+        <div>
+          <span class="sp-badge sp-badge--neutral">group</span>
+          <h3 class="name" style="margin-top: 4px;">Group — container only</h3>
+          <div class="types">Group · holds N children · no own response · max nesting depth = 3</div>
+        </div>
+      </div>
+      <span class="sp-badge sp-badge--neutral">15 mks total · 3 children</span>
+    </header>
+    <div class="shape-split">
+
+      <div class="shape-pane">
+        <span class="pane-label"><span class="dot"></span>Populated · 3 children</span>
+
+        <div class="stem-edit">
+          <span class="stem-label">Group stem · shared context</span>
+          Page replacement &amp; the working set
+        </div>
+
+        <span class="pane-label" style="margin-bottom: 6px;"><span class="dot"></span>Children · canonical question rows</span>
+
+        <div class="qr-row" data-leaf="true">
+          <span class="qr-leafdot"></span>
+          <div class="qr-body">
+            <div class="qr-head">
+              <span class="qr-num">3 (a)</span>
+              <span class="sp-badge sp-badge--xs sp-badge--primary">theory</span>
+            </div>
+            <div class="qr-content" style="font-size: 12.5px;">State the LRU page replacement algorithm.</div>
+          </div>
+          <span class="qr-marks">5m</span>
+        </div>
+        <div class="qr-row" data-leaf="true">
+          <span class="qr-leafdot"></span>
+          <div class="qr-body">
+            <div class="qr-head">
+              <span class="qr-num">3 (b)</span>
+              <span class="sp-badge sp-badge--xs sp-badge--danger">calculation</span>
+            </div>
+            <div class="qr-content" style="font-size: 12.5px;">Trace the reference string 1, 2, 3, 4, 1, 2, 5, 1, 2, 3, 4, 5.</div>
+          </div>
+          <span class="qr-marks">6m</span>
+        </div>
+        <div class="qr-row" data-leaf="true">
+          <span class="qr-leafdot"></span>
+          <div class="qr-body">
+            <div class="qr-head">
+              <span class="qr-num">3 (c)</span>
+              <span class="sp-badge sp-badge--xs sp-badge--primary">essay</span>
+            </div>
+            <div class="qr-content" style="font-size: 12.5px;">Discuss thrashing and the working-set model.</div>
+          </div>
+          <span class="qr-marks">4m</span>
+        </div>
+
+        <div class="qr-opt-add" style="margin-top: 8px;">
+          <span style="font-size: 14px;">+</span>
+          <span>Add child question</span>
+        </div>
+
+        <div class="author-note">
+          🌗 group has <strong>no own answers</strong> · Answers tab on parent shows children-status matrix (see §04) · max nesting depth = 3
+        </div>
+      </div>
+
+      <div class="shape-pane" data-state="empty">
+        <span class="pane-label"><span class="dot"></span>Empty · just-created group</span>
+
+        <div class="stem-edit">
+          <span class="stem-label">Group stem</span>
+          Type the shared context for all children…
+        </div>
+
+        <div class="qr-opt-add">
+          <span style="font-size: 14px;">+</span>
+          <span>Add first child question</span>
+        </div>
+
+        <div class="author-note" style="margin-top: 18px;">
+          🌗 group is purely organizational · author <strong>each child as its own type</strong> — they can be different (a, b, c can be theory, calc, essay)
+        </div>
+      </div>
+
+    </div>
+  </article>
+
+</div>
+
+<!-- =============================================================
+     SECTION 6 · IMPLEMENTATION MAP
+     ============================================================= -->
+
+<style>
+  .impl-table {
+    width: 100%;
+    border-collapse: separate;
+    border-spacing: 0;
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: var(--card-radius);
+    overflow: hidden;
+  }
+  .impl-table th {
+    background: var(--bg-raised);
+    border-bottom: 1px solid var(--border);
+    padding: 12px 16px;
+    text-align: left;
+    font-family: var(--font-display);
+    font-size: 11px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--muted-foreground);
+  }
+  .impl-table td {
+    padding: 14px 16px;
+    border-bottom: 1px solid var(--border-2);
+    font-family: var(--font-body);
+    font-size: 13px;
+    vertical-align: top;
+  }
+  .impl-table tr:last-child td { border-bottom: 0; }
+  .impl-table .round-tag {
+    display: inline-flex; align-items: center; justify-content: center;
+    background: var(--foreground);
+    color: var(--background);
+    padding: 3px 8px;
+    border-radius: 4px;
+    font-family: var(--font-mono);
+    font-size: 11px;
+    font-weight: 600;
+  }
+  .impl-table .round-tag[data-late="true"] {
+    background: var(--bg-raised);
+    color: var(--muted-foreground);
+    border: 1px solid var(--border);
+  }
+  .impl-table .lands-canonical {
+    font-family: var(--font-mono);
+    font-size: 11px;
+    color: var(--badge-primary-fg);
+    font-weight: 600;
+  }
+  .impl-table .lands-preview {
+    font-family: var(--font-mono);
+    font-size: 11px;
+    color: var(--badge-danger-fg);
+    font-weight: 600;
+  }
+  .impl-table .meta-line {
+    font-family: var(--font-mono);
+    font-size: 11px;
+    color: var(--fg-subtle);
+    margin-top: 4px;
+    line-height: 1.55;
+  }
+</style>
+
+<div class="anno">
+  <span class="nm">section · 06</span>
+  <span class="ttl">Implementation map — Round 4.A → 4.G</span>
+  <span class="desc">Backend changes (4.A) land canonically and benefit both routes immediately. Frontend forks into <span class="mono">preview/</span> until cutover.</span>
+</div>
+
+<div class="container-wrap" style="margin-bottom: 60px;">
+  <table class="impl-table">
+    <thead>
+      <tr>
+        <th style="width: 80px;">Round</th>
+        <th>Goal</th>
+        <th style="width: 130px;">Lands in</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td><span class="round-tag">4.A</span></td>
+        <td>
+          <strong>Foundation</strong> · eager-load fix on <span class="mono">QuestionPaperController</span> to populate <span class="mono">node.answers</span> · adds answer-status dots in the existing tree
+          <div class="meta-line">unlocks dead AnswerSection · daily-visible signal for every author · helps both routes immediately</div>
+        </td>
+        <td><span class="lands-canonical">canonical</span></td>
+      </tr>
+      <tr>
+        <td><span class="round-tag">4.B</span></td>
+        <td>
+          <strong>Preview route scaffold</strong> · ships <span class="mono">/admin/question-papers/{paper}/build/preview</span> with composite editor + Theory authoring end-to-end · new pages under <span class="mono">preview/</span>
+          <div class="meta-line">smallest viable vertical slice — proves the architecture before scaling to all types</div>
+        </td>
+        <td><span class="lands-preview">preview/</span></td>
+      </tr>
+      <tr>
+        <td><span class="round-tag">4.C</span></td>
+        <td>
+          <strong>Question tab — type variants</strong> · the 12 authoring shapes from §05 · type-aware <span class="mono">response_config</span> UI · author affordances (drag, edit, accepted-answer chips, hotspot placement)
+          <div class="meta-line">largest round · most net-new code · canonical render chrome reused throughout</div>
+        </td>
+        <td><span class="lands-preview">preview/</span></td>
+      </tr>
+      <tr>
+        <td><span class="round-tag">4.D</span></td>
+        <td>
+          <strong>Answers tab — structural split</strong> · correct-response card on top + 3 explanation depth cards below · diagram embeds inside Tiptap · AI prose+illustration co-generation
+          <div class="meta-line">absorbs the standalone <span class="mono">/admin/questions/{id}/answers</span> page</div>
+        </td>
+        <td><span class="lands-preview">preview/</span></td>
+      </tr>
+      <tr>
+        <td><span class="round-tag">4.E</span></td>
+        <td>
+          <strong>Library reshape</strong> · container-first landing (papers · course pools · exam pools · unattached inbox) · ⌘K global search · pool-builder variant · retires <span class="mono">/admin/questions</span> flat index
+          <div class="meta-line">absorbs prototype's §01 + §03</div>
+        </td>
+        <td><span class="lands-preview">preview/</span></td>
+      </tr>
+      <tr>
+        <td><span class="round-tag" data-late="true">4.F</span></td>
+        <td>
+          <strong>Inbox triage</strong> · resolve the 24 unattached questions · bulk-assign UI or delete
+          <div class="meta-line">data hygiene · small lift · can defer if needed</div>
+        </td>
+        <td><span class="lands-preview">preview/</span></td>
+      </tr>
+      <tr>
+        <td><span class="round-tag" data-late="true">4.G</span></td>
+        <td>
+          <strong>Cutover</strong> · move <span class="mono">preview/*</span> into canonical paths · delete old standalone pages (questions/create · questions/edit · questions/answers · questions/topic-links · questions/block-links) · drop preview routes
+          <div class="meta-line">single PR · file moves + deletes · coordinate with no-merge window</div>
+        </td>
+        <td><span class="lands-canonical">canonical</span></td>
+      </tr>
+    </tbody>
+  </table>
+</div>
+
+<footer style="text-align: center; padding: 32px 24px 48px; color: var(--fg-subtle); font-family: var(--font-mono); font-size: 11px; letter-spacing: 0.04em;">
+  prototype v3 · skoolpad / question builder · 2026-05-07 · supersedes v1 + v2 · canonical chrome respected · author affordances net-new
+</footer>
+
+<script>
+  // Tab swap behavior — primary builder pane only
+  const tabbar = document.querySelectorAll('.tabbar .tab');
+  // (intentionally minimal — sections in this prototype are static for audit)
+</script>
+
+</body>
+</html>

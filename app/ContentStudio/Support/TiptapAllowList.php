@@ -8,6 +8,7 @@ final class TiptapAllowList
         'doc', 'paragraph', 'heading', 'bulletList', 'orderedList', 'listItem',
         'blockquote', 'codeBlock', 'horizontalRule', 'blockMath',
         'table', 'tableRow', 'tableHeader', 'tableCell',
+        'diagram',
     ];
 
     public const ALLOWED_INLINE_NODES = [

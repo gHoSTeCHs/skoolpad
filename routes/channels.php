@@ -12,3 +12,7 @@ Broadcast::channel('App.Models.User.{id}', function ($user, $id) {
 Broadcast::channel('content-studio.{contentProject}', function (User $user, ContentProject $contentProject) {
     return Gate::forUser($user)->allows('view', $contentProject);
 });
+
+Broadcast::channel('answers.{questionId}', function (User $user) {
+    return $user->role->isStaff();
+});

@@ -18,17 +18,36 @@ interface ResetTopicDialogProps {
     topicSlug: string;
     onConfirm: (confirmSlug: string) => void;
     disabled?: boolean;
+    open?: boolean;
+    onOpenChange?: (open: boolean) => void;
+    hideTrigger?: boolean;
 }
 
-export function ResetTopicDialog({ topicTitle, topicSlug, onConfirm, disabled }: ResetTopicDialogProps) {
+export function ResetTopicDialog({
+    topicTitle,
+    topicSlug,
+    onConfirm,
+    disabled,
+    open,
+    onOpenChange,
+    hideTrigger,
+}: ResetTopicDialogProps) {
     const [typed, setTyped] = useState('');
     const canConfirm = typed === topicSlug;
 
     return (
-        <AlertDialog onOpenChange={(open) => { if (!open) setTyped(''); }}>
-            <AlertDialogTrigger asChild>
-                <Button variant="ghost" size="sm" disabled={disabled}>Reset topic</Button>
-            </AlertDialogTrigger>
+        <AlertDialog
+            open={open}
+            onOpenChange={(next) => {
+                if (!next) setTyped('');
+                onOpenChange?.(next);
+            }}
+        >
+            {!hideTrigger && (
+                <AlertDialogTrigger asChild>
+                    <Button variant="ghost" size="sm" disabled={disabled}>Reset topic</Button>
+                </AlertDialogTrigger>
+            )}
             <AlertDialogContent>
                 <AlertDialogHeader>
                     <AlertDialogTitle>Reset all content for {topicTitle}?</AlertDialogTitle>

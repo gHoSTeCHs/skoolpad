@@ -10,6 +10,7 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Support\Str;
 
 class CanonicalTopic extends Model
@@ -128,6 +129,26 @@ class CanonicalTopic extends Model
     public function topicCoverages(): HasMany
     {
         return $this->hasMany(TopicCoverage::class);
+    }
+
+    public function classAssignments(): HasMany
+    {
+        return $this->hasMany(CanonicalTopicClassAssignment::class);
+    }
+
+    public function educationLevels(): BelongsToMany
+    {
+        return $this->belongsToMany(
+            EducationLevel::class,
+            'canonical_topic_class_assignments',
+            'canonical_topic_id',
+            'education_level_id'
+        )->withPivot('depth', 'term_index', 'is_primary')->withTimestamps();
+    }
+
+    public function visualizationBrief(): HasOne
+    {
+        return $this->hasOne(CanonicalTopicVisualizationBrief::class);
     }
 
     public function scopePublished(Builder $query): Builder

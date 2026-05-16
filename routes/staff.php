@@ -3,11 +3,14 @@
 use App\Http\Controllers\Admin\AIModelController;
 use App\Http\Controllers\Admin\AIPlatformSettingsController;
 use App\Http\Controllers\Admin\AnswerController;
+use App\Http\Controllers\Admin\AnswerGenerationController;
 use App\Http\Controllers\Admin\AssessmentSubjectController;
 use App\Http\Controllers\Admin\AssessmentTypeController;
 use App\Http\Controllers\Admin\BulkImportController;
 use App\Http\Controllers\Admin\CalendarTermController;
 use App\Http\Controllers\Admin\CanonicalTopicController;
+use App\Http\Controllers\Admin\CanvasStencilController;
+use App\Http\Controllers\Admin\ContentBlockAssetController;
 use App\Http\Controllers\Admin\ContentBlockController;
 use App\Http\Controllers\Admin\ContentStudioController;
 use App\Http\Controllers\Admin\CourseBlockMappingController;
@@ -30,6 +33,7 @@ use App\Http\Controllers\Admin\InstitutionController;
 use App\Http\Controllers\Admin\InstitutionTypeController;
 use App\Http\Controllers\Admin\QuestionContextController;
 use App\Http\Controllers\Admin\QuestionController;
+use App\Http\Controllers\Admin\QuestionLibraryController;
 use App\Http\Controllers\Admin\QuestionPaperController;
 use App\Http\Controllers\Admin\QuestionSectionController;
 use App\Http\Controllers\Admin\ReviewQueueController;
@@ -72,15 +76,44 @@ Route::middleware(['auth', 'verified', 'staff'])->prefix('admin')->name('admin.'
     Route::post('questions/{question}/contexts/link', [QuestionContextController::class, 'link'])->name('questions.contexts.link');
     Route::delete('questions/{question}/contexts/{questionContext}/unlink', [QuestionContextController::class, 'unlink'])->name('questions.contexts.unlink');
 
-    Route::get('questions', [QuestionController::class, 'index'])->name('questions.index');
-    Route::get('questions/create', [QuestionController::class, 'create'])->name('questions.create');
+    // Diagram-authoring assets (Track 2, Checkpoint 2). One row per drawn diagram;
+    // scope determined by which owner FK is set (content_block / question / question_paper).
+    // Admin asset browser (Polish A.2) — Inertia page for auditing drawn diagrams.
+    Route::get('canvas-assets', [ContentBlockAssetController::class, 'adminIndex'])->name('canvas-assets.index');
+    Route::delete('canvas-assets/{asset}', [ContentBlockAssetController::class, 'adminDestroy'])->name('canvas-assets.destroy');
+
+    Route::post('assets', [ContentBlockAssetController::class, 'store'])->name('assets.store');
+    Route::get('assets/{asset}', [ContentBlockAssetController::class, 'show'])->name('assets.show');
+    Route::put('assets/{asset}', [ContentBlockAssetController::class, 'update'])->name('assets.update');
+    Route::get('assets/{asset}/svg', [ContentBlockAssetController::class, 'svg'])->name('assets.svg');
+
+    // Canvas stencil library (Track 2 CP11). Browse + CRUD + SVG-serve endpoints.
+    // Catalog is the lightweight metadata feed consumed by the Excalidraw modal sidebar.
+    Route::get('canvas-stencils/catalog', [CanvasStencilController::class, 'catalog'])->name('canvas-stencils.catalog');
+    Route::get('canvas-stencils/json', [CanvasStencilController::class, 'jsonIndex'])->name('canvas-stencils.json-index');
+    Route::get('canvas-stencils', [CanvasStencilController::class, 'index'])->name('canvas-stencils.index');
+    Route::post('canvas-stencils', [CanvasStencilController::class, 'store'])->name('canvas-stencils.store');
+    Route::get('canvas-stencils/{canvasStencil}', [CanvasStencilController::class, 'show'])->name('canvas-stencils.show');
+    Route::get('canvas-stencils/{canvasStencil}/svg', [CanvasStencilController::class, 'svg'])->name('canvas-stencils.svg');
+    Route::put('canvas-stencils/{canvasStencil}', [CanvasStencilController::class, 'update'])->name('canvas-stencils.update');
+    Route::delete('canvas-stencils/{canvasStencil}', [CanvasStencilController::class, 'destroy'])->name('canvas-stencils.destroy');
+
+    Route::get('question-library', [QuestionLibraryController::class, 'index'])->name('question-library.index');
+    Route::get('question-library/search', [QuestionLibraryController::class, 'search'])->name('question-library.search');
+    Route::post('question-library/unattached/bulk-assign', [QuestionLibraryController::class, 'bulkAssignUnattached'])->name('question-library.unattached.bulk-assign');
+    Route::get('question-library/courses/{course}', [QuestionLibraryController::class, 'showCourse'])->name('question-library.course');
+
+    Route::redirect('questions', '/admin/question-library')->name('questions.index');
+    Route::redirect('questions/create', '/admin/question-library')->name('questions.create');
     Route::post('questions', [QuestionController::class, 'store'])->name('questions.store');
-    Route::get('questions/{question}/edit', [QuestionController::class, 'edit'])->name('questions.edit');
+    Route::get('questions/{question}/edit', [QuestionController::class, 'legacyEditRedirect'])->name('questions.edit');
     Route::put('questions/{question}', [QuestionController::class, 'update'])->name('questions.update');
     Route::post('questions/reorder', [QuestionController::class, 'reorder'])->name('questions.reorder');
-    Route::get('questions/{question}/answers', [AnswerController::class, 'index'])->name('questions.answers');
+    Route::get('questions/{question}/answers', [QuestionController::class, 'legacyEditRedirect'])->name('questions.answers');
     Route::post('questions/{question}/answers', [AnswerController::class, 'store'])->name('questions.answers.store');
     Route::put('questions/{question}/answers/{answer}', [AnswerController::class, 'update'])->name('questions.answers.update');
+    Route::post('questions/{question}/answers/{depth}/plan', [AnswerGenerationController::class, 'plan'])->name('questions.answers.plan');
+    Route::post('questions/{question}/answers/{depth}/generate', [AnswerGenerationController::class, 'generate'])->name('questions.answers.generate');
     Route::get('courses', [CourseController::class, 'index'])->name('courses.index');
     Route::get('courses/create', [CourseController::class, 'create'])->name('courses.create');
     Route::post('courses', [CourseController::class, 'store'])->name('courses.store');
@@ -129,6 +162,20 @@ Route::middleware(['auth', 'verified', 'staff'])->prefix('admin')->name('admin.'
             ->limit(20)
             ->get(['id', 'title']);
     })->name('api.topics.search');
+    Route::get('api/blocks/search', function (Request $request) {
+        return \App\Models\ContentBlock::query()
+            ->when($request->filled('topic_ids'), function ($q) use ($request) {
+                $q->whereIn('canonical_topic_id', $request->array('topic_ids'));
+            })
+            ->when($request->filled('q'), function ($q) use ($request) {
+                $escaped = str_replace(['%', '_'], ['\%', '\_'], $request->string('q'));
+
+                return $q->where('title', 'ilike', "%{$escaped}%");
+            })
+            ->orderBy('title')
+            ->limit(20)
+            ->get(['id', 'title', 'canonical_topic_id']);
+    })->name('api.blocks.search');
     Route::get('api/institutions/{institution}/courses', function (Institution $institution, Request $request) {
         return InstitutionCourse::query()
             ->where('institution_id', $institution->id)
@@ -225,6 +272,7 @@ Route::middleware(['auth', 'verified', 'staff'])->prefix('admin')->name('admin.'
     Route::get('content-studio/create', [ContentStudioController::class, 'create'])->name('content-studio.create');
     Route::post('content-studio', [ContentStudioController::class, 'store'])->name('content-studio.store');
     Route::get('content-studio/{contentProject}', [ContentStudioController::class, 'show'])->name('content-studio.show');
+    Route::get('content-studio/{contentProject}/preview', [ContentStudioController::class, 'preview'])->name('content-studio.preview');
     Route::put('content-studio/{contentProject}/models', [ContentStudioController::class, 'updateModels'])->name('content-studio.update-models');
     Route::post('content-studio/{contentProject}/research', [ContentStudioController::class, 'runResearch'])->name('content-studio.run-research')->middleware('throttle:10,1');
     Route::post('content-studio/{contentProject}/research/approve', [ContentStudioController::class, 'approveResearch'])->name('content-studio.approve-research');

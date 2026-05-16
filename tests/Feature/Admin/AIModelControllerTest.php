@@ -18,7 +18,7 @@ it('lists AI models for authorized staff', function () {
     $response->assertOk()
         ->assertInertia(fn ($page) => $page
             ->component('admin/ai-models/index')
-            ->has('models.data', 3)
+            ->where('providers', fn ($providers) => collect($providers)->sum(fn ($p) => count($p['models'])) === 3)
         );
 });
 
@@ -32,7 +32,7 @@ it('searches models by name', function () {
 
     $response->assertOk()
         ->assertInertia(fn ($page) => $page
-            ->has('models.data', 1)
+            ->where('providers', fn ($providers) => collect($providers)->sum(fn ($p) => count($p['models'])) === 1)
         );
 });
 

@@ -1,0 +1,2472 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Question Library, Pool Builder & Type Shapes — Prototype</title>
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,400;12..96,500;12..96,600;12..96,700&family=DM+Sans:opsz,wght@9..40,400;9..40,500;9..40,600;9..40,700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+
+<script src="https://cdn.tailwindcss.com"></script>
+
+<style>
+  :root {
+    --bg:            #F7F2E9;
+    --surface:       #FBF8F1;
+    --surface-2:     #F0E9DB;
+    --surface-3:     #E8DFCB;
+    --border:        #E0D6C2;
+    --border-strong: #C9BCA0;
+    --fg:            #1F1A12;
+    --fg-muted:      #6B5E47;
+    --fg-subtle:     #9C8E73;
+
+    --primary:       #1A6B4F;
+    --primary-fg:    #FBF8F1;
+    --primary-soft:  #DCE8DD;
+    --primary-line:  #A6C4A8;
+
+    --honey:         #B8862F;
+    --honey-soft:    #F4E8CC;
+    --honey-line:    #E0C679;
+
+    --ember:         #B85423;
+    --ember-soft:    #F4DCC8;
+
+    --danger:        #9C2A2A;
+    --danger-soft:   #F4DBDB;
+
+    --shadow-sm: 0 1px 0 rgba(31,26,18,0.04), 0 1px 2px rgba(31,26,18,0.04);
+    --shadow-md: 0 4px 12px -4px rgba(31,26,18,0.08), 0 2px 4px rgba(31,26,18,0.04);
+    --shadow-lg: 0 18px 40px -20px rgba(31,26,18,0.18), 0 4px 12px -6px rgba(31,26,18,0.08);
+  }
+  html, body { height: 100%; }
+  body {
+    background: var(--bg);
+    color: var(--fg);
+    font-family: 'DM Sans', system-ui, sans-serif;
+    font-size: 14px;
+    line-height: 1.5;
+    -webkit-font-smoothing: antialiased;
+  }
+  .display { font-family: 'Bricolage Grotesque'; letter-spacing: -0.012em; }
+  .mono    { font-family: 'JetBrains Mono'; }
+
+  ::-webkit-scrollbar { width: 8px; height: 8px; }
+  ::-webkit-scrollbar-thumb { background: var(--border-strong); border-radius: 4px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+
+  /* ==== Reusable primitives (same vocabulary as the v1 prototype) ==== */
+  .pill {
+    display: inline-flex; align-items: center; gap: 6px;
+    padding: 2px 8px 2px 7px;
+    border-radius: 999px;
+    font-size: 11.5px; font-weight: 500;
+    line-height: 1.4; white-space: nowrap;
+  }
+  .pill::before {
+    content: ''; width: 6px; height: 6px; border-radius: 999px;
+    background: currentColor; opacity: 0.85;
+  }
+  .pill-success { background: var(--primary-soft); color: var(--primary); }
+  .pill-warning { background: var(--honey-soft); color: #6B4F18; }
+  .pill-warning::before { background: var(--honey); opacity:1; }
+  .pill-neutral { background: var(--surface-2); color: var(--fg-muted); }
+  .pill-neutral::before { background: var(--fg-subtle); }
+  .pill-danger  { background: var(--danger-soft); color: var(--danger); }
+  .pill-ember   { background: var(--ember-soft); color: var(--ember); }
+  .pill-ember::before { background: var(--ember); opacity:1; }
+
+  /* Question type pills — mirror QuestionTypeBadge variants from architecture-showcase */
+  .qtype-pill {
+    display: inline-flex; align-items: center; gap: 5px;
+    padding: 2px 8px;
+    border-radius: 4px;
+    font-family: 'JetBrains Mono';
+    font-size: 10.5px; font-weight: 500;
+    letter-spacing: 0.04em; text-transform: uppercase; white-space: nowrap;
+  }
+  .qtype-primary { background: var(--primary-soft); color: var(--primary); border: 1px solid var(--primary-line); }
+  .qtype-danger  { background: var(--danger-soft); color: var(--danger); border: 1px solid #D89C9C; }
+  .qtype-reward  { background: var(--honey-soft); color: #6B4F18; border: 1px solid var(--honey-line); }
+  .qtype-solid   { background: var(--fg); color: var(--bg); border: 1px solid var(--fg); }
+  .qtype-neutral { background: var(--surface-3); color: var(--fg-muted); border: 1px solid var(--border-strong); }
+
+  .btn {
+    display: inline-flex; align-items: center; gap: 7px;
+    height: 32px; padding: 0 12px;
+    border-radius: 7px;
+    font-size: 13px; font-weight: 500;
+    border: 1px solid transparent; cursor: pointer;
+    transition: all 0.1s ease;
+    background: var(--surface); color: var(--fg);
+    border-color: var(--border);
+  }
+  .btn:hover { background: var(--surface-2); }
+  .btn-primary { background: var(--fg); color: var(--bg); border-color: transparent; }
+  .btn-primary:hover { background: #2A2418; }
+  .btn-canopy  { background: var(--primary); color: var(--primary-fg); border-color: transparent; }
+  .btn-canopy:hover { background: #155640; }
+  .btn-ghost { background: transparent; border-color: transparent; color: var(--fg-muted); }
+  .btn-ghost:hover { background: var(--surface-2); color: var(--fg); }
+  .btn-sm { height: 28px; padding: 0 10px; font-size: 12px; }
+  .btn-icon { width: 32px; padding: 0; justify-content: center; }
+
+  .sigil {
+    width: 22px; height: 22px;
+    border-radius: 5px;
+    background: var(--fg); color: var(--bg);
+    display: inline-flex; align-items: center; justify-content: center;
+    font-family: 'Bricolage Grotesque'; font-weight: 700;
+    font-size: 12px; letter-spacing: -0.02em;
+  }
+
+  /* ==== Cover ==== */
+  .container-wrap { max-width: 1280px; margin: 0 auto; padding: 0 18px; }
+  .cover {
+    max-width: 1280px; margin: 28px auto 14px; padding: 0 18px;
+    display: flex; align-items: flex-end; justify-content: space-between; gap: 20px;
+  }
+  .cover h1 {
+    font-family: 'Bricolage Grotesque';
+    font-weight: 600;
+    font-size: 32px;
+    letter-spacing: -0.018em;
+    line-height: 1.05;
+  }
+  .cover .sub {
+    margin-top: 8px;
+    color: var(--fg-muted);
+    font-size: 14px;
+    max-width: 720px;
+    line-height: 1.5;
+  }
+  .cover .meta {
+    text-align: right;
+    color: var(--fg-subtle);
+    font-family: 'JetBrains Mono';
+    font-size: 11.5px;
+    line-height: 1.7;
+  }
+  .cover .meta strong { color: var(--fg-muted); font-weight: 500; }
+
+  /* ==== Section labels ==== */
+  .anno {
+    margin: 48px auto 14px;
+    max-width: 1280px;
+    padding: 0 18px;
+    display: flex;
+    align-items: baseline;
+    gap: 14px;
+  }
+  .anno .label {
+    font-family: 'Bricolage Grotesque';
+    font-weight: 600;
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.12em;
+    color: var(--fg-subtle);
+  }
+  .anno .title {
+    font-family: 'Bricolage Grotesque';
+    font-size: 18px;
+    font-weight: 600;
+    letter-spacing: -0.01em;
+  }
+  .anno .desc {
+    font-size: 13px;
+    color: var(--fg-muted);
+    margin-left: auto;
+    max-width: 540px;
+    text-align: right;
+  }
+
+  /* ===================================================== */
+  /* SECTION 1 · LIBRARY LANDING                           */
+  /* ===================================================== */
+
+  .lib-shell {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    overflow: hidden;
+    box-shadow: var(--shadow-lg);
+  }
+  .lib-header {
+    padding: 22px 28px 18px;
+    background: linear-gradient(180deg, var(--surface) 0%, var(--surface-2) 100%);
+    border-bottom: 1px solid var(--border);
+  }
+  .lib-header .ribbon {
+    display: flex; align-items: center; gap: 10px;
+    font-family: 'Bricolage Grotesque';
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.14em;
+    color: var(--fg-subtle);
+    margin-bottom: 6px;
+  }
+  .lib-header h2 {
+    font-family: 'Bricolage Grotesque';
+    font-size: 26px;
+    font-weight: 600;
+    letter-spacing: -0.014em;
+    line-height: 1.1;
+  }
+  .lib-header .h-meta {
+    display: flex; align-items: center; gap: 14px;
+    margin-top: 8px;
+    color: var(--fg-muted);
+    font-size: 13px;
+  }
+  .lib-header .h-meta .dot { width: 3px; height: 3px; border-radius: 999px; background: var(--fg-subtle); }
+
+  /* Toolbar (search + filters + actions) */
+  .lib-toolbar {
+    display: grid;
+    grid-template-columns: 1fr auto;
+    gap: 16px;
+    padding: 14px 28px;
+    border-bottom: 1px solid var(--border);
+    background: var(--surface);
+    align-items: center;
+  }
+  .search-box {
+    display: flex; align-items: center; gap: 10px;
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 8px 12px;
+    color: var(--fg-subtle);
+    font-size: 13px;
+  }
+  .search-box .kbd {
+    margin-left: auto;
+    font-family: 'JetBrains Mono';
+    font-size: 11px;
+    color: var(--fg-subtle);
+    background: var(--surface-2);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    padding: 1px 6px;
+  }
+  .filters-row {
+    display: flex; align-items: center; gap: 8px;
+  }
+  .filter-chip {
+    display: inline-flex; align-items: center; gap: 6px;
+    padding: 5px 10px 5px 11px;
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    font-size: 12px;
+    color: var(--fg-muted);
+    cursor: pointer;
+  }
+  .filter-chip:hover { border-color: var(--border-strong); color: var(--fg); }
+  .filter-chip[data-active="true"] {
+    background: var(--fg); color: var(--bg); border-color: var(--fg);
+  }
+
+  /* Container-type tabs (Papers / Course pools / Unattached) */
+  .lib-tabs {
+    display: flex;
+    padding: 0 28px;
+    gap: 4px;
+    background: var(--surface);
+    border-bottom: 1px solid var(--border);
+  }
+  .lib-tab {
+    display: inline-flex; align-items: center; gap: 8px;
+    padding: 12px 14px 13px;
+    font-size: 13px; font-weight: 500;
+    color: var(--fg-muted);
+    cursor: pointer;
+    border-bottom: 2px solid transparent;
+    margin-bottom: -1px;
+  }
+  .lib-tab:hover { color: var(--fg); }
+  .lib-tab[data-active="true"] {
+    color: var(--fg);
+    border-bottom-color: var(--fg);
+  }
+  .lib-tab .lt-count {
+    font-family: 'JetBrains Mono';
+    font-size: 11px;
+    color: var(--fg-subtle);
+  }
+  .lib-tab[data-active="true"] .lt-count { color: var(--fg); }
+
+  /* Container card grid */
+  .lib-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 14px;
+    padding: 22px 28px 32px;
+  }
+  .container-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 16px 18px 14px;
+    cursor: pointer;
+    transition: all 0.12s ease;
+    position: relative;
+    box-shadow: var(--shadow-sm);
+  }
+  .container-card:hover {
+    border-color: var(--border-strong);
+    box-shadow: var(--shadow-md);
+    transform: translateY(-1px);
+  }
+  .cc-top {
+    display: flex; align-items: flex-start; justify-content: space-between;
+    gap: 12px; margin-bottom: 6px;
+  }
+  .cc-top .cc-id {
+    font-family: 'JetBrains Mono';
+    font-size: 11px;
+    color: var(--fg-subtle);
+    margin-bottom: 4px;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+  }
+  .cc-top .cc-title {
+    font-family: 'Bricolage Grotesque';
+    font-size: 16px;
+    font-weight: 600;
+    line-height: 1.25;
+    letter-spacing: -0.005em;
+    color: var(--fg);
+  }
+  .cc-top .cc-sub {
+    font-size: 12px;
+    color: var(--fg-muted);
+    margin-top: 2px;
+  }
+  .cc-numbers {
+    display: grid;
+    grid-template-columns: auto auto auto auto;
+    gap: 16px;
+    align-items: end;
+    margin-top: 12px;
+    padding-top: 12px;
+    border-top: 1px dashed var(--border);
+  }
+  .cc-numbers .stat .v {
+    font-family: 'Bricolage Grotesque';
+    font-size: 18px;
+    font-weight: 600;
+    line-height: 1;
+    color: var(--fg);
+  }
+  .cc-numbers .stat .l {
+    font-family: 'JetBrains Mono';
+    font-size: 10px;
+    color: var(--fg-subtle);
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    margin-top: 4px;
+  }
+  .cc-bar {
+    margin-top: 12px;
+    height: 4px;
+    background: var(--surface-2);
+    border-radius: 999px;
+    overflow: hidden;
+    display: flex;
+  }
+  .cc-bar .seg-pub { background: var(--primary); }
+  .cc-bar .seg-drf { background: var(--honey); }
+  .cc-bar .seg-emp { background: var(--surface-3); }
+  .cc-foot {
+    display: flex; align-items: center; justify-content: space-between;
+    margin-top: 10px;
+    font-family: 'JetBrains Mono';
+    font-size: 11px;
+    color: var(--fg-subtle);
+  }
+  .cc-foot .last { display: inline-flex; align-items: center; gap: 6px; }
+
+  /* container-card flavor accents */
+  .container-card[data-flavor="paper"]::before {
+    content: '';
+    position: absolute; left: 0; top: 14px; bottom: 14px;
+    width: 3px;
+    background: var(--fg);
+    border-radius: 0 3px 3px 0;
+  }
+  .container-card[data-flavor="course"]::before {
+    content: '';
+    position: absolute; left: 0; top: 14px; bottom: 14px;
+    width: 3px;
+    background: var(--primary);
+    border-radius: 0 3px 3px 0;
+  }
+  .container-card[data-flavor="exam"]::before {
+    content: '';
+    position: absolute; left: 0; top: 14px; bottom: 14px;
+    width: 3px;
+    background: var(--ember);
+    border-radius: 0 3px 3px 0;
+  }
+  .container-card[data-flavor="unattached"] {
+    background: repeating-linear-gradient(135deg, var(--surface) 0 8px, #FAF4E5 8px 16px);
+    border-color: var(--honey-line);
+  }
+
+  /* ===================================================== */
+  /* SECTION 2 · POOL BUILDER VARIANT                      */
+  /* ===================================================== */
+
+  .pool-shell {
+    display: grid;
+    grid-template-columns: 320px 1fr 380px;
+    height: 660px;
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    overflow: hidden;
+    background: var(--surface);
+    box-shadow: var(--shadow-lg);
+  }
+  .pool-tree {
+    border-right: 1px solid var(--border);
+    background: var(--surface);
+    display: flex; flex-direction: column;
+    min-height: 0;
+  }
+  .pool-tree-header {
+    padding: 14px 16px 10px;
+    border-bottom: 1px solid var(--border);
+    background: var(--surface-2);
+  }
+  .pool-tree-header h3 {
+    font-family: 'Bricolage Grotesque';
+    font-weight: 600;
+    font-size: 14.5px;
+  }
+  .pool-tree-header .sub {
+    font-size: 11.5px; color: var(--fg-subtle);
+    margin-top: 2px;
+    font-family: 'JetBrains Mono';
+  }
+  .pool-tree-scroll {
+    overflow-y: auto;
+    padding: 6px 6px 24px;
+    flex: 1;
+  }
+
+  .topic-group {
+    margin-top: 10px;
+  }
+  .topic-group .tg-head {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 8px 12px 6px 14px;
+    color: var(--fg-subtle);
+    font-family: 'Bricolage Grotesque';
+    font-size: 11.5px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+  }
+  .topic-group .tg-head .tg-count {
+    font-family: 'JetBrains Mono';
+    font-size: 10.5px;
+    letter-spacing: 0.04em;
+  }
+  .topic-group .tg-head .tg-chev {
+    color: var(--fg-subtle);
+    font-size: 10px;
+    margin-right: 6px;
+  }
+
+  .pq-row {
+    display: grid;
+    grid-template-columns: 1fr auto;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 12px;
+    border-radius: 7px;
+    margin: 1px 4px;
+    cursor: pointer;
+    transition: background 0.1s ease;
+    position: relative;
+  }
+  .pq-row:hover { background: var(--surface-2); }
+  .pq-row[data-state="active"] {
+    background: var(--bg);
+    box-shadow: 0 0 0 1px var(--border-strong);
+  }
+  .pq-row[data-state="active"]::before {
+    content: ''; position: absolute;
+    left: -4px; top: 8px; bottom: 8px;
+    width: 3px; background: var(--fg); border-radius: 0 3px 3px 0;
+  }
+  .pq-row .pq-body {
+    display: flex; flex-direction: column; gap: 3px;
+    min-width: 0;
+  }
+  .pq-row .pq-text {
+    font-size: 13px;
+    line-height: 1.35;
+    overflow: hidden; text-overflow: ellipsis;
+    display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical;
+  }
+  .pq-row[data-state="active"] .pq-text { font-weight: 500; }
+  .pq-row .pq-meta {
+    display: flex; align-items: center; gap: 6px;
+    font-size: 11px; color: var(--fg-subtle);
+    font-family: 'JetBrains Mono';
+  }
+
+  .dots {
+    display: inline-flex; align-items: center; gap: 3px;
+    padding: 3px 6px;
+    border-radius: 999px;
+    background: var(--surface-2);
+    border: 1px solid var(--border);
+  }
+  .dots .dot {
+    width: 6px; height: 6px; border-radius: 999px; background: var(--surface-3);
+  }
+  .dots .dot[data-filled="true"]  { background: var(--primary); }
+  .dots .dot[data-filled="draft"] { background: var(--honey); }
+
+  /* ===================================================== */
+  /* SECTION 3 · TYPE AUTHORING SHAPES                     */
+  /* ===================================================== */
+
+  .shapes-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 18px;
+  }
+  .shape-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    overflow: hidden;
+    box-shadow: var(--shadow-sm);
+  }
+  .shape-card-head {
+    display: flex; align-items: center; justify-content: space-between;
+    gap: 10px;
+    padding: 12px 16px;
+    background: var(--surface-2);
+    border-bottom: 1px solid var(--border);
+  }
+  .shape-card-head .left {
+    display: flex; align-items: center; gap: 10px;
+    min-width: 0;
+  }
+  .shape-card-head .name {
+    font-family: 'Bricolage Grotesque';
+    font-weight: 600;
+    font-size: 14.5px;
+    letter-spacing: -0.005em;
+  }
+  .shape-card-head .types {
+    font-family: 'JetBrains Mono';
+    font-size: 11px;
+    color: var(--fg-subtle);
+    margin-top: 2px;
+  }
+  .shape-card-body {
+    padding: 14px 16px 16px;
+    background: var(--bg);
+  }
+  .shape-card-body .stem {
+    font-size: 12.5px;
+    color: var(--fg);
+    margin-bottom: 10px;
+    padding: 8px 10px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    line-height: 1.4;
+  }
+  .shape-card-body .stem .lbl {
+    display: block;
+    font-family: 'JetBrains Mono';
+    font-size: 9.5px;
+    color: var(--fg-subtle);
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    margin-bottom: 3px;
+  }
+
+  /* MCQ option row */
+  .opt-row {
+    display: grid;
+    grid-template-columns: 22px 1fr auto auto;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 10px;
+    border: 1px solid var(--border);
+    background: var(--surface);
+    border-radius: 7px;
+    margin-bottom: 6px;
+  }
+  .opt-row[data-correct="true"] {
+    border-color: var(--primary-line);
+    background: #F0F6F1;
+  }
+  .opt-row .opt-key {
+    width: 20px; height: 20px;
+    border-radius: 4px;
+    display: inline-flex; align-items: center; justify-content: center;
+    font-family: 'JetBrains Mono';
+    font-size: 11px;
+    font-weight: 600;
+    background: var(--surface-2);
+    color: var(--fg-muted);
+    border: 1px solid var(--border);
+  }
+  .opt-row[data-correct="true"] .opt-key {
+    background: var(--primary);
+    color: var(--bg);
+    border-color: var(--primary);
+  }
+  .opt-row .opt-text {
+    font-size: 12.5px;
+    color: var(--fg);
+  }
+  .opt-row .opt-mark {
+    font-size: 10.5px;
+    color: var(--primary);
+    font-family: 'JetBrains Mono';
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+  }
+  .opt-row .opt-actions {
+    display: inline-flex; gap: 2px;
+    color: var(--fg-subtle);
+  }
+
+  /* Boolean row */
+  .bool-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+  }
+  .bool-tile {
+    display: flex; align-items: center; justify-content: center;
+    gap: 8px;
+    padding: 14px 10px;
+    border: 1px solid var(--border);
+    background: var(--surface);
+    border-radius: 7px;
+    font-family: 'Bricolage Grotesque';
+    font-weight: 600;
+    color: var(--fg-muted);
+    cursor: pointer;
+  }
+  .bool-tile[data-correct="true"] {
+    background: var(--primary-soft);
+    border-color: var(--primary-line);
+    color: var(--primary);
+  }
+  .bool-tile .tile-glyph {
+    width: 14px; height: 14px;
+  }
+
+  /* Inline blank stem */
+  .cloze-stem {
+    font-size: 13px;
+    line-height: 1.7;
+    padding: 12px 14px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 7px;
+    margin-bottom: 10px;
+  }
+  .cloze-blank {
+    display: inline-block;
+    min-width: 64px;
+    padding: 0 8px;
+    margin: 0 2px;
+    border-bottom: 2px solid var(--primary);
+    background: var(--primary-soft);
+    color: var(--primary);
+    font-family: 'JetBrains Mono';
+    font-size: 12px;
+    border-radius: 3px 3px 0 0;
+    vertical-align: baseline;
+    cursor: pointer;
+  }
+  .cloze-blank .num {
+    font-size: 9px;
+    background: var(--primary);
+    color: var(--bg);
+    padding: 0 4px;
+    border-radius: 999px;
+    margin-right: 4px;
+  }
+  .blanks-list {
+    display: flex; flex-direction: column; gap: 6px;
+  }
+  .blank-item {
+    display: grid;
+    grid-template-columns: auto 1fr auto;
+    gap: 10px;
+    align-items: center;
+    padding: 8px 12px;
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    background: var(--surface);
+    font-size: 12px;
+  }
+  .blank-item .num {
+    background: var(--primary);
+    color: var(--bg);
+    padding: 1px 7px;
+    border-radius: 999px;
+    font-family: 'JetBrains Mono';
+    font-size: 10.5px;
+    font-weight: 600;
+  }
+  .blank-item .accepted {
+    display: flex; flex-wrap: wrap; gap: 4px;
+  }
+  .accept-chip {
+    font-family: 'JetBrains Mono';
+    font-size: 11px;
+    background: var(--surface-2);
+    color: var(--fg-muted);
+    padding: 2px 7px;
+    border-radius: 3px;
+  }
+
+  /* Pair / matching */
+  .pair-grid {
+    display: grid;
+    grid-template-columns: 1fr 22px 1fr;
+    gap: 6px 8px;
+    align-items: stretch;
+  }
+  .pair-cell {
+    padding: 8px 10px;
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    background: var(--surface);
+    font-size: 12.5px;
+    display: flex; align-items: center;
+  }
+  .pair-cell .key {
+    font-family: 'JetBrains Mono';
+    font-size: 10.5px;
+    color: var(--fg-subtle);
+    margin-right: 7px;
+    background: var(--surface-2);
+    border-radius: 3px;
+    padding: 1px 5px;
+  }
+  .pair-arrow {
+    display: flex; align-items: center; justify-content: center;
+    color: var(--primary);
+    font-size: 14px;
+  }
+  .ord-list .ord-row {
+    display: grid;
+    grid-template-columns: 22px 24px 1fr auto;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 10px;
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    background: var(--surface);
+    margin-bottom: 5px;
+    font-size: 12.5px;
+  }
+  .ord-list .ord-row .grip {
+    color: var(--fg-subtle);
+    cursor: grab;
+  }
+  .ord-list .ord-row .ord-pos {
+    font-family: 'JetBrains Mono';
+    font-size: 11px;
+    background: var(--fg);
+    color: var(--bg);
+    padding: 2px 7px;
+    border-radius: 4px;
+    text-align: center;
+  }
+
+  /* Numeric / Calculation */
+  .numeric-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    gap: 8px;
+  }
+  .numeric-field {
+    padding: 8px 10px;
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    background: var(--surface);
+  }
+  .numeric-field .l {
+    display: block;
+    font-family: 'JetBrains Mono';
+    font-size: 9.5px;
+    color: var(--fg-subtle);
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    margin-bottom: 4px;
+  }
+  .numeric-field .v {
+    font-family: 'JetBrains Mono';
+    font-size: 14px;
+    color: var(--fg);
+    font-weight: 500;
+  }
+  .calc-steps {
+    margin-top: 10px;
+    padding: 10px 12px;
+    border: 1px dashed var(--border-strong);
+    border-radius: 6px;
+    background: var(--surface);
+  }
+  .calc-steps .l {
+    font-family: 'Bricolage Grotesque';
+    font-size: 11px;
+    color: var(--fg-subtle);
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    margin-bottom: 6px;
+  }
+  .calc-steps ol {
+    margin: 0; padding-left: 22px;
+    font-size: 12.5px;
+    color: var(--fg);
+    line-height: 1.6;
+  }
+  .calc-steps .formula {
+    display: inline-block;
+    font-family: 'JetBrains Mono';
+    background: var(--surface-2);
+    padding: 1px 6px;
+    border-radius: 3px;
+  }
+
+  /* Diagram-label authoring */
+  .diagram-canvas {
+    position: relative;
+    background: #fdfaf3;
+    border: 1px solid var(--border);
+    border-radius: 7px;
+    overflow: hidden;
+  }
+  .hotspot {
+    position: absolute;
+    width: 22px; height: 22px;
+    border-radius: 999px;
+    background: var(--primary);
+    color: var(--bg);
+    display: inline-flex; align-items: center; justify-content: center;
+    font-family: 'JetBrains Mono';
+    font-size: 11px;
+    font-weight: 600;
+    transform: translate(-50%, -50%);
+    box-shadow: 0 0 0 4px rgba(26,107,79,0.16);
+    cursor: pointer;
+  }
+  .label-list {
+    margin-top: 10px;
+    display: flex; flex-direction: column; gap: 6px;
+  }
+  .label-item {
+    display: grid;
+    grid-template-columns: 22px 1fr auto;
+    gap: 10px;
+    align-items: center;
+    padding: 7px 10px;
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    background: var(--surface);
+    font-size: 12px;
+  }
+  .label-item .num {
+    width: 22px; height: 22px;
+    border-radius: 999px;
+    background: var(--primary);
+    color: var(--bg);
+    display: inline-flex; align-items: center; justify-content: center;
+    font-family: 'JetBrains Mono';
+    font-size: 11px;
+    font-weight: 600;
+  }
+
+  /* Group */
+  .group-children {
+    display: flex; flex-direction: column; gap: 6px;
+  }
+  .group-child {
+    display: grid;
+    grid-template-columns: auto 1fr auto;
+    gap: 10px;
+    align-items: center;
+    padding: 8px 10px 8px 12px;
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    background: var(--surface);
+    font-size: 12.5px;
+  }
+  .group-child .ch-label {
+    font-family: 'JetBrains Mono';
+    font-size: 11px;
+    color: var(--fg-subtle);
+  }
+
+  /* Free-form rubric */
+  .rubric {
+    margin-top: 10px;
+    border: 1px dashed var(--border-strong);
+    border-radius: 6px;
+    background: var(--surface);
+    padding: 10px 12px;
+  }
+  .rubric .l {
+    font-family: 'Bricolage Grotesque';
+    font-size: 11px;
+    color: var(--fg-subtle);
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    margin-bottom: 6px;
+  }
+  .rubric-row {
+    display: grid;
+    grid-template-columns: 30px 1fr 50px;
+    gap: 8px;
+    align-items: center;
+    padding: 5px 0;
+    font-size: 12.5px;
+    border-bottom: 1px dashed var(--border);
+  }
+  .rubric-row:last-child { border-bottom: 0; }
+  .rubric-row .pts {
+    font-family: 'JetBrains Mono';
+    font-size: 11px;
+    color: var(--primary);
+    text-align: right;
+  }
+
+  /* ===================================================== */
+  /* SECTION 4 · ANSWERS TAB STRUCTURAL SPLIT              */
+  /* ===================================================== */
+
+  .answers-split {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    overflow: hidden;
+    box-shadow: var(--shadow-lg);
+  }
+  .as-head {
+    padding: 14px 18px;
+    background: var(--surface-2);
+    border-bottom: 1px solid var(--border);
+    display: flex; align-items: center; justify-content: space-between;
+  }
+  .as-head .label {
+    font-family: 'Bricolage Grotesque';
+    font-weight: 600;
+    font-size: 12px;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--fg-subtle);
+  }
+  .as-body {
+    padding: 18px 18px 22px;
+    background: var(--bg);
+  }
+  .as-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    margin-bottom: 14px;
+    box-shadow: var(--shadow-sm);
+    overflow: hidden;
+  }
+  .as-card-head {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 12px 16px;
+    border-bottom: 1px solid var(--border);
+    background: linear-gradient(180deg, var(--surface) 0%, var(--surface-2) 100%);
+  }
+  .as-card-head .left {
+    display: flex; align-items: center; gap: 10px;
+  }
+  .as-card-head .title {
+    font-family: 'Bricolage Grotesque';
+    font-weight: 600;
+    font-size: 14px;
+    color: var(--fg);
+  }
+  .as-card-head .sub {
+    font-size: 11.5px;
+    color: var(--fg-subtle);
+    font-family: 'JetBrains Mono';
+    margin-top: 1px;
+  }
+  .as-card-body {
+    padding: 14px 16px;
+  }
+  .depth-icon {
+    width: 26px; height: 26px;
+    border-radius: 6px;
+    display: inline-flex; align-items: center; justify-content: center;
+    font-family: 'JetBrains Mono';
+    font-size: 11px;
+    font-weight: 600;
+  }
+  .depth-quick { background: var(--primary-soft); color: var(--primary); border: 1px solid var(--primary-line); }
+  .depth-standard { background: var(--honey-soft); color: #6B4F18; border: 1px solid var(--honey-line); }
+  .depth-deep { background: var(--fg); color: var(--bg); }
+  .correct-icon {
+    background: var(--primary); color: var(--bg);
+    width: 26px; height: 26px;
+    border-radius: 6px;
+    display: inline-flex; align-items: center; justify-content: center;
+  }
+
+  /* Inset preview of MCQ option as the correct response */
+  .correct-mcq {
+    display: flex; flex-direction: column; gap: 6px;
+  }
+  .correct-mcq .row {
+    display: grid;
+    grid-template-columns: 22px 1fr auto;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 12px;
+    border: 1px solid var(--border);
+    border-radius: 7px;
+    background: var(--bg);
+    font-size: 12.5px;
+  }
+  .correct-mcq .row[data-correct="true"] {
+    border-color: var(--primary-line);
+    background: #F0F6F1;
+  }
+  .correct-mcq .row .key {
+    width: 20px; height: 20px;
+    border-radius: 4px;
+    display: inline-flex; align-items: center; justify-content: center;
+    font-family: 'JetBrains Mono';
+    font-size: 11px;
+    font-weight: 600;
+    background: var(--surface-2);
+    color: var(--fg-muted);
+    border: 1px solid var(--border);
+  }
+  .correct-mcq .row[data-correct="true"] .key {
+    background: var(--primary);
+    color: var(--bg);
+    border-color: var(--primary);
+  }
+  .correct-mcq .row .opt-explain {
+    margin-top: 2px;
+    font-size: 11.5px;
+    color: var(--fg-muted);
+    grid-column: 2 / -1;
+    line-height: 1.5;
+  }
+
+  /* mini-prose */
+  .mini-prose {
+    font-size: 13px;
+    line-height: 1.6;
+    color: var(--fg-muted);
+  }
+  .mini-prose strong { color: var(--fg); font-weight: 600; }
+
+  /* footer */
+  .doc-foot {
+    text-align: center;
+    padding: 28px 18px 40px;
+    color: var(--fg-subtle);
+    font-family: 'JetBrains Mono';
+    font-size: 11.5px;
+    letter-spacing: 0.04em;
+  }
+</style>
+</head>
+<body>
+
+<!-- ============= COVER ============= -->
+<section class="cover">
+  <div>
+    <div style="display:flex; align-items:center; gap:10px; margin-bottom:8px;">
+      <span class="sigil">Q</span>
+      <span class="display" style="font-size:12px; text-transform:uppercase; letter-spacing:0.14em; color:var(--fg-subtle);">
+        Skoolpad · Library reshape · Pool builder · Type shapes
+      </span>
+    </div>
+    <h1>From a flat 2,000-row index<br/>to a container-first library.</h1>
+    <p class="sub">
+      Questions don't exist in a vacuum — they belong to a paper or to a course pool. This prototype reshapes the Library landing, the pool-builder variant for paperless containers, the seven authoring shapes for the Question tab, and the Answers tab's structural split (correct response + explanation depths).
+    </p>
+  </div>
+  <div class="meta">
+    <div><strong>Sibling of</strong>&nbsp;&nbsp;question-builder-redesign.html</div>
+    <div><strong>Route</strong>&nbsp;&nbsp;/admin/question-papers/{paper}/build/preview</div>
+    <div><strong>Live data</strong>&nbsp;&nbsp;80 q · 4 papers · 14 in pools · 24 unattached</div>
+    <div><strong>Aesthetic</strong>&nbsp;&nbsp;Warm Editorial</div>
+  </div>
+</section>
+
+<!-- ============= SECTION 1 · LIBRARY LANDING ============= -->
+<div class="anno">
+  <span class="label">section 01 · library landing</span>
+  <span class="title">Container browser · papers, course pools, unattached inbox</span>
+  <span class="desc">Replaces <code style="font-family:'JetBrains Mono'; font-size:11px;">/admin/questions</code> flat index. Three tabs reflect the schema's three legitimate container states. The flat list survives only as a global ⌘K search.</span>
+</div>
+
+<div class="container-wrap">
+  <div class="lib-shell">
+    <!-- Header -->
+    <header class="lib-header">
+      <div class="ribbon">
+        <span class="sigil">Q</span>
+        <span>Question Library</span>
+        <span style="color:var(--fg-subtle);">·</span>
+        <span style="text-transform:none; letter-spacing:0; font-family:'DM Sans'; font-size:13px;">browse by container, not by question</span>
+      </div>
+      <h2>Where do you want to author today?</h2>
+      <div class="h-meta">
+        <span><strong style="color:var(--fg);">80</strong> questions</span>
+        <span class="dot"></span>
+        <span><strong style="color:var(--fg);">4</strong> papers · <strong style="color:var(--fg);">14</strong> course-pool questions · <strong style="color:var(--fg);">24</strong> unattached</span>
+        <span class="dot"></span>
+        <span style="font-family:'JetBrains Mono'; font-size:11.5px;">last activity 14m ago — Q3(a) standard answer edited by you</span>
+      </div>
+    </header>
+
+    <!-- Toolbar -->
+    <div class="lib-toolbar">
+      <div class="search-box">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/></svg>
+        <span>Search across all containers — paper title, question stem, topic, course code…</span>
+        <span class="kbd">⌘ K</span>
+      </div>
+      <div class="filters-row">
+        <span class="filter-chip" data-active="true">All status</span>
+        <span class="filter-chip">Published</span>
+        <span class="filter-chip">Draft</span>
+        <span class="filter-chip" style="border-style:dashed;">+ Filter</span>
+      </div>
+    </div>
+
+    <!-- Container-type tabs -->
+    <div class="lib-tabs">
+      <div class="lib-tab" data-active="true">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6"/></svg>
+        Papers <span class="lt-count">4</span>
+      </div>
+      <div class="lib-tab">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M2 3h20v18H2zM2 9h20"/></svg>
+        Course pools <span class="lt-count">3</span>
+      </div>
+      <div class="lib-tab">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 4l3 3-3 3M12 4l3 3-3 3M19 4l-3 3 3 3"/></svg>
+        Exam-subject pools <span class="lt-count">0</span>
+      </div>
+      <div class="lib-tab" style="margin-left:auto;">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2v20M2 12h20"/></svg>
+        Unattached inbox <span class="lt-count" style="color:var(--honey);">24</span>
+      </div>
+      <div style="display:flex; align-items:center; gap:8px; padding: 8px 0;">
+        <button class="btn btn-primary btn-sm" style="height:28px;">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12h14"/></svg>
+          New paper
+        </button>
+      </div>
+    </div>
+
+    <!-- Container card grid (showing PAPERS tab active) -->
+    <div class="lib-grid">
+
+      <!-- Paper 1 -->
+      <div class="container-card" data-flavor="paper">
+        <div class="cc-top">
+          <div style="min-width:0;">
+            <div class="cc-id">CSC302 · 2024</div>
+            <div class="cc-title">Computer Architecture · Final Exam</div>
+            <div class="cc-sub">University of Lagos · Tertiary · Final · 100 marks</div>
+          </div>
+          <span class="pill pill-success">Published</span>
+        </div>
+        <div class="cc-numbers">
+          <div class="stat"><div class="v">17</div><div class="l">Questions</div></div>
+          <div class="stat"><div class="v">3</div><div class="l">Sections</div></div>
+          <div class="stat"><div class="v">6</div><div class="l">Contexts</div></div>
+          <div class="stat"><div class="v" style="color:var(--primary);">42 / 51</div><div class="l">Answers filled</div></div>
+        </div>
+        <div class="cc-bar">
+          <div class="seg-pub" style="flex: 0 0 60%;"></div>
+          <div class="seg-drf" style="flex: 0 0 22%;"></div>
+          <div class="seg-emp" style="flex: 0 0 18%;"></div>
+        </div>
+        <div class="cc-foot">
+          <span class="last">
+            <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg>
+            edited 14m ago · you
+          </span>
+          <span>open builder →</span>
+        </div>
+      </div>
+
+      <!-- Paper 2 -->
+      <div class="container-card" data-flavor="paper">
+        <div class="cc-top">
+          <div>
+            <div class="cc-id">MAT201 · 2023</div>
+            <div class="cc-title">Linear Algebra · Mid-Semester</div>
+            <div class="cc-sub">University of Lagos · Tertiary · Mid · 50 marks</div>
+          </div>
+          <span class="pill pill-warning">In review</span>
+        </div>
+        <div class="cc-numbers">
+          <div class="stat"><div class="v">12</div><div class="l">Questions</div></div>
+          <div class="stat"><div class="v">2</div><div class="l">Sections</div></div>
+          <div class="stat"><div class="v">3</div><div class="l">Contexts</div></div>
+          <div class="stat"><div class="v" style="color:var(--honey);">22 / 36</div><div class="l">Answers filled</div></div>
+        </div>
+        <div class="cc-bar">
+          <div class="seg-pub" style="flex: 0 0 38%;"></div>
+          <div class="seg-drf" style="flex: 0 0 24%;"></div>
+          <div class="seg-emp" style="flex: 0 0 38%;"></div>
+        </div>
+        <div class="cc-foot">
+          <span class="last">edited 2h ago · A. Adekunle</span>
+          <span>open builder →</span>
+        </div>
+      </div>
+
+      <!-- Paper 3 -->
+      <div class="container-card" data-flavor="paper">
+        <div class="cc-top">
+          <div>
+            <div class="cc-id">PHY101 · 2024</div>
+            <div class="cc-title">Mechanics · First Continuous Assessment</div>
+            <div class="cc-sub">University of Ibadan · Tertiary · CA · 30 marks</div>
+          </div>
+          <span class="pill pill-neutral">Draft</span>
+        </div>
+        <div class="cc-numbers">
+          <div class="stat"><div class="v">8</div><div class="l">Questions</div></div>
+          <div class="stat"><div class="v">1</div><div class="l">Section</div></div>
+          <div class="stat"><div class="v">2</div><div class="l">Contexts</div></div>
+          <div class="stat"><div class="v" style="color:var(--fg-subtle);">5 / 24</div><div class="l">Answers filled</div></div>
+        </div>
+        <div class="cc-bar">
+          <div class="seg-pub" style="flex: 0 0 12%;"></div>
+          <div class="seg-drf" style="flex: 0 0 8%;"></div>
+          <div class="seg-emp" style="flex: 0 0 80%;"></div>
+        </div>
+        <div class="cc-foot">
+          <span class="last">edited yesterday · B. Eze</span>
+          <span>open builder →</span>
+        </div>
+      </div>
+
+      <!-- Paper 4 -->
+      <div class="container-card" data-flavor="paper">
+        <div class="cc-top">
+          <div>
+            <div class="cc-id">JAMB · 2023</div>
+            <div class="cc-title">English Language · Past Paper</div>
+            <div class="cc-sub">JAMB · Exam-prep · Past paper · 60 marks</div>
+          </div>
+          <span class="pill pill-success">Published</span>
+        </div>
+        <div class="cc-numbers">
+          <div class="stat"><div class="v">5</div><div class="l">Questions</div></div>
+          <div class="stat"><div class="v">1</div><div class="l">Section</div></div>
+          <div class="stat"><div class="v">1</div><div class="l">Context</div></div>
+          <div class="stat"><div class="v" style="color:var(--primary);">15 / 15</div><div class="l">Answers filled</div></div>
+        </div>
+        <div class="cc-bar">
+          <div class="seg-pub" style="flex: 0 0 100%;"></div>
+        </div>
+        <div class="cc-foot">
+          <span class="last">edited 6 days ago · OCR import</span>
+          <span>open builder →</span>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<!-- COURSE POOLS — second view (preview of inactive tab content) -->
+<div class="anno">
+  <span class="label">section 01b · course pools tab</span>
+  <span class="title">Same shell, course-shaped containers</span>
+  <span class="desc">Course pools surface platform-curated questions that aren't tied to a paper. 14 such questions exist in the live system today.</span>
+</div>
+
+<div class="container-wrap">
+  <div class="lib-shell">
+    <header class="lib-header" style="padding: 16px 28px 14px;">
+      <div class="ribbon">
+        <span class="sigil" style="background:var(--primary);">C</span>
+        <span style="text-transform:none; letter-spacing:0; font-family:'DM Sans'; font-size:13.5px; color:var(--fg);"><strong style="font-weight:600;">Course pools</strong> · platform-curated questions attached to a course, not a paper</span>
+      </div>
+    </header>
+
+    <div class="lib-grid" style="padding: 18px 28px 24px;">
+
+      <div class="container-card" data-flavor="course">
+        <div class="cc-top">
+          <div>
+            <div class="cc-id">CSC302</div>
+            <div class="cc-title">Computer Architecture · practice pool</div>
+            <div class="cc-sub">University of Lagos · 8 questions · grouped by 3 canonical topics</div>
+          </div>
+          <span class="pill pill-success">Active</span>
+        </div>
+        <div class="cc-numbers">
+          <div class="stat"><div class="v">8</div><div class="l">Questions</div></div>
+          <div class="stat"><div class="v">3</div><div class="l">Topics</div></div>
+          <div class="stat"><div class="v" style="color:var(--primary);">21 / 24</div><div class="l">Answers filled</div></div>
+          <div class="stat"><div class="v">—</div><div class="l">No paper</div></div>
+        </div>
+        <div class="cc-bar">
+          <div class="seg-pub" style="flex: 0 0 70%;"></div>
+          <div class="seg-drf" style="flex: 0 0 18%;"></div>
+          <div class="seg-emp" style="flex: 0 0 12%;"></div>
+        </div>
+        <div class="cc-foot">
+          <span class="last">edited 3d ago · A. Adekunle</span>
+          <span>open pool builder →</span>
+        </div>
+      </div>
+
+      <div class="container-card" data-flavor="course">
+        <div class="cc-top">
+          <div>
+            <div class="cc-id">MAT201</div>
+            <div class="cc-title">Linear Algebra · practice pool</div>
+            <div class="cc-sub">University of Lagos · 4 questions · grouped by 2 canonical topics</div>
+          </div>
+          <span class="pill pill-success">Active</span>
+        </div>
+        <div class="cc-numbers">
+          <div class="stat"><div class="v">4</div><div class="l">Questions</div></div>
+          <div class="stat"><div class="v">2</div><div class="l">Topics</div></div>
+          <div class="stat"><div class="v" style="color:var(--honey);">8 / 12</div><div class="l">Answers filled</div></div>
+          <div class="stat"><div class="v">—</div><div class="l">No paper</div></div>
+        </div>
+        <div class="cc-bar">
+          <div class="seg-pub" style="flex: 0 0 50%;"></div>
+          <div class="seg-drf" style="flex: 0 0 17%;"></div>
+          <div class="seg-emp" style="flex: 0 0 33%;"></div>
+        </div>
+        <div class="cc-foot">
+          <span class="last">edited 1w ago · B. Eze</span>
+          <span>open pool builder →</span>
+        </div>
+      </div>
+
+      <div class="container-card" data-flavor="course">
+        <div class="cc-top">
+          <div>
+            <div class="cc-id">CSC205</div>
+            <div class="cc-title">Data Structures · practice pool</div>
+            <div class="cc-sub">University of Ibadan · 2 questions · 1 canonical topic</div>
+          </div>
+          <span class="pill pill-neutral">Sparse</span>
+        </div>
+        <div class="cc-numbers">
+          <div class="stat"><div class="v">2</div><div class="l">Questions</div></div>
+          <div class="stat"><div class="v">1</div><div class="l">Topic</div></div>
+          <div class="stat"><div class="v" style="color:var(--fg-subtle);">2 / 6</div><div class="l">Answers filled</div></div>
+          <div class="stat"><div class="v">—</div><div class="l">No paper</div></div>
+        </div>
+        <div class="cc-bar">
+          <div class="seg-pub" style="flex: 0 0 33%;"></div>
+          <div class="seg-emp" style="flex: 0 0 67%;"></div>
+        </div>
+        <div class="cc-foot">
+          <span class="last">edited 3w ago · OCR import</span>
+          <span>open pool builder →</span>
+        </div>
+      </div>
+
+      <!-- Unattached inbox card (cross-tab placement to surface it always) -->
+      <div class="container-card" data-flavor="unattached">
+        <div class="cc-top">
+          <div>
+            <div class="cc-id" style="color:var(--honey);">⚠ Inbox</div>
+            <div class="cc-title">Unattached questions · need a container</div>
+            <div class="cc-sub">No paper, no course, no exam subject · likely seeder noise or aborted imports</div>
+          </div>
+          <span class="pill pill-warning">Triage</span>
+        </div>
+        <div class="cc-numbers">
+          <div class="stat"><div class="v" style="color:var(--honey);">24</div><div class="l">Floating</div></div>
+          <div class="stat"><div class="v">—</div><div class="l">—</div></div>
+          <div class="stat"><div class="v">—</div><div class="l">—</div></div>
+          <div class="stat"><div class="v">—</div><div class="l">—</div></div>
+        </div>
+        <div class="cc-foot">
+          <span class="last">bulk-assign or delete</span>
+          <span>review →</span>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<!-- ============= SECTION 2 · POOL BUILDER VARIANT ============= -->
+<div class="anno">
+  <span class="label">section 02 · pool builder variant</span>
+  <span class="title">Same composite editor · paperless tree shape</span>
+  <span class="desc">Selecting a course pool opens the same builder. Left tree drops sections + contexts; instead, questions group by canonical topic. Middle pane is unchanged — same Question / Answers / Links / Contexts tabs work for pool questions too.</span>
+</div>
+
+<div class="container-wrap">
+  <div class="pool-shell">
+
+    <!-- Left tree: topic-grouped -->
+    <aside class="pool-tree">
+      <div class="pool-tree-header">
+        <h3>CSC302 · practice pool</h3>
+        <div class="sub">8 questions · 3 topics · no paper</div>
+      </div>
+      <div class="pool-tree-scroll">
+
+        <div class="topic-group">
+          <div class="tg-head">
+            <span><span class="tg-chev">▾</span>Memory Management</span>
+            <span class="tg-count">4</span>
+          </div>
+
+          <div class="pq-row" data-state="active">
+            <div class="pq-body">
+              <div class="pq-text">Define a virtual address and explain how it maps to a physical address.</div>
+              <div class="pq-meta">
+                <span class="qtype-pill qtype-primary">Theory</span>
+                <span>·</span><span>5 mks</span>
+              </div>
+            </div>
+            <span class="dots"><span class="dot" data-filled="true"></span><span class="dot" data-filled="true"></span><span class="dot" data-filled="draft"></span></span>
+          </div>
+
+          <div class="pq-row">
+            <div class="pq-body">
+              <div class="pq-text">Which of these is NOT a cache replacement policy?</div>
+              <div class="pq-meta">
+                <span class="qtype-pill qtype-solid">MCQ</span>
+                <span>·</span><span>2 mks</span>
+              </div>
+            </div>
+            <span class="dots"><span class="dot" data-filled="true"></span><span class="dot" data-filled="true"></span><span class="dot"></span></span>
+          </div>
+
+          <div class="pq-row">
+            <div class="pq-body">
+              <div class="pq-text">A 4-way set associative cache has 64 KB capacity, 64-byte lines…</div>
+              <div class="pq-meta">
+                <span class="qtype-pill qtype-danger">Calc</span>
+                <span>·</span><span>10 mks</span>
+              </div>
+            </div>
+            <span class="dots"><span class="dot" data-filled="true"></span><span class="dot"></span><span class="dot"></span></span>
+          </div>
+
+          <div class="pq-row">
+            <div class="pq-body">
+              <div class="pq-text">True or False: Write-back caches always have higher bandwidth than write-through.</div>
+              <div class="pq-meta">
+                <span class="qtype-pill qtype-danger">T/F</span>
+                <span>·</span><span>1 mk</span>
+              </div>
+            </div>
+            <span class="dots"><span class="dot" data-filled="true"></span><span class="dot" data-filled="true"></span><span class="dot" data-filled="true"></span></span>
+          </div>
+        </div>
+
+        <div class="topic-group">
+          <div class="tg-head">
+            <span><span class="tg-chev">▾</span>Pipelining &amp; Hazards</span>
+            <span class="tg-count">3</span>
+          </div>
+
+          <div class="pq-row">
+            <div class="pq-body">
+              <div class="pq-text">Identify all data and structural hazards in the pipeline diagram.</div>
+              <div class="pq-meta">
+                <span class="qtype-pill qtype-danger">Diagram</span>
+                <span>·</span><span>8 mks</span>
+              </div>
+            </div>
+            <span class="dots"><span class="dot" data-filled="true"></span><span class="dot"></span><span class="dot"></span></span>
+          </div>
+
+          <div class="pq-row">
+            <div class="pq-body">
+              <div class="pq-text">Match each hazard type to its standard mitigation strategy.</div>
+              <div class="pq-meta">
+                <span class="qtype-pill qtype-reward">Match</span>
+                <span>·</span><span>4 mks</span>
+              </div>
+            </div>
+            <span class="dots"><span class="dot" data-filled="true"></span><span class="dot" data-filled="true"></span><span class="dot"></span></span>
+          </div>
+
+          <div class="pq-row">
+            <div class="pq-body">
+              <div class="pq-text">Compute the speed-up of a 5-stage pipeline given the following stalls.</div>
+              <div class="pq-meta">
+                <span class="qtype-pill qtype-danger">Numeric</span>
+                <span>·</span><span>3 mks</span>
+              </div>
+            </div>
+            <span class="dots"><span class="dot"></span><span class="dot"></span><span class="dot"></span></span>
+          </div>
+        </div>
+
+        <div class="topic-group">
+          <div class="tg-head">
+            <span><span class="tg-chev">▾</span>Instruction Set Architecture</span>
+            <span class="tg-count">1</span>
+          </div>
+          <div class="pq-row">
+            <div class="pq-body">
+              <div class="pq-text">Compare RISC and CISC architectures. Discuss with examples.</div>
+              <div class="pq-meta">
+                <span class="qtype-pill qtype-primary">Essay</span>
+                <span>·</span><span>15 mks</span>
+              </div>
+            </div>
+            <span class="dots"><span class="dot" data-filled="true"></span><span class="dot" data-filled="true"></span><span class="dot" data-filled="draft"></span></span>
+          </div>
+        </div>
+
+        <div style="padding: 14px 8px 8px;">
+          <button class="btn btn-ghost btn-sm" style="width:100%; justify-content:center; border:1px dashed var(--border-strong);">
+            + Add question to pool
+          </button>
+        </div>
+      </div>
+    </aside>
+
+    <!-- Middle: same composite editor (compact) -->
+    <main style="background: var(--bg); display: flex; flex-direction: column; min-height: 0;">
+
+      <div style="padding: 18px 22px 12px; border-bottom: 1px solid var(--border); background: var(--surface);">
+        <div style="font-family:'JetBrains Mono'; font-size:11.5px; color:var(--fg-subtle); margin-bottom:6px;">CSC302 POOL  ·  TOPIC: Memory Management  ·  no paper</div>
+        <h2 style="font-family:'Bricolage Grotesque'; font-size:18px; font-weight:600; letter-spacing:-0.012em; line-height:1.25;">
+          Define a virtual address and explain how it maps to a physical address.
+        </h2>
+        <div style="display:flex; align-items:center; gap:10px; margin-top:8px; font-size:12px; color:var(--fg-muted);">
+          <span class="qtype-pill qtype-primary">Theory</span>
+          <span>5 marks</span>
+          <span style="width:3px; height:3px; border-radius:999px; background:var(--fg-subtle);"></span>
+          <span>Difficulty&nbsp;<strong style="color:var(--fg);">Standard</strong></span>
+          <span style="width:3px; height:3px; border-radius:999px; background:var(--fg-subtle);"></span>
+          <span style="font-family:'JetBrains Mono'; font-size:11px;">course-pool · no paper context</span>
+        </div>
+      </div>
+
+      <!-- Tab bar (same shape as builder, contexts greyed since pools rarely use them) -->
+      <div style="display:flex; padding: 0 22px; gap:2px; background:var(--surface); border-bottom:1px solid var(--border);">
+        <div style="padding:10px 12px 11px; font-size:13px; font-weight:500; color:var(--fg-muted); border-bottom: 2px solid transparent; margin-bottom:-1px;">Question</div>
+        <div style="padding:10px 12px 11px; font-size:13px; font-weight:500; color:var(--fg); border-bottom: 2px solid var(--fg); margin-bottom:-1px;">
+          Answers
+          <span style="display:inline-flex; align-items:center; justify-content:center; min-width:18px; height:18px; padding:0 5px; background:var(--fg); color:var(--bg); border-radius:999px; font-family:'JetBrains Mono'; font-size:10.5px; margin-left:4px;">2/3</span>
+        </div>
+        <div style="padding:10px 12px 11px; font-size:13px; font-weight:500; color:var(--fg-muted); border-bottom: 2px solid transparent; margin-bottom:-1px;">
+          Links
+          <span style="display:inline-flex; align-items:center; justify-content:center; min-width:18px; height:18px; padding:0 5px; background:var(--surface-3); color:var(--fg-muted); border-radius:999px; font-family:'JetBrains Mono'; font-size:10.5px; margin-left:4px;">3</span>
+        </div>
+        <div style="padding:10px 12px 11px; font-size:13px; font-weight:400; color:var(--fg-subtle); border-bottom: 2px solid transparent; margin-bottom:-1px; opacity:0.55;">
+          Contexts
+          <span style="font-family:'JetBrains Mono'; font-size:10.5px; margin-left:6px;">— pools rarely use</span>
+        </div>
+      </div>
+
+      <div style="flex:1 1 0; overflow-y:auto; padding: 22px;">
+        <div style="background:var(--surface); border:1px solid var(--border); border-radius:10px; box-shadow: var(--shadow-sm); overflow:hidden;">
+          <div style="padding:12px 16px; background: var(--surface-2); border-bottom:1px solid var(--border); display:flex; justify-content:space-between; align-items:center;">
+            <div style="display:flex; align-items:center; gap:10px;">
+              <span class="depth-icon depth-quick">Q</span>
+              <span style="font-family:'Bricolage Grotesque'; font-weight:600; font-size:14px;">Quick answer</span>
+            </div>
+            <span class="pill pill-success">Published</span>
+          </div>
+          <div style="padding:14px 16px;">
+            <p class="mini-prose">
+              <strong>A virtual address</strong> is the address generated by the CPU during program execution; it lives in the process's logical address space. The MMU translates it to a physical address using a page table, mapping virtual page number → physical frame number plus the unchanged page offset.
+            </p>
+          </div>
+        </div>
+
+        <div style="background:var(--surface); border:1px solid var(--honey-line); border-radius:10px; box-shadow: var(--shadow-sm); overflow:hidden; margin-top:12px;">
+          <div style="padding:12px 16px; background: var(--surface-2); border-bottom:1px solid var(--border); display:flex; justify-content:space-between; align-items:center;">
+            <div style="display:flex; align-items:center; gap:10px;">
+              <span class="depth-icon depth-standard">S</span>
+              <span style="font-family:'Bricolage Grotesque'; font-weight:600; font-size:14px;">Standard answer</span>
+            </div>
+            <span class="pill pill-warning">Draft · 187 words</span>
+          </div>
+          <div style="padding:14px 16px;">
+            <p class="mini-prose">
+              <strong>Virtual addressing</strong> decouples program-visible memory from physical RAM. Each process sees a contiguous, private address space starting at zero, while the OS + MMU map those addresses to scattered physical frames at runtime…
+              <span style="color:var(--fg-subtle); font-style:italic;"> [continues for ~150 more words with diagram]</span>
+            </p>
+          </div>
+        </div>
+
+        <div style="background:var(--surface); border:1px solid var(--border); border-radius:10px; box-shadow: var(--shadow-sm); margin-top:12px; padding: 14px 16px; display:flex; align-items:center; justify-content:space-between;">
+          <div style="display:flex; align-items:center; gap:10px;">
+            <span class="depth-icon depth-deep">D</span>
+            <div>
+              <div style="font-family:'Bricolage Grotesque'; font-weight:600; font-size:14px;">Deep dive</div>
+              <div style="font-size:11.5px; color:var(--fg-subtle); font-family:'JetBrains Mono';">empty · seed from Standard + AI</div>
+            </div>
+          </div>
+          <button class="btn btn-primary btn-sm">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4"/></svg>
+            Generate
+          </button>
+        </div>
+      </div>
+
+    </main>
+
+    <!-- Right: preview (compact) -->
+    <aside style="border-left: 1px solid var(--border); background: var(--surface); display:flex; flex-direction:column; min-height:0;">
+      <div style="padding: 12px 18px; background: var(--surface-2); border-bottom: 1px solid var(--border);">
+        <span style="font-family:'Bricolage Grotesque'; font-weight:600; font-size:11px; text-transform:uppercase; letter-spacing:0.08em; color:var(--fg-subtle);">Student preview · pool</span>
+      </div>
+      <div style="padding: 18px 20px; overflow-y:auto;">
+        <div style="background: var(--bg); border:1px solid var(--border); border-radius:10px; padding:16px 18px; margin-bottom:14px;">
+          <p style="font-size:14px; line-height:1.5; margin:0;">
+            Define a virtual address and explain how it maps to a physical address.
+          </p>
+          <div style="margin-top: 10px; font-family:'JetBrains Mono'; font-size:11px; color:var(--fg-subtle);">5 marks · CSC302 practice pool</div>
+        </div>
+
+        <div style="background:var(--bg); border:1px solid var(--border); border-radius:10px; overflow:hidden;">
+          <div style="display:flex; background:var(--surface-2); border-bottom:1px solid var(--border);">
+            <div style="flex:1; text-align:center; padding:8px 6px; font-size:11.5px; font-weight:500; background:var(--bg); border-bottom: 2px solid var(--primary); margin-bottom:-1px;">Quick</div>
+            <div style="flex:1; text-align:center; padding:8px 6px; font-size:11.5px; color:var(--fg-muted); border-left:1px solid var(--border);">Standard <span style="color:var(--honey); font-size:9px;">●</span></div>
+            <div style="flex:1; text-align:center; padding:8px 6px; font-size:11.5px; color:var(--fg-subtle); opacity:0.55; border-left:1px solid var(--border);">Deep dive</div>
+          </div>
+          <div style="padding:14px 16px; font-size:12.5px; line-height:1.55; color:var(--fg);">
+            <strong>A virtual address</strong> is the address generated by the CPU during program execution…
+          </div>
+        </div>
+
+        <div style="margin-top: 16px; padding: 12px 0 0; border-top: 1px solid var(--border); font-size:11px; color:var(--fg-subtle); font-family:'JetBrains Mono'; line-height:1.7;">
+          <div><span style="color:var(--fg-muted);">topic</span>&nbsp;&nbsp;Memory Management <sup style="color:var(--honey);">★</sup></div>
+          <div><span style="color:var(--fg-muted);">blocks</span>&nbsp;&nbsp;3.1.1, 3.1.2</div>
+          <div><span style="color:var(--fg-muted);">paper</span>&nbsp;&nbsp;<em>none</em> · pool-only</div>
+        </div>
+      </div>
+    </aside>
+
+  </div>
+</div>
+
+<!-- ============= SECTION 3 · TYPE AUTHORING SHAPES ============= -->
+<div class="anno">
+  <span class="label">section 03 · question tab type shapes</span>
+  <span class="title">Seven authoring surfaces for the Question tab body</span>
+  <span class="desc">All 16 question types collapse to 8 distinct shapes (free-form already shown in v1 prototype). Each card below is what the <strong>Question tab body</strong> looks like for that type. Stem editor + type-specific response config.</span>
+</div>
+
+<div class="container-wrap">
+  <div class="shapes-grid">
+
+    <!-- 1. SINGLE-CHOICE — MCQ / AssertionReason -->
+    <div class="shape-card">
+      <div class="shape-card-head">
+        <div class="left">
+          <span class="qtype-pill qtype-solid">MCQ</span>
+          <div>
+            <div class="name">Single-choice option list</div>
+            <div class="types">MCQ · AssertionReason</div>
+          </div>
+        </div>
+        <span class="pill pill-success">2 mks</span>
+      </div>
+      <div class="shape-card-body">
+        <div class="stem">
+          <span class="lbl">Stem</span>
+          Which of these is NOT a cache replacement policy?
+        </div>
+
+        <div style="font-family:'Bricolage Grotesque'; font-size:11px; text-transform:uppercase; letter-spacing:0.08em; color:var(--fg-subtle); margin: 12px 0 6px;">
+          Options · pick the correct one
+        </div>
+
+        <div class="opt-row" data-correct="false">
+          <span class="opt-key">A</span>
+          <span class="opt-text">Least Recently Used (LRU)</span>
+          <span></span>
+          <span class="opt-actions">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+          </span>
+        </div>
+        <div class="opt-row" data-correct="false">
+          <span class="opt-key">B</span>
+          <span class="opt-text">First-In First-Out (FIFO)</span>
+          <span></span>
+          <span class="opt-actions"></span>
+        </div>
+        <div class="opt-row" data-correct="true">
+          <span class="opt-key">C</span>
+          <span class="opt-text">Round Robin Scheduling</span>
+          <span class="opt-mark">correct</span>
+          <span class="opt-actions"></span>
+        </div>
+        <div class="opt-row" data-correct="false">
+          <span class="opt-key">D</span>
+          <span class="opt-text">Belady's Optimal</span>
+          <span></span>
+          <span class="opt-actions"></span>
+        </div>
+
+        <button class="btn btn-ghost btn-sm" style="margin-top: 4px; border:1px dashed var(--border-strong); width:100%; justify-content:center;">
+          + Add option
+        </button>
+
+        <div style="margin-top: 12px; padding: 8px 10px; background: var(--surface); border:1px dashed var(--border); border-radius:6px; font-size:11.5px; color:var(--fg-muted); font-family:'JetBrains Mono';">
+          🌗 each option can carry its own explanation — surfaced on the Answers tab
+        </div>
+      </div>
+    </div>
+
+    <!-- 2. MULTI-CHOICE — MultiSelectMcq -->
+    <div class="shape-card">
+      <div class="shape-card-head">
+        <div class="left">
+          <span class="qtype-pill qtype-solid">Multi</span>
+          <div>
+            <div class="name">Multi-choice option list</div>
+            <div class="types">MultiSelectMcq</div>
+          </div>
+        </div>
+        <span class="pill pill-success">3 mks</span>
+      </div>
+      <div class="shape-card-body">
+        <div class="stem">
+          <span class="lbl">Stem</span>
+          Which of the following are valid pipeline hazards?  <em>(select all that apply)</em>
+        </div>
+
+        <div style="font-family:'Bricolage Grotesque'; font-size:11px; text-transform:uppercase; letter-spacing:0.08em; color:var(--fg-subtle); margin: 12px 0 6px;">
+          Options · pick all correct  ·  3 of 5 correct
+        </div>
+
+        <div class="opt-row" data-correct="true">
+          <span class="opt-key" style="border-radius:3px;">✓</span>
+          <span class="opt-text">Data hazard (RAW)</span>
+          <span class="opt-mark">correct</span>
+          <span></span>
+        </div>
+        <div class="opt-row" data-correct="false">
+          <span class="opt-key" style="border-radius:3px;">☐</span>
+          <span class="opt-text">Memory leak</span>
+          <span></span><span></span>
+        </div>
+        <div class="opt-row" data-correct="true">
+          <span class="opt-key" style="border-radius:3px;">✓</span>
+          <span class="opt-text">Control hazard (branch misprediction)</span>
+          <span class="opt-mark">correct</span>
+          <span></span>
+        </div>
+        <div class="opt-row" data-correct="true">
+          <span class="opt-key" style="border-radius:3px;">✓</span>
+          <span class="opt-text">Structural hazard (resource contention)</span>
+          <span class="opt-mark">correct</span>
+          <span></span>
+        </div>
+        <div class="opt-row" data-correct="false">
+          <span class="opt-key" style="border-radius:3px;">☐</span>
+          <span class="opt-text">Cache coherency hazard</span>
+          <span></span><span></span>
+        </div>
+
+        <div style="margin-top: 12px; padding: 8px 10px; background: var(--surface); border:1px dashed var(--border); border-radius:6px; font-size:11.5px; color:var(--fg-muted); font-family:'JetBrains Mono';">
+          🌗 partial credit configurable on Answers tab · default = all-or-nothing
+        </div>
+      </div>
+    </div>
+
+    <!-- 3. BOOLEAN — TrueFalse -->
+    <div class="shape-card">
+      <div class="shape-card-head">
+        <div class="left">
+          <span class="qtype-pill qtype-danger">T/F</span>
+          <div>
+            <div class="name">Boolean</div>
+            <div class="types">TrueFalse</div>
+          </div>
+        </div>
+        <span class="pill pill-success">1 mk</span>
+      </div>
+      <div class="shape-card-body">
+        <div class="stem">
+          <span class="lbl">Stem</span>
+          Write-back caches always have higher bandwidth than write-through caches.
+        </div>
+
+        <div style="font-family:'Bricolage Grotesque'; font-size:11px; text-transform:uppercase; letter-spacing:0.08em; color:var(--fg-subtle); margin: 12px 0 6px;">
+          Correct answer
+        </div>
+
+        <div class="bool-row">
+          <div class="bool-tile">
+            <svg class="tile-glyph" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M5 13l4 4L19 7"/></svg>
+            True
+          </div>
+          <div class="bool-tile" data-correct="true">
+            <svg class="tile-glyph" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M6 6l12 12M18 6l-12 12"/></svg>
+            False
+          </div>
+        </div>
+
+        <div style="margin-top: 12px; padding: 8px 10px; background: var(--surface); border:1px dashed var(--border); border-radius:6px; font-size:11.5px; color:var(--fg-muted); font-family:'JetBrains Mono';">
+          🌗 optional: require justification text from the student → manual graded
+        </div>
+      </div>
+    </div>
+
+    <!-- 4. INLINE BLANKS — FillBlank / Cloze -->
+    <div class="shape-card">
+      <div class="shape-card-head">
+        <div class="left">
+          <span class="qtype-pill qtype-reward">Cloze</span>
+          <div>
+            <div class="name">Inline blanks</div>
+            <div class="types">FillBlank · Cloze</div>
+          </div>
+        </div>
+        <span class="pill pill-success">3 mks · 3 blanks</span>
+      </div>
+      <div class="shape-card-body">
+        <div class="stem">
+          <span class="lbl">Stem · type <span class="mono" style="background:var(--surface-2); padding:0 4px; border-radius:3px;">[[</span> to insert a blank</span>
+        </div>
+
+        <div class="cloze-stem">
+          The MMU translates a virtual address into a physical address by looking up the
+          <span class="cloze-blank"><span class="num">1</span>page number</span>
+          in the
+          <span class="cloze-blank"><span class="num">2</span>page table</span>
+          to obtain a frame number, then concatenating it with the unchanged
+          <span class="cloze-blank"><span class="num">3</span>offset</span>
+          bits.
+        </div>
+
+        <div style="font-family:'Bricolage Grotesque'; font-size:11px; text-transform:uppercase; letter-spacing:0.08em; color:var(--fg-subtle); margin: 12px 0 6px;">
+          Accepted answers per blank
+        </div>
+
+        <div class="blanks-list">
+          <div class="blank-item">
+            <span class="num">1</span>
+            <div class="accepted">
+              <span class="accept-chip">virtual page</span>
+              <span class="accept-chip">page number</span>
+              <span class="accept-chip">VPN</span>
+            </div>
+            <span style="font-family:'JetBrains Mono'; font-size:10.5px; color:var(--fg-subtle);">case-insensitive</span>
+          </div>
+          <div class="blank-item">
+            <span class="num">2</span>
+            <div class="accepted">
+              <span class="accept-chip">page table</span>
+              <span class="accept-chip">PTE table</span>
+            </div>
+            <span style="font-family:'JetBrains Mono'; font-size:10.5px; color:var(--fg-subtle);">exact match</span>
+          </div>
+          <div class="blank-item">
+            <span class="num">3</span>
+            <div class="accepted">
+              <span class="accept-chip">offset</span>
+              <span class="accept-chip">page offset</span>
+              <span class="accept-chip">byte offset</span>
+            </div>
+            <span style="font-family:'JetBrains Mono'; font-size:10.5px; color:var(--fg-subtle);">case-insensitive</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 5. PAIR / ORDER — Matching / Ordering / MatrixMatching -->
+    <div class="shape-card">
+      <div class="shape-card-head">
+        <div class="left">
+          <span class="qtype-pill qtype-reward">Match</span>
+          <div>
+            <div class="name">Pair · order · matrix</div>
+            <div class="types">Matching · Ordering · MatrixMatching</div>
+          </div>
+        </div>
+        <span class="pill pill-success">4 mks</span>
+      </div>
+      <div class="shape-card-body">
+        <div class="stem">
+          <span class="lbl">Stem</span>
+          Match each hazard type to its standard mitigation strategy.
+        </div>
+
+        <div style="font-family:'Bricolage Grotesque'; font-size:11px; text-transform:uppercase; letter-spacing:0.08em; color:var(--fg-subtle); margin: 12px 0 6px;">
+          Pairings · drag right column to reorder · auto-shuffles for student
+        </div>
+
+        <div class="pair-grid">
+          <div class="pair-cell"><span class="key">L1</span>Data hazard (RAW)</div>
+          <div class="pair-arrow">→</div>
+          <div class="pair-cell"><span class="key">R3</span>Operand forwarding</div>
+
+          <div class="pair-cell"><span class="key">L2</span>Control hazard</div>
+          <div class="pair-arrow">→</div>
+          <div class="pair-cell"><span class="key">R1</span>Branch prediction</div>
+
+          <div class="pair-cell"><span class="key">L3</span>Structural hazard</div>
+          <div class="pair-arrow">→</div>
+          <div class="pair-cell"><span class="key">R4</span>Pipeline stall / duplicate unit</div>
+
+          <div class="pair-cell"><span class="key">L4</span>Memory hazard</div>
+          <div class="pair-arrow">→</div>
+          <div class="pair-cell"><span class="key">R2</span>Cache coherence protocol</div>
+        </div>
+
+        <div style="margin-top: 12px; padding: 8px 10px; background: var(--surface); border:1px dashed var(--border); border-radius:6px; font-size:11.5px; color:var(--fg-muted); font-family:'JetBrains Mono';">
+          🌗 ordering type uses a single column with positional grading · matrix type expands to N×M grid
+        </div>
+      </div>
+    </div>
+
+    <!-- 6. NUMERIC — Calculation / NumericEntry -->
+    <div class="shape-card">
+      <div class="shape-card-head">
+        <div class="left">
+          <span class="qtype-pill qtype-danger">Calc</span>
+          <div>
+            <div class="name">Numeric · with optional steps</div>
+            <div class="types">Calculation · NumericEntry</div>
+          </div>
+        </div>
+        <span class="pill pill-success">10 mks</span>
+      </div>
+      <div class="shape-card-body">
+        <div class="stem">
+          <span class="lbl">Stem</span>
+          A 4-way set associative cache has 64 KB capacity, 64-byte lines. Compute the number of sets and the tag/index/offset bit widths for a 32-bit address space.
+        </div>
+
+        <div style="font-family:'Bricolage Grotesque'; font-size:11px; text-transform:uppercase; letter-spacing:0.08em; color:var(--fg-subtle); margin: 12px 0 6px;">
+          Final answer
+        </div>
+
+        <div class="numeric-row">
+          <div class="numeric-field">
+            <span class="l">Value</span>
+            <span class="v">256</span>
+          </div>
+          <div class="numeric-field">
+            <span class="l">Unit</span>
+            <span class="v">sets</span>
+          </div>
+          <div class="numeric-field">
+            <span class="l">Tolerance</span>
+            <span class="v">± 0</span>
+          </div>
+        </div>
+
+        <div class="calc-steps">
+          <div class="l">Worked steps · optional · awarded as part-marks</div>
+          <ol>
+            <li>Lines per set <span class="formula">= cap / (assoc × line) = 65536 / (4 × 64) = 256</span></li>
+            <li>Offset bits <span class="formula">= log₂(64) = 6</span></li>
+            <li>Index bits <span class="formula">= log₂(256) = 8</span></li>
+            <li>Tag bits <span class="formula">= 32 − 8 − 6 = 18</span></li>
+          </ol>
+        </div>
+
+        <div style="margin-top: 12px; padding: 8px 10px; background: var(--surface); border:1px dashed var(--border); border-radius:6px; font-size:11.5px; color:var(--fg-muted); font-family:'JetBrains Mono';">
+          🌗 NumericEntry skips the steps block · tolerance can be absolute or percentage
+        </div>
+      </div>
+    </div>
+
+    <!-- 7. VISUAL — DiagramLabel -->
+    <div class="shape-card">
+      <div class="shape-card-head">
+        <div class="left">
+          <span class="qtype-pill qtype-danger">Diagram</span>
+          <div>
+            <div class="name">Diagram-label · click to place hotspots</div>
+            <div class="types">DiagramLabel</div>
+          </div>
+        </div>
+        <span class="pill pill-success">8 mks · 4 labels</span>
+      </div>
+      <div class="shape-card-body">
+        <div class="stem">
+          <span class="lbl">Stem</span>
+          Identify the components of the 5-stage pipeline marked 1–4.
+        </div>
+
+        <div style="font-family:'Bricolage Grotesque'; font-size:11px; text-transform:uppercase; letter-spacing:0.08em; color:var(--fg-subtle); margin: 12px 0 6px;">
+          Diagram · click to place · drag to move
+        </div>
+
+        <div class="diagram-canvas">
+          <svg viewBox="0 0 320 140" width="100%" style="display:block;">
+            <rect x="8" y="8" width="304" height="124" rx="6" fill="none" stroke="#E0D6C2"/>
+            <g font-family="JetBrains Mono" font-size="10" fill="#1F1A12">
+              <rect x="20"  y="46" width="48" height="40" rx="4" fill="#FBF8F1" stroke="#C9BCA0"/>
+              <text x="44" y="70" text-anchor="middle">IF</text>
+              <rect x="80"  y="46" width="48" height="40" rx="4" fill="#FBF8F1" stroke="#C9BCA0"/>
+              <text x="104" y="70" text-anchor="middle">ID</text>
+              <rect x="140" y="46" width="48" height="40" rx="4" fill="#FBF8F1" stroke="#C9BCA0"/>
+              <text x="164" y="70" text-anchor="middle">EX</text>
+              <rect x="200" y="46" width="48" height="40" rx="4" fill="#FBF8F1" stroke="#C9BCA0"/>
+              <text x="224" y="70" text-anchor="middle">MEM</text>
+              <rect x="260" y="46" width="48" height="40" rx="4" fill="#FBF8F1" stroke="#C9BCA0"/>
+              <text x="284" y="70" text-anchor="middle">WB</text>
+            </g>
+            <line x1="68" y1="66" x2="80" y2="66" stroke="#9C8E73"/>
+            <line x1="128" y1="66" x2="140" y2="66" stroke="#9C8E73"/>
+            <line x1="188" y1="66" x2="200" y2="66" stroke="#9C8E73"/>
+            <line x1="248" y1="66" x2="260" y2="66" stroke="#9C8E73"/>
+          </svg>
+          <span class="hotspot" style="left: 13.7%; top: 28%;">1</span>
+          <span class="hotspot" style="left: 32.3%; top: 28%;">2</span>
+          <span class="hotspot" style="left: 51.1%; top: 28%;">3</span>
+          <span class="hotspot" style="left: 70%; top: 28%;">4</span>
+        </div>
+
+        <div class="label-list">
+          <div class="label-item">
+            <span class="num">1</span>
+            <div class="accepted">
+              <span class="accept-chip">Instruction Fetch</span>
+              <span class="accept-chip">IF</span>
+              <span class="accept-chip">Fetch</span>
+            </div>
+            <span style="font-family:'JetBrains Mono'; font-size:10.5px; color:var(--fg-subtle);">2 mks</span>
+          </div>
+          <div class="label-item">
+            <span class="num">2</span>
+            <div class="accepted">
+              <span class="accept-chip">Instruction Decode</span>
+              <span class="accept-chip">ID</span>
+              <span class="accept-chip">Decode</span>
+            </div>
+            <span style="font-family:'JetBrains Mono'; font-size:10.5px; color:var(--fg-subtle);">2 mks</span>
+          </div>
+          <div class="label-item">
+            <span class="num">3</span>
+            <div class="accepted">
+              <span class="accept-chip">Execute</span>
+              <span class="accept-chip">EX</span>
+              <span class="accept-chip">ALU</span>
+            </div>
+            <span style="font-family:'JetBrains Mono'; font-size:10.5px; color:var(--fg-subtle);">2 mks</span>
+          </div>
+          <div class="label-item">
+            <span class="num">4</span>
+            <div class="accepted">
+              <span class="accept-chip">Memory Access</span>
+              <span class="accept-chip">MEM</span>
+            </div>
+            <span style="font-family:'JetBrains Mono'; font-size:10.5px; color:var(--fg-subtle);">2 mks</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 8. ORDERING — separate card to give it its own surface -->
+    <div class="shape-card">
+      <div class="shape-card-head">
+        <div class="left">
+          <span class="qtype-pill qtype-reward">Order</span>
+          <div>
+            <div class="name">Ordering · sequence-graded</div>
+            <div class="types">Ordering · MatrixMatching uses N×M grid</div>
+          </div>
+        </div>
+        <span class="pill pill-success">5 mks</span>
+      </div>
+      <div class="shape-card-body">
+        <div class="stem">
+          <span class="lbl">Stem</span>
+          Place the following stages of the instruction lifecycle in correct execution order.
+        </div>
+
+        <div style="font-family:'Bricolage Grotesque'; font-size:11px; text-transform:uppercase; letter-spacing:0.08em; color:var(--fg-subtle); margin: 12px 0 6px;">
+          Correct sequence · drag to reorder
+        </div>
+
+        <div class="ord-list">
+          <div class="ord-row">
+            <span class="grip">⋮⋮</span>
+            <span class="ord-pos">1</span>
+            <span>Fetch instruction from memory</span>
+            <span style="font-family:'JetBrains Mono'; font-size:10.5px; color:var(--fg-subtle);">1 mk</span>
+          </div>
+          <div class="ord-row">
+            <span class="grip">⋮⋮</span>
+            <span class="ord-pos">2</span>
+            <span>Decode instruction &amp; read registers</span>
+            <span style="font-family:'JetBrains Mono'; font-size:10.5px; color:var(--fg-subtle);">1 mk</span>
+          </div>
+          <div class="ord-row">
+            <span class="grip">⋮⋮</span>
+            <span class="ord-pos">3</span>
+            <span>Execute in ALU</span>
+            <span style="font-family:'JetBrains Mono'; font-size:10.5px; color:var(--fg-subtle);">1 mk</span>
+          </div>
+          <div class="ord-row">
+            <span class="grip">⋮⋮</span>
+            <span class="ord-pos">4</span>
+            <span>Access memory if needed</span>
+            <span style="font-family:'JetBrains Mono'; font-size:10.5px; color:var(--fg-subtle);">1 mk</span>
+          </div>
+          <div class="ord-row">
+            <span class="grip">⋮⋮</span>
+            <span class="ord-pos">5</span>
+            <span>Write result back to register</span>
+            <span style="font-family:'JetBrains Mono'; font-size:10.5px; color:var(--fg-subtle);">1 mk</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 9. GROUP — container only -->
+    <div class="shape-card">
+      <div class="shape-card-head">
+        <div class="left">
+          <span class="qtype-pill qtype-neutral">Group</span>
+          <div>
+            <div class="name">Group · container-only</div>
+            <div class="types">Group · holds N children · no own response</div>
+          </div>
+        </div>
+        <span class="pill pill-neutral">15 mks total</span>
+      </div>
+      <div class="shape-card-body">
+        <div class="stem">
+          <span class="lbl">Group stem · shared context</span>
+          Page replacement &amp; the working set
+        </div>
+
+        <div style="font-family:'Bricolage Grotesque'; font-size:11px; text-transform:uppercase; letter-spacing:0.08em; color:var(--fg-subtle); margin: 12px 0 6px;">
+          Children · 3 sub-questions
+        </div>
+
+        <div class="group-children">
+          <div class="group-child">
+            <span class="ch-label">3 (a)</span>
+            <span>State the LRU page replacement algorithm.</span>
+            <span><span class="qtype-pill qtype-primary">Theory</span> <span style="font-family:'JetBrains Mono'; font-size:10.5px; color:var(--fg-subtle);">5 mks</span></span>
+          </div>
+          <div class="group-child">
+            <span class="ch-label">3 (b)</span>
+            <span>Trace the reference string 1, 2, 3, 4, 1, 2, 5, 1, 2, 3, 4, 5.</span>
+            <span><span class="qtype-pill qtype-danger">Calc</span> <span style="font-family:'JetBrains Mono'; font-size:10.5px; color:var(--fg-subtle);">6 mks</span></span>
+          </div>
+          <div class="group-child">
+            <span class="ch-label">3 (c)</span>
+            <span>Discuss thrashing and the working-set model.</span>
+            <span><span class="qtype-pill qtype-primary">Essay</span> <span style="font-family:'JetBrains Mono'; font-size:10.5px; color:var(--fg-subtle);">4 mks</span></span>
+          </div>
+        </div>
+
+        <div style="margin-top: 12px; padding: 8px 10px; background: var(--surface); border:1px dashed var(--border); border-radius:6px; font-size:11.5px; color:var(--fg-muted); font-family:'JetBrains Mono';">
+          🌗 group has no own answer · Answers tab on parent shows children-status matrix · max nesting depth = 3
+        </div>
+      </div>
+    </div>
+
+    <!-- 10. FREE-FORM with rubric — Theory / ShortAnswer / Essay -->
+    <div class="shape-card">
+      <div class="shape-card-head">
+        <div class="left">
+          <span class="qtype-pill qtype-primary">Theory</span>
+          <div>
+            <div class="name">Free-form · with rubric</div>
+            <div class="types">Theory · ShortAnswer · Essay</div>
+          </div>
+        </div>
+        <span class="pill pill-success">15 mks</span>
+      </div>
+      <div class="shape-card-body">
+        <div class="stem">
+          <span class="lbl">Stem</span>
+          Compare RISC and CISC architectures. Discuss with examples and contemporary trends.
+        </div>
+
+        <div style="font-family:'Bricolage Grotesque'; font-size:11px; text-transform:uppercase; letter-spacing:0.08em; color:var(--fg-subtle); margin: 12px 0 6px;">
+          Response config
+        </div>
+
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px;">
+          <div class="numeric-field">
+            <span class="l">Min words</span>
+            <span class="v">300</span>
+          </div>
+          <div class="numeric-field">
+            <span class="l">Max words</span>
+            <span class="v">600</span>
+          </div>
+        </div>
+
+        <div class="rubric">
+          <div class="l">Rubric · used by manual graders + AI grading assist</div>
+          <div class="rubric-row">
+            <span style="background:var(--primary); color:var(--bg); border-radius:3px; text-align:center; font-family:'JetBrains Mono'; font-size:11px; padding:1px 0;">A</span>
+            <span>Defines RISC and CISC with at least two technical distinctions each</span>
+            <span class="pts">5 pts</span>
+          </div>
+          <div class="rubric-row">
+            <span style="background:var(--primary); color:var(--bg); border-radius:3px; text-align:center; font-family:'JetBrains Mono'; font-size:11px; padding:1px 0;">B</span>
+            <span>Names a real-world RISC processor (e.g. ARM) and a CISC (e.g. x86)</span>
+            <span class="pts">3 pts</span>
+          </div>
+          <div class="rubric-row">
+            <span style="background:var(--primary); color:var(--bg); border-radius:3px; text-align:center; font-family:'JetBrains Mono'; font-size:11px; padding:1px 0;">C</span>
+            <span>Discusses convergence trends (RISC-V, x86 micro-ops)</span>
+            <span class="pts">4 pts</span>
+          </div>
+          <div class="rubric-row">
+            <span style="background:var(--primary); color:var(--bg); border-radius:3px; text-align:center; font-family:'JetBrains Mono'; font-size:11px; padding:1px 0;">D</span>
+            <span>Coherent structure, accurate technical language</span>
+            <span class="pts">3 pts</span>
+          </div>
+        </div>
+
+        <div style="margin-top: 12px; padding: 8px 10px; background: var(--surface); border:1px dashed var(--border); border-radius:6px; font-size:11.5px; color:var(--fg-muted); font-family:'JetBrains Mono';">
+          🌗 ShortAnswer drops the rubric (single accepted-answer chip) · Essay raises max-words
+        </div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<!-- ============= SECTION 4 · ANSWERS TAB STRUCTURAL SPLIT ============= -->
+<div class="anno">
+  <span class="label">section 04 · answers tab — structural split</span>
+  <span class="title">Correct response card on top · explanation depths below</span>
+  <span class="desc">For auto-graded types, the structured "what's correct" lives in its own card at the top of the Answers tab, with the three explanation depths (Quick / Standard / Deep) below. The Question tab covers the *stem and options*; the Answers tab covers *what the engine grades against and why*.</span>
+</div>
+
+<div class="container-wrap">
+  <div class="answers-split">
+    <div class="as-head">
+      <span class="label">Answers tab · MCQ example · Q2</span>
+      <span style="font-family:'JetBrains Mono'; font-size:11.5px; color:var(--fg-subtle);">tab badge: <span style="background:var(--fg); color:var(--bg); padding:1px 6px; border-radius:3px; font-size:10.5px;">2/3</span> shows depth fill only — correct response is implicit</span>
+    </div>
+
+    <div class="as-body">
+
+      <!-- CORRECT RESPONSE CARD (new) -->
+      <article class="as-card" style="border-color: var(--primary-line);">
+        <header class="as-card-head" style="background: linear-gradient(180deg, #F0F6F1 0%, #E5EFE6 100%);">
+          <div class="left">
+            <span class="correct-icon">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M5 13l4 4L19 7"/></svg>
+            </span>
+            <div>
+              <div class="title">Correct response</div>
+              <div class="sub">structured · what the engine grades against · varies by type</div>
+            </div>
+          </div>
+          <div style="display:flex; align-items:center; gap:8px;">
+            <span class="pill pill-success">Locked · saved</span>
+            <button class="btn btn-ghost btn-sm">Edit on Question tab →</button>
+          </div>
+        </header>
+
+        <div class="as-card-body">
+          <div class="correct-mcq">
+            <div class="row" data-correct="false">
+              <span class="key">A</span>
+              <span>Least Recently Used (LRU)</span>
+              <span></span>
+              <div class="opt-explain">A real cache replacement policy.</div>
+            </div>
+            <div class="row" data-correct="false">
+              <span class="key">B</span>
+              <span>First-In First-Out (FIFO)</span>
+              <span></span>
+              <div class="opt-explain">A real cache replacement policy.</div>
+            </div>
+            <div class="row" data-correct="true">
+              <span class="key">C</span>
+              <span>Round Robin Scheduling</span>
+              <span style="font-family:'JetBrains Mono'; font-size:10.5px; color:var(--primary); text-transform:uppercase; letter-spacing:0.06em;">correct</span>
+              <div class="opt-explain"><strong>Round Robin</strong> is a CPU scheduling algorithm — not a cache replacement policy. This is the trick.</div>
+            </div>
+            <div class="row" data-correct="false">
+              <span class="key">D</span>
+              <span>Belady's Optimal</span>
+              <span></span>
+              <div class="opt-explain">A theoretical cache replacement policy (lower bound benchmark).</div>
+            </div>
+          </div>
+
+          <div style="margin-top: 14px; padding: 10px 12px; background: var(--surface-2); border-radius: 6px; font-size: 11.5px; color: var(--fg-muted); font-family:'JetBrains Mono'; line-height: 1.6;">
+            <div><span style="color:var(--fg);">For free-form types</span> (Theory · ShortAnswer · Essay) this card holds the <em>model answer</em> + rubric instead of structured options.</div>
+            <div><span style="color:var(--fg);">For Group questions</span> this card is suppressed entirely — children carry their own correct responses.</div>
+          </div>
+        </div>
+      </article>
+
+      <!-- DEPTH CARDS (compact, mostly the same as v1) -->
+      <article class="as-card">
+        <header class="as-card-head">
+          <div class="left">
+            <span class="depth-icon depth-quick">Q</span>
+            <div>
+              <div class="title">Quick explanation</div>
+              <div class="sub">free tier · ~50 words · why is C correct?</div>
+            </div>
+          </div>
+          <span class="pill pill-success">Published</span>
+        </header>
+        <div class="as-card-body">
+          <p class="mini-prose">
+            <strong>Round Robin</strong> belongs to CPU scheduling, not memory caching. The other three are cache replacement policies — LRU, FIFO, and Belady's Optimal all decide which cache line to evict on a miss.
+          </p>
+        </div>
+      </article>
+
+      <article class="as-card">
+        <header class="as-card-head">
+          <div class="left">
+            <span class="depth-icon depth-standard">S</span>
+            <div>
+              <div class="title">Standard explanation</div>
+              <div class="sub">paid · ~200 words · context + why distractors are tempting</div>
+            </div>
+          </div>
+          <span class="pill pill-warning">Draft · 187 words</span>
+        </header>
+        <div class="as-card-body">
+          <p class="mini-prose">
+            Cache replacement policies decide which cache line to evict when a new line must be loaded. The most common are <strong>LRU</strong>, <strong>FIFO</strong>, <strong>Belady's Optimal</strong> (theoretical), <strong>LFU</strong>, and clock approximations of LRU.
+            <span style="color:var(--fg-subtle); font-style:italic;"> [continues with why each distractor is plausible — students often confuse Round Robin with the round-robin pattern in N-way set associative caches…]</span>
+          </p>
+        </div>
+      </article>
+
+      <article class="as-card" style="opacity: 0.92;">
+        <header class="as-card-head">
+          <div class="left">
+            <span class="depth-icon depth-deep">D</span>
+            <div>
+              <div class="title">Deep dive</div>
+              <div class="sub">premium · empty · seed from Standard + AI illustration</div>
+            </div>
+          </div>
+          <button class="btn btn-primary btn-sm">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4"/></svg>
+            Generate
+          </button>
+        </header>
+      </article>
+
+    </div>
+  </div>
+</div>
+
+<!-- ============= ROUND PLAN ============= -->
+<div class="anno">
+  <span class="label">implementation map · revised</span>
+  <span class="title">Round 4 sub-rounds with preview-route framing</span>
+  <span class="desc">Backend changes (4.A) land canonically and benefit both routes. Frontend forks into <code style="font-family:'JetBrains Mono'; font-size:11px;">preview/</code> until cutover (4.G).</span>
+</div>
+
+<div class="container-wrap" style="margin-bottom: 60px;">
+  <div style="background: var(--surface); border:1px solid var(--border); border-radius:10px; overflow:hidden;">
+    <table style="width:100%; border-collapse:separate; border-spacing:0;">
+      <thead>
+        <tr style="background:var(--surface-2);">
+          <th style="text-align:left; padding:10px 12px; font-family:'Bricolage Grotesque'; font-size:11px; font-weight:600; text-transform:uppercase; letter-spacing:0.06em; color:var(--fg-muted); border-bottom:1px solid var(--border); width: 80px;">Round</th>
+          <th style="text-align:left; padding:10px 12px; font-family:'Bricolage Grotesque'; font-size:11px; font-weight:600; text-transform:uppercase; letter-spacing:0.06em; color:var(--fg-muted); border-bottom:1px solid var(--border);">Goal</th>
+          <th style="text-align:left; padding:10px 12px; font-family:'Bricolage Grotesque'; font-size:11px; font-weight:600; text-transform:uppercase; letter-spacing:0.06em; color:var(--fg-muted); border-bottom:1px solid var(--border); width: 110px;">Lands in</th>
+        </tr>
+      </thead>
+      <tbody style="font-size: 12.5px;">
+        <tr>
+          <td style="padding:12px; border-bottom:1px solid var(--border); font-family:'JetBrains Mono'; font-size:11px;"><span style="background:var(--fg); color:var(--bg); padding:2px 6px; border-radius:3px;">4.A</span></td>
+          <td style="padding:12px; border-bottom:1px solid var(--border);">
+            <strong>Foundation</strong> · eager-load fix on QuestionPaperController to populate <code style="font-family:'JetBrains Mono'; font-size:11px;">node.answers</code> · adds answer-status dots in the existing tree
+            <div style="font-family:'JetBrains Mono'; font-size:11px; color:var(--fg-subtle); margin-top:3px;">unlocks dead AnswerSection · daily-visible signal for every author</div>
+          </td>
+          <td style="padding:12px; border-bottom:1px solid var(--border); font-family:'JetBrains Mono'; font-size:11px; color:var(--primary);">canonical</td>
+        </tr>
+        <tr>
+          <td style="padding:12px; border-bottom:1px solid var(--border); font-family:'JetBrains Mono'; font-size:11px;"><span style="background:var(--fg); color:var(--bg); padding:2px 6px; border-radius:3px;">4.B</span></td>
+          <td style="padding:12px; border-bottom:1px solid var(--border);">
+            <strong>Preview route scaffold</strong> · ships <code style="font-family:'JetBrains Mono'; font-size:11px;">/admin/question-papers/{paper}/build/preview</code> with composite editor + Theory authoring end-to-end · new pages under <code style="font-family:'JetBrains Mono'; font-size:11px;">preview/</code>
+            <div style="font-family:'JetBrains Mono'; font-size:11px; color:var(--fg-subtle); margin-top:3px;">smallest viable vertical slice — proves the architecture</div>
+          </td>
+          <td style="padding:12px; border-bottom:1px solid var(--border); font-family:'JetBrains Mono'; font-size:11px; color:var(--ember);">preview/</td>
+        </tr>
+        <tr>
+          <td style="padding:12px; border-bottom:1px solid var(--border); font-family:'JetBrains Mono'; font-size:11px;"><span style="background:var(--fg); color:var(--bg); padding:2px 6px; border-radius:3px;">4.C</span></td>
+          <td style="padding:12px; border-bottom:1px solid var(--border);">
+            <strong>Question tab type variants</strong> · the 7+1 authoring shapes from §3 above
+            <div style="font-family:'JetBrains Mono'; font-size:11px; color:var(--fg-subtle); margin-top:3px;">largest round — most new code · type-aware response_config UI</div>
+          </td>
+          <td style="padding:12px; border-bottom:1px solid var(--border); font-family:'JetBrains Mono'; font-size:11px; color:var(--ember);">preview/</td>
+        </tr>
+        <tr>
+          <td style="padding:12px; border-bottom:1px solid var(--border); font-family:'JetBrains Mono'; font-size:11px;"><span style="background:var(--fg); color:var(--bg); padding:2px 6px; border-radius:3px;">4.D</span></td>
+          <td style="padding:12px; border-bottom:1px solid var(--border);">
+            <strong>Answers tab structural split</strong> · correct-response card + 3 depth cards · diagram embeds inside Tiptap · AI prose+illustration co-generation
+            <div style="font-family:'JetBrains Mono'; font-size:11px; color:var(--fg-subtle); margin-top:3px;">absorbs the standalone /admin/questions/{id}/answers page</div>
+          </td>
+          <td style="padding:12px; border-bottom:1px solid var(--border); font-family:'JetBrains Mono'; font-size:11px; color:var(--ember);">preview/</td>
+        </tr>
+        <tr>
+          <td style="padding:12px; border-bottom:1px solid var(--border); font-family:'JetBrains Mono'; font-size:11px;"><span style="background:var(--fg); color:var(--bg); padding:2px 6px; border-radius:3px;">4.E</span></td>
+          <td style="padding:12px; border-bottom:1px solid var(--border);">
+            <strong>Library reshape</strong> · new container-first landing · papers / course-pools / unattached inbox · ⌘K global search · retires the flat <code style="font-family:'JetBrains Mono'; font-size:11px;">/admin/questions</code> index
+            <div style="font-family:'JetBrains Mono'; font-size:11px; color:var(--fg-subtle); margin-top:3px;">also lands the pool-builder variant from §2 above</div>
+          </td>
+          <td style="padding:12px; border-bottom:1px solid var(--border); font-family:'JetBrains Mono'; font-size:11px; color:var(--ember);">preview/</td>
+        </tr>
+        <tr>
+          <td style="padding:12px; border-bottom:1px solid var(--border); font-family:'JetBrains Mono'; font-size:11px;"><span style="background:var(--surface-3); color:var(--fg-muted); padding:2px 6px; border-radius:3px;">4.F</span></td>
+          <td style="padding:12px; border-bottom:1px solid var(--border);">
+            <strong>Inbox triage</strong> · resolve the 24 unattached questions · bulk-assign UI or delete
+            <div style="font-family:'JetBrains Mono'; font-size:11px; color:var(--fg-subtle); margin-top:3px;">data hygiene — small lift, can defer if needed</div>
+          </td>
+          <td style="padding:12px; border-bottom:1px solid var(--border); font-family:'JetBrains Mono'; font-size:11px; color:var(--ember);">preview/</td>
+        </tr>
+        <tr>
+          <td style="padding:12px; font-family:'JetBrains Mono'; font-size:11px;"><span style="background:var(--surface-3); color:var(--fg-muted); padding:2px 6px; border-radius:3px;">4.G</span></td>
+          <td style="padding:12px;">
+            <strong>Cutover</strong> · move <code style="font-family:'JetBrains Mono'; font-size:11px;">preview/*</code> into canonical paths · delete old standalone pages (questions/create, questions/edit, questions/answers, questions/topic-links, questions/block-links) · drop the preview routes
+            <div style="font-family:'JetBrains Mono'; font-size:11px; color:var(--fg-subtle); margin-top:3px;">single PR, lots of file moves and deletes — coordinate with no-merge window</div>
+          </td>
+          <td style="padding:12px; font-family:'JetBrains Mono'; font-size:11px; color:var(--primary);">canonical</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<footer class="doc-foot">
+  prototype 02 · skoolpad / question library, pool builder, type shapes · 2026-05-07 · warm editorial · sibling of question-builder-redesign.html
+</footer>
+
+</body>
+</html>

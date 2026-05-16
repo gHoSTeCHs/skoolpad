@@ -48,4 +48,9 @@ class QuestionPolicy
     {
         return $user->role->hasPermission('manage_answers');
     }
+
+    public function delete(User $user, ?Question $question = null): bool
+    {
+        return $user->role->hasPermission('manage_questions');
+    }
 }

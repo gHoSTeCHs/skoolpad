@@ -13,7 +13,7 @@ class ContentGenerationUpdate implements ShouldBroadcastNow
     use Dispatchable, InteractsWithSockets, SerializesModels;
 
     /**
-     * @param  'status'|'complete'|'error'  $type
+     * @param  'status'|'complete'|'error'|'item_complete'|'item_error'  $type
      * @param  array<string, mixed>  $data
      */
     public function __construct(

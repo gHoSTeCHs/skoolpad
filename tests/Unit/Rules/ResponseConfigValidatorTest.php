@@ -277,9 +277,48 @@ test('written types with null config pass', function (string $type) {
     expect(validateConfig($type, null))->toBeTrue();
 })->with(['theory', 'short_answer', 'essay']);
 
-test('written types with non-null config fail', function (string $type) {
+test('written types with unknown keys fail', function (string $type) {
     expect(validateConfig($type, ['some' => 'data']))->toBeFalse();
 })->with(['theory', 'short_answer', 'essay']);
+
+test('written types with word range pass', function (string $type) {
+    expect(validateConfig($type, ['minWords' => 100, 'maxWords' => 500]))->toBeTrue();
+})->with(['theory', 'short_answer', 'essay']);
+
+test('written types with rubric pass', function (string $type) {
+    $config = [
+        'rubric' => [
+            ['label' => 'A', 'text' => 'Defines RISC and CISC', 'points' => 5],
+            ['label' => 'B', 'text' => 'Names a real processor', 'points' => 3],
+        ],
+    ];
+    expect(validateConfig($type, $config))->toBeTrue();
+})->with(['theory', 'short_answer', 'essay']);
+
+test('written types with rubric + word range pass', function () {
+    $config = [
+        'minWords' => 200,
+        'maxWords' => 600,
+        'rubric' => [
+            ['label' => 'A', 'text' => 'Coherent', 'points' => 4],
+        ],
+    ];
+    expect(validateConfig('essay', $config))->toBeTrue();
+});
+
+test('written types with malformed rubric criterion fail', function () {
+    $config = ['rubric' => [['label' => 'A', 'text' => 'no points field']]];
+    expect(validateConfig('theory', $config))->toBeFalse();
+});
+
+test('written types with negative word range fail', function () {
+    expect(validateConfig('theory', ['minWords' => -5]))->toBeFalse();
+});
+
+test('written types with non-integer points fail', function () {
+    $config = ['rubric' => [['label' => 'A', 'text' => 'X', 'points' => 'five']]];
+    expect(validateConfig('theory', $config))->toBeFalse();
+});
 
 test('group with null config passes', function () {
     expect(validateConfig('group', null))->toBeTrue();

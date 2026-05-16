@@ -12,7 +12,7 @@ export type ContextType =
 
 export type QuestionStatus = 'draft' | 'in_review' | 'published' | 'archived';
 export type QuestionDifficulty = 'easy' | 'medium' | 'hard';
-export type QuestionSource = 'manual' | 'crowdsourced' | 'ai_generated' | 'bulk_import';
+export type QuestionSource = 'manual' | 'crowdsourced' | 'ai_generated' | 'bulk_import' | 'past_paper_imported';
 export type AnswerDepthLevel = 'quick' | 'standard' | 'deep_dive';
 export type QuestionSemester = 'first' | 'second';
 
@@ -136,9 +136,11 @@ export interface QuestionContextData {
 export interface QuestionNode {
     id: string;
     question_type: QuestionType;
+    question_section_id?: string | null;
     question_number?: string;
     display_label?: string;
     content: string;
+    content_doc?: TiptapJSON | null;
     marks: number | null;
     sort_order: number;
     depth_level: number;
@@ -150,6 +152,8 @@ export interface QuestionNode {
     context_links?: { context_id: string; sort_order: number; label?: string }[];
     question_context_links?: { question_context_id: string; sort_order: number; label?: string }[];
     children: QuestionNode[];
+    topic_links?: QuestionNodeTopicLink[];
+    question_block_links?: QuestionNodeBlockLink[];
     answers?: {
         id: string;
         depth_level: string;
@@ -157,6 +161,8 @@ export interface QuestionNode {
         content_plain: string | null;
         is_published: boolean;
     }[];
+    /** Count of content_block_assets owned by this question (Track 2 polish B.1). */
+    diagram_assets_count?: number;
 }
 
 /** @deprecated Use McqConfig.options instead */
@@ -190,6 +196,27 @@ export interface TopicLink {
     is_primary: boolean;
 }
 
+export type BlockRelevance = 'primary' | 'secondary' | 'prerequisite';
+
+export interface BlockSearchResult {
+    id: string;
+    title: string;
+    canonical_topic_id: string;
+}
+
+export interface QuestionNodeTopicLink {
+    id: string;
+    canonical_topic_id: string;
+    is_primary: boolean;
+    canonical_topic: { id: string; title: string };
+}
+
+export interface QuestionNodeBlockLink {
+    content_block_id: string;
+    relevance: BlockRelevance;
+    content_block: { id: string; title: string };
+}
+
 export interface InstitutionOption {
     id: string;
     name: string;
@@ -207,6 +234,22 @@ export interface TopicSearchResult {
     title: string;
 }
 
+export interface ChoiceGroup {
+    required: string[];
+    chooseN: number;
+    optional: string[];
+}
+
+export interface SubQuestionFormData {
+    id?: string;
+    question_type: QuestionType;
+    content: string;
+    content_doc?: TiptapJSON | null;
+    marks: number | null;
+    sort_order: number;
+    response_config: ResponseConfig;
+}
+
 export interface QuestionFormData {
     institution_course_id: string;
     question_paper_id?: string;
@@ -215,6 +258,7 @@ export interface QuestionFormData {
     exam_subject_id?: string;
     question_type: QuestionType;
     content: string;
+    content_doc?: TiptapJSON | null;
     year: number | '';
     semester: QuestionSemester | '';
     marks: number | '';
@@ -225,12 +269,16 @@ export interface QuestionFormData {
     response_config: ResponseConfig;
     topic_ids: string[];
     primary_topic_id: string;
+    sub_questions: SubQuestionFormData[];
+    choice_group: ChoiceGroup | null;
 }
 
-export interface QuestionData extends QuestionFormData {
+export interface QuestionData extends Omit<QuestionFormData, 'sub_questions' | 'choice_group'> {
     id: string;
     institution_id: string;
     topic_links: TopicLink[];
+    sub_questions: SubQuestionFormData[];
+    choice_group: ChoiceGroup | null;
 }
 
 export interface QuestionEnumOptions {

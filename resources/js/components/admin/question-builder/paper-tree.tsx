@@ -1,38 +1,20 @@
 import { useState } from 'react';
-import { router } from '@inertiajs/react';
-import { Button } from '@/components/ui/button';
 import { QuestionTypeBadge } from '@/components/skoolpad/questions';
-import QuestionSectionController from '@/actions/App/Http/Controllers/Admin/QuestionSectionController';
-import QuestionContextController from '@/actions/App/Http/Controllers/Admin/QuestionContextController';
-import QuestionController from '@/actions/App/Http/Controllers/Admin/QuestionController';
-import type { QuestionPaper, QuestionSection, QuestionNode, QuestionContextData } from '@/types/questions';
+import { AnswerStatusDots } from './answer-status-dots';
+import { DiagramPresenceChip } from './diagram-presence-chip';
+import type { QuestionPaper, QuestionSection, QuestionNode, QuestionContextData, QuestionType } from '@/types/questions';
 
-export type SelectedNodeType = 'section' | 'question' | 'context';
-
-export interface SelectedNode {
-    type: SelectedNodeType;
-    id: string;
-}
+export type SelectedNode =
+    | { type: 'section'; id: string }
+    | { type: 'question'; id: string }
+    | { type: 'context'; id: string }
+    | { type: 'draft'; defaultType: QuestionType; sectionId?: string; topicId?: string; parentId?: string };
 
 interface PaperTreeProps {
     paper: QuestionPaper;
     selectedNode: SelectedNode | null;
     onSelectNode: (node: SelectedNode | null) => void;
-}
-
-interface SectionNodeProps {
-    paper: QuestionPaper;
-    section: QuestionSection;
-    selectedNode: SelectedNode | null;
-    onSelectNode: (node: SelectedNode | null) => void;
-}
-
-interface QuestionTreeNodeProps {
-    paper: QuestionPaper;
-    question: QuestionNode;
-    depth: number;
-    selectedNode: SelectedNode | null;
-    onSelectNode: (node: SelectedNode | null) => void;
+    onAddSection: () => void;
 }
 
 function countQuestionsRecursive(questions: QuestionNode[]): number {
@@ -46,33 +28,26 @@ function countQuestionsRecursive(questions: QuestionNode[]): number {
     return count;
 }
 
-function QuestionTreeNode({ paper, question, depth, selectedNode, onSelectNode }: QuestionTreeNodeProps) {
+interface QuestionTreeNodeProps {
+    question: QuestionNode;
+    depth: number;
+    selectedNode: SelectedNode | null;
+    onSelectNode: (node: SelectedNode) => void;
+    sectionId: string;
+}
+
+function QuestionTreeNode({ question, depth, selectedNode, onSelectNode, sectionId }: QuestionTreeNodeProps) {
     const [expanded, setExpanded] = useState(true);
     const isSelected = selectedNode?.type === 'question' && selectedNode.id === question.id;
     const hasChildren = question.children.length > 0;
 
-    function handleAddSubQuestion() {
-        router.post(QuestionController.store.url(), {
-            question_paper_id: paper.id,
-            question_section_id: question.question_type === 'group' ? null : undefined,
-            parent_question_id: question.id,
-            institution_course_id: paper.institution_course_id,
-            question_type: 'short_answer',
-            content: 'New sub-question',
-            source: 'manual',
-            status: 'draft',
-        }, {
-            preserveScroll: true,
-            onSuccess: () => router.reload({ only: ['paper'] }),
-        });
-    }
-
     return (
         <div style={{ paddingLeft: depth > 0 ? 12 : 0 }}>
             <div
+                data-selected={isSelected || undefined}
                 className={
                     'group flex cursor-pointer items-center gap-1.5 rounded-md px-2 py-1.5 text-xs transition-colors hover:bg-accent'
-                    + (isSelected ? ' border-l-2 border-primary bg-accent' : '')
+                    + (isSelected ? ' border-l-2 border-foreground bg-background shadow-[inset_0_0_0_1px_var(--border)]' : '')
                 }
                 onClick={() => onSelectNode({ type: 'question', id: question.id })}
             >
@@ -81,32 +56,22 @@ function QuestionTreeNode({ paper, question, depth, selectedNode, onSelectNode }
                         onClick={(e) => { e.stopPropagation(); setExpanded(!expanded); }}
                         className="shrink-0 border-none bg-transparent p-0 text-[10px] text-muted-foreground transition-transform duration-150"
                         style={{ transform: expanded ? 'rotate(90deg)' : 'none' }}
+                        aria-label={expanded ? 'Collapse' : 'Expand'}
                     >
-                        {'\u25B6'}
+                        {'▶'}
                     </button>
                 ) : (
                     <span className="inline-block h-1.5 w-1.5 shrink-0 rounded-full bg-primary/40" />
                 )}
 
-                <span className="min-w-0 flex-1 truncate">
+                <span className={'min-w-0 flex-1 truncate' + (isSelected ? ' font-medium' : '')}>
                     {question.question_number || question.display_label || 'Q'}
                 </span>
 
                 <QuestionTypeBadge type={question.question_type} className="shrink-0 text-[8px] px-1 py-0" />
 
-                {question.marks !== null && (
-                    <span className="shrink-0 text-[10px] text-muted-foreground">{question.marks}m</span>
-                )}
-
-                {question.question_type === 'group' && (
-                    <button
-                        onClick={(e) => { e.stopPropagation(); handleAddSubQuestion(); }}
-                        className="hidden shrink-0 rounded border-none bg-transparent p-0 text-muted-foreground transition-colors hover:text-primary group-hover:inline-block"
-                        title="Add sub-question"
-                    >
-                        +
-                    </button>
-                )}
+                <DiagramPresenceChip question={question} />
+                <AnswerStatusDots question={question} />
             </div>
 
             {hasChildren && expanded && (
@@ -114,38 +79,42 @@ function QuestionTreeNode({ paper, question, depth, selectedNode, onSelectNode }
                     {question.children.map((child) => (
                         <QuestionTreeNode
                             key={child.id}
-                            paper={paper}
                             question={child}
                             depth={depth + 1}
                             selectedNode={selectedNode}
                             onSelectNode={onSelectNode}
+                            sectionId={sectionId}
                         />
                     ))}
                 </div>
+            )}
+
+            {question.question_type === 'group' && (
+                <button
+                    type="button"
+                    onClick={(e) => {
+                        e.stopPropagation();
+                        onSelectNode({ type: 'draft', sectionId, parentId: question.id, defaultType: 'theory' });
+                    }}
+                    className="mt-0.5 flex w-full items-center gap-1.5 rounded-md border border-dashed border-border px-2 py-1 text-[11px] text-muted-foreground transition-colors hover:border-[var(--fg-subtle)] hover:bg-[var(--bg-raised)] hover:text-foreground"
+                >
+                    + Add sub-question
+                </button>
             )}
         </div>
     );
 }
 
-function SectionNode({ paper, section, selectedNode, onSelectNode }: SectionNodeProps) {
+interface SectionNodeProps {
+    section: QuestionSection;
+    selectedNode: SelectedNode | null;
+    onSelectNode: (node: SelectedNode) => void;
+}
+
+function SectionNode({ section, selectedNode, onSelectNode }: SectionNodeProps) {
     const [expanded, setExpanded] = useState(true);
     const isSelected = selectedNode?.type === 'section' && selectedNode.id === section.id;
     const questionCount = countQuestionsRecursive(section.questions);
-
-    function handleAddQuestion() {
-        router.post(QuestionController.store.url(), {
-            question_paper_id: paper.id,
-            question_section_id: section.id,
-            institution_course_id: paper.institution_course_id,
-            question_type: 'mcq',
-            content: 'New question',
-            source: 'manual',
-            status: 'draft',
-        }, {
-            preserveScroll: true,
-            onSuccess: () => router.reload({ only: ['paper'] }),
-        });
-    }
 
     return (
         <div className="mb-1">
@@ -160,21 +129,14 @@ function SectionNode({ paper, section, selectedNode, onSelectNode }: SectionNode
                     onClick={(e) => { e.stopPropagation(); setExpanded(!expanded); }}
                     className="shrink-0 border-none bg-transparent p-0 text-[10px] text-muted-foreground transition-transform duration-150"
                     style={{ transform: expanded ? 'rotate(90deg)' : 'none' }}
+                    aria-label={expanded ? 'Collapse section' : 'Expand section'}
                 >
-                    {'\u25B6'}
+                    {'▶'}
                 </button>
 
                 <span className="min-w-0 flex-1 truncate">{section.label}</span>
 
                 <span className="shrink-0 text-[10px] text-muted-foreground">{questionCount}q</span>
-
-                <button
-                    onClick={(e) => { e.stopPropagation(); handleAddQuestion(); }}
-                    className="hidden shrink-0 rounded-md border-none bg-transparent px-1 py-0 text-sm text-muted-foreground transition-colors hover:text-primary group-hover:inline-block"
-                    title="Add question to section"
-                >
-                    +
-                </button>
             </div>
 
             {expanded && (
@@ -182,96 +144,23 @@ function SectionNode({ paper, section, selectedNode, onSelectNode }: SectionNode
                     {section.questions.map((question) => (
                         <QuestionTreeNode
                             key={question.id}
-                            paper={paper}
                             question={question}
                             depth={0}
                             selectedNode={selectedNode}
                             onSelectNode={onSelectNode}
+                            sectionId={section.id}
                         />
                     ))}
+
+                    <button
+                        type="button"
+                        onClick={() => onSelectNode({ type: 'draft', sectionId: section.id, defaultType: 'mcq' })}
+                        className="ml-1 mt-0.5 flex w-full items-center gap-1.5 rounded-md border border-dashed border-border px-2 py-1 text-[11px] text-muted-foreground transition-colors hover:border-[var(--fg-subtle)] hover:bg-[var(--bg-raised)] hover:text-foreground"
+                    >
+                        + Add question
+                    </button>
                 </div>
             )}
-        </div>
-    );
-}
-
-export default function PaperTree({ paper, selectedNode, onSelectNode }: PaperTreeProps) {
-    const [contextsExpanded, setContextsExpanded] = useState(true);
-
-    function handleAddSection() {
-        router.post(QuestionSectionController.store.url(paper.id), {
-            label: `Section ${String.fromCharCode(65 + paper.sections.length)}`,
-        }, {
-            preserveScroll: true,
-            onSuccess: () => router.reload({ only: ['paper'] }),
-        });
-    }
-
-    function handleAddContext() {
-        router.post(QuestionContextController.store.url(paper.id), {
-            context_type: 'passage',
-            title: 'New context',
-        }, {
-            preserveScroll: true,
-            onSuccess: () => router.reload({ only: ['paper'] }),
-        });
-    }
-
-    return (
-        <div className="flex h-full flex-col border-r border-border bg-card">
-            <div className="border-b border-border px-3 py-2">
-                <h3 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Paper Structure</h3>
-            </div>
-
-            <div className="flex-1 overflow-y-auto p-2">
-                {paper.sections.map((section) => (
-                    <SectionNode
-                        key={section.id}
-                        paper={paper}
-                        section={section}
-                        selectedNode={selectedNode}
-                        onSelectNode={onSelectNode}
-                    />
-                ))}
-
-                <Button variant="ghost" size="sm" className="mt-2 w-full text-xs" onClick={handleAddSection}>
-                    + Add Section
-                </Button>
-
-                {paper.contexts.length > 0 && (
-                    <div className="mt-4">
-                        <div
-                            className="flex cursor-pointer items-center gap-1.5 px-2 py-1.5 text-xs font-semibold uppercase tracking-wider text-muted-foreground"
-                            onClick={() => setContextsExpanded(!contextsExpanded)}
-                        >
-                            <span
-                                className="text-[10px] transition-transform duration-150"
-                                style={{ transform: contextsExpanded ? 'rotate(90deg)' : 'none' }}
-                            >
-                                {'\u25B6'}
-                            </span>
-                            Contexts ({paper.contexts.length})
-                        </div>
-
-                        {contextsExpanded && (
-                            <div className="space-y-0.5">
-                                {paper.contexts.map((ctx) => (
-                                    <ContextTreeNode
-                                        key={ctx.id}
-                                        context={ctx}
-                                        selectedNode={selectedNode}
-                                        onSelectNode={onSelectNode}
-                                    />
-                                ))}
-                            </div>
-                        )}
-                    </div>
-                )}
-
-                <Button variant="ghost" size="sm" className="mt-2 w-full text-xs" onClick={handleAddContext}>
-                    + Add Context
-                </Button>
-            </div>
         </div>
     );
 }
@@ -283,7 +172,7 @@ function ContextTreeNode({
 }: {
     context: QuestionContextData;
     selectedNode: SelectedNode | null;
-    onSelectNode: (node: SelectedNode | null) => void;
+    onSelectNode: (node: SelectedNode) => void;
 }) {
     const isSelected = selectedNode?.type === 'context' && selectedNode.id === context.id;
 
@@ -302,6 +191,72 @@ function ContextTreeNode({
             <span className="shrink-0 text-[9px] uppercase text-muted-foreground">
                 {context.context_type.replace('_', ' ')}
             </span>
+        </div>
+    );
+}
+
+export function PaperTree({ paper, selectedNode, onSelectNode, onAddSection }: PaperTreeProps) {
+    const [contextsExpanded, setContextsExpanded] = useState(true);
+
+    return (
+        <div className="flex h-full flex-col border-r border-border bg-card">
+            <div className="border-b border-border-2 bg-gradient-to-b from-card to-[var(--bg-raised)] px-4 py-3">
+                <h3 className="font-display text-[15px] font-semibold leading-tight tracking-tight text-foreground">
+                    {paper.title}
+                </h3>
+                <p className="mt-0.5 font-mono text-[11.5px] text-[var(--fg-subtle)]">
+                    {paper.sections.length} section{paper.sections.length === 1 ? '' : 's'}
+                </p>
+            </div>
+
+            <div className="flex-1 overflow-y-auto p-2">
+                {paper.sections.map((section) => (
+                    <SectionNode
+                        key={section.id}
+                        section={section}
+                        selectedNode={selectedNode}
+                        onSelectNode={onSelectNode}
+                    />
+                ))}
+
+                <button
+                    type="button"
+                    onClick={onAddSection}
+                    className="mt-2 flex w-full items-center justify-center gap-1.5 rounded-md border border-dashed border-border px-2 py-1.5 text-[11px] text-muted-foreground transition-colors hover:border-[var(--fg-subtle)] hover:bg-[var(--bg-raised)] hover:text-foreground"
+                >
+                    + Add section
+                </button>
+
+                {paper.contexts.length > 0 && (
+                    <div className="mt-4">
+                        <div
+                            className="flex cursor-pointer items-center gap-1.5 px-2 py-1.5 text-xs font-semibold uppercase tracking-wider text-muted-foreground"
+                            onClick={() => setContextsExpanded(!contextsExpanded)}
+                        >
+                            <span
+                                className="text-[10px] transition-transform duration-150"
+                                style={{ transform: contextsExpanded ? 'rotate(90deg)' : 'none' }}
+                            >
+                                {'▶'}
+                            </span>
+                            Contexts ({paper.contexts.length})
+                        </div>
+
+                        {contextsExpanded && (
+                            <div className="space-y-0.5">
+                                {paper.contexts.map((ctx) => (
+                                    <ContextTreeNode
+                                        key={ctx.id}
+                                        context={ctx}
+                                        selectedNode={selectedNode}
+                                        onSelectNode={onSelectNode}
+                                    />
+                                ))}
+                            </div>
+                        )}
+                    </div>
+                )}
+            </div>
         </div>
     );
 }

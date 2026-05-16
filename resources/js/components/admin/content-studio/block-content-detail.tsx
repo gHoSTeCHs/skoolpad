@@ -1,23 +1,14 @@
 'use no memo';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { FileText, PenLine, X } from 'lucide-react';
-import {
-    AlertDialog,
-    AlertDialogAction,
-    AlertDialogCancel,
-    AlertDialogContent,
-    AlertDialogDescription,
-    AlertDialogFooter,
-    AlertDialogHeader,
-    AlertDialogTitle,
-    AlertDialogTrigger,
-} from '@/components/ui/alert-dialog';
 import { Button } from '@/components/ui/button';
 import { ContentRenderer } from '@/components/shared/content-renderer';
 import { TiptapEditor } from '@/components/shared/tiptap-editor';
 import { DriftAdvisoryBanner } from './drift-advisory-banner';
 import { StageModelSelector } from './stage-model-selector';
 import { GenerationProgress } from './generation-progress';
+import { BlockMetadataPanel } from './block-metadata-panel';
+import { RegenerateWithConfirm } from './regenerate-with-confirm';
 import type { AIModelOption, ContentBlock, ContentProject, ResolvedStageModels } from '@/types/content-studio';
 import type { TiptapJSON } from '@/types/tiptap';
 
@@ -208,6 +199,7 @@ export function BlockContentDetail({
                             onChange={(json) => setEditedContent(json)}
                             placeholder="Block content"
                             disabled={false}
+                            diagramOwner={{ kind: 'content_block', id: block.id }}
                         />
                     ) : (
                         <div className="rounded-md border border-border bg-background p-6">
@@ -215,7 +207,7 @@ export function BlockContentDetail({
                         </div>
                     )}
 
-                    <MetadataPanel block={block} />
+                    <BlockMetadataPanel block={block} variant="inline-details" />
 
                     <div className="flex flex-wrap items-center justify-end gap-2">
                         {block.generation_status === 'approved' && !isEditing && (
@@ -337,92 +329,4 @@ function GuidanceView({ guidance, onEdit }: { guidance: string; onEdit: () => vo
     );
 }
 
-function MetadataPanel({ block }: { block: ContentBlock }) {
-    const terms = block.key_terms_introduced ?? [];
-    const symbols = block.symbols_used ?? [];
-    const formulas = block.formulas_used ?? [];
 
-    if (!block.summary_sentence && terms.length === 0 && symbols.length === 0 && formulas.length === 0) {
-        return null;
-    }
-
-    return (
-        <details className="group rounded-md border border-border bg-background">
-            <summary className="flex cursor-pointer list-none items-center justify-between px-3 py-2">
-                <span className="font-mono text-[10px] uppercase tracking-[0.16em] text-muted-foreground">
-                    Generation metadata
-                </span>
-                <span className="font-mono text-[10px] uppercase tracking-[0.16em] text-muted-foreground">
-                    <span className="group-open:hidden">↓ expand</span>
-                    <span className="hidden group-open:inline">↑ collapse</span>
-                </span>
-            </summary>
-            <div className="flex flex-col gap-3 border-t border-border px-3 py-3">
-                {block.summary_sentence && (
-                    <div>
-                        <div className="font-mono text-[10px] uppercase tracking-[0.16em] text-muted-foreground">Summary</div>
-                        <p className="pt-1 text-sm text-foreground">{block.summary_sentence}</p>
-                    </div>
-                )}
-                {terms.length > 0 && (
-                    <div>
-                        <div className="font-mono text-[10px] uppercase tracking-[0.16em] text-muted-foreground">Key terms introduced</div>
-                        <ul className="pt-1 space-y-1 text-sm text-foreground">
-                            {terms.map((t) => (
-                                <li key={t.term}>
-                                    <span className="font-medium">{t.term}</span>
-                                    <span className="text-muted-foreground"> — {t.definition}</span>
-                                </li>
-                            ))}
-                        </ul>
-                    </div>
-                )}
-                {symbols.length > 0 && (
-                    <div>
-                        <div className="font-mono text-[10px] uppercase tracking-[0.16em] text-muted-foreground">Symbols</div>
-                        <ul className="pt-1 space-y-1 text-sm text-foreground">
-                            {symbols.map((s) => (
-                                <li key={s.symbol}>
-                                    <span className="font-mono">{s.symbol}</span>
-                                    <span className="text-muted-foreground"> = {s.quantity} ({s.unit})</span>
-                                </li>
-                            ))}
-                        </ul>
-                    </div>
-                )}
-                {formulas.length > 0 && (
-                    <div>
-                        <div className="font-mono text-[10px] uppercase tracking-[0.16em] text-muted-foreground">Formulas</div>
-                        <ul className="pt-1 space-y-1 font-mono text-xs text-foreground">
-                            {formulas.map((f, i) => <li key={i}>{f}</li>)}
-                        </ul>
-                    </div>
-                )}
-            </div>
-        </details>
-    );
-}
-
-function RegenerateWithConfirm({ onConfirm, destructive = false }: { onConfirm: () => void; destructive?: boolean }) {
-    return (
-        <AlertDialog>
-            <AlertDialogTrigger asChild>
-                <Button variant={destructive ? 'destructive' : 'outline'}>Regenerate</Button>
-            </AlertDialogTrigger>
-            <AlertDialogContent>
-                <AlertDialogHeader>
-                    <AlertDialogTitle>Regenerate this block?</AlertDialogTitle>
-                    <AlertDialogDescription>
-                        {destructive
-                            ? 'This approved block will drop to the generated state and may flag downstream blocks if its key terms, symbols, or summary change.'
-                            : 'The current content will be replaced.'}
-                    </AlertDialogDescription>
-                </AlertDialogHeader>
-                <AlertDialogFooter>
-                    <AlertDialogCancel>Cancel</AlertDialogCancel>
-                    <AlertDialogAction onClick={onConfirm}>Regenerate</AlertDialogAction>
-                </AlertDialogFooter>
-            </AlertDialogContent>
-        </AlertDialog>
-    );
-}

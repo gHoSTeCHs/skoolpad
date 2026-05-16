@@ -30,12 +30,14 @@ class Question extends Model
         'question_number',
         'display_label',
         'content',
+        'content_doc',
         'marks',
         'sort_order',
         'depth_level',
         'response_config',
         'choice_group',
         'explanation',
+        'raw_ocr_excerpt',
         'difficulty_level',
         'bloom_level',
         'is_published',
@@ -62,6 +64,7 @@ class Question extends Model
             'status' => QuestionStatus::class,
             'response_config' => 'array',
             'choice_group' => 'array',
+            'content_doc' => 'array',
             'is_published' => 'boolean',
             'sort_order' => 'integer',
             'depth_level' => 'integer',
@@ -112,6 +115,16 @@ class Question extends Model
     public function answers(): HasMany
     {
         return $this->hasMany(QuestionAnswer::class);
+    }
+
+    /**
+     * Diagram assets attached to this question (drawn via the Excalidraw modal
+     * inside the stem or any answer-key editor). Drives the question tree's
+     * diagram-presence indicator (Track 2 polish B.1).
+     */
+    public function diagramAssets(): HasMany
+    {
+        return $this->hasMany(ContentBlockAsset::class);
     }
 
     public function topicLinks(): HasMany

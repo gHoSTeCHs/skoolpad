@@ -1,10 +1,12 @@
 <?php
 
+use App\Enums\AnswerDepthLevel;
 use App\Models\AssessmentType;
 use App\Models\EducationSystem;
 use App\Models\Institution;
 use App\Models\InstitutionCourse;
 use App\Models\Question;
+use App\Models\QuestionAnswer;
 use App\Models\QuestionPaper;
 use App\Models\QuestionSection;
 use App\Models\User;
@@ -137,6 +139,111 @@ test('build page loads paper with nested data', function () {
             ->has('enum_options.difficulties')
             ->has('enum_options.bloom_levels')
             ->has('enum_options.context_types')
+        );
+});
+
+test('build preview page loads paper with same payload shape as build', function () {
+    $paper = QuestionPaper::factory()->create(['institution_course_id' => $this->course->id]);
+    $section = QuestionSection::factory()->create(['question_paper_id' => $paper->id]);
+    $question = Question::factory()->create([
+        'question_paper_id' => $paper->id,
+        'question_section_id' => $section->id,
+        'institution_course_id' => $this->course->id,
+        'created_by' => $this->admin->id,
+    ]);
+    QuestionAnswer::factory()->for($question)->create([
+        'depth_level' => AnswerDepthLevel::Quick,
+        'is_published' => true,
+        'created_by' => $this->admin->id,
+    ]);
+
+    $this->actingAs($this->admin)
+        ->get(route('admin.question-papers.build', $paper))
+        ->assertOk()
+        ->assertInertia(fn ($page) => $page
+            ->component('admin/question-papers/build')
+            ->has('paper')
+            ->has('paper.sections', 1)
+            ->has('paper.sections.0.questions', 1)
+            ->has('paper.sections.0.questions.0.answers', 1)
+            ->has('enum_options.question_types')
+            ->has('enum_options.difficulties')
+            ->has('enum_options.bloom_levels')
+            ->has('enum_options.context_types')
+        );
+});
+
+test('build preview is staff-gated', function () {
+    $paper = QuestionPaper::factory()->create(['institution_course_id' => $this->course->id]);
+
+    $this->get(route('admin.question-papers.build', $paper))
+        ->assertRedirect(route('login'));
+});
+
+test('build eager-loads answers on top-level questions', function () {
+    $paper = QuestionPaper::factory()->create(['institution_course_id' => $this->course->id]);
+    $section = QuestionSection::factory()->create(['question_paper_id' => $paper->id]);
+    $question = Question::factory()->create([
+        'question_paper_id' => $paper->id,
+        'question_section_id' => $section->id,
+        'institution_course_id' => $this->course->id,
+        'created_by' => $this->admin->id,
+    ]);
+    QuestionAnswer::factory()->for($question)->create([
+        'depth_level' => AnswerDepthLevel::Quick,
+        'is_published' => true,
+        'created_by' => $this->admin->id,
+    ]);
+    QuestionAnswer::factory()->for($question)->create([
+        'depth_level' => AnswerDepthLevel::Standard,
+        'is_published' => false,
+        'created_by' => $this->admin->id,
+    ]);
+
+    $this->actingAs($this->admin)
+        ->get(route('admin.question-papers.build', $paper))
+        ->assertOk()
+        ->assertInertia(fn ($page) => $page
+            ->component('admin/question-papers/build')
+            ->has('paper.sections.0.questions.0.answers', 2)
+            ->has('paper.sections.0.questions.0.answers.0', fn ($answer) => $answer
+                ->has('id')
+                ->has('depth_level')
+                ->has('is_published')
+                ->etc()
+            )
+        );
+});
+
+test('build eager-loads answers on nested child questions', function () {
+    $paper = QuestionPaper::factory()->create(['institution_course_id' => $this->course->id]);
+    $section = QuestionSection::factory()->create(['question_paper_id' => $paper->id]);
+    $parent = Question::factory()->create([
+        'question_paper_id' => $paper->id,
+        'question_section_id' => $section->id,
+        'institution_course_id' => $this->course->id,
+        'created_by' => $this->admin->id,
+    ]);
+    $child = Question::factory()->create([
+        'question_paper_id' => $paper->id,
+        'question_section_id' => $section->id,
+        'parent_question_id' => $parent->id,
+        'institution_course_id' => $this->course->id,
+        'created_by' => $this->admin->id,
+    ]);
+    QuestionAnswer::factory()->for($child)->create([
+        'depth_level' => AnswerDepthLevel::DeepDive,
+        'is_published' => true,
+        'created_by' => $this->admin->id,
+    ]);
+
+    $this->actingAs($this->admin)
+        ->get(route('admin.question-papers.build', $paper))
+        ->assertOk()
+        ->assertInertia(fn ($page) => $page
+            ->has('paper.sections.0.questions.0.children.0.answers', 1)
+            ->where('paper.sections.0.questions.0.children.0.answers.0.depth_level', 'deep_dive')
+            ->where('paper.sections.0.questions.0.children.0.answers.0.is_published', true)
         );
 });
 

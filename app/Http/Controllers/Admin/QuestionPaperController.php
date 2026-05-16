@@ -91,28 +91,74 @@ class QuestionPaperController extends Controller
     {
         Gate::authorize('managePapers', Question::class);
 
-        $questionPaper->load([
+        return Inertia::render('admin/question-papers/build', $this->buildPayload($questionPaper));
+    }
+
+    /** @return array<string, mixed> */
+    /** Walk the recursive question tree, pushing every node into $sink. */
+    private static function collectQuestionsRecursive(iterable $questions, \Illuminate\Support\Collection $sink): void
+    {
+        foreach ($questions as $q) {
+            $sink->push($q);
+            if ($q->relationLoaded('children') && $q->children->isNotEmpty()) {
+                self::collectQuestionsRecursive($q->children, $sink);
+            }
+        }
+    }
+
+    private function buildPayload(QuestionPaper $paper): array
+    {
+        $paper->load([
             'institutionCourse:id,institution_id,course_code,course_title',
             'institutionCourse.institution:id,name,abbreviation',
             'assessmentType:id,name,slug',
             'sections' => fn ($q) => $q->orderBy('sort_order'),
             'sections.questions' => fn ($q) => $q->whereNull('parent_question_id')->orderBy('sort_order'),
+            'sections.questions.answers',
+            'sections.questions.topicLinks.canonicalTopic:id,title',
+            'sections.questions.questionBlockLinks.contentBlock:id,title',
             'sections.questions.children' => fn ($q) => $q->orderBy('sort_order'),
+            'sections.questions.children.answers',
+            'sections.questions.children.topicLinks.canonicalTopic:id,title',
+            'sections.questions.children.questionBlockLinks.contentBlock:id,title',
             'sections.questions.children.children' => fn ($q) => $q->orderBy('sort_order'),
+            'sections.questions.children.children.answers',
+            'sections.questions.children.children.topicLinks.canonicalTopic:id,title',
+            'sections.questions.children.children.questionBlockLinks.contentBlock:id,title',
             'sections.questions.children.children.children' => fn ($q) => $q->orderBy('sort_order'),
+            'sections.questions.children.children.children.answers',
+            'sections.questions.children.children.children.topicLinks.canonicalTopic:id,title',
+            'sections.questions.children.children.children.questionBlockLinks.contentBlock:id,title',
             'sections.questions.questionContextLinks',
             'contexts',
         ]);
 
-        return Inertia::render('admin/question-papers/build', [
-            'paper' => $questionPaper,
+        // Polish B.1 — diagram-presence indicator for the question tree.
+        // Walk the loaded tree once; one keyed COUNT query covers every depth.
+        $allQuestions = collect();
+        foreach ($paper->sections as $section) {
+            self::collectQuestionsRecursive($section->questions, $allQuestions);
+        }
+        if ($allQuestions->isNotEmpty()) {
+            $counts = \Illuminate\Support\Facades\DB::table('content_block_assets')
+                ->select('question_id', \Illuminate\Support\Facades\DB::raw('count(*) as c'))
+                ->whereIn('question_id', $allQuestions->pluck('id'))
+                ->groupBy('question_id')
+                ->pluck('c', 'question_id');
+            foreach ($allQuestions as $q) {
+                $q->diagram_assets_count = (int) ($counts[$q->id] ?? 0);
+            }
+        }
+
+        return [
+            'paper' => $paper,
             'enum_options' => [
                 'question_types' => array_map(fn ($c) => ['value' => $c->value, 'label' => $c->label()], QuestionType::cases()),
                 'difficulties' => array_map(fn ($c) => ['value' => $c->value, 'label' => $c->label()], QuestionDifficulty::cases()),
                 'bloom_levels' => array_map(fn ($c) => ['value' => $c->value, 'label' => $c->label()], BloomLevel::cases()),
                 'context_types' => array_map(fn ($c) => ['value' => $c->value, 'label' => $c->label()], ContextType::cases()),
             ],
-        ]);
+        ];
     }
 
     public function update(UpdateQuestionPaperRequest $request, QuestionPaper $questionPaper): RedirectResponse

@@ -17,6 +17,9 @@ interface MarkTopicCompleteDialogProps {
     allApproved: boolean;
     onConfirm: () => void;
     disabled?: boolean;
+    open?: boolean;
+    onOpenChange?: (open: boolean) => void;
+    hideTrigger?: boolean;
 }
 
 export function MarkTopicCompleteDialog({
@@ -25,12 +28,17 @@ export function MarkTopicCompleteDialog({
     allApproved,
     onConfirm,
     disabled,
+    open,
+    onOpenChange,
+    hideTrigger,
 }: MarkTopicCompleteDialogProps) {
     return (
-        <AlertDialog>
-            <AlertDialogTrigger asChild>
-                <Button variant="default" disabled={disabled || !allApproved}>Mark topic complete</Button>
-            </AlertDialogTrigger>
+        <AlertDialog open={open} onOpenChange={onOpenChange}>
+            {!hideTrigger && (
+                <AlertDialogTrigger asChild>
+                    <Button variant="default" disabled={disabled || !allApproved}>Mark topic complete</Button>
+                </AlertDialogTrigger>
+            )}
             <AlertDialogContent>
                 <AlertDialogHeader>
                     <AlertDialogTitle>Publish {topicTitle} to students?</AlertDialogTitle>

@@ -4,7 +4,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import PracticeController from '@/actions/App/Http/Controllers/Student/PracticeController';
 import { Button } from '@/components/ui/button';
 import { modeLabels } from '@/lib/practice';
-import { cn } from '@/lib/utils';
+import { cn, randomId } from '@/lib/utils';
 import type { AnswerSubmissionResponse, PracticeAnswerData, PracticeShowPageProps } from '@/types/practice';
 
 import { ProgressBar } from './partials/progress-bar';
@@ -97,7 +97,7 @@ export default function PracticeShow({ session, questions, answers: serverAnswer
                     const updated = {
                         ...prev,
                         [currentQuestion.id]: {
-                            id: crypto.randomUUID(),
+                            id: randomId(),
                             question_id: currentQuestion.id,
                             selected_option_label: (data as { selected_label?: string }).selected_label ?? null,
                             response_data: data,
@@ -150,7 +150,7 @@ export default function PracticeShow({ session, questions, answers: serverAnswer
                 setLocalAnswers((prev) => ({
                     ...prev,
                     [currentQuestion.id]: {
-                        id: crypto.randomUUID(),
+                        id: randomId(),
                         question_id: currentQuestion.id,
                         selected_option_label: null,
                         response_data: null,

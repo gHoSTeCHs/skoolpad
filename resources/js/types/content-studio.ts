@@ -153,6 +153,8 @@ export interface VisualizationFlag {
 
 export interface GenerationLogEntry {
     id: string;
+    content_block_id: string | null;
+    canonical_topic_id: string | null;
     prompt_type: string;
     model_used: string;
     is_valid: boolean;
@@ -211,6 +213,10 @@ export interface AIModel {
     thinking_mode: ThinkingMode;
     provider_id: string;
     provider?: AIProvider;
+    adapter_type?: AIAdapterType;
+    base_url?: string;
+    api_key?: string | null;
+    provider_api_key_set?: boolean;
     max_tokens: number;
     input_cost_per_million: number;
     output_cost_per_million: number;

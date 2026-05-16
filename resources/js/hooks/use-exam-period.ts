@@ -1,4 +1,5 @@
 import { useCallback, useState } from 'react';
+import { randomId } from '@/lib/utils';
 
 export interface ExamPeriod {
     label: string;
@@ -37,7 +38,7 @@ export function useExamPeriod(): UseExamPeriodReturn {
     const addEntry = useCallback((entry: Omit<ExamPeriodEntry, 'id'>) => {
         const newEntry: ExamPeriodEntry = {
             ...entry,
-            id: crypto.randomUUID(),
+            id: randomId(),
         };
         setEntries((prev) => [...prev, newEntry]);
     }, []);

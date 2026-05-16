@@ -12,24 +12,10 @@ beforeEach(function () {
     $this->question = Question::factory()->for($this->course)->create(['created_by' => $this->admin->id]);
 });
 
-test('index shows 3 depth levels with question info', function () {
-    QuestionAnswer::factory()->for($this->question)->quick()->create(['created_by' => $this->admin->id]);
-
+test('legacy answers URL redirects course-scoped questions to the course builder', function () {
     $this->actingAs($this->admin)
         ->get(route('admin.questions.answers', $this->question))
-        ->assertOk()
-        ->assertInertia(fn ($page) => $page
-            ->component('admin/questions/answers')
-            ->has('question')
-            ->where('question.id', $this->question->id)
-            ->has('answers', 3)
-            ->where('answers.0.depth_level', 'quick')
-            ->where('answers.0.label', 'Quick')
-            ->has('answers.0.description')
-            ->has('answers.0.answer')
-            ->where('answers.1.answer', null)
-            ->where('answers.2.answer', null)
-        );
+        ->assertRedirect(route('admin.question-library.course', $this->course));
 });
 
 test('store creates answer with content', function () {

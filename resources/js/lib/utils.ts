@@ -45,3 +45,45 @@ export function stripHtml(html: string): string {
     if (typeof html !== 'string') return '';
     return html.replace(/<[^>]*>/g, '').replace(/&nbsp;/g, ' ').replace(/\s+/g, ' ').trim();
 }
+
+/**
+ * Generates a v4-style UUID for client-only use (React keys, draft IDs).
+ * Prefers crypto.randomUUID, falls back to crypto.getRandomValues, then Math.random.
+ *
+ * crypto.randomUUID is only defined on secure contexts (HTTPS or http://localhost);
+ * dev servers bound to ::1 or non-localhost hosts otherwise crash.
+ */
+export function randomId(): string {
+    if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') {
+        return crypto.randomUUID();
+    }
+
+    if (typeof crypto !== 'undefined' && typeof crypto.getRandomValues === 'function') {
+        const bytes = new Uint8Array(16);
+        crypto.getRandomValues(bytes);
+        bytes[6] = (bytes[6] & 0x0f) | 0x40;
+        bytes[8] = (bytes[8] & 0x3f) | 0x80;
+        const hex: string[] = [];
+        for (let i = 0; i < 16; i++) hex.push(bytes[i].toString(16).padStart(2, '0'));
+        return `${hex.slice(0, 4).join('')}-${hex.slice(4, 6).join('')}-${hex.slice(6, 8).join('')}-${hex.slice(8, 10).join('')}-${hex.slice(10, 16).join('')}`;
+    }
+
+    return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, (c) => {
+        const r = (Math.random() * 16) | 0;
+        const v = c === 'x' ? r : (r & 0x3) | 0x8;
+        return v.toString(16);
+    });
+}
+
+export function csrfFetch(url: string, init?: RequestInit): Promise<Response> {
+    const token = decodeURIComponent(document.cookie.match(/XSRF-TOKEN=([^;]+)/)?.[1] ?? '');
+    return fetch(url, {
+        ...init,
+        headers: {
+            'X-XSRF-TOKEN': token,
+            Accept: 'application/json',
+            'Content-Type': 'application/json',
+            ...(init?.headers ?? {}),
+        },
+    });
+}

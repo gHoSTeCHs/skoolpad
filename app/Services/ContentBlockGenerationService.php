@@ -301,6 +301,8 @@ class ContentBlockGenerationService
             $context,
             $project,
             $modelId ?? $project->content_model_id,
+            contentBlockId: $block->id,
+            canonicalTopicId: $block->canonical_topic_id,
         );
 
         if (! $response->valid) {
@@ -315,6 +317,16 @@ class ContentBlockGenerationService
             throw new \DomainException(
                 'AI-generated content contains disallowed Tiptap nodes: '.json_encode($violations)
             );
+        }
+
+        $claimedWordCount = (int) ($response->data['word_count'] ?? 0);
+        if ($claimedWordCount > 0) {
+            $actualTextLength = self::tiptapTextLength($response->data['content'] ?? []);
+            if ($actualTextLength < $claimedWordCount) {
+                throw new \DomainException(
+                    "AI returned hollow content: claimed {$claimedWordCount} words but Tiptap document contains only {$actualTextLength} characters of text."
+                );
+            }
         }
 
         $prior = [
@@ -376,10 +388,24 @@ class ContentBlockGenerationService
             throw new \DomainException('Container blocks have no content.');
         }
 
-        $violations = \App\ContentStudio\Support\TiptapAllowList::findViolations($payload['content'] ?? []);
+        $content = $payload['content'] ?? [];
+
+        $violations = \App\ContentStudio\Support\TiptapAllowList::findViolations($content);
         if (! empty($violations)) {
             throw new \DomainException(
                 'Content contains disallowed Tiptap nodes: '.json_encode($violations)
+            );
+        }
+
+        // CP12 — reject cross-document diagram references (defence-in-depth).
+        $scopeViolations = \App\ContentStudio\Support\TiptapDiagramScope::findScopeViolations(
+            $content,
+            'content_block_id',
+            $block->id,
+        );
+        if (! empty($scopeViolations)) {
+            throw new \DomainException(
+                'Content references diagram assets from other documents: '.json_encode($scopeViolations)
             );
         }
 
@@ -455,6 +481,19 @@ class ContentBlockGenerationService
         $block->update(['drift_advisory' => null]);
     }
 
+    private static function tiptapTextLength(array $node): int
+    {
+        $length = 0;
+        if (($node['type'] ?? '') === 'text' && isset($node['text'])) {
+            $length += mb_strlen($node['text']);
+        }
+        foreach ($node['content'] ?? [] as $child) {
+            $length += self::tiptapTextLength($child);
+        }
+
+        return $length;
+    }
+
     public function approveBlockContent(ContentBlock $block): void
     {
         if ($block->generation_status === \App\Enums\BlockGenerationStatus::Approved) {
@@ -464,6 +503,18 @@ class ContentBlockGenerationService
         if ($block->generation_status !== \App\Enums\BlockGenerationStatus::Generated) {
             throw new \DomainException(
                 "Block must be in 'generated' state to approve; current state: {$block->generation_status->value}"
+            );
+        }
+
+        // CP12 — alt-text required for every diagram in the block at publish time.
+        $unlabeled = \App\ContentStudio\Support\TiptapDiagramScope::findUnlabeledAssetIds(
+            $block->content ?? []
+        );
+        if (! empty($unlabeled)) {
+            throw new \DomainException(
+                'Cannot approve: '.count($unlabeled).' diagram'.(count($unlabeled) === 1 ? '' : 's')
+                .' missing alt-text. Add alt-text on the diagram(s) before publishing. Asset IDs: '
+                .implode(', ', $unlabeled)
             );
         }
 

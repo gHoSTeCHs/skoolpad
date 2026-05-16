@@ -1550,42 +1550,135 @@ class Csc302Seeder extends Seeder
     /** @param array<string, CanonicalTopic> $topics */
     private function createTheoryQuestions(QuestionPaper $paper, QuestionSection $section, array $topics): void
     {
-        $theories = [
+        $groups = [
             [
-                'content' => '(a) Explain the three-schema architecture of a database system, clearly describing each level. (8 marks)\n(b) Distinguish between logical data independence and physical data independence, with examples. (6 marks)\n(c) List three advantages of the database approach over file-based data management. (6 marks)',
+                'number' => '1',
+                'content' => '',
                 'topic' => 'models',
-                'answer' => '(a) External level: individual user views. Conceptual level: community-wide logical structure. Internal level: physical storage details. (b) Logical independence: change conceptual schema without affecting views. Physical independence: change storage without affecting logical schema. (c) Reduced redundancy, data integrity enforcement, concurrent access control.',
-                'deep' => "(a) The three-schema architecture (ANSI/SPARC) separates a database into three levels. The External Level provides customized views for different user groups — the registrar sees enrollment data, the bursar sees fee data, each from the same underlying database. The Conceptual Level describes the complete logical structure: all entities, relationships, constraints, and security policies — it is the 'single source of truth' for what data exists. The Internal Level specifies physical storage: file organization (heap vs. sorted), indexing (B+ tree, hash), compression, and buffer management.\n\n(b) Logical data independence means the conceptual schema can change (e.g., adding a new column, splitting a table) without requiring changes to external views or application programs. Physical data independence means the internal schema can change (e.g., adding an index, moving to SSD, changing file organization) without affecting the conceptual schema.\n\n(c) Advantages: 1) Reduced redundancy through centralized data management. 2) Integrity enforcement — constraints defined once and applied everywhere. 3) Concurrent access — multiple users can safely access data simultaneously through locking and transaction mechanisms.",
+                'parts' => [
+                    [
+                        'label' => '(a)',
+                        'content' => 'Explain the three-schema architecture of a database system, clearly describing each level.',
+                        'marks' => 8,
+                        'answer' => 'External level: individual user views. Conceptual level: community-wide logical structure. Internal level: physical storage details.',
+                        'deep' => "The three-schema architecture (ANSI/SPARC) separates a database into three levels. The External Level provides customized views for different user groups — the registrar sees enrollment data, the bursar sees fee data, each from the same underlying database.\n\nThe Conceptual Level describes the complete logical structure: all entities, relationships, constraints, and security policies — it is the 'single source of truth' for what data exists.\n\nThe Internal Level specifies physical storage: file organization (heap vs. sorted), indexing (B+ tree, hash), compression, and buffer management.",
+                    ],
+                    [
+                        'label' => '(b)',
+                        'content' => 'Distinguish between logical data independence and physical data independence, with examples.',
+                        'marks' => 6,
+                        'answer' => 'Logical independence: change conceptual schema without affecting views. Physical independence: change storage without affecting logical schema.',
+                        'deep' => 'Logical data independence means the conceptual schema can change (e.g., adding a new column, splitting a table) without requiring changes to external views or application programs. Physical data independence means the internal schema can change (e.g., adding an index, moving to SSD, changing file organization) without affecting the conceptual schema.',
+                    ],
+                    [
+                        'label' => '(c)',
+                        'content' => 'List three advantages of the database approach over file-based data management.',
+                        'marks' => 6,
+                        'answer' => 'Reduced redundancy, data integrity enforcement, concurrent access control.',
+                        'deep' => "1) Reduced redundancy through centralized data management.\n\n2) Integrity enforcement — constraints defined once and applied everywhere.\n\n3) Concurrent access — multiple users can safely access data simultaneously through locking and transaction mechanisms.",
+                    ],
+                ],
             ],
             [
-                'content' => "Given the following relation STUDENT_COURSE:\n\nSTUDENT_COURSE(MatricNo, StudentName, CourseCode, CourseTitle, InstructorId, InstructorName, Grade)\n\nWith functional dependencies:\nMatricNo → StudentName\nCourseCode → CourseTitle, InstructorId\nInstructorId → InstructorName\nMatricNo, CourseCode → Grade\n\n(a) Identify the candidate key(s) of this relation. (4 marks)\n(b) Show that this relation is not in 2NF and decompose it to 2NF. (8 marks)\n(c) Show that the 2NF result is not in 3NF and decompose it to 3NF. (8 marks)",
+                'number' => '2',
+                'content' => "Given the following relation STUDENT_COURSE:\n\nSTUDENT_COURSE(MatricNo, StudentName, CourseCode, CourseTitle, InstructorId, InstructorName, Grade)\n\nWith functional dependencies:\nMatricNo → StudentName\nCourseCode → CourseTitle, InstructorId\nInstructorId → InstructorName\nMatricNo, CourseCode → Grade",
                 'topic' => 'normalization',
-                'answer' => '(a) Candidate key: {MatricNo, CourseCode}. (b) Not in 2NF because StudentName depends only on MatricNo (partial dependency). Decompose into STUDENT(MatricNo, StudentName), COURSE(CourseCode, CourseTitle, InstructorId, InstructorName), ENROLLMENT(MatricNo, CourseCode, Grade). (c) COURSE is not in 3NF because InstructorName depends transitively through InstructorId. Decompose COURSE into COURSE(CourseCode, CourseTitle, InstructorId) and INSTRUCTOR(InstructorId, InstructorName).',
-                'deep' => "(a) The candidate key is {MatricNo, CourseCode} because its closure includes all attributes: MatricNo → StudentName, CourseCode → CourseTitle, InstructorId → InstructorName (via transitivity through CourseCode → InstructorId), and MatricNo, CourseCode → Grade.\n\n(b) 2NF violations (partial dependencies on composite key): MatricNo → StudentName (depends on part of key), CourseCode → CourseTitle, InstructorId, InstructorName (depends on part of key). Decomposition: STUDENT(MatricNo, StudentName) with PK MatricNo; COURSE_DETAIL(CourseCode, CourseTitle, InstructorId, InstructorName) with PK CourseCode; ENROLLMENT(MatricNo, CourseCode, Grade) with PK (MatricNo, CourseCode).\n\n(c) In COURSE_DETAIL, there is a transitive dependency: CourseCode → InstructorId → InstructorName. InstructorName depends on CourseCode through InstructorId. 3NF decomposition: COURSE(CourseCode, CourseTitle, InstructorId) with PK CourseCode; INSTRUCTOR(InstructorId, InstructorName) with PK InstructorId. Final 3NF schema: STUDENT, COURSE, INSTRUCTOR, ENROLLMENT — four clean tables with no redundancy.",
+                'parts' => [
+                    [
+                        'label' => '(a)',
+                        'content' => 'Identify the candidate key(s) of this relation.',
+                        'marks' => 4,
+                        'answer' => 'Candidate key: {MatricNo, CourseCode}.',
+                        'deep' => 'The candidate key is {MatricNo, CourseCode} because its closure includes all attributes: MatricNo → StudentName, CourseCode → CourseTitle, InstructorId → InstructorName (via transitivity through CourseCode → InstructorId), and MatricNo, CourseCode → Grade.',
+                    ],
+                    [
+                        'label' => '(b)',
+                        'content' => 'Show that this relation is not in 2NF and decompose it to 2NF.',
+                        'marks' => 8,
+                        'answer' => 'Not in 2NF because StudentName depends only on MatricNo (partial dependency). Decompose into STUDENT(MatricNo, StudentName), COURSE(CourseCode, CourseTitle, InstructorId, InstructorName), ENROLLMENT(MatricNo, CourseCode, Grade).',
+                        'deep' => '2NF violations (partial dependencies on composite key): MatricNo → StudentName (depends on part of key), CourseCode → CourseTitle, InstructorId, InstructorName (depends on part of key). Decomposition: STUDENT(MatricNo, StudentName) with PK MatricNo; COURSE_DETAIL(CourseCode, CourseTitle, InstructorId, InstructorName) with PK CourseCode; ENROLLMENT(MatricNo, CourseCode, Grade) with PK (MatricNo, CourseCode).',
+                    ],
+                    [
+                        'label' => '(c)',
+                        'content' => 'Show that the 2NF result is not in 3NF and decompose it to 3NF.',
+                        'marks' => 8,
+                        'answer' => 'COURSE is not in 3NF because InstructorName depends transitively through InstructorId. Decompose COURSE into COURSE(CourseCode, CourseTitle, InstructorId) and INSTRUCTOR(InstructorId, InstructorName).',
+                        'deep' => 'In COURSE_DETAIL, there is a transitive dependency: CourseCode → InstructorId → InstructorName. InstructorName depends on CourseCode through InstructorId. 3NF decomposition: COURSE(CourseCode, CourseTitle, InstructorId) with PK CourseCode; INSTRUCTOR(InstructorId, InstructorName) with PK InstructorId. Final 3NF schema: STUDENT, COURSE, INSTRUCTOR, ENROLLMENT — four clean tables with no redundancy.',
+                    ],
+                ],
             ],
             [
-                'content' => "(a) Write SQL statements to create a DEPARTMENT table with columns: dept_id (integer, primary key), dept_name (varchar 100, not null, unique), faculty (varchar 100), and head_of_dept (varchar 100). (4 marks)\n(b) Write a query to find the names and GPAs of all students in the 'Computer Science' department with a GPA above 3.50, sorted by GPA in descending order. (4 marks)\n(c) Write a query that shows each department name and the number of students enrolled, including departments with no students. (6 marks)\n(d) Explain the difference between WHERE and HAVING clauses with an example. (6 marks)",
+                'number' => '3',
+                'content' => '',
                 'topic' => 'sql',
-                'answer' => "(a) CREATE TABLE departments(dept_id INT PRIMARY KEY, dept_name VARCHAR(100) NOT NULL UNIQUE, faculty VARCHAR(100), head_of_dept VARCHAR(100)). (b) SELECT name, gpa FROM students JOIN departments ON ... WHERE dept_name = 'Computer Science' AND gpa > 3.50 ORDER BY gpa DESC. (c) Use LEFT JOIN with COUNT. (d) WHERE filters rows before grouping, HAVING filters groups after aggregation.",
-                'deep' => "(a) CREATE TABLE departments (dept_id INTEGER PRIMARY KEY, dept_name VARCHAR(100) NOT NULL UNIQUE, faculty VARCHAR(100), head_of_dept VARCHAR(100));\n\n(b) SELECT s.first_name || ' ' || s.last_name AS name, s.gpa FROM students s JOIN departments d ON s.department_id = d.dept_id WHERE d.dept_name = 'Computer Science' AND s.gpa > 3.50 ORDER BY s.gpa DESC;\n\n(c) SELECT d.dept_name, COUNT(s.matric_no) AS student_count FROM departments d LEFT JOIN students s ON d.dept_id = s.department_id GROUP BY d.dept_name ORDER BY student_count DESC; — LEFT JOIN ensures departments with zero students still appear with a count of 0.\n\n(d) WHERE filters individual rows BEFORE grouping: 'WHERE level = 300' removes non-300-level rows before any aggregation. HAVING filters groups AFTER GROUP BY and aggregation: 'HAVING COUNT(*) > 10' keeps only groups with more than 10 members. You cannot use aggregate functions in WHERE. Example: SELECT department_id, AVG(gpa) FROM students WHERE level >= 200 GROUP BY department_id HAVING AVG(gpa) > 3.5; — WHERE first eliminates 100-level students, then GROUP BY groups by department, then HAVING keeps only high-performing departments.",
+                'parts' => [
+                    [
+                        'label' => '(a)',
+                        'content' => 'Write SQL statements to create a DEPARTMENT table with columns: dept_id (integer, primary key), dept_name (varchar 100, not null, unique), faculty (varchar 100), and head_of_dept (varchar 100).',
+                        'marks' => 4,
+                        'answer' => 'CREATE TABLE departments(dept_id INT PRIMARY KEY, dept_name VARCHAR(100) NOT NULL UNIQUE, faculty VARCHAR(100), head_of_dept VARCHAR(100)).',
+                        'deep' => 'CREATE TABLE departments (dept_id INTEGER PRIMARY KEY, dept_name VARCHAR(100) NOT NULL UNIQUE, faculty VARCHAR(100), head_of_dept VARCHAR(100));',
+                    ],
+                    [
+                        'label' => '(b)',
+                        'content' => "Write a query to find the names and GPAs of all students in the 'Computer Science' department with a GPA above 3.50, sorted by GPA in descending order.",
+                        'marks' => 4,
+                        'answer' => "SELECT name, gpa FROM students JOIN departments ON ... WHERE dept_name = 'Computer Science' AND gpa > 3.50 ORDER BY gpa DESC.",
+                        'deep' => "SELECT s.first_name || ' ' || s.last_name AS name, s.gpa FROM students s JOIN departments d ON s.department_id = d.dept_id WHERE d.dept_name = 'Computer Science' AND s.gpa > 3.50 ORDER BY s.gpa DESC;",
+                    ],
+                    [
+                        'label' => '(c)',
+                        'content' => 'Write a query that shows each department name and the number of students enrolled, including departments with no students.',
+                        'marks' => 6,
+                        'answer' => 'Use LEFT JOIN with COUNT.',
+                        'deep' => 'SELECT d.dept_name, COUNT(s.matric_no) AS student_count FROM departments d LEFT JOIN students s ON d.dept_id = s.department_id GROUP BY d.dept_name ORDER BY student_count DESC; — LEFT JOIN ensures departments with zero students still appear with a count of 0.',
+                    ],
+                    [
+                        'label' => '(d)',
+                        'content' => 'Explain the difference between WHERE and HAVING clauses with an example.',
+                        'marks' => 6,
+                        'answer' => 'WHERE filters rows before grouping, HAVING filters groups after aggregation.',
+                        'deep' => "WHERE filters individual rows BEFORE grouping: 'WHERE level = 300' removes non-300-level rows before any aggregation. HAVING filters groups AFTER GROUP BY and aggregation: 'HAVING COUNT(*) > 10' keeps only groups with more than 10 members. You cannot use aggregate functions in WHERE.\n\nExample: SELECT department_id, AVG(gpa) FROM students WHERE level >= 200 GROUP BY department_id HAVING AVG(gpa) > 3.5; — WHERE first eliminates 100-level students, then GROUP BY groups by department, then HAVING keeps only high-performing departments.",
+                    ],
+                ],
             ],
             [
-                'content' => "(a) Define the ACID properties of a transaction and explain why each is important. (12 marks)\n(b) Describe the Lost Update and Dirty Read concurrency problems. Illustrate each with a scenario involving a bank account database. (8 marks)",
+                'number' => '4',
+                'content' => '',
                 'topic' => 'transactions',
-                'answer' => '(a) Atomicity: all-or-nothing execution. Consistency: database moves between consistent states. Isolation: concurrent transactions do not interfere. Durability: committed changes persist through failures. (b) Lost Update: two transactions read same balance and update independently, one overwriting the other. Dirty Read: transaction reads uncommitted data from another transaction that later rolls back.',
-                'deep' => "(a) Atomicity — ensures a transaction is indivisible. If a bank transfer debits ₦50,000 from Account A but crashes before crediting Account B, atomicity ensures the debit is rolled back. Without it, money would disappear. Enforced via WAL (Write-Ahead Logging). Consistency — guarantees that integrity constraints hold before and after the transaction. If a constraint says total balance across all accounts must remain constant, a transfer that satisfies this is consistent. Isolation — ensures that concurrent transactions produce the same result as if they ran sequentially. Without isolation, interleaved operations could see partial results. Enforced via locking protocols (2PL) or MVCC. Durability — once COMMIT returns success, the data survives any subsequent failure (power loss, disk crash). Enforced by writing log records to stable storage before acknowledging the commit.\n\n(b) Lost Update: T1 reads balance = ₦100,000. T2 reads balance = ₦100,000. T1 adds ₦20,000, writes ₦120,000. T2 adds ₦30,000, writes ₦130,000 (overwriting T1's update). Correct result should be ₦150,000 — ₦20,000 was lost. Dirty Read: T1 transfers ₦50,000 from A to B (A becomes ₦50,000, B becomes ₦150,000). T2 reads B = ₦150,000 and uses it. T1 then ROLLBACKS (B goes back to ₦100,000). T2 has used a value (₦150,000) that never actually existed in a committed state.",
+                'parts' => [
+                    [
+                        'label' => '(a)',
+                        'content' => 'Define the ACID properties of a transaction and explain why each is important.',
+                        'marks' => 12,
+                        'answer' => 'Atomicity: all-or-nothing execution. Consistency: database moves between consistent states. Isolation: concurrent transactions do not interfere. Durability: committed changes persist through failures.',
+                        'deep' => "Atomicity — ensures a transaction is indivisible. If a bank transfer debits ₦50,000 from Account A but crashes before crediting Account B, atomicity ensures the debit is rolled back. Without it, money would disappear. Enforced via WAL (Write-Ahead Logging).\n\nConsistency — guarantees that integrity constraints hold before and after the transaction. If a constraint says total balance across all accounts must remain constant, a transfer that satisfies this is consistent.\n\nIsolation — ensures that concurrent transactions produce the same result as if they ran sequentially. Without isolation, interleaved operations could see partial results. Enforced via locking protocols (2PL) or MVCC.\n\nDurability — once COMMIT returns success, the data survives any subsequent failure (power loss, disk crash). Enforced by writing log records to stable storage before acknowledging the commit.",
+                    ],
+                    [
+                        'label' => '(b)',
+                        'content' => 'Describe the Lost Update and Dirty Read concurrency problems. Illustrate each with a scenario involving a bank account database.',
+                        'marks' => 8,
+                        'answer' => 'Lost Update: two transactions read same balance and update independently, one overwriting the other. Dirty Read: transaction reads uncommitted data from another transaction that later rolls back.',
+                        'deep' => "Lost Update: T1 reads balance = ₦100,000. T2 reads balance = ₦100,000. T1 adds ₦20,000, writes ₦120,000. T2 adds ₦30,000, writes ₦130,000 (overwriting T1's update). Correct result should be ₦150,000 — ₦20,000 was lost.\n\nDirty Read: T1 transfers ₦50,000 from A to B (A becomes ₦50,000, B becomes ₦150,000). T2 reads B = ₦150,000 and uses it. T1 then ROLLBACKS (B goes back to ₦100,000). T2 has used a value (₦150,000) that never actually existed in a committed state.",
+                    ],
+                ],
             ],
         ];
 
-        foreach ($theories as $index => $theory) {
-            $question = \App\Models\Question::create([
+        foreach ($groups as $groupIndex => $group) {
+            $totalMarks = array_sum(array_column($group['parts'], 'marks'));
+
+            $parent = \App\Models\Question::create([
                 'institution_course_id' => $this->courseId,
                 'question_paper_id' => $paper->id,
                 'question_section_id' => $section->id,
-                'question_type' => QuestionType::Theory,
-                'content' => $theory['content'],
-                'marks' => 20,
-                'sort_order' => $index + 1,
+                'question_type' => QuestionType::Group,
+                'question_number' => $group['number'],
+                'display_label' => 'Question '.$group['number'],
+                'content' => $group['content'],
+                'marks' => $totalMarks,
+                'sort_order' => $groupIndex + 1,
+                'depth_level' => 0,
                 'difficulty_level' => QuestionDifficulty::Hard,
                 'bloom_level' => BloomLevel::Analyze,
                 'status' => QuestionStatus::Published,
@@ -1598,28 +1691,59 @@ class Csc302Seeder extends Seeder
             ]);
 
             QuestionTopicLink::create([
-                'question_id' => $question->id,
-                'canonical_topic_id' => $topics[$theory['topic']]->id,
+                'question_id' => $parent->id,
+                'canonical_topic_id' => $topics[$group['topic']]->id,
                 'is_primary' => true,
             ]);
 
-            QuestionAnswer::create([
-                'question_id' => $question->id,
-                'depth_level' => AnswerDepthLevel::Quick,
-                'content' => $this->doc([$this->p($theory['answer'])]),
-                'content_plain' => $theory['answer'],
-                'is_published' => true,
-                'created_by' => $this->contentUserId,
-            ]);
+            foreach ($group['parts'] as $partIndex => $part) {
+                $child = \App\Models\Question::create([
+                    'institution_course_id' => $this->courseId,
+                    'question_paper_id' => $paper->id,
+                    'question_section_id' => $section->id,
+                    'parent_question_id' => $parent->id,
+                    'question_type' => QuestionType::Theory,
+                    'question_number' => $group['number'].$part['label'],
+                    'display_label' => $part['label'],
+                    'content' => $part['content'],
+                    'marks' => $part['marks'],
+                    'sort_order' => $partIndex,
+                    'depth_level' => 1,
+                    'difficulty_level' => QuestionDifficulty::Hard,
+                    'bloom_level' => BloomLevel::Analyze,
+                    'status' => QuestionStatus::Published,
+                    'is_published' => true,
+                    'published_at' => now(),
+                    'year' => 2024,
+                    'semester' => 'first',
+                    'source' => QuestionSource::Manual,
+                    'created_by' => $this->contentUserId,
+                ]);
 
-            QuestionAnswer::create([
-                'question_id' => $question->id,
-                'depth_level' => AnswerDepthLevel::DeepDive,
-                'content' => $this->doc(array_map(fn ($para) => $this->p($para), explode("\n\n", $theory['deep']))),
-                'content_plain' => $theory['deep'],
-                'is_published' => true,
-                'created_by' => $this->contentUserId,
-            ]);
+                QuestionTopicLink::create([
+                    'question_id' => $child->id,
+                    'canonical_topic_id' => $topics[$group['topic']]->id,
+                    'is_primary' => true,
+                ]);
+
+                QuestionAnswer::create([
+                    'question_id' => $child->id,
+                    'depth_level' => AnswerDepthLevel::Quick,
+                    'content' => $this->doc([$this->p($part['answer'])]),
+                    'content_plain' => $part['answer'],
+                    'is_published' => true,
+                    'created_by' => $this->contentUserId,
+                ]);
+
+                QuestionAnswer::create([
+                    'question_id' => $child->id,
+                    'depth_level' => AnswerDepthLevel::DeepDive,
+                    'content' => $this->doc(array_map(fn ($para) => $this->p($para), explode("\n\n", $part['deep']))),
+                    'content_plain' => $part['deep'],
+                    'is_published' => true,
+                    'created_by' => $this->contentUserId,
+                ]);
+            }
         }
     }
 

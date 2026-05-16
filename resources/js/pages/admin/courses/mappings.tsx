@@ -11,6 +11,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import AdminLayout from '@/layouts/admin-layout';
+import { randomId } from '@/lib/utils';
 import type { AvailableMappingTopic, MappedTopic, MappingPayload, TopicWeight, WeightOption } from '@/types/mappings';
 
 const difficultyLabels: Record<string, string> = {
@@ -47,7 +48,7 @@ export default function AdminCourseMappings({ course, mapped_topics, available_t
     const [processing, setProcessing] = useState(false);
 
     const breadcrumbs = [
-        { title: 'Courses', href: '/admin/courses' },
+        { title: 'Courses', href: CourseController.index.url() },
         { title: 'Edit', href: CourseController.edit.url(course.id) },
         { title: 'Topic Mappings', href: '#' },
     ];
@@ -70,7 +71,7 @@ export default function AdminCourseMappings({ course, mapped_topics, available_t
         setMappedTopics((prev) => [
             ...prev,
             {
-                id: crypto.randomUUID(),
+                id: randomId(),
                 canonical_topic_id: topic.id,
                 title: topic.title,
                 difficulty_level: topic.difficulty_level,
