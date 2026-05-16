@@ -179,15 +179,17 @@ test('questions edit route redirects to the builder for the question container',
         ->assertRedirect(route('admin.question-library.course', $this->course));
 });
 
-test('update modifies question and redirects', function () {
+test('update modifies question and redirects back', function () {
     $question = Question::factory()->for($this->course)->draft()->create(['created_by' => $this->admin->id]);
+    $from = route('admin.question-library.course', $this->course);
 
     $this->actingAs($this->admin)
+        ->from($from)
         ->put(route('admin.questions.update', $question), validQuestionData([
             'content' => 'Updated question content',
             'status' => 'in_review',
         ]))
-        ->assertRedirect(route('admin.questions.edit', $question))
+        ->assertRedirect($from)
         ->assertSessionHas('success', 'Question updated.');
 
     $question->refresh();

@@ -87,7 +87,7 @@ class QuestionController extends Controller
             $this->questionService->syncBlockLinks($question, $request->validated('block_links') ?? []);
         }
 
-        return to_route('admin.questions.edit', $question)->with('success', 'Question updated.');
+        return back()->with('success', 'Question updated.');
     }
 
     public function reorder(ReorderQuestionsRequest $request): JsonResponse
