@@ -94,6 +94,13 @@ class QuestionPaperController extends Controller
         return Inertia::render('admin/question-papers/build', $this->buildPayload($questionPaper));
     }
 
+    public function buildV4(QuestionPaper $questionPaper): Response
+    {
+        Gate::authorize('managePapers', Question::class);
+
+        return Inertia::render('admin/question-papers/v4-build', $this->buildPayload($questionPaper));
+    }
+
     /** @return array<string, mixed> */
     /** Walk the recursive question tree, pushing every node into $sink. */
     private static function collectQuestionsRecursive(iterable $questions, \Illuminate\Support\Collection $sink): void

@@ -62,6 +62,7 @@ Route::middleware(['auth', 'verified', 'staff'])->prefix('admin')->name('admin.'
     Route::get('question-papers/create', [QuestionPaperController::class, 'create'])->name('question-papers.create');
     Route::post('question-papers', [QuestionPaperController::class, 'store'])->name('question-papers.store');
     Route::get('question-papers/{questionPaper}/build', [QuestionPaperController::class, 'build'])->name('question-papers.build');
+    Route::get('question-papers/{questionPaper}/build-v4', [QuestionPaperController::class, 'buildV4'])->name('question-papers.build-v4');
     Route::put('question-papers/{questionPaper}', [QuestionPaperController::class, 'update'])->name('question-papers.update');
     Route::delete('question-papers/{questionPaper}', [QuestionPaperController::class, 'destroy'])->name('question-papers.destroy');
 
