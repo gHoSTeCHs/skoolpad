@@ -89,8 +89,9 @@ test('3 exam types exist and all are inactive', function () {
         ->and($jamb->questions_per_subject)->toBe(60);
 });
 
-test('3 platform settings exist with correct values', function () {
-    expect(PlatformSetting::count())->toBe(3);
+test('platform settings exist with correct values', function () {
+    // DatabaseSeeder seeds 3 core flags; AIModelSeeder adds 2 more for the AI router.
+    expect(PlatformSetting::count())->toBe(5);
 
     $monetization = PlatformSetting::where('key', 'monetization_enabled')->first();
     $registration = PlatformSetting::where('key', 'registration_open')->first();
@@ -101,6 +102,8 @@ test('3 platform settings exist with correct values', function () {
         ->and($registration->value)->toBeTruthy();
 
     $this->assertDatabaseHas('platform_settings', ['key' => 'default_education_system_id']);
+    $this->assertDatabaseHas('platform_settings', ['key' => 'content_studio.default_model_id']);
+    $this->assertDatabaseHas('platform_settings', ['key' => 'ai_task_routing']);
 });
 
 test('3 subscription plans exist with correct prices', function () {

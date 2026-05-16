@@ -32,7 +32,7 @@ class TopicProgressService
         return true;
     }
 
-    public function toggleBlockCompletion(User $user, ContentBlock $block, int $readingTimeSeconds): bool
+    public function toggleBlockCompletion(User $user, ContentBlock $block, ?int $readingTimeSeconds = null): bool
     {
         $existing = BlockCompletion::query()
             ->where('user_id', $user->id)

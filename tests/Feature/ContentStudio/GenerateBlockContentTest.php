@@ -23,7 +23,7 @@ function happyAIResponse(string $logId): ContentResponse
             'key_terms_introduced' => [['term' => 'speed', 'definition' => 'distance per unit time']],
             'symbols_used' => [['symbol' => 'v', 'quantity' => 'speed', 'unit' => 'm/s']],
             'formulas_used' => ['v = d/t'],
-            'word_count' => 300,
+            'word_count' => 20,
             'nigerian_context_used' => true,
         ],
         validation_errors: [],

@@ -36,7 +36,7 @@ dataset('enums', [
     'QuestionDifficulty' => [QuestionDifficulty::class, 3],
     'QuestionType' => [QuestionType::class, 16],
     'QuestionStatus' => [QuestionStatus::class, 4],
-    'QuestionSource' => [QuestionSource::class, 4],
+    'QuestionSource' => [QuestionSource::class, 5],
     'AnswerDepthLevel' => [AnswerDepthLevel::class, 3],
     'ContentSubmissionType' => [ContentSubmissionType::class, 4],
     'ContentSubmissionStatus' => [ContentSubmissionStatus::class, 3],
