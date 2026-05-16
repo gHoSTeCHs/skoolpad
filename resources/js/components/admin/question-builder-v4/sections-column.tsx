@@ -16,8 +16,8 @@ export function SectionsColumn() {
     const paper = useBuilderV4Store((s) => s.paper);
     const col1Mode = useBuilderV4Store((s) => s.col1Mode);
     const activeSectionId = useBuilderV4Store((s) => s.activeSectionId);
-    const selectSection = useBuilderV4Store((s) => s.selectSection);
-    const activateContexts = useBuilderV4Store((s) => s.activateContexts);
+    const selectSection = useBuilderV4Store((s) => s.requestSelectSection);
+    const activateContexts = useBuilderV4Store((s) => s.requestActivateContexts);
 
     const sectionCount = paper.sections.length;
     const questionCount = paper.sections.reduce(

@@ -1,25 +1,7 @@
 import { ChevronRight } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import type { AnswerDepthLevel, QuestionNode, QuestionType } from '@/types/questions';
-
-const TYPE_SHORT: Record<QuestionType, string> = {
-    mcq: 'MCQ',
-    multi_select_mcq: 'MSC',
-    theory: 'THRY',
-    short_answer: 'SANS',
-    essay: 'ESSY',
-    fill_blank: 'FILL',
-    cloze: 'CLZ',
-    matching: 'MTCH',
-    ordering: 'ORD',
-    true_false: 'T/F',
-    diagram_label: 'DIAG',
-    calculation: 'CALC',
-    assertion_reason: 'A/R',
-    matrix_matching: 'MTX',
-    numeric_entry: 'NUM',
-    group: 'GRP',
-};
+import { TYPE_META } from './lib/question-meta';
+import type { AnswerDepthLevel, QuestionNode } from '@/types/questions';
 
 const DEPTHS: AnswerDepthLevel[] = ['quick', 'standard', 'deep_dive'];
 
@@ -91,7 +73,7 @@ export function QuestionCard({ question, index, isSelected, onSelect }: Question
                 </p>
                 <div className="mt-1.5 flex items-center gap-1.5">
                     <span className="rounded-sm bg-[var(--bg-raised)] px-1.5 py-0.5 font-mono text-[9.5px] font-semibold tracking-wider text-muted-foreground uppercase">
-                        {TYPE_SHORT[question.question_type] ?? question.question_type.toUpperCase().slice(0, 4)}
+                        {TYPE_META[question.question_type]?.short ?? question.question_type.toUpperCase().slice(0, 4)}
                     </span>
                     {question.marks != null && (
                         <span className="font-mono text-[10px] text-[var(--fg-subtle)]">

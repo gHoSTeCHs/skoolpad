@@ -19,8 +19,8 @@ function QuestionsView() {
     const activeSectionId = useBuilderV4Store((s) => s.activeSectionId);
     const drillPath = useBuilderV4Store((s) => s.drillPath);
     const selectedQuestionId = useBuilderV4Store((s) => s.selectedQuestionId);
-    const selectQuestion = useBuilderV4Store((s) => s.selectQuestion);
-    const popDrillTo = useBuilderV4Store((s) => s.popDrillTo);
+    const selectQuestion = useBuilderV4Store((s) => s.requestSelectQuestion);
+    const popDrillTo = useBuilderV4Store((s) => s.requestPopDrillTo);
 
     const crumbs = currentBreadcrumbs(paper, activeSectionId, drillPath);
     const items = currentLevelQuestions(paper, activeSectionId, drillPath);

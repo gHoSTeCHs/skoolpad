@@ -1,9 +1,10 @@
-import { StudioTopBar } from './studio-top-bar';
-import { SectionsColumn } from './sections-column';
-import { QuestionsColumn } from './questions-column';
-import { EditorPlaceholder } from './editor-placeholder';
+import { DiscardDialog } from './discard-dialog';
+import { EditorColumn } from './editor-column';
 import { InspectorRail } from './inspector-rail';
 import { InspectorSheet } from './inspector-sheet';
+import { QuestionsColumn } from './questions-column';
+import { SectionsColumn } from './sections-column';
+import { StudioTopBar } from './studio-top-bar';
 
 export function QuestionBuilderV4Shell() {
     return (
@@ -11,9 +12,10 @@ export function QuestionBuilderV4Shell() {
             <StudioTopBar />
             <SectionsColumn />
             <QuestionsColumn />
-            <EditorPlaceholder />
+            <EditorColumn />
             <InspectorRail />
             <InspectorSheet />
+            <DiscardDialog />
         </div>
     );
 }
