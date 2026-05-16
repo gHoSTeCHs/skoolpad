@@ -35,4 +35,5 @@ nul
 boost.json
 nul
 .playwright-mcp
+/checkpoint-*.png
 /knowledge_base
