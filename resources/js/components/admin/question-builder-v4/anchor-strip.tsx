@@ -31,7 +31,7 @@ export function AnchorStrip({ questionType }: AnchorStripProps) {
     return (
         <nav
             aria-label="Question sections"
-            className="sticky top-[120px] z-[9] -mx-12 mt-1 mb-7 flex items-center gap-1 border-b border-[var(--border-2)] bg-background px-12 py-1.5"
+            className="flex items-center gap-1 border-b border-[var(--border-2)] px-12 py-1.5"
         >
             {ANCHORS.map((key) => {
                 const isActive = active === key;

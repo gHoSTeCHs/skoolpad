@@ -25,14 +25,15 @@ export function EditorColumn() {
 
     return (
         <main className="relative col-start-3 row-start-2 flex min-h-0 min-w-0 flex-col overflow-hidden bg-background">
-            <div className="flex-1 overflow-y-auto px-12 pt-8 pb-32">
-                <QuestionHeader
-                    paper={paper}
-                    question={selected}
-                    sectionLabel={section?.label ?? null}
-                />
-
-                <AnchorStrip questionType={selected.question_type} />
+            <div className="flex-1 overflow-y-auto px-12 pb-32">
+                <div className="sticky top-0 z-10 -mx-12 mb-7 bg-background after:pointer-events-none after:absolute after:inset-x-0 after:-bottom-4 after:h-4 after:bg-gradient-to-b after:from-background after:to-transparent">
+                    <QuestionHeader
+                        paper={paper}
+                        question={selected}
+                        sectionLabel={section?.label ?? null}
+                    />
+                    <AnchorStrip questionType={selected.question_type} />
+                </div>
 
                 <BodySection
                     id="sec-stem"

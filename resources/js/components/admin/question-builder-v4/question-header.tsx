@@ -27,7 +27,7 @@ export function QuestionHeader({ paper, question, sectionLabel }: QuestionHeader
     const courseCode = paper.institution_course?.course_code;
 
     return (
-        <header className="sticky top-0 z-10 -mx-12 -mt-8 bg-background px-12 pt-8 pb-4 after:pointer-events-none after:absolute after:inset-x-0 after:-bottom-4 after:h-4 after:bg-gradient-to-b after:from-background after:to-transparent">
+        <header className="px-12 pt-8 pb-4">
             <nav
                 aria-label="Question breadcrumb"
                 className="flex items-center gap-1.5 font-mono text-[10px] tracking-[0.14em] text-[var(--fg-subtle)] uppercase"
