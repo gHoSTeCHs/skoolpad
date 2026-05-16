@@ -17,6 +17,7 @@ import type { DiagramKind, DiagramOwner } from './diagram-node';
 import {
     useActiveCategoryChips,
     useFilteredStencils,
+    useRecentStencils,
     useStencilStore,
     type StencilCatalogEntry,
 } from './stencil-store';
@@ -106,8 +107,15 @@ export function DiagramEditModal({
     const setActiveCategory = useStencilStore((s) => s.setActiveCategory);
     const searchQuery = useStencilStore((s) => s.searchQuery);
     const setSearchQuery = useStencilStore((s) => s.setSearchQuery);
+    const markStencilUsed = useStencilStore((s) => s.markStencilUsed);
+    const clearRecent = useStencilStore((s) => s.clearRecent);
     const filteredStencils = useFilteredStencils();
     const categoryChips = useActiveCategoryChips();
+    const recentStencils = useRecentStencils();
+    // Hide the Recent section when the user is actively filtering — the main grid
+    // is already narrowed, redundant "recent" rows would just clutter.
+    const showRecent =
+        recentStencils.length > 0 && activeCategory === 'all' && searchQuery.trim() === '';
 
     useEffect(() => {
         if (!open) {
@@ -191,12 +199,15 @@ export function DiagramEditModal({
 
             const current = api.getSceneElements();
             api.updateScene({ elements: [...current, ...newElements] });
+
+            // Track this insertion so it floats to the top of the sidebar next time.
+            markStencilUsed(stencil.slug);
         } catch (e) {
             setError(e instanceof Error ? e.message : 'Failed to insert stencil');
         } finally {
             setInsertingSlug(null);
         }
-    }, []);
+    }, [markStencilUsed]);
 
     const handleSave = useCallback(async () => {
         if (!owner && !assetId) {
@@ -350,6 +361,36 @@ export function DiagramEditModal({
                         )}
 
                         <div className="min-h-0 flex-1 overflow-y-auto pr-0.5" data-testid="stencil-grid">
+                            {showRecent && (
+                                <section className="mb-3" data-testid="stencil-recent">
+                                    <header className="mb-1.5 flex items-center justify-between px-0.5">
+                                        <span className="font-mono text-[9.5px] uppercase tracking-[0.18em] text-muted-foreground">
+                                            Recent
+                                            <span className="ml-1.5 opacity-60">{recentStencils.length}</span>
+                                        </span>
+                                        <button
+                                            type="button"
+                                            onClick={clearRecent}
+                                            className="font-mono text-[9px] uppercase tracking-[0.08em] text-muted-foreground/60 transition-colors hover:text-foreground"
+                                            data-testid="stencil-recent-clear"
+                                            title="Clear recent stencils"
+                                        >
+                                            clear
+                                        </button>
+                                    </header>
+                                    <div className="grid grid-cols-2 gap-1.5">
+                                        {recentStencils.map((s) => (
+                                            <StencilThumb
+                                                key={`recent-${s.id}`}
+                                                stencil={s}
+                                                busy={insertingSlug === s.slug}
+                                                onClick={() => insertStencil(s)}
+                                            />
+                                        ))}
+                                    </div>
+                                    <div className="mt-3 border-t border-dashed border-border" />
+                                </section>
+                            )}
                             {catalogLoading ? (
                                 <StencilSkeleton />
                             ) : !catalogReady ? (

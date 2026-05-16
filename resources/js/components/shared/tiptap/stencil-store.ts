@@ -1,5 +1,6 @@
 import { useMemo } from 'react';
 import { create } from 'zustand';
+import { persist, createJSONStorage } from 'zustand/middleware';
 
 /**
  * Shared catalog store for the canvas stencil library (CP11.5).
@@ -28,59 +29,89 @@ export interface StencilCategoryEntry {
 
 type Status = 'idle' | 'loading' | 'ready' | 'error';
 
+const MAX_RECENT_SLUGS = 8;
+
 interface StencilStoreState {
     status: Status;
     categories: StencilCategoryEntry[];
     stencils: StencilCatalogEntry[];
     activeCategory: string;
     searchQuery: string;
+    /** Slugs of recently-inserted stencils, most-recent-first. Persisted to localStorage. */
+    recentSlugs: string[];
 
     load: () => Promise<void>;
     setActiveCategory: (category: string) => void;
     setSearchQuery: (query: string) => void;
+    markStencilUsed: (slug: string) => void;
+    clearRecent: () => void;
     reset: () => void;
 }
 
-export const useStencilStore = create<StencilStoreState>((set, get) => ({
-    status: 'idle',
-    categories: [],
-    stencils: [],
-    activeCategory: 'all',
-    searchQuery: '',
-
-    load: async () => {
-        const { status } = get();
-        if (status === 'loading' || status === 'ready') return;
-        set({ status: 'loading' });
-        try {
-            const res = await fetch('/admin/canvas-stencils/catalog', {
-                credentials: 'same-origin',
-                headers: { Accept: 'application/json' },
-            });
-            if (!res.ok) throw new Error(`Catalog fetch failed (${res.status})`);
-            const body: { categories: StencilCategoryEntry[]; stencils: StencilCatalogEntry[] } =
-                await res.json();
-            set({
-                categories: body.categories ?? [],
-                stencils: body.stencils ?? [],
-                status: 'ready',
-            });
-        } catch {
-            set({ status: 'error', categories: [], stencils: [] });
-        }
-    },
-
-    setActiveCategory: (category) => set({ activeCategory: category }),
-    setSearchQuery: (searchQuery) => set({ searchQuery }),
-    reset: () =>
-        set({
+export const useStencilStore = create<StencilStoreState>()(
+    persist(
+        (set, get) => ({
             status: 'idle',
             categories: [],
             stencils: [],
             activeCategory: 'all',
             searchQuery: '',
+            recentSlugs: [],
+
+            load: async () => {
+                const { status } = get();
+                if (status === 'loading' || status === 'ready') return;
+                set({ status: 'loading' });
+                try {
+                    const res = await fetch('/admin/canvas-stencils/catalog', {
+                        credentials: 'same-origin',
+                        headers: { Accept: 'application/json' },
+                    });
+                    if (!res.ok) throw new Error(`Catalog fetch failed (${res.status})`);
+                    const body: { categories: StencilCategoryEntry[]; stencils: StencilCatalogEntry[] } =
+                        await res.json();
+                    set({
+                        categories: body.categories ?? [],
+                        stencils: body.stencils ?? [],
+                        status: 'ready',
+                    });
+                } catch {
+                    set({ status: 'error', categories: [], stencils: [] });
+                }
+            },
+
+            setActiveCategory: (category) => set({ activeCategory: category }),
+            setSearchQuery: (searchQuery) => set({ searchQuery }),
+
+            markStencilUsed: (slug) => {
+                if (!slug) return;
+                set((s) => ({
+                    recentSlugs: [
+                        slug,
+                        ...s.recentSlugs.filter((existing) => existing !== slug),
+                    ].slice(0, MAX_RECENT_SLUGS),
+                }));
+            },
+            clearRecent: () => set({ recentSlugs: [] }),
+
+            reset: () =>
+                set({
+                    status: 'idle',
+                    categories: [],
+                    stencils: [],
+                    activeCategory: 'all',
+                    searchQuery: '',
+                    recentSlugs: [],
+                }),
         }),
-}));
+        {
+            name: 'skoolpad.stencils',
+            storage: createJSONStorage(() => localStorage),
+            // Only persist the recent list — the catalog refetches on every page load.
+            partialize: (state) => ({ recentSlugs: state.recentSlugs }),
+        },
+    ),
+);
 
 /**
  * Selector hook: stencils filtered by current category + search.
@@ -102,6 +133,23 @@ export function useFilteredStencils(): StencilCatalogEntry[] {
             );
         });
     }, [stencils, activeCategory, searchQuery]);
+}
+
+/**
+ * Selector hook: recently-inserted stencils in MRU order, materialised against
+ * the current catalog (drops slugs whose stencil was deleted or hidden).
+ */
+export function useRecentStencils(): StencilCatalogEntry[] {
+    const stencils = useStencilStore((s) => s.stencils);
+    const recentSlugs = useStencilStore((s) => s.recentSlugs);
+
+    return useMemo(() => {
+        if (stencils.length === 0 || recentSlugs.length === 0) return [];
+        const bySlug = new Map(stencils.map((s) => [s.slug, s]));
+        return recentSlugs
+            .map((slug) => bySlug.get(slug))
+            .filter((s): s is StencilCatalogEntry => !!s);
+    }, [stencils, recentSlugs]);
 }
 
 /**

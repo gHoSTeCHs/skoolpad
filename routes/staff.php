@@ -78,6 +78,10 @@ Route::middleware(['auth', 'verified', 'staff'])->prefix('admin')->name('admin.'
 
     // Diagram-authoring assets (Track 2, Checkpoint 2). One row per drawn diagram;
     // scope determined by which owner FK is set (content_block / question / question_paper).
+    // Admin asset browser (Polish A.2) — Inertia page for auditing drawn diagrams.
+    Route::get('canvas-assets', [ContentBlockAssetController::class, 'adminIndex'])->name('canvas-assets.index');
+    Route::delete('canvas-assets/{asset}', [ContentBlockAssetController::class, 'adminDestroy'])->name('canvas-assets.destroy');
+
     Route::post('assets', [ContentBlockAssetController::class, 'store'])->name('assets.store');
     Route::get('assets/{asset}', [ContentBlockAssetController::class, 'show'])->name('assets.show');
     Route::put('assets/{asset}', [ContentBlockAssetController::class, 'update'])->name('assets.update');

@@ -22,6 +22,7 @@ import {
 import AIModelController from '@/actions/App/Http/Controllers/Admin/AIModelController';
 import BulkImportController from '@/actions/App/Http/Controllers/Admin/BulkImportController';
 import CanvasStencilController from '@/actions/App/Http/Controllers/Admin/CanvasStencilController';
+import ContentBlockAssetController from '@/actions/App/Http/Controllers/Admin/ContentBlockAssetController';
 import ContentStudioController from '@/actions/App/Http/Controllers/Admin/ContentStudioController';
 import CanonicalTopicController from '@/actions/App/Http/Controllers/Admin/CanonicalTopicController';
 import CourseController from '@/actions/App/Http/Controllers/Admin/CourseController';
@@ -82,6 +83,7 @@ const navGroups: NavGroup[] = [
         label: 'Canvas Library',
         items: [
             { title: 'Stencils', href: CanvasStencilController.index.url(), icon: Shapes },
+            { title: 'Asset Ledger', href: ContentBlockAssetController.adminIndex.url(), icon: Library },
         ],
     },
     {
