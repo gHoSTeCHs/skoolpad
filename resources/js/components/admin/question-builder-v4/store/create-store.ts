@@ -32,6 +32,8 @@ export interface QuestionBuilderV4State {
     saveRequestNonce: number;
 
     // primitives (always applied; used by confirmDiscard + bootstrap)
+    /** Replace the paper snapshot — called by PaperSync whenever Inertia reloads the prop. */
+    setPaper: (paper: QuestionPaper) => void;
     selectSection: (sectionId: string) => void;
     activateContexts: () => void;
     selectQuestion: (id: string) => void;
@@ -110,6 +112,8 @@ export function createQuestionBuilderV4Store(paper: QuestionPaper) {
             resetCallbacks: {},
             pendingNav: null,
             saveRequestNonce: 0,
+
+            setPaper: (nextPaper) => set({ paper: nextPaper }),
 
             selectSection: (sectionId) => {
                 const section = get().paper.sections.find((s) => s.id === sectionId);
