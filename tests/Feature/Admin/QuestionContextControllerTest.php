@@ -123,12 +123,12 @@ test('link attaches context to question', function () {
     ]);
 
     $this->actingAs($this->admin)
-        ->postJson(route('admin.questions.contexts.link', $question), [
+        ->post(route('admin.questions.contexts.link', $question), [
             'context_id' => $context->id,
             'sort_order' => 1,
             'label' => 'Source 1',
         ])
-        ->assertOk();
+        ->assertRedirect();
 
     $this->assertDatabaseHas('question_context_links', [
         'question_id' => $question->id,
@@ -145,10 +145,10 @@ test('link validates context_id exists', function () {
     ]);
 
     $this->actingAs($this->admin)
-        ->postJson(route('admin.questions.contexts.link', $question), [
+        ->post(route('admin.questions.contexts.link', $question), [
             'context_id' => 'nonexistent-uuid',
         ])
-        ->assertUnprocessable();
+        ->assertSessionHasErrors('context_id');
 });
 
 test('unlink detaches context from question', function () {
@@ -162,8 +162,8 @@ test('unlink detaches context from question', function () {
     $question->contexts()->attach($context->id, ['sort_order' => 0]);
 
     $this->actingAs($this->admin)
-        ->deleteJson(route('admin.questions.contexts.unlink', [$question, $context]))
-        ->assertOk();
+        ->delete(route('admin.questions.contexts.unlink', [$question, $context]))
+        ->assertRedirect();
 
     $this->assertDatabaseMissing('question_context_links', [
         'question_id' => $question->id,

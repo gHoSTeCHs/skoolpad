@@ -33,8 +33,13 @@ export function InspectorRail() {
         (selectedQuestion?.topic_links?.length ?? 0) +
         (selectedQuestion?.question_block_links?.length ?? 0);
 
+    const contextsCount =
+        (selectedQuestion?.context_links?.length ?? 0) ||
+        (selectedQuestion?.question_context_links?.length ?? 0);
+
     function badgeCountFor(key: InspectorTab): number {
         if (key === 'links') return linksCount;
+        if (key === 'contexts') return contextsCount;
         return 0;
     }
 

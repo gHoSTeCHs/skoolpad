@@ -8,7 +8,6 @@ use App\Http\Requests\Admin\UpdateQuestionContextRequest;
 use App\Models\Question;
 use App\Models\QuestionContext;
 use App\Models\QuestionPaper;
-use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Support\Facades\Gate;
 
@@ -44,7 +43,7 @@ class QuestionContextController extends Controller
         return back()->with('success', 'Context deleted.');
     }
 
-    public function link(\App\Http\Requests\Admin\LinkQuestionContextRequest $request, Question $question): JsonResponse
+    public function link(\App\Http\Requests\Admin\LinkQuestionContextRequest $request, Question $question): RedirectResponse
     {
         Gate::authorize('manageContexts', $question);
 
@@ -57,15 +56,15 @@ class QuestionContextController extends Controller
             ],
         ]);
 
-        return response()->json(['message' => 'Context linked.']);
+        return back()->with('success', 'Context linked.');
     }
 
-    public function unlink(Question $question, QuestionContext $questionContext): JsonResponse
+    public function unlink(Question $question, QuestionContext $questionContext): RedirectResponse
     {
         Gate::authorize('manageContexts', $question);
 
         $question->contexts()->detach($questionContext->id);
 
-        return response()->json(['message' => 'Context unlinked.']);
+        return back()->with('success', 'Context unlinked.');
     }
 }

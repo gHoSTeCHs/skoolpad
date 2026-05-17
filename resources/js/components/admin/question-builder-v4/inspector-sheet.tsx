@@ -1,4 +1,5 @@
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet';
+import { ContextsInspector } from './contexts-inspector';
 import { findQuestion } from './lib/drill';
 import { LinksInspector } from './links-inspector';
 import { useBuilderV4Store } from './store/provider';
@@ -13,7 +14,7 @@ const TAB_META: Record<InspectorTab, { title: string; landingCp: string; blurb: 
     contexts: {
         title: 'Contexts',
         landingCp: 'CP7',
-        blurb: 'Attach shared contexts to a question, or compose a new one inline. Arrives in Checkpoint 7.',
+        blurb: '',
     },
     ai: {
         title: 'AI assist',
@@ -48,6 +49,14 @@ export function InspectorSheet() {
                 {activeTab === 'links' && selectedQuestion ? (
                     <div className="flex-1 overflow-y-auto">
                         <LinksInspector key={selectedQuestion.id} question={selectedQuestion} />
+                    </div>
+                ) : activeTab === 'contexts' && selectedQuestion ? (
+                    <div className="flex-1 overflow-y-auto">
+                        <ContextsInspector
+                            key={selectedQuestion.id}
+                            paper={paper}
+                            question={selectedQuestion}
+                        />
                     </div>
                 ) : activeTab && !selectedQuestion ? (
                     <EmptyTabState message="Select a question to use this panel." />
